@@ -1,0 +1,117 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "ci-env-check",
+			"type": "shell",
+			"command": "rustup toolchain list *> d:\\RustProject\\VeloGuard\\tc_check.txt; rustc +1.97.0 --version *>> d:\\RustProject\\VeloGuard\\tc_check.txt; cargo +1.97.0 clippy --version *>> d:\\RustProject\\VeloGuard\\tc_check.txt; flutter --version *>> d:\\RustProject\\VeloGuard\\tc_check.txt; Write-Output TASK_DONE *>> d:\\RustProject\\VeloGuard\\tc_check.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "convert-file",
+			"type": "shell",
+			"command": "Get-Content d:\\RustProject\\VeloGuard\\tc_check.txt | Set-Content -Encoding utf8 d:\\RustProject\\VeloGuard\\tc_check8.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "ci-rust-replicate",
+			"type": "shell",
+			"command": "cd d:\\RustProject\\VeloGuard\\rust; rustup target add --toolchain 1.97.0 x86_64-unknown-linux-gnu 2>&1 | Out-File -Encoding utf8 ..\\ci_target_add.txt; cargo +1.97.0 fmt --all -- --check 2>&1 | Out-File -Encoding utf8 ..\\ci_fmt.txt; cargo +1.97.0 clippy --workspace --all-targets --all-features --locked -- -D warnings 2>&1 | Out-File -Encoding utf8 ..\\ci_clippy_win.txt; cargo +1.97.0 clippy --workspace --all-targets --all-features --locked --target x86_64-unknown-linux-gnu -- -D warnings 2>&1 | Out-File -Encoding utf8 ..\\ci_clippy_linux.txt; Write-Output CI_RUST_DONE | Out-File -Encoding utf8 ..\\ci_rust_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "probe-and-verify",
+			"type": "shell",
+			"command": "$ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri 'https://storage.flutter-io.cn/flutter_infra_release/releases/stable/windows/flutter_windows_3.44.6-stable.zip' -Method Head -TimeoutSec 30; \"ZIP_OK $($r.StatusCode) $($r.Headers['Content-Length'])\" | Out-File -Encoding utf8 d:\\RustProject\\VeloGuard\\probe_zip.txt } catch { \"ZIP_FAIL $($_.Exception.Message)\" | Out-File -Encoding utf8 d:\\RustProject\\VeloGuard\\probe_zip.txt }; cd d:\\RustProject\\VeloGuard\\rust; cargo +1.97.0 clippy --workspace --all-targets --all-features --locked -- -D warnings 2>&1 | Out-File -Encoding utf8 ..\\ci_clippy_win.txt; cargo +1.97.0 test --workspace --all-targets --all-features --locked 2>&1 | Out-File -Encoding utf8 ..\\ci_test_win.txt; Write-Output PROBE_DONE | Out-File -Encoding utf8 ..\\probe_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "probe-and-verify2",
+			"type": "shell",
+			"command": "$ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri 'https://storage.flutter-io.cn/flutter_infra_release/releases/stable/windows/flutter_windows_3.44.6-stable.zip' -Method Head -TimeoutSec 30 -UseBasicParsing; \"ZIP_OK $($r.StatusCode) $($r.Headers['Content-Length'])\" | Out-File -Encoding utf8 d:\\RustProject\\VeloGuard\\probe_zip.txt } catch { \"ZIP_FAIL $($_.Exception.Message)\" | Out-File -Encoding utf8 d:\\RustProject\\VeloGuard\\probe_zip.txt }; cd d:\\RustProject\\VeloGuard\\rust; cargo +1.97.0 clippy --workspace --all-targets --all-features --locked -- -D warnings 2>&1 | Out-File -Encoding utf8 ..\\ci_clippy_win.txt; Write-Output PROBE_DONE | Out-File -Encoding utf8 ..\\probe_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "probe3",
+			"type": "shell",
+			"command": "$ProgressPreference='SilentlyContinue'; $zipUrl='https://storage.flutter-io.cn/flutter_infra_release/releases/stable/windows/flutter_windows_3.44.6-stable.zip'; $r=$null; try { $r=Invoke-WebRequest -Uri $zipUrl -Method Head -TimeoutSec 30 -UseBasicParsing } catch { $r=$null }; if ($r) { ('ZIP_OK ' + $r.StatusCode + ' ' + $r.Headers['Content-Length']) | Out-File -Encoding utf8 d:\\RustProject\\VeloGuard\\probe_zip.txt } else { 'ZIP_FAIL' | Out-File -Encoding utf8 d:\\RustProject\\VeloGuard\\probe_zip.txt }; cd d:\\RustProject\\VeloGuard\\rust; cargo +1.97.0 clippy --workspace --all-targets --all-features --locked -- -D warnings 2>&1 | Out-File -Encoding utf8 ..\\ci_clippy_win.txt; Write-Output PROBE_DONE | Out-File -Encoding utf8 ..\\probe_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "clippy-check4",
+			"type": "shell",
+			"command": "cd d:\\RustProject\\VeloGuard\\rust; (rustc +1.97.0 --version) 2>&1 | Out-File -Encoding utf8 ..\\tc197.txt; cargo +1.97.0 clippy --workspace --all-targets --all-features --locked -- -D warnings 2>&1 | Out-File -Encoding utf8 ..\\clippy_check.txt; ('CLIPPY_EXIT=' + $LASTEXITCODE) | Out-File -Append -Encoding utf8 ..\\clippy_check.txt; Write-Output DONE4 | Out-File -Encoding utf8 ..\\done4.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "flutter-3446-chain",
+			"type": "shell",
+			"command": "rustup toolchain install 1.97.0 -c clippy,rustfmt --profile minimal 2>&1 | Out-File -Encoding utf8 d:\\RustProject\\VeloGuard\\rust197.txt; $wc = New-Object System.Net.WebClient; $wc.DownloadFile('https://storage.flutter-io.cn/flutter_infra_release/releases/stable/windows/flutter_windows_3.44.6-stable.zip', 'D:\\flutter-sdk-3.44.6.zip'); Expand-Archive -LiteralPath 'D:\\flutter-sdk-3.44.6.zip' -DestinationPath 'D:\\' -Force; $env:FLUTTER_STORAGE_BASE_URL='https://storage.flutter-io.cn'; $env:PUB_HOSTED_URL='https://pub.flutter-io.cn'; cd d:\\RustProject\\VeloGuard; & 'D:\\flutter\\bin\\flutter.bat' --version 2>&1 | Out-File -Encoding utf8 flutter_version.txt; & 'D:\\flutter\\bin\\flutter.bat' pub get 2>&1 | Out-File -Encoding utf8 flutter_pubget.txt; & 'D:\\flutter\\bin\\flutter.bat' pub get --enforce-lockfile 2>&1 | Out-File -Encoding utf8 flutter_enforce.txt; & 'D:\\flutter\\bin\\dart.bat' format --output=none --set-exit-if-changed lib test 2>&1 | Out-File -Encoding utf8 flutter_fmt.txt; & 'D:\\flutter\\bin\\flutter.bat' analyze 2>&1 | Out-File -Encoding utf8 flutter_analyze.txt; & 'D:\\flutter\\bin\\flutter.bat' test 2>&1 | Out-File -Encoding utf8 flutter_test.txt; Write-Output FLUTTER_CHAIN_DONE | Out-File -Encoding utf8 flutter_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "flutter-only-chain",
+			"type": "shell",
+			"command": "$ProgressPreference='SilentlyContinue'; if (-not (Test-Path 'D:\\flutter\\bin\\flutter.bat')) { $wc = New-Object System.Net.WebClient; $wc.DownloadFile('https://storage.flutter-io.cn/flutter_infra_release/releases/stable/windows/flutter_windows_3.44.6-stable.zip', 'D:\\flutter-sdk-3.44.6.zip'); Expand-Archive -LiteralPath 'D:\\flutter-sdk-3.44.6.zip' -DestinationPath 'D:\\' -Force }; $env:FLUTTER_STORAGE_BASE_URL='https://storage.flutter-io.cn'; $env:PUB_HOSTED_URL='https://pub.flutter-io.cn'; cd d:\\RustProject\\VeloGuard; & 'D:\\flutter\\bin\\flutter.bat' --version 2>&1 | Out-File -Encoding utf8 flutter_version.txt; & 'D:\\flutter\\bin\\flutter.bat' pub get 2>&1 | Out-File -Encoding utf8 flutter_pubget.txt; & 'D:\\flutter\\bin\\flutter.bat' pub get --enforce-lockfile 2>&1 | Out-File -Encoding utf8 flutter_enforce.txt; & 'D:\\flutter\\bin\\dart.bat' format --output=none --set-exit-if-changed lib test 2>&1 | Out-File -Encoding utf8 flutter_fmt.txt; & 'D:\\flutter\\bin\\flutter.bat' analyze 2>&1 | Out-File -Encoding utf8 flutter_analyze.txt; & 'D:\\flutter\\bin\\flutter.bat' test 2>&1 | Out-File -Encoding utf8 flutter_test.txt; 'FLUTTER_CHAIN_DONE' | Out-File -Encoding utf8 flutter_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "rust-stable-verify",
+			"type": "shell",
+			"command": "cd d:\\RustProject\\VeloGuard\\rust; cargo +stable clippy --workspace --all-targets --all-features --locked -- -D warnings 2>&1 | Out-File -Encoding utf8 ..\\clippy_stable.txt; ('CLIPPY_EXIT=' + $LASTEXITCODE) | Out-File -Append -Encoding utf8 ..\\clippy_stable.txt; cargo +stable test --workspace --all-targets --all-features --locked 2>&1 | Out-File -Encoding utf8 ..\\test_stable.txt; ('TEST_EXIT=' + $LASTEXITCODE) | Out-File -Append -Encoding utf8 ..\\test_stable.txt; 'STABLE_VERIFY_DONE' | Out-File -Encoding utf8 ..\\stable_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "git-check-frb",
+			"type": "shell",
+			"command": "cd d:\\RustProject\\VeloGuard; '---STATUS---' | Out-File -Encoding utf8 gitcheck.txt; git status --porcelain 2>&1 | Out-File -Append -Encoding utf8 gitcheck.txt; '---LOG---' | Out-File -Append -Encoding utf8 gitcheck.txt; git log --oneline -6 2>&1 | Out-File -Append -Encoding utf8 gitcheck.txt; '---DIFFSTAT---' | Out-File -Append -Encoding utf8 gitcheck.txt; git diff --stat 2>&1 | Out-File -Append -Encoding utf8 gitcheck.txt; '---FILEDIFF---' | Out-File -Append -Encoding utf8 gitcheck.txt; git diff --stat HEAD -- lib/src/rust/frb_generated.io.dart 2>&1 | Out-File -Append -Encoding utf8 gitcheck.txt; git show HEAD:lib/src/rust/frb_generated.io.dart > frb_head_io.dart 2>&1; ('HEADLINES=' + (Get-Content frb_head_io.dart | Measure-Object -Line).Lines) | Out-File -Append -Encoding utf8 gitcheck.txt; ('WORKTREELINES=' + (Get-Content lib\\src\\rust\\frb_generated.io.dart | Measure-Object -Line).Lines) | Out-File -Append -Encoding utf8 gitcheck.txt; 'GITCHECK_DONE' | Out-File -Encoding utf8 gitcheck_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "frb-history",
+			"type": "shell",
+			"command": "cd d:\\RustProject\\VeloGuard; git log --oneline -8 -- lib/src/rust/frb_generated.io.dart 2>&1 | Out-File -Encoding utf8 frb_history.txt; 'FRB_HISTORY_DONE' | Out-File -Encoding utf8 frb_hist_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "frb-old",
+			"type": "shell",
+			"command": "cd d:\\RustProject\\VeloGuard; git show 400351e:lib/src/rust/frb_generated.io.dart > frb_old.dart 2>&1; ('OLDLINES=' + (Get-Content frb_old.dart | Measure-Object -Line).Lines) | Out-File -Encoding utf8 frb_old_lines.txt; 'FRB_OLD_DONE' | Out-File -Encoding utf8 frb_old_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "frb-tool-probe",
+			"type": "shell",
+			"command": "$out='d:\\RustProject\\VeloGuard\\frb_tool.txt'; '---WHICH---' | Out-File -Encoding utf8 $out; (Get-Command flutter_rust_bridge_codegen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source) 2>&1 | Out-File -Append -Encoding utf8 $out; '---PATHS---' | Out-File -Append -Encoding utf8 $out; @(\"$env:LOCALAPPDATA\\Pub\\Cache\\bin\\flutter_rust_bridge_codegen.bat\", \"$env:USERPROFILE\\.cargo\\bin\\flutter_rust_bridge_codegen.exe\", \"$env:APPDATA\\Pub\\Cache\\bin\\flutter_rust_bridge_codegen.bat\") | Out-File -Append -Encoding utf8 $out; '---GLOBALPKG---' | Out-File -Append -Encoding utf8 $out; Get-ChildItem \"$env:LOCALAPPDATA\\Pub\\Cache\\global_packages\" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name | Out-File -Append -Encoding utf8 $out; 'FRB_TOOL_DONE' | Out-File -Encoding utf8 frb_tool_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "frb-diffstat",
+			"type": "shell",
+			"command": "cd d:\\RustProject\\VeloGuard; git diff --stat 400351e HEAD -- lib/src/rust/ 2>&1 | Out-File -Encoding utf8 frb_diffstat.txt; '---TOOL---' | Out-File -Append -Encoding utf8 frb_diffstat.txt; (Test-Path 'C:\\Users\\blueo\\AppData\\Local\\Pub\\Cache\\bin\\flutter_rust_bridge_codegen.bat') | Out-File -Append -Encoding utf8 frb_diffstat.txt; (Test-Path 'C:\\Users\\blueo\\.cargo\\bin\\flutter_rust_bridge_codegen.exe') | Out-File -Append -Encoding utf8 frb_diffstat.txt; '---GLOBAL---' | Out-File -Append -Encoding utf8 frb_diffstat.txt; Get-ChildItem 'C:\\Users\\blueo\\AppData\\Local\\Pub\\Cache\\global_packages' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name | Out-File -Append -Encoding utf8 frb_diffstat.txt; 'FRB_DIFF_DONE' | Out-File -Encoding utf8 frb_diff_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		},
+		{
+			"label": "frb-regenerate",
+			"type": "shell",
+			"command": "cd d:\\RustProject\\VeloGuard; Copy-Item -Recurse -Force lib\\src\\rust frb_backup_rust; $env:Path = 'D:\\flutter\\bin;' + $env:Path; & 'C:\\Users\\blueo\\.cargo\\bin\\flutter_rust_bridge_codegen.exe' --version 2>&1 | Out-File -Encoding utf8 frb_version.txt; & 'C:\\Users\\blueo\\.cargo\\bin\\flutter_rust_bridge_codegen.exe' generate 2>&1 | Out-File -Encoding utf8 frb_generate.txt; ('GEN_EXIT=' + $LASTEXITCODE) | Out-File -Append -Encoding utf8 frb_generate.txt; & 'D:\\flutter\\bin\\dart.bat' format lib/src/rust 2>&1 | Out-File -Encoding utf8 frb_gen_fmt.txt; & 'D:\\flutter\\bin\\flutter.bat' analyze 2>&1 | Out-File -Encoding utf8 flutter_analyze2.txt; 'FRB_GEN_DONE' | Out-File -Encoding utf8 frb_gen_done.txt",
+			"problemMatcher": [],
+			"group": "none"
+		}
+	]
+}

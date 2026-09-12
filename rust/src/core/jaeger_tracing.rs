@@ -114,10 +114,10 @@ fn init_tracing_inner(_config: TracingConfig) -> Result<()> {
 pub fn shutdown_tracing() {
     #[cfg(feature = "jaeger")]
     {
-        if let Some(provider) = TRACER_PROVIDER.get() {
-            if let Err(e) = provider.shutdown() {
-                tracing::error!("Failed to shutdown tracer provider: {:?}", e);
-            }
+        if let Some(provider) = TRACER_PROVIDER.get()
+            && let Err(e) = provider.shutdown()
+        {
+            tracing::error!("Failed to shutdown tracer provider: {:?}", e);
         }
     }
 }

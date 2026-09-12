@@ -41,26 +41,53 @@ mod windows_impl {
     }
 }
 
-#[cfg(target_os = "linux")]
-mod linux_impl {
+/// `/proc` based socket lookup shared by the Linux and Android backends.
+#[cfg(any(target_os = "linux", target_os = "android"))]
+mod proc_net {
     use std::fs;
     use std::net::SocketAddr;
-    use std::path::PathBuf;
 
-    pub fn get_process_name_by_socket(local_addr: SocketAddr) -> Option<String> {
-        let inode = find_socket_inode(local_addr)?;
-        let pid = find_pid_by_inode(inode)?;
-        get_process_name_by_pid(pid)
+    /// Find the socket inode behind a local TCP endpoint.
+    pub fn find_socket_inode(addr: SocketAddr) -> Option<u64> {
+        search_proc_net("/proc/net/tcp", addr).or_else(|| search_proc_net("/proc/net/tcp6", addr))
     }
 
-    fn find_socket_inode(addr: SocketAddr) -> Option<u64> {
-        let (tcp_path, tcp6_path) = ("/proc/net/tcp", "/proc/net/tcp6");
+    /// Walk `/proc/*/fd` to find the process that owns a socket inode.
+    pub fn find_pid_by_inode(target_inode: u64) -> Option<u32> {
+        let proc_dir = fs::read_dir("/proc").ok()?;
 
-        if let Some(inode) = search_proc_net(tcp_path, addr) {
-            return Some(inode);
+        for entry in proc_dir.flatten() {
+            let path = entry.path();
+            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            let Ok(pid) = name.parse::<u32>() else {
+                continue;
+            };
+            let Ok(fd_dir) = fs::read_dir(path.join("fd")) else {
+                continue;
+            };
+            for fd_entry in fd_dir.flatten() {
+                let Ok(link) = fs::read_link(fd_entry.path()) else {
+                    continue;
+                };
+                let link_str = link.to_string_lossy();
+                let Some(inode_str) = link_str.strip_prefix("socket:[") else {
+                    continue;
+                };
+                let Some(inode_str) = inode_str.strip_suffix(']') else {
+                    continue;
+                };
+                let Ok(inode) = inode_str.parse::<u64>() else {
+                    continue;
+                };
+                if inode == target_inode {
+                    return Some(pid);
+                }
+            }
         }
 
-        search_proc_net(tcp6_path, addr)
+        None
     }
 
     fn search_proc_net(path: &str, addr: SocketAddr) -> Option<u64> {
@@ -78,48 +105,29 @@ mod linux_impl {
                 continue;
             }
 
-            if let Ok(local_port) = u16::from_str_radix(local_addr_parts[1], 16) {
-                if local_port == port {
-                    if let Ok(inode) = parts[9].parse::<u64>() {
-                        return Some(inode);
-                    }
-                }
+            if let Ok(local_port) = u16::from_str_radix(local_addr_parts[1], 16)
+                && local_port == port
+                && let Ok(inode) = parts[9].parse::<u64>()
+            {
+                return Some(inode);
             }
         }
 
         None
     }
+}
 
-    fn find_pid_by_inode(target_inode: u64) -> Option<u32> {
-        let proc_dir = fs::read_dir("/proc").ok()?;
+#[cfg(target_os = "linux")]
+mod linux_impl {
+    use super::proc_net::{find_pid_by_inode, find_socket_inode};
+    use std::fs;
+    use std::net::SocketAddr;
+    use std::path::PathBuf;
 
-        for entry in proc_dir.flatten() {
-            let path = entry.path();
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if let Ok(pid) = name.parse::<u32>() {
-                    let fd_path = path.join("fd");
-                    if let Ok(fd_dir) = fs::read_dir(&fd_path) {
-                        for fd_entry in fd_dir.flatten() {
-                            if let Ok(link) = fs::read_link(fd_entry.path()) {
-                                let link_str = link.to_string_lossy();
-                                if link_str.starts_with("socket:[") {
-                                    let inode_str = link_str
-                                        .trim_start_matches("socket:[")
-                                        .trim_end_matches(']');
-                                    if let Ok(inode) = inode_str.parse::<u64>() {
-                                        if inode == target_inode {
-                                            return Some(pid);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        None
+    pub fn get_process_name_by_socket(local_addr: SocketAddr) -> Option<String> {
+        let inode = find_socket_inode(local_addr)?;
+        let pid = find_pid_by_inode(inode)?;
+        get_process_name_by_pid(pid)
     }
 
     pub fn get_process_name_by_pid(pid: u32) -> Option<String> {
@@ -173,6 +181,7 @@ mod macos_impl {
 
 #[cfg(target_os = "android")]
 mod android_impl {
+    use super::proc_net::{find_pid_by_inode, find_socket_inode};
     use std::fs;
     use std::net::SocketAddr;
     use std::path::PathBuf;
@@ -181,76 +190,6 @@ mod android_impl {
         let inode = find_socket_inode(local_addr)?;
         let pid = find_pid_by_inode(inode)?;
         get_process_name_by_pid(pid)
-    }
-
-    fn find_socket_inode(addr: SocketAddr) -> Option<u64> {
-        let tcp_path = "/proc/net/tcp";
-        let tcp6_path = "/proc/net/tcp6";
-
-        if let Some(inode) = search_proc_net(tcp_path, addr) {
-            return Some(inode);
-        }
-
-        search_proc_net(tcp6_path, addr)
-    }
-
-    fn search_proc_net(path: &str, addr: SocketAddr) -> Option<u64> {
-        let content = fs::read_to_string(path).ok()?;
-        let port = addr.port();
-
-        for line in content.lines().skip(1) {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() < 10 {
-                continue;
-            }
-
-            let local_addr_parts: Vec<&str> = parts[1].split(':').collect();
-            if local_addr_parts.len() != 2 {
-                continue;
-            }
-
-            if let Ok(local_port) = u16::from_str_radix(local_addr_parts[1], 16) {
-                if local_port == port {
-                    if let Ok(inode) = parts[9].parse::<u64>() {
-                        return Some(inode);
-                    }
-                }
-            }
-        }
-
-        None
-    }
-
-    fn find_pid_by_inode(target_inode: u64) -> Option<u32> {
-        let proc_dir = fs::read_dir("/proc").ok()?;
-
-        for entry in proc_dir.flatten() {
-            let path = entry.path();
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if let Ok(pid) = name.parse::<u32>() {
-                    let fd_path = path.join("fd");
-                    if let Ok(fd_dir) = fs::read_dir(&fd_path) {
-                        for fd_entry in fd_dir.flatten() {
-                            if let Ok(link) = fs::read_link(fd_entry.path()) {
-                                let link_str = link.to_string_lossy();
-                                if link_str.starts_with("socket:[") {
-                                    let inode_str = link_str
-                                        .trim_start_matches("socket:[")
-                                        .trim_end_matches(']');
-                                    if let Ok(inode) = inode_str.parse::<u64>() {
-                                        if inode == target_inode {
-                                            return Some(pid);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        None
     }
 
     pub fn get_process_name_by_pid(pid: u32) -> Option<String> {

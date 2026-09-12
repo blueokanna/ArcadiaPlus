@@ -1035,32 +1035,33 @@ fn get_cpu_name(sys: &sysinfo::System) -> String {
     {
         if let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo") {
             for line in cpuinfo.lines() {
-                if line.starts_with("Hardware") {
-                    if let Some(value) = line.split(':').nth(1) {
-                        let name = value.trim();
-                        if !name.is_empty() {
-                            return name.to_string();
-                        }
+                if line.starts_with("Hardware")
+                    && let Some(value) = line.split(':').nth(1)
+                {
+                    let name = value.trim();
+                    if !name.is_empty() {
+                        return name.to_string();
                     }
                 }
             }
             for line in cpuinfo.lines() {
-                if line.starts_with("model name") {
-                    if let Some(value) = line.split(':').nth(1) {
-                        let name = value.trim();
-                        if !name.is_empty() {
-                            return name.to_string();
-                        }
+                if line.starts_with("model name")
+                    && let Some(value) = line.split(':').nth(1)
+                {
+                    let name = value.trim();
+                    if !name.is_empty() {
+                        return name.to_string();
                     }
                 }
             }
             for line in cpuinfo.lines() {
-                if line.starts_with("Processor") && !line.starts_with("Processors") {
-                    if let Some(value) = line.split(':').nth(1) {
-                        let name = value.trim();
-                        if !name.is_empty() {
-                            return name.to_string();
-                        }
+                if line.starts_with("Processor")
+                    && !line.starts_with("Processors")
+                    && let Some(value) = line.split(':').nth(1)
+                {
+                    let name = value.trim();
+                    if !name.is_empty() {
+                        return name.to_string();
                     }
                 }
             }
@@ -1071,12 +1072,12 @@ fn get_cpu_name(sys: &sysinfo::System) -> String {
     {
         if let Ok(cpuinfo) = std::fs::read_to_string("/proc/cpuinfo") {
             for line in cpuinfo.lines() {
-                if line.starts_with("model name") {
-                    if let Some(value) = line.split(':').nth(1) {
-                        let name = value.trim();
-                        if !name.is_empty() {
-                            return name.to_string();
-                        }
+                if line.starts_with("model name")
+                    && let Some(value) = line.split(':').nth(1)
+                {
+                    let name = value.trim();
+                    if !name.is_empty() {
+                        return name.to_string();
                     }
                 }
             }
@@ -2261,15 +2262,15 @@ async fn stop_linux_tun_runtime() -> Vec<String> {
         processor.stop();
         processor.reset();
     }
-    if let Some(mut routes) = crate::take_linux_route_manager() {
-        if let Err(error) = routes.restore_routes() {
-            errors.push(format!("failed to restore routes: {error}"));
-        }
+    if let Some(mut routes) = crate::take_linux_route_manager()
+        && let Err(error) = routes.restore_routes()
+    {
+        errors.push(format!("failed to restore routes: {error}"));
     }
-    if let Some(mut device) = crate::take_linux_tun_device() {
-        if let Err(error) = device.stop().await {
-            errors.push(format!("failed to stop TUN device: {error}"));
-        }
+    if let Some(mut device) = crate::take_linux_tun_device()
+        && let Err(error) = device.stop().await
+    {
+        errors.push(format!("failed to stop TUN device: {error}"));
     }
 
     crate::core::set_runtime_proxy_mode(0);
