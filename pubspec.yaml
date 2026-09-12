@@ -20,29 +20,35 @@ dependencies:
 
   # Material Design 3 and UI components
   material_design_icons_flutter: ^7.0.7296
-  dynamic_color: ^1.7.0
+  # 2.x pulls material_ui, which wants Dart >= 3.12; 1.9 is the newest 1.x.
+  dynamic_color: ^1.9.0
 
   # State management
   provider: ^6.1.5
 
   # Navigation and routing
-  go_router: ^17.0.1
+  # 18.x needs Dart >= 3.12; this toolchain is 3.11, so 17.5 is the newest
+  # version that actually resolves. Bump together with the SDK.
+  go_router: ^17.5.0
 
   # Utilities
+  # `flutter_localizations` pins intl, so follow the SDK rather than the range.
   intl: ^0.20.2
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
   url_launcher: ^6.3.1
-  package_info_plus: ^9.0.0
-  device_info_plus: ^12.3.0
+  package_info_plus: ^10.2.1
+  device_info_plus: ^13.2.0
 
   # Networking and HTTP
+  # Rust 侧的网络与哈希已经全部走自有 crate；这两项服务的是 Dart 侧自己的
+  # 界面需求（订阅预览、更新安装包校验）。
   http: ^1.4.0
-  dio: ^5.8.0
+  dio: ^5.11.1
   crypto: ^3.0.6
 
   # YAML parsing
-  yaml: ^3.1.3
+  yaml: ^3.1.4
 
   # Charts and data visualization
   fl_chart: ^1.1.1
@@ -51,7 +57,7 @@ dependencies:
   flutter_animate: ^4.5.2
 
   # File operations
-  file_picker: ^10.3.8
+  file_picker: ^12.3.0
 
   # Platform specific - Desktop window management
   window_manager: ^0.5.1
@@ -61,6 +67,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
+  ffigen: ^21.0.0
 
 flutter_launcher_icons:
   android: true

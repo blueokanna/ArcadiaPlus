@@ -8,7 +8,7 @@ set(PROJECT_NAME "rust_lib_veloguard")
 project(${PROJECT_NAME} LANGUAGES CXX)
 
 include("../cargokit/cmake/cargokit.cmake")
-apply_cargokit(${PROJECT_NAME} ../../rust/veloguard-lib rust_lib_veloguard "")
+apply_cargokit(${PROJECT_NAME} ../../rust rust_lib_veloguard "")
 
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an

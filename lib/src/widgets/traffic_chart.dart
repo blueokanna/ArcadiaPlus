@@ -92,12 +92,16 @@ class TrafficChart extends StatefulWidget {
   final BigInt uploadSpeed;
   final bool isProxyRunning;
 
+  /// 本地混合入站端口（与应用设置保持一致）。
+  final int proxyPort;
+
   const TrafficChart({
     super.key,
     required this.trafficStats,
     required this.downloadSpeed,
     required this.uploadSpeed,
     this.isProxyRunning = false,
+    this.proxyPort = 7890,
   });
 
   @override
@@ -283,11 +287,12 @@ class _TrafficChartState extends State<TrafficChart>
 
     if (useProxy) {
       // Route through local proxy to get exit IP
+      final port = widget.proxyPort;
       dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
           final client = HttpClient();
           // Use local HTTP proxy (mixed port)
-          client.findProxy = (uri) => 'PROXY 127.0.0.1:7890';
+          client.findProxy = (uri) => 'PROXY 127.0.0.1:$port';
           return client;
         },
       );

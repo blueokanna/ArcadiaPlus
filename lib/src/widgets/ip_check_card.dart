@@ -1,6 +1,7 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:veloguard/src/utils/responsive_utils.dart';
@@ -36,7 +37,14 @@ class IpInfo {
 class IpCheckCard extends StatefulWidget {
   final bool isProxyRunning;
 
-  const IpCheckCard({super.key, required this.isProxyRunning});
+  /// 本地混合入站端口：代理运行时，检测走它，否则拿到的只是本机地址。
+  final int proxyPort;
+
+  const IpCheckCard({
+    super.key,
+    required this.isProxyRunning,
+    this.proxyPort = 7890,
+  });
 
   @override
   State<IpCheckCard> createState() => _IpCheckCardState();
@@ -167,39 +175,60 @@ class _IpCheckCardState extends State<IpCheckCard>
     }
   }
 
-  /// 从 ip.sb 获取 IP
-  Future<String?> _fetchIpFromIpSb() async {
-    try {
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 10);
+  /// 一次请求一个 Dio，统一在 `finally` 里关闭。
+  ///
+  /// 代理运行时请求走本地混合入站端口，这样显示的是出口 IP；
+  /// 绕过代理的 IP 检测只会回答用户没问的那个问题。
+  Dio _httpClient() {
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 8),
+        receiveTimeout: const Duration(seconds: 8),
+        headers: const {'User-Agent': 'VeloGuard/1.0'},
+      ),
+    );
 
-      final request = await client.getUrl(Uri.parse('https://api.ip.sb/ip'));
-      request.headers.set('User-Agent', 'VeloGuard/1.0');
-
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        return body.trim();
-      }
-      client.close();
-    } catch (e) {
-      debugPrint('ip.sb request failed: $e');
+    if (widget.isProxyRunning) {
+      final port = widget.proxyPort;
+      dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final client = HttpClient()
+            ..connectionTimeout = const Duration(seconds: 8);
+          client.findProxy = (uri) => 'PROXY 127.0.0.1:$port';
+          return client;
+        },
+      );
     }
 
-    // 备用方案：使用 ipify
-    try {
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 10);
+    return dio;
+  }
 
-      final request = await client.getUrl(Uri.parse('https://api.ipify.org'));
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        return body.trim();
+  /// 从 ip.sb 获取 IP（失败时回退到 ipify）。
+  Future<String?> _fetchIpFromIpSb() async {
+    final dio = _httpClient();
+    try {
+      final response = await dio.get<String>('https://api.ip.sb/ip');
+      final body = response.data?.trim();
+      if (body != null && body.isNotEmpty) {
+        return body;
       }
-      client.close();
+    } catch (e) {
+      debugPrint('ip.sb request failed: $e');
+    } finally {
+      dio.close(force: true);
+    }
+
+    final fallback = _httpClient();
+    try {
+      final response = await fallback.get<String>('https://api.ipify.org');
+      final body = response.data?.trim();
+      if (body != null && body.isNotEmpty) {
+        return body;
+      }
     } catch (e) {
       debugPrint('ipify request failed: $e');
+    } finally {
+      fallback.close(force: true);
     }
 
     return null;
@@ -207,27 +236,21 @@ class _IpCheckCardState extends State<IpCheckCard>
 
   /// 获取 IP 详细信息
   Future<IpInfo?> _fetchIpDetails(String ip) async {
+    final dio = _httpClient();
     try {
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 5);
-
-      // 使用 ip-api.com 获取详细信息
-      final request = await client.getUrl(
-        Uri.parse('http://ip-api.com/json/$ip?lang=zh-CN'),
+      final response = await dio.get<Map<String, dynamic>>(
+        'http://ip-api.com/json/$ip?lang=zh-CN',
       );
-
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final body = await response.transform(utf8.decoder).join();
-        final json = jsonDecode(body) as Map<String, dynamic>;
-        if (json['status'] == 'success') {
-          return IpInfo.fromIpApi(json);
-        }
+      final json = response.data;
+      if (json != null && json['status'] == 'success') {
+        return IpInfo.fromIpApi(json);
       }
-      client.close();
     } catch (e) {
       debugPrint('IP details request failed: $e');
+    } finally {
+      dio.close(force: true);
     }
+
     return null;
   }
 

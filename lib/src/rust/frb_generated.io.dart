@@ -11,955 +11,553 @@ import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'types.dart';
 
-abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
-  RustLibApiImplPlatform({
-    required super.handler,
-    required super.wire,
-    required super.generalizedFrbRustBinding,
-    required super.portManager,
-  });
 
-  @protected
-  AnyhowException dco_decode_AnyhowException(dynamic raw);
 
-  @protected
-  String dco_decode_String(dynamic raw);
 
-  @protected
-  ActiveConnection dco_decode_active_connection(dynamic raw);
+                abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
+                  RustLibApiImplPlatform({
+                    required super.handler,
+                    required super.wire,
+                    required super.generalizedFrbRustBinding,
+                    required super.portManager,
+                  });
 
-  @protected
-  bool dco_decode_bool(dynamic raw);
+                  
 
-  @protected
-  int dco_decode_box_autoadd_u_16(dynamic raw);
+                  @protected AnyhowException dco_decode_AnyhowException(dynamic raw);
 
-  @protected
-  int dco_decode_box_autoadd_u_32(dynamic raw);
+@protected String dco_decode_String(dynamic raw);
 
-  @protected
-  BigInt dco_decode_box_autoadd_u_64(dynamic raw);
+@protected ActiveConnection dco_decode_active_connection(dynamic raw);
 
-  @protected
-  ConnectionDto dco_decode_connection_dto(dynamic raw);
+@protected bool dco_decode_bool(dynamic raw);
 
-  @protected
-  ConnectionInfo dco_decode_connection_info(dynamic raw);
+@protected int dco_decode_box_autoadd_u_16(dynamic raw);
 
-  @protected
-  DnsConfigDto dco_decode_dns_config_dto(dynamic raw);
+@protected int dco_decode_box_autoadd_u_32(dynamic raw);
 
-  @protected
-  double dco_decode_f_64(dynamic raw);
+@protected BigInt dco_decode_box_autoadd_u_64(dynamic raw);
 
-  @protected
-  int dco_decode_i_32(dynamic raw);
+@protected ConnectionDto dco_decode_connection_dto(dynamic raw);
 
-  @protected
-  PlatformInt64 dco_decode_i_64(dynamic raw);
+@protected ConnectionInfo dco_decode_connection_info(dynamic raw);
 
-  @protected
-  LatencyTestResult dco_decode_latency_test_result(dynamic raw);
+@protected DnsConfigDto dco_decode_dns_config_dto(dynamic raw);
 
-  @protected
-  List<String> dco_decode_list_String(dynamic raw);
+@protected double dco_decode_f_64(dynamic raw);
 
-  @protected
-  List<ActiveConnection> dco_decode_list_active_connection(dynamic raw);
+@protected int dco_decode_i_32(dynamic raw);
 
-  @protected
-  List<ConnectionDto> dco_decode_list_connection_dto(dynamic raw);
+@protected PlatformInt64 dco_decode_i_64(dynamic raw);
 
-  @protected
-  List<ConnectionInfo> dco_decode_list_connection_info(dynamic raw);
+@protected LatencyTestResult dco_decode_latency_test_result(dynamic raw);
 
-  @protected
-  List<LatencyTestResult> dco_decode_list_latency_test_result(dynamic raw);
+@protected List<String> dco_decode_list_String(dynamic raw);
 
-  @protected
-  Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+@protected List<ActiveConnection> dco_decode_list_active_connection(dynamic raw);
 
-  @protected
-  List<ProxyGroupDto> dco_decode_list_proxy_group_dto(dynamic raw);
+@protected List<ConnectionDto> dco_decode_list_connection_dto(dynamic raw);
 
-  @protected
-  List<ProxyInfoDto> dco_decode_list_proxy_info_dto(dynamic raw);
+@protected List<ConnectionInfo> dco_decode_list_connection_info(dynamic raw);
 
-  @protected
-  List<ProxyLatencyDto> dco_decode_list_proxy_latency_dto(dynamic raw);
+@protected List<LatencyTestResult> dco_decode_list_latency_test_result(dynamic raw);
 
-  @protected
-  List<(String, int)> dco_decode_list_record_string_u_16(dynamic raw);
+@protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
-  @protected
-  List<RuleDto> dco_decode_list_rule_dto(dynamic raw);
+@protected List<ProxyGroupDto> dco_decode_list_proxy_group_dto(dynamic raw);
 
-  @protected
-  String? dco_decode_opt_String(dynamic raw);
+@protected List<ProxyInfoDto> dco_decode_list_proxy_info_dto(dynamic raw);
 
-  @protected
-  int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
+@protected List<ProxyLatencyDto> dco_decode_list_proxy_latency_dto(dynamic raw);
 
-  @protected
-  int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
+@protected List<(String,int)> dco_decode_list_record_string_u_16(dynamic raw);
 
-  @protected
-  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+@protected List<RuleDto> dco_decode_list_rule_dto(dynamic raw);
 
-  @protected
-  ProxyGroupDto dco_decode_proxy_group_dto(dynamic raw);
+@protected String? dco_decode_opt_String(dynamic raw);
 
-  @protected
-  ProxyInfoDto dco_decode_proxy_info_dto(dynamic raw);
+@protected int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
 
-  @protected
-  ProxyLatencyDto dco_decode_proxy_latency_dto(dynamic raw);
+@protected int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
 
-  @protected
-  ProxyStatus dco_decode_proxy_status(dynamic raw);
+@protected BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
 
-  @protected
-  (String, int) dco_decode_record_string_u_16(dynamic raw);
+@protected ProxyGroupDto dco_decode_proxy_group_dto(dynamic raw);
 
-  @protected
-  (BigInt, BigInt, BigInt, BigInt) dco_decode_record_u_64_u_64_u_64_u_64(
-    dynamic raw,
-  );
+@protected ProxyInfoDto dco_decode_proxy_info_dto(dynamic raw);
 
-  @protected
-  (BigInt, BigInt, BigInt, BigInt, BigInt, BigInt)
-  dco_decode_record_u_64_u_64_u_64_u_64_usize_usize(dynamic raw);
+@protected ProxyLatencyDto dco_decode_proxy_latency_dto(dynamic raw);
 
-  @protected
-  RuleDto dco_decode_rule_dto(dynamic raw);
+@protected ProxyStatus dco_decode_proxy_status(dynamic raw);
 
-  @protected
-  SystemInfo dco_decode_system_info(dynamic raw);
+@protected (String,int) dco_decode_record_string_u_16(dynamic raw);
 
-  @protected
-  TrafficStats dco_decode_traffic_stats(dynamic raw);
+@protected (BigInt,BigInt,BigInt,BigInt) dco_decode_record_u_64_u_64_u_64_u_64(dynamic raw);
 
-  @protected
-  TrafficStatsDto dco_decode_traffic_stats_dto(dynamic raw);
+@protected (BigInt,BigInt,BigInt,BigInt,BigInt,BigInt) dco_decode_record_u_64_u_64_u_64_u_64_usize_usize(dynamic raw);
 
-  @protected
-  TunStatus dco_decode_tun_status(dynamic raw);
+@protected RuleDto dco_decode_rule_dto(dynamic raw);
 
-  @protected
-  int dco_decode_u_16(dynamic raw);
+@protected SystemInfo dco_decode_system_info(dynamic raw);
 
-  @protected
-  int dco_decode_u_32(dynamic raw);
+@protected TrafficStats dco_decode_traffic_stats(dynamic raw);
 
-  @protected
-  BigInt dco_decode_u_64(dynamic raw);
+@protected TrafficStatsDto dco_decode_traffic_stats_dto(dynamic raw);
 
-  @protected
-  int dco_decode_u_8(dynamic raw);
+@protected TunStatus dco_decode_tun_status(dynamic raw);
 
-  @protected
-  void dco_decode_unit(dynamic raw);
+@protected int dco_decode_u_16(dynamic raw);
 
-  @protected
-  BigInt dco_decode_usize(dynamic raw);
+@protected int dco_decode_u_32(dynamic raw);
 
-  @protected
-  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
+@protected BigInt dco_decode_u_64(dynamic raw);
 
-  @protected
-  String sse_decode_String(SseDeserializer deserializer);
+@protected int dco_decode_u_8(dynamic raw);
 
-  @protected
-  ActiveConnection sse_decode_active_connection(SseDeserializer deserializer);
+@protected void dco_decode_unit(dynamic raw);
 
-  @protected
-  bool sse_decode_bool(SseDeserializer deserializer);
+@protected BigInt dco_decode_usize(dynamic raw);
 
-  @protected
-  int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
+@protected AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
-  @protected
-  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+@protected String sse_decode_String(SseDeserializer deserializer);
 
-  @protected
-  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
+@protected ActiveConnection sse_decode_active_connection(SseDeserializer deserializer);
 
-  @protected
-  ConnectionDto sse_decode_connection_dto(SseDeserializer deserializer);
+@protected bool sse_decode_bool(SseDeserializer deserializer);
 
-  @protected
-  ConnectionInfo sse_decode_connection_info(SseDeserializer deserializer);
+@protected int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
 
-  @protected
-  DnsConfigDto sse_decode_dns_config_dto(SseDeserializer deserializer);
+@protected int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
 
-  @protected
-  double sse_decode_f_64(SseDeserializer deserializer);
+@protected BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
 
-  @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
+@protected ConnectionDto sse_decode_connection_dto(SseDeserializer deserializer);
 
-  @protected
-  PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
+@protected ConnectionInfo sse_decode_connection_info(SseDeserializer deserializer);
 
-  @protected
-  LatencyTestResult sse_decode_latency_test_result(
-    SseDeserializer deserializer,
-  );
+@protected DnsConfigDto sse_decode_dns_config_dto(SseDeserializer deserializer);
 
-  @protected
-  List<String> sse_decode_list_String(SseDeserializer deserializer);
+@protected double sse_decode_f_64(SseDeserializer deserializer);
 
-  @protected
-  List<ActiveConnection> sse_decode_list_active_connection(
-    SseDeserializer deserializer,
-  );
+@protected int sse_decode_i_32(SseDeserializer deserializer);
 
-  @protected
-  List<ConnectionDto> sse_decode_list_connection_dto(
-    SseDeserializer deserializer,
-  );
+@protected PlatformInt64 sse_decode_i_64(SseDeserializer deserializer);
 
-  @protected
-  List<ConnectionInfo> sse_decode_list_connection_info(
-    SseDeserializer deserializer,
-  );
+@protected LatencyTestResult sse_decode_latency_test_result(SseDeserializer deserializer);
 
-  @protected
-  List<LatencyTestResult> sse_decode_list_latency_test_result(
-    SseDeserializer deserializer,
-  );
+@protected List<String> sse_decode_list_String(SseDeserializer deserializer);
 
-  @protected
-  Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+@protected List<ActiveConnection> sse_decode_list_active_connection(SseDeserializer deserializer);
 
-  @protected
-  List<ProxyGroupDto> sse_decode_list_proxy_group_dto(
-    SseDeserializer deserializer,
-  );
+@protected List<ConnectionDto> sse_decode_list_connection_dto(SseDeserializer deserializer);
 
-  @protected
-  List<ProxyInfoDto> sse_decode_list_proxy_info_dto(
-    SseDeserializer deserializer,
-  );
+@protected List<ConnectionInfo> sse_decode_list_connection_info(SseDeserializer deserializer);
 
-  @protected
-  List<ProxyLatencyDto> sse_decode_list_proxy_latency_dto(
-    SseDeserializer deserializer,
-  );
+@protected List<LatencyTestResult> sse_decode_list_latency_test_result(SseDeserializer deserializer);
 
-  @protected
-  List<(String, int)> sse_decode_list_record_string_u_16(
-    SseDeserializer deserializer,
-  );
+@protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
-  @protected
-  List<RuleDto> sse_decode_list_rule_dto(SseDeserializer deserializer);
+@protected List<ProxyGroupDto> sse_decode_list_proxy_group_dto(SseDeserializer deserializer);
 
-  @protected
-  String? sse_decode_opt_String(SseDeserializer deserializer);
+@protected List<ProxyInfoDto> sse_decode_list_proxy_info_dto(SseDeserializer deserializer);
 
-  @protected
-  int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
+@protected List<ProxyLatencyDto> sse_decode_list_proxy_latency_dto(SseDeserializer deserializer);
 
-  @protected
-  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
+@protected List<(String,int)> sse_decode_list_record_string_u_16(SseDeserializer deserializer);
 
-  @protected
-  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+@protected List<RuleDto> sse_decode_list_rule_dto(SseDeserializer deserializer);
 
-  @protected
-  ProxyGroupDto sse_decode_proxy_group_dto(SseDeserializer deserializer);
+@protected String? sse_decode_opt_String(SseDeserializer deserializer);
 
-  @protected
-  ProxyInfoDto sse_decode_proxy_info_dto(SseDeserializer deserializer);
+@protected int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
 
-  @protected
-  ProxyLatencyDto sse_decode_proxy_latency_dto(SseDeserializer deserializer);
+@protected int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
-  @protected
-  ProxyStatus sse_decode_proxy_status(SseDeserializer deserializer);
+@protected BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
 
-  @protected
-  (String, int) sse_decode_record_string_u_16(SseDeserializer deserializer);
+@protected ProxyGroupDto sse_decode_proxy_group_dto(SseDeserializer deserializer);
 
-  @protected
-  (BigInt, BigInt, BigInt, BigInt) sse_decode_record_u_64_u_64_u_64_u_64(
-    SseDeserializer deserializer,
-  );
+@protected ProxyInfoDto sse_decode_proxy_info_dto(SseDeserializer deserializer);
 
-  @protected
-  (BigInt, BigInt, BigInt, BigInt, BigInt, BigInt)
-  sse_decode_record_u_64_u_64_u_64_u_64_usize_usize(
-    SseDeserializer deserializer,
-  );
+@protected ProxyLatencyDto sse_decode_proxy_latency_dto(SseDeserializer deserializer);
 
-  @protected
-  RuleDto sse_decode_rule_dto(SseDeserializer deserializer);
+@protected ProxyStatus sse_decode_proxy_status(SseDeserializer deserializer);
 
-  @protected
-  SystemInfo sse_decode_system_info(SseDeserializer deserializer);
+@protected (String,int) sse_decode_record_string_u_16(SseDeserializer deserializer);
 
-  @protected
-  TrafficStats sse_decode_traffic_stats(SseDeserializer deserializer);
+@protected (BigInt,BigInt,BigInt,BigInt) sse_decode_record_u_64_u_64_u_64_u_64(SseDeserializer deserializer);
 
-  @protected
-  TrafficStatsDto sse_decode_traffic_stats_dto(SseDeserializer deserializer);
-
-  @protected
-  TunStatus sse_decode_tun_status(SseDeserializer deserializer);
-
-  @protected
-  int sse_decode_u_16(SseDeserializer deserializer);
-
-  @protected
-  int sse_decode_u_32(SseDeserializer deserializer);
-
-  @protected
-  BigInt sse_decode_u_64(SseDeserializer deserializer);
-
-  @protected
-  int sse_decode_u_8(SseDeserializer deserializer);
-
-  @protected
-  void sse_decode_unit(SseDeserializer deserializer);
-
-  @protected
-  BigInt sse_decode_usize(SseDeserializer deserializer);
-
-  @protected
-  ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_AnyhowException(
-    AnyhowException raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    throw UnimplementedError();
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_String(String raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return cst_encode_list_prim_u_8_strict(utf8.encoder.convert(raw));
-  }
-
-  @protected
-  ffi.Pointer<ffi.Uint16> cst_encode_box_autoadd_u_16(int raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return wire.cst_new_box_autoadd_u_16(cst_encode_u_16(raw));
-  }
-
-  @protected
-  ffi.Pointer<ffi.Uint32> cst_encode_box_autoadd_u_32(int raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return wire.cst_new_box_autoadd_u_32(cst_encode_u_32(raw));
-  }
-
-  @protected
-  ffi.Pointer<ffi.Uint64> cst_encode_box_autoadd_u_64(BigInt raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return wire.cst_new_box_autoadd_u_64(cst_encode_u_64(raw));
-  }
-
-  @protected
-  int cst_encode_i_64(PlatformInt64 raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw.toInt();
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_String> cst_encode_list_String(List<String> raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_String(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      ans.ref.ptr[i] = cst_encode_String(raw[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_active_connection>
-  cst_encode_list_active_connection(List<ActiveConnection> raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_active_connection(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_active_connection(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_connection_dto> cst_encode_list_connection_dto(
-    List<ConnectionDto> raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_connection_dto(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_connection_dto(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_connection_info> cst_encode_list_connection_info(
-    List<ConnectionInfo> raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_connection_info(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_connection_info(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_latency_test_result>
-  cst_encode_list_latency_test_result(List<LatencyTestResult> raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_latency_test_result(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_latency_test_result(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_list_prim_u_8_strict(
-    Uint8List raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_prim_u_8_strict(raw.length);
-    ans.ref.ptr.asTypedList(raw.length).setAll(0, raw);
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_proxy_group_dto> cst_encode_list_proxy_group_dto(
-    List<ProxyGroupDto> raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_proxy_group_dto(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_proxy_group_dto(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_proxy_info_dto> cst_encode_list_proxy_info_dto(
-    List<ProxyInfoDto> raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_proxy_info_dto(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_proxy_info_dto(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_proxy_latency_dto>
-  cst_encode_list_proxy_latency_dto(List<ProxyLatencyDto> raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_proxy_latency_dto(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_proxy_latency_dto(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_record_string_u_16>
-  cst_encode_list_record_string_u_16(List<(String, int)> raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_record_string_u_16(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_record_string_u_16(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_rule_dto> cst_encode_list_rule_dto(
-    List<RuleDto> raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    final ans = wire.cst_new_list_rule_dto(raw.length);
-    for (var i = 0; i < raw.length; ++i) {
-      cst_api_fill_to_wire_rule_dto(raw[i], ans.ref.ptr[i]);
-    }
-    return ans;
-  }
-
-  @protected
-  ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_opt_String(
-    String? raw,
-  ) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw == null ? ffi.nullptr : cst_encode_String(raw);
-  }
-
-  @protected
-  ffi.Pointer<ffi.Uint16> cst_encode_opt_box_autoadd_u_16(int? raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw == null ? ffi.nullptr : cst_encode_box_autoadd_u_16(raw);
-  }
-
-  @protected
-  ffi.Pointer<ffi.Uint32> cst_encode_opt_box_autoadd_u_32(int? raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw == null ? ffi.nullptr : cst_encode_box_autoadd_u_32(raw);
-  }
-
-  @protected
-  ffi.Pointer<ffi.Uint64> cst_encode_opt_box_autoadd_u_64(BigInt? raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw == null ? ffi.nullptr : cst_encode_box_autoadd_u_64(raw);
-  }
-
-  @protected
-  int cst_encode_u_64(BigInt raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw.toSigned(64).toInt();
-  }
-
-  @protected
-  int cst_encode_usize(BigInt raw) {
-    // Codec=Cst (C-struct based), see doc to use other codecs
-    return raw.toSigned(64).toInt();
-  }
-
-  @protected
-  void cst_api_fill_to_wire_active_connection(
-    ActiveConnection apiObj,
-    wire_cst_active_connection wireObj,
-  ) {
-    wireObj.id = cst_encode_String(apiObj.id);
-    wireObj.inbound_tag = cst_encode_String(apiObj.inboundTag);
-    wireObj.outbound_tag = cst_encode_String(apiObj.outboundTag);
-    wireObj.host = cst_encode_String(apiObj.host);
-    wireObj.destination_ip = cst_encode_opt_String(apiObj.destinationIp);
-    wireObj.destination_port = cst_encode_u_16(apiObj.destinationPort);
-    wireObj.protocol = cst_encode_String(apiObj.protocol);
-    wireObj.network = cst_encode_String(apiObj.network);
-    wireObj.upload_bytes = cst_encode_u_64(apiObj.uploadBytes);
-    wireObj.download_bytes = cst_encode_u_64(apiObj.downloadBytes);
-    wireObj.start_time = cst_encode_u_64(apiObj.startTime);
-    wireObj.rule = cst_encode_String(apiObj.rule);
-    wireObj.rule_payload = cst_encode_String(apiObj.rulePayload);
-    wireObj.process_name = cst_encode_opt_String(apiObj.processName);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_connection_dto(
-    ConnectionDto apiObj,
-    wire_cst_connection_dto wireObj,
-  ) {
-    wireObj.id = cst_encode_String(apiObj.id);
-    wireObj.src_addr = cst_encode_String(apiObj.srcAddr);
-    wireObj.dst_addr = cst_encode_String(apiObj.dstAddr);
-    wireObj.dst_domain = cst_encode_opt_String(apiObj.dstDomain);
-    wireObj.protocol = cst_encode_String(apiObj.protocol);
-    wireObj.outbound = cst_encode_String(apiObj.outbound);
-    wireObj.upload = cst_encode_u_64(apiObj.upload);
-    wireObj.download = cst_encode_u_64(apiObj.download);
-    wireObj.start_time = cst_encode_i_64(apiObj.startTime);
-    wireObj.rule = cst_encode_opt_String(apiObj.rule);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_connection_info(
-    ConnectionInfo apiObj,
-    wire_cst_connection_info wireObj,
-  ) {
-    wireObj.id = cst_encode_String(apiObj.id);
-    wireObj.host = cst_encode_String(apiObj.host);
-    wireObj.destination = cst_encode_String(apiObj.destination);
-    wireObj.upload = cst_encode_u_64(apiObj.upload);
-    wireObj.download = cst_encode_u_64(apiObj.download);
-    wireObj.start_time = cst_encode_u_64(apiObj.startTime);
-    wireObj.rule = cst_encode_String(apiObj.rule);
-    wireObj.chains = cst_encode_list_String(apiObj.chains);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_dns_config_dto(
-    DnsConfigDto apiObj,
-    wire_cst_dns_config_dto wireObj,
-  ) {
-    wireObj.enable = cst_encode_bool(apiObj.enable);
-    wireObj.listen = cst_encode_String(apiObj.listen);
-    wireObj.enhanced_mode = cst_encode_String(apiObj.enhancedMode);
-    wireObj.nameservers = cst_encode_list_String(apiObj.nameservers);
-    wireObj.fallback = cst_encode_list_String(apiObj.fallback);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_latency_test_result(
-    LatencyTestResult apiObj,
-    wire_cst_latency_test_result wireObj,
-  ) {
-    wireObj.proxy_name = cst_encode_String(apiObj.proxyName);
-    wireObj.latency_ms = cst_encode_opt_box_autoadd_u_32(apiObj.latencyMs);
-    wireObj.success = cst_encode_bool(apiObj.success);
-    wireObj.error = cst_encode_opt_String(apiObj.error);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_proxy_group_dto(
-    ProxyGroupDto apiObj,
-    wire_cst_proxy_group_dto wireObj,
-  ) {
-    wireObj.tag = cst_encode_String(apiObj.tag);
-    wireObj.group_type = cst_encode_String(apiObj.groupType);
-    wireObj.proxies = cst_encode_list_String(apiObj.proxies);
-    wireObj.selected = cst_encode_String(apiObj.selected);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_proxy_info_dto(
-    ProxyInfoDto apiObj,
-    wire_cst_proxy_info_dto wireObj,
-  ) {
-    wireObj.tag = cst_encode_String(apiObj.tag);
-    wireObj.protocol_type = cst_encode_String(apiObj.protocolType);
-    wireObj.server = cst_encode_opt_String(apiObj.server);
-    wireObj.port = cst_encode_opt_box_autoadd_u_16(apiObj.port);
-    wireObj.latency_ms = cst_encode_opt_box_autoadd_u_64(apiObj.latencyMs);
-    wireObj.alive = cst_encode_bool(apiObj.alive);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_proxy_latency_dto(
-    ProxyLatencyDto apiObj,
-    wire_cst_proxy_latency_dto wireObj,
-  ) {
-    wireObj.tag = cst_encode_String(apiObj.tag);
-    wireObj.latency_ms = cst_encode_opt_box_autoadd_u_64(apiObj.latencyMs);
-    wireObj.error = cst_encode_opt_String(apiObj.error);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_proxy_status(
-    ProxyStatus apiObj,
-    wire_cst_proxy_status wireObj,
-  ) {
-    wireObj.running = cst_encode_bool(apiObj.running);
-    wireObj.inbound_count = cst_encode_u_32(apiObj.inboundCount);
-    wireObj.outbound_count = cst_encode_u_32(apiObj.outboundCount);
-    wireObj.connection_count = cst_encode_u_32(apiObj.connectionCount);
-    wireObj.memory_usage = cst_encode_u_64(apiObj.memoryUsage);
-    wireObj.uptime = cst_encode_u_64(apiObj.uptime);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_record_string_u_16(
-    (String, int) apiObj,
-    wire_cst_record_string_u_16 wireObj,
-  ) {
-    wireObj.field0 = cst_encode_String(apiObj.$1);
-    wireObj.field1 = cst_encode_u_16(apiObj.$2);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_record_u_64_u_64_u_64_u_64(
-    (BigInt, BigInt, BigInt, BigInt) apiObj,
-    wire_cst_record_u_64_u_64_u_64_u_64 wireObj,
-  ) {
-    wireObj.field0 = cst_encode_u_64(apiObj.$1);
-    wireObj.field1 = cst_encode_u_64(apiObj.$2);
-    wireObj.field2 = cst_encode_u_64(apiObj.$3);
-    wireObj.field3 = cst_encode_u_64(apiObj.$4);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_record_u_64_u_64_u_64_u_64_usize_usize(
-    (BigInt, BigInt, BigInt, BigInt, BigInt, BigInt) apiObj,
-    wire_cst_record_u_64_u_64_u_64_u_64_usize_usize wireObj,
-  ) {
-    wireObj.field0 = cst_encode_u_64(apiObj.$1);
-    wireObj.field1 = cst_encode_u_64(apiObj.$2);
-    wireObj.field2 = cst_encode_u_64(apiObj.$3);
-    wireObj.field3 = cst_encode_u_64(apiObj.$4);
-    wireObj.field4 = cst_encode_usize(apiObj.$5);
-    wireObj.field5 = cst_encode_usize(apiObj.$6);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_rule_dto(
-    RuleDto apiObj,
-    wire_cst_rule_dto wireObj,
-  ) {
-    wireObj.rule_type = cst_encode_String(apiObj.ruleType);
-    wireObj.payload = cst_encode_String(apiObj.payload);
-    wireObj.outbound = cst_encode_String(apiObj.outbound);
-    wireObj.matched_count = cst_encode_u_64(apiObj.matchedCount);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_system_info(
-    SystemInfo apiObj,
-    wire_cst_system_info wireObj,
-  ) {
-    wireObj.platform = cst_encode_String(apiObj.platform);
-    wireObj.version = cst_encode_String(apiObj.version);
-    wireObj.memory_total = cst_encode_u_64(apiObj.memoryTotal);
-    wireObj.memory_used = cst_encode_u_64(apiObj.memoryUsed);
-    wireObj.cpu_cores = cst_encode_u_32(apiObj.cpuCores);
-    wireObj.cpu_threads = cst_encode_u_32(apiObj.cpuThreads);
-    wireObj.cpu_name = cst_encode_String(apiObj.cpuName);
-    wireObj.cpu_usage = cst_encode_f_64(apiObj.cpuUsage);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_traffic_stats(
-    TrafficStats apiObj,
-    wire_cst_traffic_stats wireObj,
-  ) {
-    wireObj.upload = cst_encode_u_64(apiObj.upload);
-    wireObj.download = cst_encode_u_64(apiObj.download);
-    wireObj.upload_speed = cst_encode_u_64(apiObj.uploadSpeed);
-    wireObj.download_speed = cst_encode_u_64(apiObj.downloadSpeed);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_traffic_stats_dto(
-    TrafficStatsDto apiObj,
-    wire_cst_traffic_stats_dto wireObj,
-  ) {
-    wireObj.upload = cst_encode_u_64(apiObj.upload);
-    wireObj.download = cst_encode_u_64(apiObj.download);
-    wireObj.total_upload = cst_encode_u_64(apiObj.totalUpload);
-    wireObj.total_download = cst_encode_u_64(apiObj.totalDownload);
-    wireObj.connection_count = cst_encode_u_32(apiObj.connectionCount);
-    wireObj.uptime_secs = cst_encode_u_64(apiObj.uptimeSecs);
-  }
-
-  @protected
-  void cst_api_fill_to_wire_tun_status(
-    TunStatus apiObj,
-    wire_cst_tun_status wireObj,
-  ) {
-    wireObj.enabled = cst_encode_bool(apiObj.enabled);
-    wireObj.interface_name = cst_encode_opt_String(apiObj.interfaceName);
-    wireObj.mtu = cst_encode_opt_box_autoadd_u_32(apiObj.mtu);
-    wireObj.error = cst_encode_opt_String(apiObj.error);
-  }
-
-  @protected
-  bool cst_encode_bool(bool raw);
-
-  @protected
-  double cst_encode_f_64(double raw);
-
-  @protected
-  int cst_encode_i_32(int raw);
-
-  @protected
-  int cst_encode_u_16(int raw);
-
-  @protected
-  int cst_encode_u_32(int raw);
-
-  @protected
-  int cst_encode_u_8(int raw);
-
-  @protected
-  void cst_encode_unit(void raw);
-
-  @protected
-  void sse_encode_AnyhowException(
-    AnyhowException self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_String(String self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_active_connection(
-    ActiveConnection self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_bool(bool self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_connection_dto(ConnectionDto self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_connection_info(
-    ConnectionInfo self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_dns_config_dto(DnsConfigDto self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_f_64(double self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_latency_test_result(
-    LatencyTestResult self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_String(List<String> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_active_connection(
-    List<ActiveConnection> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_connection_dto(
-    List<ConnectionDto> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_connection_info(
-    List<ConnectionInfo> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_latency_test_result(
-    List<LatencyTestResult> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_prim_u_8_strict(
-    Uint8List self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_proxy_group_dto(
-    List<ProxyGroupDto> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_proxy_info_dto(
-    List<ProxyInfoDto> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_proxy_latency_dto(
-    List<ProxyLatencyDto> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_record_string_u_16(
-    List<(String, int)> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_rule_dto(List<RuleDto> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_String(String? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_proxy_group_dto(ProxyGroupDto self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_proxy_info_dto(ProxyInfoDto self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_proxy_latency_dto(
-    ProxyLatencyDto self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_proxy_status(ProxyStatus self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_record_string_u_16(
-    (String, int) self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_record_u_64_u_64_u_64_u_64(
-    (BigInt, BigInt, BigInt, BigInt) self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_record_u_64_u_64_u_64_u_64_usize_usize(
-    (BigInt, BigInt, BigInt, BigInt, BigInt, BigInt) self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_rule_dto(RuleDto self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_system_info(SystemInfo self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_traffic_stats(TrafficStats self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_traffic_stats_dto(
-    TrafficStatsDto self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_tun_status(TunStatus self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_u_16(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_u_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_u_64(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_u_8(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_unit(void self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_usize(BigInt self, SseSerializer serializer);
-}
+@protected (BigInt,BigInt,BigInt,BigInt,BigInt,BigInt) sse_decode_record_u_64_u_64_u_64_u_64_usize_usize(SseDeserializer deserializer);
+
+@protected RuleDto sse_decode_rule_dto(SseDeserializer deserializer);
+
+@protected SystemInfo sse_decode_system_info(SseDeserializer deserializer);
+
+@protected TrafficStats sse_decode_traffic_stats(SseDeserializer deserializer);
+
+@protected TrafficStatsDto sse_decode_traffic_stats_dto(SseDeserializer deserializer);
+
+@protected TunStatus sse_decode_tun_status(SseDeserializer deserializer);
+
+@protected int sse_decode_u_16(SseDeserializer deserializer);
+
+@protected int sse_decode_u_32(SseDeserializer deserializer);
+
+@protected BigInt sse_decode_u_64(SseDeserializer deserializer);
+
+@protected int sse_decode_u_8(SseDeserializer deserializer);
+
+@protected void sse_decode_unit(SseDeserializer deserializer);
+
+@protected BigInt sse_decode_usize(SseDeserializer deserializer);
+
+@protected ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_AnyhowException(AnyhowException raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+throw UnimplementedError(); }
+
+@protected ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_String(String raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return cst_encode_list_prim_u_8_strict(utf8.encoder.convert(raw)); }
+
+@protected ffi.Pointer<ffi.Uint16> cst_encode_box_autoadd_u_16(int raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return wire.cst_new_box_autoadd_u_16(cst_encode_u_16(raw)); }
+
+@protected ffi.Pointer<ffi.Uint32> cst_encode_box_autoadd_u_32(int raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return wire.cst_new_box_autoadd_u_32(cst_encode_u_32(raw)); }
+
+@protected ffi.Pointer<ffi.Uint64> cst_encode_box_autoadd_u_64(BigInt raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return wire.cst_new_box_autoadd_u_64(cst_encode_u_64(raw)); }
+
+@protected int cst_encode_i_64(PlatformInt64 raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return raw.toInt(); }
+
+@protected ffi.Pointer<wire_cst_list_String> cst_encode_list_String(List<String> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_String(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    ans.ref.ptr[i] = cst_encode_String(raw[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_active_connection> cst_encode_list_active_connection(List<ActiveConnection> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_active_connection(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_active_connection(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_connection_dto> cst_encode_list_connection_dto(List<ConnectionDto> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_connection_dto(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_connection_dto(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_connection_info> cst_encode_list_connection_info(List<ConnectionInfo> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_connection_info(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_connection_info(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_latency_test_result> cst_encode_list_latency_test_result(List<LatencyTestResult> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_latency_test_result(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_latency_test_result(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_list_prim_u_8_strict(Uint8List raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_prim_u_8_strict(raw.length);
+                ans.ref.ptr.asTypedList(raw.length).setAll(0, raw);
+                return ans; }
+
+@protected ffi.Pointer<wire_cst_list_proxy_group_dto> cst_encode_list_proxy_group_dto(List<ProxyGroupDto> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_proxy_group_dto(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_proxy_group_dto(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_proxy_info_dto> cst_encode_list_proxy_info_dto(List<ProxyInfoDto> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_proxy_info_dto(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_proxy_info_dto(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_proxy_latency_dto> cst_encode_list_proxy_latency_dto(List<ProxyLatencyDto> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_proxy_latency_dto(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_proxy_latency_dto(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_record_string_u_16> cst_encode_list_record_string_u_16(List<(String,int)> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_record_string_u_16(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_record_string_u_16(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_rule_dto> cst_encode_list_rule_dto(List<RuleDto> raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+final ans = wire.cst_new_list_rule_dto(raw.length);
+                for (var i = 0; i < raw.length; ++i) {
+                    cst_api_fill_to_wire_rule_dto(raw[i], ans.ref.ptr[i]);
+                }
+                return ans;
+                 }
+
+@protected ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_opt_String(String? raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return raw == null ? ffi.nullptr : cst_encode_String(raw); }
+
+@protected ffi.Pointer<ffi.Uint16> cst_encode_opt_box_autoadd_u_16(int? raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return raw == null ? ffi.nullptr : cst_encode_box_autoadd_u_16(raw); }
+
+@protected ffi.Pointer<ffi.Uint32> cst_encode_opt_box_autoadd_u_32(int? raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return raw == null ? ffi.nullptr : cst_encode_box_autoadd_u_32(raw); }
+
+@protected ffi.Pointer<ffi.Uint64> cst_encode_opt_box_autoadd_u_64(BigInt? raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return raw == null ? ffi.nullptr : cst_encode_box_autoadd_u_64(raw); }
+
+@protected int cst_encode_u_64(BigInt raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return raw.toSigned(64).toInt(); }
+
+@protected int cst_encode_usize(BigInt raw){ // Codec=Cst (C-struct based), see doc to use other codecs
+return raw.toSigned(64).toInt(); }
+
+@protected void cst_api_fill_to_wire_active_connection(ActiveConnection apiObj, wire_cst_active_connection wireObj){ wireObj.id = cst_encode_String(apiObj.id);
+wireObj.inbound_tag = cst_encode_String(apiObj.inboundTag);
+wireObj.outbound_tag = cst_encode_String(apiObj.outboundTag);
+wireObj.host = cst_encode_String(apiObj.host);
+wireObj.destination_ip = cst_encode_opt_String(apiObj.destinationIp);
+wireObj.destination_port = cst_encode_u_16(apiObj.destinationPort);
+wireObj.protocol = cst_encode_String(apiObj.protocol);
+wireObj.network = cst_encode_String(apiObj.network);
+wireObj.upload_bytes = cst_encode_u_64(apiObj.uploadBytes);
+wireObj.download_bytes = cst_encode_u_64(apiObj.downloadBytes);
+wireObj.start_time = cst_encode_u_64(apiObj.startTime);
+wireObj.rule = cst_encode_String(apiObj.rule);
+wireObj.rule_payload = cst_encode_String(apiObj.rulePayload);
+wireObj.process_name = cst_encode_opt_String(apiObj.processName); }
+
+@protected void cst_api_fill_to_wire_connection_dto(ConnectionDto apiObj, wire_cst_connection_dto wireObj){ wireObj.id = cst_encode_String(apiObj.id);
+wireObj.src_addr = cst_encode_String(apiObj.srcAddr);
+wireObj.dst_addr = cst_encode_String(apiObj.dstAddr);
+wireObj.dst_domain = cst_encode_opt_String(apiObj.dstDomain);
+wireObj.protocol = cst_encode_String(apiObj.protocol);
+wireObj.outbound = cst_encode_String(apiObj.outbound);
+wireObj.upload = cst_encode_u_64(apiObj.upload);
+wireObj.download = cst_encode_u_64(apiObj.download);
+wireObj.start_time = cst_encode_i_64(apiObj.startTime);
+wireObj.rule = cst_encode_opt_String(apiObj.rule); }
+
+@protected void cst_api_fill_to_wire_connection_info(ConnectionInfo apiObj, wire_cst_connection_info wireObj){ wireObj.id = cst_encode_String(apiObj.id);
+wireObj.host = cst_encode_String(apiObj.host);
+wireObj.destination = cst_encode_String(apiObj.destination);
+wireObj.upload = cst_encode_u_64(apiObj.upload);
+wireObj.download = cst_encode_u_64(apiObj.download);
+wireObj.start_time = cst_encode_u_64(apiObj.startTime);
+wireObj.rule = cst_encode_String(apiObj.rule);
+wireObj.chains = cst_encode_list_String(apiObj.chains); }
+
+@protected void cst_api_fill_to_wire_dns_config_dto(DnsConfigDto apiObj, wire_cst_dns_config_dto wireObj){ wireObj.enable = cst_encode_bool(apiObj.enable);
+wireObj.listen = cst_encode_String(apiObj.listen);
+wireObj.enhanced_mode = cst_encode_String(apiObj.enhancedMode);
+wireObj.nameservers = cst_encode_list_String(apiObj.nameservers);
+wireObj.fallback = cst_encode_list_String(apiObj.fallback); }
+
+@protected void cst_api_fill_to_wire_latency_test_result(LatencyTestResult apiObj, wire_cst_latency_test_result wireObj){ wireObj.proxy_name = cst_encode_String(apiObj.proxyName);
+wireObj.latency_ms = cst_encode_opt_box_autoadd_u_32(apiObj.latencyMs);
+wireObj.success = cst_encode_bool(apiObj.success);
+wireObj.error = cst_encode_opt_String(apiObj.error); }
+
+@protected void cst_api_fill_to_wire_proxy_group_dto(ProxyGroupDto apiObj, wire_cst_proxy_group_dto wireObj){ wireObj.tag = cst_encode_String(apiObj.tag);
+wireObj.group_type = cst_encode_String(apiObj.groupType);
+wireObj.proxies = cst_encode_list_String(apiObj.proxies);
+wireObj.selected = cst_encode_String(apiObj.selected); }
+
+@protected void cst_api_fill_to_wire_proxy_info_dto(ProxyInfoDto apiObj, wire_cst_proxy_info_dto wireObj){ wireObj.tag = cst_encode_String(apiObj.tag);
+wireObj.protocol_type = cst_encode_String(apiObj.protocolType);
+wireObj.server = cst_encode_opt_String(apiObj.server);
+wireObj.port = cst_encode_opt_box_autoadd_u_16(apiObj.port);
+wireObj.latency_ms = cst_encode_opt_box_autoadd_u_64(apiObj.latencyMs);
+wireObj.alive = cst_encode_bool(apiObj.alive); }
+
+@protected void cst_api_fill_to_wire_proxy_latency_dto(ProxyLatencyDto apiObj, wire_cst_proxy_latency_dto wireObj){ wireObj.tag = cst_encode_String(apiObj.tag);
+wireObj.latency_ms = cst_encode_opt_box_autoadd_u_64(apiObj.latencyMs);
+wireObj.error = cst_encode_opt_String(apiObj.error); }
+
+@protected void cst_api_fill_to_wire_proxy_status(ProxyStatus apiObj, wire_cst_proxy_status wireObj){ wireObj.running = cst_encode_bool(apiObj.running);
+wireObj.inbound_count = cst_encode_u_32(apiObj.inboundCount);
+wireObj.outbound_count = cst_encode_u_32(apiObj.outboundCount);
+wireObj.connection_count = cst_encode_u_32(apiObj.connectionCount);
+wireObj.memory_usage = cst_encode_u_64(apiObj.memoryUsage);
+wireObj.uptime = cst_encode_u_64(apiObj.uptime); }
+
+@protected void cst_api_fill_to_wire_record_string_u_16((String,int) apiObj, wire_cst_record_string_u_16 wireObj){ wireObj.field0 = cst_encode_String(apiObj.$1);
+wireObj.field1 = cst_encode_u_16(apiObj.$2); }
+
+@protected void cst_api_fill_to_wire_record_u_64_u_64_u_64_u_64((BigInt,BigInt,BigInt,BigInt) apiObj, wire_cst_record_u_64_u_64_u_64_u_64 wireObj){ wireObj.field0 = cst_encode_u_64(apiObj.$1);
+wireObj.field1 = cst_encode_u_64(apiObj.$2);
+wireObj.field2 = cst_encode_u_64(apiObj.$3);
+wireObj.field3 = cst_encode_u_64(apiObj.$4); }
+
+@protected void cst_api_fill_to_wire_record_u_64_u_64_u_64_u_64_usize_usize((BigInt,BigInt,BigInt,BigInt,BigInt,BigInt) apiObj, wire_cst_record_u_64_u_64_u_64_u_64_usize_usize wireObj){ wireObj.field0 = cst_encode_u_64(apiObj.$1);
+wireObj.field1 = cst_encode_u_64(apiObj.$2);
+wireObj.field2 = cst_encode_u_64(apiObj.$3);
+wireObj.field3 = cst_encode_u_64(apiObj.$4);
+wireObj.field4 = cst_encode_usize(apiObj.$5);
+wireObj.field5 = cst_encode_usize(apiObj.$6); }
+
+@protected void cst_api_fill_to_wire_rule_dto(RuleDto apiObj, wire_cst_rule_dto wireObj){ wireObj.rule_type = cst_encode_String(apiObj.ruleType);
+wireObj.payload = cst_encode_String(apiObj.payload);
+wireObj.outbound = cst_encode_String(apiObj.outbound);
+wireObj.matched_count = cst_encode_u_64(apiObj.matchedCount); }
+
+@protected void cst_api_fill_to_wire_system_info(SystemInfo apiObj, wire_cst_system_info wireObj){ wireObj.platform = cst_encode_String(apiObj.platform);
+wireObj.version = cst_encode_String(apiObj.version);
+wireObj.memory_total = cst_encode_u_64(apiObj.memoryTotal);
+wireObj.memory_used = cst_encode_u_64(apiObj.memoryUsed);
+wireObj.cpu_cores = cst_encode_u_32(apiObj.cpuCores);
+wireObj.cpu_threads = cst_encode_u_32(apiObj.cpuThreads);
+wireObj.cpu_name = cst_encode_String(apiObj.cpuName);
+wireObj.cpu_usage = cst_encode_f_64(apiObj.cpuUsage); }
+
+@protected void cst_api_fill_to_wire_traffic_stats(TrafficStats apiObj, wire_cst_traffic_stats wireObj){ wireObj.upload = cst_encode_u_64(apiObj.upload);
+wireObj.download = cst_encode_u_64(apiObj.download);
+wireObj.upload_speed = cst_encode_u_64(apiObj.uploadSpeed);
+wireObj.download_speed = cst_encode_u_64(apiObj.downloadSpeed); }
+
+@protected void cst_api_fill_to_wire_traffic_stats_dto(TrafficStatsDto apiObj, wire_cst_traffic_stats_dto wireObj){ wireObj.upload = cst_encode_u_64(apiObj.upload);
+wireObj.download = cst_encode_u_64(apiObj.download);
+wireObj.total_upload = cst_encode_u_64(apiObj.totalUpload);
+wireObj.total_download = cst_encode_u_64(apiObj.totalDownload);
+wireObj.connection_count = cst_encode_u_32(apiObj.connectionCount);
+wireObj.uptime_secs = cst_encode_u_64(apiObj.uptimeSecs); }
+
+@protected void cst_api_fill_to_wire_tun_status(TunStatus apiObj, wire_cst_tun_status wireObj){ wireObj.enabled = cst_encode_bool(apiObj.enabled);
+wireObj.interface_name = cst_encode_opt_String(apiObj.interfaceName);
+wireObj.mtu = cst_encode_opt_box_autoadd_u_32(apiObj.mtu);
+wireObj.error = cst_encode_opt_String(apiObj.error); }
+
+@protected bool cst_encode_bool(bool raw);
+
+@protected double cst_encode_f_64(double raw);
+
+@protected int cst_encode_i_32(int raw);
+
+@protected int cst_encode_u_16(int raw);
+
+@protected int cst_encode_u_32(int raw);
+
+@protected int cst_encode_u_8(int raw);
+
+@protected void cst_encode_unit(void raw);
+
+@protected void sse_encode_AnyhowException(AnyhowException self, SseSerializer serializer);
+
+@protected void sse_encode_String(String self, SseSerializer serializer);
+
+@protected void sse_encode_active_connection(ActiveConnection self, SseSerializer serializer);
+
+@protected void sse_encode_bool(bool self, SseSerializer serializer);
+
+@protected void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
+
+@protected void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+@protected void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
+
+@protected void sse_encode_connection_dto(ConnectionDto self, SseSerializer serializer);
+
+@protected void sse_encode_connection_info(ConnectionInfo self, SseSerializer serializer);
+
+@protected void sse_encode_dns_config_dto(DnsConfigDto self, SseSerializer serializer);
+
+@protected void sse_encode_f_64(double self, SseSerializer serializer);
+
+@protected void sse_encode_i_32(int self, SseSerializer serializer);
+
+@protected void sse_encode_i_64(PlatformInt64 self, SseSerializer serializer);
+
+@protected void sse_encode_latency_test_result(LatencyTestResult self, SseSerializer serializer);
+
+@protected void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+@protected void sse_encode_list_active_connection(List<ActiveConnection> self, SseSerializer serializer);
+
+@protected void sse_encode_list_connection_dto(List<ConnectionDto> self, SseSerializer serializer);
+
+@protected void sse_encode_list_connection_info(List<ConnectionInfo> self, SseSerializer serializer);
+
+@protected void sse_encode_list_latency_test_result(List<LatencyTestResult> self, SseSerializer serializer);
+
+@protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer);
+
+@protected void sse_encode_list_proxy_group_dto(List<ProxyGroupDto> self, SseSerializer serializer);
+
+@protected void sse_encode_list_proxy_info_dto(List<ProxyInfoDto> self, SseSerializer serializer);
+
+@protected void sse_encode_list_proxy_latency_dto(List<ProxyLatencyDto> self, SseSerializer serializer);
+
+@protected void sse_encode_list_record_string_u_16(List<(String,int)> self, SseSerializer serializer);
+
+@protected void sse_encode_list_rule_dto(List<RuleDto> self, SseSerializer serializer);
+
+@protected void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+@protected void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
+
+@protected void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+@protected void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+@protected void sse_encode_proxy_group_dto(ProxyGroupDto self, SseSerializer serializer);
+
+@protected void sse_encode_proxy_info_dto(ProxyInfoDto self, SseSerializer serializer);
+
+@protected void sse_encode_proxy_latency_dto(ProxyLatencyDto self, SseSerializer serializer);
+
+@protected void sse_encode_proxy_status(ProxyStatus self, SseSerializer serializer);
+
+@protected void sse_encode_record_string_u_16((String,int) self, SseSerializer serializer);
+
+@protected void sse_encode_record_u_64_u_64_u_64_u_64((BigInt,BigInt,BigInt,BigInt) self, SseSerializer serializer);
+
+@protected void sse_encode_record_u_64_u_64_u_64_u_64_usize_usize((BigInt,BigInt,BigInt,BigInt,BigInt,BigInt) self, SseSerializer serializer);
+
+@protected void sse_encode_rule_dto(RuleDto self, SseSerializer serializer);
+
+@protected void sse_encode_system_info(SystemInfo self, SseSerializer serializer);
+
+@protected void sse_encode_traffic_stats(TrafficStats self, SseSerializer serializer);
+
+@protected void sse_encode_traffic_stats_dto(TrafficStatsDto self, SseSerializer serializer);
+
+@protected void sse_encode_tun_status(TunStatus self, SseSerializer serializer);
+
+@protected void sse_encode_u_16(int self, SseSerializer serializer);
+
+@protected void sse_encode_u_32(int self, SseSerializer serializer);
+
+@protected void sse_encode_u_64(BigInt self, SseSerializer serializer);
+
+@protected void sse_encode_u_8(int self, SseSerializer serializer);
+
+@protected void sse_encode_unit(void self, SseSerializer serializer);
+
+@protected void sse_encode_usize(BigInt self, SseSerializer serializer);
+                }
+                
+
 
 // Section: wire_class
 
@@ -967,13 +565,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 // AUTO GENERATED FILE, DO NOT EDIT.
 //
 // Generated by `package:ffigen`.
-// ignore_for_file: type=lint
+// ignore_for_file: type=lint, unused_import, unused_element, deprecated_member_use_from_same_package
 
 /// generated by flutter_rust_bridge
 class RustLibWire implements BaseWire {
-  factory RustLibWire.fromExternalLibrary(ExternalLibrary lib) =>
-      RustLibWire(lib.ffiDynamicLibrary);
 
+            factory RustLibWire.fromExternalLibrary(ExternalLibrary lib) =>
+              RustLibWire(lib.ffiDynamicLibrary);
+        
   /// Holds the symbol lookup function.
   final ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName)
   _lookup;
@@ -986,6 +585,245 @@ class RustLibWire implements BaseWire {
   RustLibWire.fromLookup(
     ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup,
   ) : _lookup = lookup;
+
+  int __android_log_write(
+    int prio,
+    ffi.Pointer<ffi.Int8> tag,
+    ffi.Pointer<ffi.Int8> text,
+  ) {
+    return ___android_log_write(prio, tag, text);
+  }
+
+  late final ___android_log_writePtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int32 Function(
+            ffi.Int32,
+            ffi.Pointer<ffi.Int8>,
+            ffi.Pointer<ffi.Int8>,
+          )
+        >
+      >('__android_log_write');
+  late final ___android_log_write = ___android_log_writePtr
+      .asFunction<
+        int Function(int, ffi.Pointer<ffi.Int8>, ffi.Pointer<ffi.Int8>)
+      >();
+
+  ffi.Pointer<ffi.Uint16> cst_new_box_autoadd_u_16(int value) {
+    return _cst_new_box_autoadd_u_16(value);
+  }
+
+  late final _cst_new_box_autoadd_u_16Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint16> Function(ffi.Uint16)>>(
+        'frbgen_veloguard_cst_new_box_autoadd_u_16',
+      );
+  late final _cst_new_box_autoadd_u_16 = _cst_new_box_autoadd_u_16Ptr
+      .asFunction<ffi.Pointer<ffi.Uint16> Function(int)>();
+
+  ffi.Pointer<ffi.Uint32> cst_new_box_autoadd_u_32(int value) {
+    return _cst_new_box_autoadd_u_32(value);
+  }
+
+  late final _cst_new_box_autoadd_u_32Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint32> Function(ffi.Uint32)>>(
+        'frbgen_veloguard_cst_new_box_autoadd_u_32',
+      );
+  late final _cst_new_box_autoadd_u_32 = _cst_new_box_autoadd_u_32Ptr
+      .asFunction<ffi.Pointer<ffi.Uint32> Function(int)>();
+
+  ffi.Pointer<ffi.Uint64> cst_new_box_autoadd_u_64(int value) {
+    return _cst_new_box_autoadd_u_64(value);
+  }
+
+  late final _cst_new_box_autoadd_u_64Ptr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint64> Function(ffi.Uint64)>>(
+        'frbgen_veloguard_cst_new_box_autoadd_u_64',
+      );
+  late final _cst_new_box_autoadd_u_64 = _cst_new_box_autoadd_u_64Ptr
+      .asFunction<ffi.Pointer<ffi.Uint64> Function(int)>();
+
+  ffi.Pointer<wire_cst_list_String> cst_new_list_String(int len) {
+    return _cst_new_list_String(len);
+  }
+
+  late final _cst_new_list_StringPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_String> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_String');
+  late final _cst_new_list_String = _cst_new_list_StringPtr
+      .asFunction<ffi.Pointer<wire_cst_list_String> Function(int)>();
+
+  ffi.Pointer<wire_cst_list_active_connection> cst_new_list_active_connection(
+    int len,
+  ) {
+    return _cst_new_list_active_connection(len);
+  }
+
+  late final _cst_new_list_active_connectionPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_active_connection> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_active_connection');
+  late final _cst_new_list_active_connection =
+      _cst_new_list_active_connectionPtr
+          .asFunction<
+            ffi.Pointer<wire_cst_list_active_connection> Function(int)
+          >();
+
+  ffi.Pointer<wire_cst_list_connection_dto> cst_new_list_connection_dto(
+    int len,
+  ) {
+    return _cst_new_list_connection_dto(len);
+  }
+
+  late final _cst_new_list_connection_dtoPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_connection_dto> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_connection_dto');
+  late final _cst_new_list_connection_dto = _cst_new_list_connection_dtoPtr
+      .asFunction<ffi.Pointer<wire_cst_list_connection_dto> Function(int)>();
+
+  ffi.Pointer<wire_cst_list_connection_info> cst_new_list_connection_info(
+    int len,
+  ) {
+    return _cst_new_list_connection_info(len);
+  }
+
+  late final _cst_new_list_connection_infoPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_connection_info> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_connection_info');
+  late final _cst_new_list_connection_info = _cst_new_list_connection_infoPtr
+      .asFunction<ffi.Pointer<wire_cst_list_connection_info> Function(int)>();
+
+  ffi.Pointer<wire_cst_list_latency_test_result>
+  cst_new_list_latency_test_result(int len) {
+    return _cst_new_list_latency_test_result(len);
+  }
+
+  late final _cst_new_list_latency_test_resultPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_latency_test_result> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_latency_test_result');
+  late final _cst_new_list_latency_test_result =
+      _cst_new_list_latency_test_resultPtr
+          .asFunction<
+            ffi.Pointer<wire_cst_list_latency_test_result> Function(int)
+          >();
+
+  ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_new_list_prim_u_8_strict(
+    int len,
+  ) {
+    return _cst_new_list_prim_u_8_strict(len);
+  }
+
+  late final _cst_new_list_prim_u_8_strictPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_prim_u_8_strict');
+  late final _cst_new_list_prim_u_8_strict = _cst_new_list_prim_u_8_strictPtr
+      .asFunction<ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(int)>();
+
+  ffi.Pointer<wire_cst_list_proxy_group_dto> cst_new_list_proxy_group_dto(
+    int len,
+  ) {
+    return _cst_new_list_proxy_group_dto(len);
+  }
+
+  late final _cst_new_list_proxy_group_dtoPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_proxy_group_dto> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_proxy_group_dto');
+  late final _cst_new_list_proxy_group_dto = _cst_new_list_proxy_group_dtoPtr
+      .asFunction<ffi.Pointer<wire_cst_list_proxy_group_dto> Function(int)>();
+
+  ffi.Pointer<wire_cst_list_proxy_info_dto> cst_new_list_proxy_info_dto(
+    int len,
+  ) {
+    return _cst_new_list_proxy_info_dto(len);
+  }
+
+  late final _cst_new_list_proxy_info_dtoPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_proxy_info_dto> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_proxy_info_dto');
+  late final _cst_new_list_proxy_info_dto = _cst_new_list_proxy_info_dtoPtr
+      .asFunction<ffi.Pointer<wire_cst_list_proxy_info_dto> Function(int)>();
+
+  ffi.Pointer<wire_cst_list_proxy_latency_dto> cst_new_list_proxy_latency_dto(
+    int len,
+  ) {
+    return _cst_new_list_proxy_latency_dto(len);
+  }
+
+  late final _cst_new_list_proxy_latency_dtoPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_proxy_latency_dto> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_proxy_latency_dto');
+  late final _cst_new_list_proxy_latency_dto =
+      _cst_new_list_proxy_latency_dtoPtr
+          .asFunction<
+            ffi.Pointer<wire_cst_list_proxy_latency_dto> Function(int)
+          >();
+
+  ffi.Pointer<wire_cst_list_record_string_u_16> cst_new_list_record_string_u_16(
+    int len,
+  ) {
+    return _cst_new_list_record_string_u_16(len);
+  }
+
+  late final _cst_new_list_record_string_u_16Ptr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_record_string_u_16> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_record_string_u_16');
+  late final _cst_new_list_record_string_u_16 =
+      _cst_new_list_record_string_u_16Ptr
+          .asFunction<
+            ffi.Pointer<wire_cst_list_record_string_u_16> Function(int)
+          >();
+
+  ffi.Pointer<wire_cst_list_rule_dto> cst_new_list_rule_dto(int len) {
+    return _cst_new_list_rule_dto(len);
+  }
+
+  late final _cst_new_list_rule_dtoPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_rule_dto> Function(ffi.Int32)
+        >
+      >('frbgen_veloguard_cst_new_list_rule_dto');
+  late final _cst_new_list_rule_dto = _cst_new_list_rule_dtoPtr
+      .asFunction<ffi.Pointer<wire_cst_list_rule_dto> Function(int)>();
+
+  int dummy_method_to_enforce_bundling() {
+    return _dummy_method_to_enforce_bundling();
+  }
+
+  late final _dummy_method_to_enforce_bundlingPtr =
+      _lookup<ffi.NativeFunction<ffi.Int64 Function()>>(
+        'dummy_method_to_enforce_bundling',
+      );
+  late final _dummy_method_to_enforce_bundling =
+      _dummy_method_to_enforce_bundlingPtr.asFunction<int Function()>();
 
   void store_dart_post_cobject(DartPostCObjectFnType ptr) {
     return _store_dart_post_cobject(ptr);
@@ -2168,283 +2006,63 @@ class RustLibWire implements BaseWire {
               int,
             )
           >();
-
-  ffi.Pointer<ffi.Uint16> cst_new_box_autoadd_u_16(int value) {
-    return _cst_new_box_autoadd_u_16(value);
-  }
-
-  late final _cst_new_box_autoadd_u_16Ptr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint16> Function(ffi.Uint16)>>(
-        'frbgen_veloguard_cst_new_box_autoadd_u_16',
-      );
-  late final _cst_new_box_autoadd_u_16 = _cst_new_box_autoadd_u_16Ptr
-      .asFunction<ffi.Pointer<ffi.Uint16> Function(int)>();
-
-  ffi.Pointer<ffi.Uint32> cst_new_box_autoadd_u_32(int value) {
-    return _cst_new_box_autoadd_u_32(value);
-  }
-
-  late final _cst_new_box_autoadd_u_32Ptr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint32> Function(ffi.Uint32)>>(
-        'frbgen_veloguard_cst_new_box_autoadd_u_32',
-      );
-  late final _cst_new_box_autoadd_u_32 = _cst_new_box_autoadd_u_32Ptr
-      .asFunction<ffi.Pointer<ffi.Uint32> Function(int)>();
-
-  ffi.Pointer<ffi.Uint64> cst_new_box_autoadd_u_64(int value) {
-    return _cst_new_box_autoadd_u_64(value);
-  }
-
-  late final _cst_new_box_autoadd_u_64Ptr =
-      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint64> Function(ffi.Uint64)>>(
-        'frbgen_veloguard_cst_new_box_autoadd_u_64',
-      );
-  late final _cst_new_box_autoadd_u_64 = _cst_new_box_autoadd_u_64Ptr
-      .asFunction<ffi.Pointer<ffi.Uint64> Function(int)>();
-
-  ffi.Pointer<wire_cst_list_String> cst_new_list_String(int len) {
-    return _cst_new_list_String(len);
-  }
-
-  late final _cst_new_list_StringPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_String> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_String');
-  late final _cst_new_list_String = _cst_new_list_StringPtr
-      .asFunction<ffi.Pointer<wire_cst_list_String> Function(int)>();
-
-  ffi.Pointer<wire_cst_list_active_connection> cst_new_list_active_connection(
-    int len,
-  ) {
-    return _cst_new_list_active_connection(len);
-  }
-
-  late final _cst_new_list_active_connectionPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_active_connection> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_active_connection');
-  late final _cst_new_list_active_connection =
-      _cst_new_list_active_connectionPtr
-          .asFunction<
-            ffi.Pointer<wire_cst_list_active_connection> Function(int)
-          >();
-
-  ffi.Pointer<wire_cst_list_connection_dto> cst_new_list_connection_dto(
-    int len,
-  ) {
-    return _cst_new_list_connection_dto(len);
-  }
-
-  late final _cst_new_list_connection_dtoPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_connection_dto> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_connection_dto');
-  late final _cst_new_list_connection_dto = _cst_new_list_connection_dtoPtr
-      .asFunction<ffi.Pointer<wire_cst_list_connection_dto> Function(int)>();
-
-  ffi.Pointer<wire_cst_list_connection_info> cst_new_list_connection_info(
-    int len,
-  ) {
-    return _cst_new_list_connection_info(len);
-  }
-
-  late final _cst_new_list_connection_infoPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_connection_info> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_connection_info');
-  late final _cst_new_list_connection_info = _cst_new_list_connection_infoPtr
-      .asFunction<ffi.Pointer<wire_cst_list_connection_info> Function(int)>();
-
-  ffi.Pointer<wire_cst_list_latency_test_result>
-  cst_new_list_latency_test_result(int len) {
-    return _cst_new_list_latency_test_result(len);
-  }
-
-  late final _cst_new_list_latency_test_resultPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_latency_test_result> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_latency_test_result');
-  late final _cst_new_list_latency_test_result =
-      _cst_new_list_latency_test_resultPtr
-          .asFunction<
-            ffi.Pointer<wire_cst_list_latency_test_result> Function(int)
-          >();
-
-  ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_new_list_prim_u_8_strict(
-    int len,
-  ) {
-    return _cst_new_list_prim_u_8_strict(len);
-  }
-
-  late final _cst_new_list_prim_u_8_strictPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_prim_u_8_strict');
-  late final _cst_new_list_prim_u_8_strict = _cst_new_list_prim_u_8_strictPtr
-      .asFunction<ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(int)>();
-
-  ffi.Pointer<wire_cst_list_proxy_group_dto> cst_new_list_proxy_group_dto(
-    int len,
-  ) {
-    return _cst_new_list_proxy_group_dto(len);
-  }
-
-  late final _cst_new_list_proxy_group_dtoPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_proxy_group_dto> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_proxy_group_dto');
-  late final _cst_new_list_proxy_group_dto = _cst_new_list_proxy_group_dtoPtr
-      .asFunction<ffi.Pointer<wire_cst_list_proxy_group_dto> Function(int)>();
-
-  ffi.Pointer<wire_cst_list_proxy_info_dto> cst_new_list_proxy_info_dto(
-    int len,
-  ) {
-    return _cst_new_list_proxy_info_dto(len);
-  }
-
-  late final _cst_new_list_proxy_info_dtoPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_proxy_info_dto> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_proxy_info_dto');
-  late final _cst_new_list_proxy_info_dto = _cst_new_list_proxy_info_dtoPtr
-      .asFunction<ffi.Pointer<wire_cst_list_proxy_info_dto> Function(int)>();
-
-  ffi.Pointer<wire_cst_list_proxy_latency_dto> cst_new_list_proxy_latency_dto(
-    int len,
-  ) {
-    return _cst_new_list_proxy_latency_dto(len);
-  }
-
-  late final _cst_new_list_proxy_latency_dtoPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_proxy_latency_dto> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_proxy_latency_dto');
-  late final _cst_new_list_proxy_latency_dto =
-      _cst_new_list_proxy_latency_dtoPtr
-          .asFunction<
-            ffi.Pointer<wire_cst_list_proxy_latency_dto> Function(int)
-          >();
-
-  ffi.Pointer<wire_cst_list_record_string_u_16> cst_new_list_record_string_u_16(
-    int len,
-  ) {
-    return _cst_new_list_record_string_u_16(len);
-  }
-
-  late final _cst_new_list_record_string_u_16Ptr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_record_string_u_16> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_record_string_u_16');
-  late final _cst_new_list_record_string_u_16 =
-      _cst_new_list_record_string_u_16Ptr
-          .asFunction<
-            ffi.Pointer<wire_cst_list_record_string_u_16> Function(int)
-          >();
-
-  ffi.Pointer<wire_cst_list_rule_dto> cst_new_list_rule_dto(int len) {
-    return _cst_new_list_rule_dto(len);
-  }
-
-  late final _cst_new_list_rule_dtoPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Pointer<wire_cst_list_rule_dto> Function(ffi.Int32)
-        >
-      >('frbgen_veloguard_cst_new_list_rule_dto');
-  late final _cst_new_list_rule_dto = _cst_new_list_rule_dtoPtr
-      .asFunction<ffi.Pointer<wire_cst_list_rule_dto> Function(int)>();
-
-  int __android_log_write(
-    int prio,
-    ffi.Pointer<ffi.Int8> tag,
-    ffi.Pointer<ffi.Int8> text,
-  ) {
-    return ___android_log_write(prio, tag, text);
-  }
-
-  late final ___android_log_writePtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.Int32 Function(
-            ffi.Int32,
-            ffi.Pointer<ffi.Int8>,
-            ffi.Pointer<ffi.Int8>,
-          )
-        >
-      >('__android_log_write');
-  late final ___android_log_write = ___android_log_writePtr
-      .asFunction<
-        int Function(int, ffi.Pointer<ffi.Int8>, ffi.Pointer<ffi.Int8>)
-      >();
-
-  int dummy_method_to_enforce_bundling() {
-    return _dummy_method_to_enforce_bundling();
-  }
-
-  late final _dummy_method_to_enforce_bundlingPtr =
-      _lookup<ffi.NativeFunction<ffi.Int64 Function()>>(
-        'dummy_method_to_enforce_bundling',
-      );
-  late final _dummy_method_to_enforce_bundling =
-      _dummy_method_to_enforce_bundlingPtr.asFunction<int Function()>();
 }
 
+final class Config extends ffi.Opaque {}
+
+const int DEFAULT_BODY_LIMIT = 8388608;
+
+const int DEFAULT_MSS_V4 = 1360;
+
+const int DEFAULT_MSS_V6 = 1340;
+
+const int DEFAULT_MTU = 1500;
+
+const int DEFAULT_TIMEOUT_SECS = 30;
+
+
+
+typedef DartPort = ffi.Int64;
+typedef DartDartPort = int;
 typedef DartPostCObjectFnType =
     ffi.Pointer<ffi.NativeFunction<DartPostCObjectFnTypeFunction>>;
 typedef DartPostCObjectFnTypeFunction =
     ffi.Bool Function(DartPort port_id, ffi.Pointer<ffi.Void> message);
 typedef DartDartPostCObjectFnTypeFunction =
     bool Function(DartDartPort port_id, ffi.Pointer<ffi.Void> message);
-typedef DartPort = ffi.Int64;
-typedef DartDartPort = int;
 
-final class wire_cst_list_prim_u_8_strict extends ffi.Struct {
-  external ffi.Pointer<ffi.Uint8> ptr;
+const int KEEPALIVE_TIMEOUT = 10;
 
-  @ffi.Int32()
-  external int len;
+const int MAX_PAYLOAD_SIZE = 16384;
+
+const int MSG_TYPE_COOKIE_REPLY = 3;
+
+const int MSG_TYPE_HANDSHAKE_INIT = 1;
+
+const int MSG_TYPE_HANDSHAKE_RESP = 2;
+
+const int MSG_TYPE_TRANSPORT = 4;
+
+const int PROTOCOL_VERSION = 1;
+
+const int REJECT_AFTER_MESSAGES = -8193;
+
+const int REJECT_AFTER_TIME = 180;
+
+const int REKEY_AFTER_MESSAGES = -2147483648;
+
+const int REKEY_AFTER_TIME = 120;
+
+const int REKEY_TIMEOUT = 5;
+
+
+
+) => $allocator<WireSyncRust2DartSse>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
 }
 
-final class wire_cst_record_string_u_16 extends ffi.Struct {
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> field0;
 
-  @ffi.Uint16()
-  external int field1;
-}
-
-final class wire_cst_list_record_string_u_16 extends ffi.Struct {
-  external ffi.Pointer<wire_cst_record_string_u_16> ptr;
-
-  @ffi.Int32()
-  external int len;
-}
-
-final class wire_cst_list_String extends ffi.Struct {
-  external ffi.Pointer<ffi.Pointer<wire_cst_list_prim_u_8_strict>> ptr;
-
-  @ffi.Int32()
-  external int len;
-}
 
 final class wire_cst_active_connection extends ffi.Struct {
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> id;
@@ -2478,13 +2096,38 @@ final class wire_cst_active_connection extends ffi.Struct {
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> rule_payload;
 
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> process_name;
-}
 
-final class wire_cst_list_active_connection extends ffi.Struct {
-  external ffi.Pointer<wire_cst_active_connection> ptr;
-
-  @ffi.Int32()
-  external int len;
+  static ffi.Pointer<wire_cst_active_connection> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> id,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> inbound_tag,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> outbound_tag,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> host,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> destination_ip,
+    required int destination_port,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> protocol,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> network,
+    required int upload_bytes,
+    required int download_bytes,
+    required int start_time,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> rule,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> rule_payload,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> process_name,
+  }) => $allocator<wire_cst_active_connection>()
+    ..ref.id = id
+    ..ref.inbound_tag = inbound_tag
+    ..ref.outbound_tag = outbound_tag
+    ..ref.host = host
+    ..ref.destination_ip = destination_ip
+    ..ref.destination_port = destination_port
+    ..ref.protocol = protocol
+    ..ref.network = network
+    ..ref.upload_bytes = upload_bytes
+    ..ref.download_bytes = download_bytes
+    ..ref.start_time = start_time
+    ..ref.rule = rule
+    ..ref.rule_payload = rule_payload
+    ..ref.process_name = process_name;
 }
 
 final class wire_cst_connection_dto extends ffi.Struct {
@@ -2510,13 +2153,30 @@ final class wire_cst_connection_dto extends ffi.Struct {
   external int start_time;
 
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> rule;
-}
 
-final class wire_cst_list_connection_dto extends ffi.Struct {
-  external ffi.Pointer<wire_cst_connection_dto> ptr;
-
-  @ffi.Int32()
-  external int len;
+  static ffi.Pointer<wire_cst_connection_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> id,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> src_addr,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> dst_addr,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> dst_domain,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> protocol,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> outbound,
+    required int upload,
+    required int download,
+    required int start_time,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> rule,
+  }) => $allocator<wire_cst_connection_dto>()
+    ..ref.id = id
+    ..ref.src_addr = src_addr
+    ..ref.dst_addr = dst_addr
+    ..ref.dst_domain = dst_domain
+    ..ref.protocol = protocol
+    ..ref.outbound = outbound
+    ..ref.upload = upload
+    ..ref.download = download
+    ..ref.start_time = start_time
+    ..ref.rule = rule;
 }
 
 final class wire_cst_connection_info extends ffi.Struct {
@@ -2538,13 +2198,53 @@ final class wire_cst_connection_info extends ffi.Struct {
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> rule;
 
   external ffi.Pointer<wire_cst_list_String> chains;
+
+  static ffi.Pointer<wire_cst_connection_info> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> id,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> host,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> destination,
+    required int upload,
+    required int download,
+    required int start_time,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> rule,
+    required ffi.Pointer<wire_cst_list_String> chains,
+  }) => $allocator<wire_cst_connection_info>()
+    ..ref.id = id
+    ..ref.host = host
+    ..ref.destination = destination
+    ..ref.upload = upload
+    ..ref.download = download
+    ..ref.start_time = start_time
+    ..ref.rule = rule
+    ..ref.chains = chains;
 }
 
-final class wire_cst_list_connection_info extends ffi.Struct {
-  external ffi.Pointer<wire_cst_connection_info> ptr;
+final class wire_cst_dns_config_dto extends ffi.Struct {
+  @ffi.Bool()
+  external bool enable;
 
-  @ffi.Int32()
-  external int len;
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> listen;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> enhanced_mode;
+
+  external ffi.Pointer<wire_cst_list_String> nameservers;
+
+  external ffi.Pointer<wire_cst_list_String> fallback;
+
+  static ffi.Pointer<wire_cst_dns_config_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required bool enable,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> listen,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> enhanced_mode,
+    required ffi.Pointer<wire_cst_list_String> nameservers,
+    required ffi.Pointer<wire_cst_list_String> fallback,
+  }) => $allocator<wire_cst_dns_config_dto>()
+    ..ref.enable = enable
+    ..ref.listen = listen
+    ..ref.enhanced_mode = enhanced_mode
+    ..ref.nameservers = nameservers
+    ..ref.fallback = fallback;
 }
 
 final class wire_cst_latency_test_result extends ffi.Struct {
@@ -2556,6 +2256,78 @@ final class wire_cst_latency_test_result extends ffi.Struct {
   external bool success;
 
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> error;
+
+  static ffi.Pointer<wire_cst_latency_test_result> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> proxy_name,
+    required ffi.Pointer<ffi.Uint32> latency_ms,
+    required bool success,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> error,
+  }) => $allocator<wire_cst_latency_test_result>()
+    ..ref.proxy_name = proxy_name
+    ..ref.latency_ms = latency_ms
+    ..ref.success = success
+    ..ref.error = error;
+}
+
+final class wire_cst_list_String extends ffi.Struct {
+  external ffi.Pointer<ffi.Pointer<wire_cst_list_prim_u_8_strict>> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_String> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<ffi.Pointer<wire_cst_list_prim_u_8_strict>> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_String>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_active_connection extends ffi.Struct {
+  external ffi.Pointer<wire_cst_active_connection> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_active_connection> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_active_connection> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_active_connection>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_connection_dto extends ffi.Struct {
+  external ffi.Pointer<wire_cst_connection_dto> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_connection_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_connection_dto> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_connection_dto>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_connection_info extends ffi.Struct {
+  external ffi.Pointer<wire_cst_connection_info> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_connection_info> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_connection_info> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_connection_info>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
 }
 
 final class wire_cst_list_latency_test_result extends ffi.Struct {
@@ -2563,6 +2335,104 @@ final class wire_cst_list_latency_test_result extends ffi.Struct {
 
   @ffi.Int32()
   external int len;
+
+  static ffi.Pointer<wire_cst_list_latency_test_result> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_latency_test_result> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_latency_test_result>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_prim_u_8_strict extends ffi.Struct {
+  external ffi.Pointer<ffi.Uint8> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_prim_u_8_strict> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<ffi.Uint8> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_prim_u_8_strict>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_proxy_group_dto extends ffi.Struct {
+  external ffi.Pointer<wire_cst_proxy_group_dto> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_proxy_group_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_proxy_group_dto> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_proxy_group_dto>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_proxy_info_dto extends ffi.Struct {
+  external ffi.Pointer<wire_cst_proxy_info_dto> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_proxy_info_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_proxy_info_dto> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_proxy_info_dto>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_proxy_latency_dto extends ffi.Struct {
+  external ffi.Pointer<wire_cst_proxy_latency_dto> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_proxy_latency_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_proxy_latency_dto> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_proxy_latency_dto>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_record_string_u_16 extends ffi.Struct {
+  external ffi.Pointer<wire_cst_record_string_u_16> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_record_string_u_16> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_record_string_u_16> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_record_string_u_16>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_rule_dto extends ffi.Struct {
+  external ffi.Pointer<wire_cst_rule_dto> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_rule_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_rule_dto> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_rule_dto>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
 }
 
 final class wire_cst_proxy_group_dto extends ffi.Struct {
@@ -2573,13 +2443,18 @@ final class wire_cst_proxy_group_dto extends ffi.Struct {
   external ffi.Pointer<wire_cst_list_String> proxies;
 
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> selected;
-}
 
-final class wire_cst_list_proxy_group_dto extends ffi.Struct {
-  external ffi.Pointer<wire_cst_proxy_group_dto> ptr;
-
-  @ffi.Int32()
-  external int len;
+  static ffi.Pointer<wire_cst_proxy_group_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> tag,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> group_type,
+    required ffi.Pointer<wire_cst_list_String> proxies,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> selected,
+  }) => $allocator<wire_cst_proxy_group_dto>()
+    ..ref.tag = tag
+    ..ref.group_type = group_type
+    ..ref.proxies = proxies
+    ..ref.selected = selected;
 }
 
 final class wire_cst_proxy_info_dto extends ffi.Struct {
@@ -2595,13 +2470,22 @@ final class wire_cst_proxy_info_dto extends ffi.Struct {
 
   @ffi.Bool()
   external bool alive;
-}
 
-final class wire_cst_list_proxy_info_dto extends ffi.Struct {
-  external ffi.Pointer<wire_cst_proxy_info_dto> ptr;
-
-  @ffi.Int32()
-  external int len;
+  static ffi.Pointer<wire_cst_proxy_info_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> tag,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> protocol_type,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> server,
+    required ffi.Pointer<ffi.Uint16> port,
+    required ffi.Pointer<ffi.Uint64> latency_ms,
+    required bool alive,
+  }) => $allocator<wire_cst_proxy_info_dto>()
+    ..ref.tag = tag
+    ..ref.protocol_type = protocol_type
+    ..ref.server = server
+    ..ref.port = port
+    ..ref.latency_ms = latency_ms
+    ..ref.alive = alive;
 }
 
 final class wire_cst_proxy_latency_dto extends ffi.Struct {
@@ -2610,44 +2494,16 @@ final class wire_cst_proxy_latency_dto extends ffi.Struct {
   external ffi.Pointer<ffi.Uint64> latency_ms;
 
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> error;
-}
 
-final class wire_cst_list_proxy_latency_dto extends ffi.Struct {
-  external ffi.Pointer<wire_cst_proxy_latency_dto> ptr;
-
-  @ffi.Int32()
-  external int len;
-}
-
-final class wire_cst_rule_dto extends ffi.Struct {
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> rule_type;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> payload;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> outbound;
-
-  @ffi.Uint64()
-  external int matched_count;
-}
-
-final class wire_cst_list_rule_dto extends ffi.Struct {
-  external ffi.Pointer<wire_cst_rule_dto> ptr;
-
-  @ffi.Int32()
-  external int len;
-}
-
-final class wire_cst_dns_config_dto extends ffi.Struct {
-  @ffi.Bool()
-  external bool enable;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> listen;
-
-  external ffi.Pointer<wire_cst_list_prim_u_8_strict> enhanced_mode;
-
-  external ffi.Pointer<wire_cst_list_String> nameservers;
-
-  external ffi.Pointer<wire_cst_list_String> fallback;
+  static ffi.Pointer<wire_cst_proxy_latency_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> tag,
+    required ffi.Pointer<ffi.Uint64> latency_ms,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> error,
+  }) => $allocator<wire_cst_proxy_latency_dto>()
+    ..ref.tag = tag
+    ..ref.latency_ms = latency_ms
+    ..ref.error = error;
 }
 
 final class wire_cst_proxy_status extends ffi.Struct {
@@ -2668,6 +2524,37 @@ final class wire_cst_proxy_status extends ffi.Struct {
 
   @ffi.Uint64()
   external int uptime;
+
+  static ffi.Pointer<wire_cst_proxy_status> $allocate(
+    ffi.Allocator $allocator, {
+    required bool running,
+    required int inbound_count,
+    required int outbound_count,
+    required int connection_count,
+    required int memory_usage,
+    required int uptime,
+  }) => $allocator<wire_cst_proxy_status>()
+    ..ref.running = running
+    ..ref.inbound_count = inbound_count
+    ..ref.outbound_count = outbound_count
+    ..ref.connection_count = connection_count
+    ..ref.memory_usage = memory_usage
+    ..ref.uptime = uptime;
+}
+
+final class wire_cst_record_string_u_16 extends ffi.Struct {
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> field0;
+
+  @ffi.Uint16()
+  external int field1;
+
+  static ffi.Pointer<wire_cst_record_string_u_16> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> field0,
+    required int field1,
+  }) => $allocator<wire_cst_record_string_u_16>()
+    ..ref.field0 = field0
+    ..ref.field1 = field1;
 }
 
 final class wire_cst_record_u_64_u_64_u_64_u_64 extends ffi.Struct {
@@ -2682,6 +2569,18 @@ final class wire_cst_record_u_64_u_64_u_64_u_64 extends ffi.Struct {
 
   @ffi.Uint64()
   external int field3;
+
+  static ffi.Pointer<wire_cst_record_u_64_u_64_u_64_u_64> $allocate(
+    ffi.Allocator $allocator, {
+    required int field0,
+    required int field1,
+    required int field2,
+    required int field3,
+  }) => $allocator<wire_cst_record_u_64_u_64_u_64_u_64>()
+    ..ref.field0 = field0
+    ..ref.field1 = field1
+    ..ref.field2 = field2
+    ..ref.field3 = field3;
 }
 
 final class wire_cst_record_u_64_u_64_u_64_u_64_usize_usize extends ffi.Struct {
@@ -2702,6 +2601,45 @@ final class wire_cst_record_u_64_u_64_u_64_u_64_usize_usize extends ffi.Struct {
 
   @ffi.UintPtr()
   external int field5;
+
+  static ffi.Pointer<wire_cst_record_u_64_u_64_u_64_u_64_usize_usize> $allocate(
+    ffi.Allocator $allocator, {
+    required int field0,
+    required int field1,
+    required int field2,
+    required int field3,
+    required int field4,
+    required int field5,
+  }) => $allocator<wire_cst_record_u_64_u_64_u_64_u_64_usize_usize>()
+    ..ref.field0 = field0
+    ..ref.field1 = field1
+    ..ref.field2 = field2
+    ..ref.field3 = field3
+    ..ref.field4 = field4
+    ..ref.field5 = field5;
+}
+
+final class wire_cst_rule_dto extends ffi.Struct {
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> rule_type;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> payload;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> outbound;
+
+  @ffi.Uint64()
+  external int matched_count;
+
+  static ffi.Pointer<wire_cst_rule_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> rule_type,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> payload,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> outbound,
+    required int matched_count,
+  }) => $allocator<wire_cst_rule_dto>()
+    ..ref.rule_type = rule_type
+    ..ref.payload = payload
+    ..ref.outbound = outbound
+    ..ref.matched_count = matched_count;
 }
 
 final class wire_cst_system_info extends ffi.Struct {
@@ -2725,6 +2663,26 @@ final class wire_cst_system_info extends ffi.Struct {
 
   @ffi.Double()
   external double cpu_usage;
+
+  static ffi.Pointer<wire_cst_system_info> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> platform,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> version,
+    required int memory_total,
+    required int memory_used,
+    required int cpu_cores,
+    required int cpu_threads,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> cpu_name,
+    required double cpu_usage,
+  }) => $allocator<wire_cst_system_info>()
+    ..ref.platform = platform
+    ..ref.version = version
+    ..ref.memory_total = memory_total
+    ..ref.memory_used = memory_used
+    ..ref.cpu_cores = cpu_cores
+    ..ref.cpu_threads = cpu_threads
+    ..ref.cpu_name = cpu_name
+    ..ref.cpu_usage = cpu_usage;
 }
 
 final class wire_cst_traffic_stats extends ffi.Struct {
@@ -2739,6 +2697,18 @@ final class wire_cst_traffic_stats extends ffi.Struct {
 
   @ffi.Uint64()
   external int download_speed;
+
+  static ffi.Pointer<wire_cst_traffic_stats> $allocate(
+    ffi.Allocator $allocator, {
+    required int upload,
+    required int download,
+    required int upload_speed,
+    required int download_speed,
+  }) => $allocator<wire_cst_traffic_stats>()
+    ..ref.upload = upload
+    ..ref.download = download
+    ..ref.upload_speed = upload_speed
+    ..ref.download_speed = download_speed;
 }
 
 final class wire_cst_traffic_stats_dto extends ffi.Struct {
@@ -2759,6 +2729,22 @@ final class wire_cst_traffic_stats_dto extends ffi.Struct {
 
   @ffi.Uint64()
   external int uptime_secs;
+
+  static ffi.Pointer<wire_cst_traffic_stats_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required int upload,
+    required int download,
+    required int total_upload,
+    required int total_download,
+    required int connection_count,
+    required int uptime_secs,
+  }) => $allocator<wire_cst_traffic_stats_dto>()
+    ..ref.upload = upload
+    ..ref.download = download
+    ..ref.total_upload = total_upload
+    ..ref.total_download = total_download
+    ..ref.connection_count = connection_count
+    ..ref.uptime_secs = uptime_secs;
 }
 
 final class wire_cst_tun_status extends ffi.Struct {
@@ -2770,4 +2756,16 @@ final class wire_cst_tun_status extends ffi.Struct {
   external ffi.Pointer<ffi.Uint32> mtu;
 
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> error;
+
+  static ffi.Pointer<wire_cst_tun_status> $allocate(
+    ffi.Allocator $allocator, {
+    required bool enabled,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> interface_name,
+    required ffi.Pointer<ffi.Uint32> mtu,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> error,
+  }) => $allocator<wire_cst_tun_status>()
+    ..ref.enabled = enabled
+    ..ref.interface_name = interface_name
+    ..ref.mtu = mtu
+    ..ref.error = error;
 }
