@@ -113,12 +113,6 @@ pub mod shadow_tls {
         }
     }
 
-    impl Default for ShadowTlsConnector {
-        fn default() -> Self {
-            Self::new().expect("Failed to create default Shadow TLS connector")
-        }
-    }
-
     pub struct ShadowTlsStream<S> {
         inner: TlsStream<S>,
         #[allow(dead_code)]

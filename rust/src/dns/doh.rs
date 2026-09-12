@@ -415,7 +415,11 @@ mod tests {
         .expect("client");
 
         let encoded = URL_SAFE_NO_PAD.encode(b"\x00\x01");
-        let separator = if client.url.query().is_some() { '&' } else { '?' };
+        let separator = if client.url.query().is_some() {
+            '&'
+        } else {
+            '?'
+        };
         let target = format!("{}{separator}dns={encoded}", client.url);
         assert_eq!(target, "https://dns.example/dns-query?token=abc&dns=AAE");
     }

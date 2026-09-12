@@ -178,7 +178,8 @@ impl GroupOutbound {
             );
         }
 
-        let test_url = opt_str(&config.options, "url").unwrap_or_else(|| DEFAULT_TEST_URL.to_string());
+        let test_url =
+            opt_str(&config.options, "url").unwrap_or_else(|| DEFAULT_TEST_URL.to_string());
         let interval_secs = opt_u64(&config.options, "interval").unwrap_or(DEFAULT_INTERVAL_SECS);
         let tolerance_ms = opt_u64(&config.options, "tolerance").unwrap_or(DEFAULT_TOLERANCE_MS);
         let probe_timeout_secs = opt_u64(&config.options, "timeout")
@@ -395,7 +396,9 @@ impl GroupOutbound {
             LbStrategy::RoundRobin => self.cursor.fetch_add(1, Ordering::Relaxed) % pool.len(),
             LbStrategy::Random => (entropy() % pool.len() as u64) as usize,
             LbStrategy::ConsistentHashing => match target.map(TargetAddr::host) {
-                Some(host) if !host.is_empty() => (fnv1a(host.as_bytes()) % pool.len() as u64) as usize,
+                Some(host) if !host.is_empty() => {
+                    (fnv1a(host.as_bytes()) % pool.len() as u64) as usize
+                }
                 _ => self.cursor.fetch_add(1, Ordering::Relaxed) % pool.len(),
             },
         };
@@ -412,7 +415,10 @@ impl GroupOutbound {
     }
 
     fn latency_of(&self, member: &str) -> Option<Duration> {
-        self.health.read().get(member).and_then(|state| state.latency)
+        self.health
+            .read()
+            .get(member)
+            .and_then(|state| state.latency)
     }
 
     fn note_latency(&self, member: &str, latency: Duration) {
@@ -696,7 +702,9 @@ impl OutboundProxy for GroupOutbound {
             "proxy group relaying"
         );
 
-        let result = proxy.relay_tcp_with_connection(inbound, target, connection).await;
+        let result = proxy
+            .relay_tcp_with_connection(inbound, target, connection)
+            .await;
         match &result {
             Ok(()) => self.note_success(&member),
             Err(err) => {
@@ -785,7 +793,12 @@ mod tests {
     use crate::core::outbound::ProxyRegistry;
     use tokio::sync::RwLock;
 
-    fn group_config(tag: &str, kind: OutboundType, members: &[&str], extra: &[(&str, Yaml)]) -> OutboundConfig {
+    fn group_config(
+        tag: &str,
+        kind: OutboundType,
+        members: &[&str],
+        extra: &[(&str, Yaml)],
+    ) -> OutboundConfig {
         let mut options: HashMap<String, Yaml> = HashMap::new();
         options.insert(
             "outbounds".to_string(),
@@ -909,7 +922,12 @@ mod tests {
     #[test]
     fn fallback_skips_members_that_failed() {
         let group = GroupOutbound::new(
-            group_config("g-fallback", OutboundType::Fallback, &["first", "second"], &[]),
+            group_config(
+                "g-fallback",
+                OutboundType::Fallback,
+                &["first", "second"],
+                &[],
+            ),
             registry(),
         )
         .expect("group");
@@ -990,7 +1008,10 @@ mod tests {
             port: None,
             options: HashMap::new(),
         }));
-        registry.write().await.insert("leaf".to_string(), leaf.clone());
+        registry
+            .write()
+            .await
+            .insert("leaf".to_string(), leaf.clone());
 
         let inner = Arc::new(
             GroupOutbound::new(
@@ -1059,7 +1080,12 @@ mod tests {
         assert_eq!(direct.tag(), DIRECT_TAG);
 
         let reject = GroupOutbound::new(
-            group_config("g-builtin-reject", OutboundType::Selector, &[REJECT_TAG], &[]),
+            group_config(
+                "g-builtin-reject",
+                OutboundType::Selector,
+                &[REJECT_TAG],
+                &[],
+            ),
             registry(),
         )
         .expect("group");
@@ -1071,7 +1097,12 @@ mod tests {
     fn consistent_hashing_spreads_hosts() {
         let mut buckets = HashSet::new();
         let members: Vec<&str> = vec!["a", "b", "c", "d"];
-        for host in ["one.example", "two.example", "three.example", "four.example"] {
+        for host in [
+            "one.example",
+            "two.example",
+            "three.example",
+            "four.example",
+        ] {
             buckets.insert((fnv1a(host.as_bytes()) % members.len() as u64) as usize);
         }
         assert!(buckets.len() > 1, "hashing should not collapse every host");

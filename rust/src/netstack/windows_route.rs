@@ -300,10 +300,10 @@ impl WindowsRouteManager {
 
 impl Drop for WindowsRouteManager {
     fn drop(&mut self) {
-        if self.routes_active {
-            if let Err(e) = self.disable_global_mode() {
-                error!("Failed to cleanup routes on drop: {}", e);
-            }
+        if self.routes_active
+            && let Err(e) = self.disable_global_mode()
+        {
+            error!("Failed to cleanup routes on drop: {}", e);
         }
     }
 }

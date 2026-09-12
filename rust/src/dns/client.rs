@@ -41,7 +41,7 @@ impl DnsClient {
             config.protocol,
             UpstreamProtocol::DoT | UpstreamProtocol::DoH
         ) {
-            Some(Arc::new(Self::create_tls_connector()?))
+            Some(Arc::new(crate::tls_policy::client_connector(&[], false)))
         } else {
             None
         };
@@ -51,18 +51,6 @@ impl DnsClient {
             timeout,
             tls_connector,
         })
-    }
-
-    /// Create TLS connector
-    fn create_tls_connector() -> Result<tokio_rustls::TlsConnector> {
-        let mut root_store = rustls::RootCertStore::empty();
-        root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-
-        let config = rustls::ClientConfig::builder()
-            .with_root_certificates(root_store)
-            .with_no_client_auth();
-
-        Ok(tokio_rustls::TlsConnector::from(Arc::new(config)))
     }
 
     /// Query DNS
@@ -222,13 +210,12 @@ impl DnsClient {
             .to_bytes()
             .map_err(|e| DnsError::Protocol(e.to_string()))?;
 
-        let client =
-            crate::dns::doh::DohClient::with_config(crate::dns::doh::DohClientConfig {
-                url: self.doh_url(),
-                method: crate::dns::doh::DohMethod::Post,
-                timeout: self.timeout,
-                headers: Vec::new(),
-            })?;
+        let client = crate::dns::doh::DohClient::with_config(crate::dns::doh::DohClientConfig {
+            url: self.doh_url(),
+            method: crate::dns::doh::DohMethod::Post,
+            timeout: self.timeout,
+            headers: Vec::new(),
+        })?;
 
         debug!("DoH query to {}", client.url());
 

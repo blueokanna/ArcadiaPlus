@@ -65,11 +65,11 @@ impl FakeIpPool {
 
     pub fn allocate(&self, domain: &str) -> Result<Ipv4Addr> {
         let domain = domain.to_lowercase();
-        if let Some(e) = self.domain_to_ip.get(&domain) {
-            if Instant::now() < e.expires {
-                self.lru.lock().put(domain.clone(), e.ip);
-                return Ok(e.ip);
-            }
+        if let Some(e) = self.domain_to_ip.get(&domain)
+            && Instant::now() < e.expires
+        {
+            self.lru.lock().put(domain.clone(), e.ip);
+            return Ok(e.ip);
         }
 
         let offset = self.next_offset.fetch_add(1, Ordering::Relaxed);

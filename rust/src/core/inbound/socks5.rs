@@ -81,7 +81,6 @@ impl Socks5Inbound {
         }
 
         let (listener, addr) = bind_tcp_listener(&self.config.listen, self.config.port, "SOCKS5")?;
-
         let router = Arc::clone(&self.router);
         let outbound_manager = Arc::clone(&self.outbound_manager);
         let auth = Arc::clone(&self.auth);
@@ -339,8 +338,6 @@ impl Socks5Inbound {
             }
         });
 
-        // Keep TCP connection alive - UDP ASSOCIATE is valid while TCP connection is open
-        // Read from TCP stream to detect when client disconnects
         let mut buf = [0u8; 1];
         loop {
             match tokio::time::timeout(Duration::from_secs(60), stream.read(&mut buf)).await {
@@ -547,7 +544,10 @@ impl Socks5Inbound {
         }
     }
 
-    async fn perform_handshake(stream: &mut tokio::net::TcpStream, auth: &AuthStore) -> Result<bool> {
+    async fn perform_handshake(
+        stream: &mut tokio::net::TcpStream,
+        auth: &AuthStore,
+    ) -> Result<bool> {
         match auth.socks5_greeting(stream).await? {
             Socks5Greeting::Accepted => Ok(true),
             // Not SOCKS5 at all, or the client offered no usable method; the

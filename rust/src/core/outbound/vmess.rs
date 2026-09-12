@@ -2,9 +2,9 @@ use crate::core::config::OutboundConfig;
 use crate::core::connection_tracker::{TrackedConnection, global_tracker};
 use crate::core::error::{Error, Result};
 use crate::core::outbound::{AsyncReadWrite, OutboundProxy, TargetAddr};
+use crate::crypto::Sha256;
 use crate::crypto::{Aead, Aes128Gcm, ChaCha20Poly1305};
 use crate::crypto::{Digest as Md5Digest, Md5};
-use crate::crypto::Sha256;
 use crate::protocol::quic_client::{self, QuicClientTuning};
 use crate::protocol::transport::websocket::{WebSocketConfig, WebSocketTransport};
 use dashmap::DashMap;
@@ -310,12 +310,12 @@ impl VmessOutbound {
                 .map(String::from);
 
             let mut headers = std::collections::HashMap::new();
-            if let Some(headers_value) = ws_opts_value.and_then(|v| v.get("headers")) {
-                if let Some(map) = headers_value.as_mapping() {
-                    for (k, v) in map {
-                        if let (Some(key), Some(value)) = (k.as_str(), v.as_str()) {
-                            headers.insert(key.to_string(), value.to_string());
-                        }
+            if let Some(headers_value) = ws_opts_value.and_then(|v| v.get("headers"))
+                && let Some(map) = headers_value.as_mapping()
+            {
+                for (k, v) in map {
+                    if let (Some(key), Some(value)) = (k.as_str(), v.as_str()) {
+                        headers.insert(key.to_string(), value.to_string());
                     }
                 }
             }
@@ -512,11 +512,7 @@ impl VmessOutbound {
         let cipher = Aes128Gcm::new(response_key);
 
         let decrypted = cipher
-            .decrypt(
-                &response_iv[..VMESS_AEAD_NONCE_LEN],
-                data,
-                &[],
-            )
+            .decrypt(&response_iv[..VMESS_AEAD_NONCE_LEN], data, &[])
             .map_err(|e| Error::protocol(format!("Failed to decrypt response header: {e:?}")))?;
 
         if decrypted.len() < 4 {
@@ -546,26 +542,10 @@ impl VmessOutbound {
 
         let sni = self.sni.as_deref().unwrap_or(&self.server);
 
-        // Build TLS config
-        let mut root_store = rustls::RootCertStore::empty();
-        let certs = rustls_native_certs::load_native_certs();
-        for cert in certs.certs {
-            root_store.add(cert).ok();
-        }
-
-        let tls_config = if self.skip_cert_verify {
-            let verifier = std::sync::Arc::new(crate::core::tls::SkipServerVerification);
-            rustls::ClientConfig::builder()
-                .dangerous()
-                .with_custom_certificate_verifier(verifier)
-                .with_no_client_auth()
-        } else {
-            rustls::ClientConfig::builder()
-                .with_root_certificates(root_store)
-                .with_no_client_auth()
-        };
-
-        let connector = tokio_rustls::TlsConnector::from(std::sync::Arc::new(tls_config));
+        // One connector policy for every outbound (roots, ALPN, the explicit
+        // verification opt-out): VMess has no ALPN of its own, so it advertises
+        // none, exactly as before.
+        let connector = crate::tls_policy::client_connector(&[], self.skip_cert_verify);
         let server_name = rustls::pki_types::ServerName::try_from(sni.to_string())
             .map_err(|_| Error::config(format!("Invalid SNI: {}", sni)))?;
 
@@ -647,8 +627,7 @@ impl VmessOutbound {
 
         let remote = quic_client::resolve(&self.server, self.port).await?;
         let server_name = self.sni.clone().unwrap_or_else(|| self.server.clone());
-        let connection =
-            quic_client::connect(&self.quic_tuning, remote, &server_name).await?;
+        let connection = quic_client::connect(&self.quic_tuning, remote, &server_name).await?;
 
         tracing::debug!("VMess QUIC connection established to {}", remote);
 

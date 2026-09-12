@@ -31,11 +31,11 @@
 
 use std::collections::VecDeque;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 
+use courierust::Result as IoResult;
 use courierust::courierust_error::{Error, ErrorKind};
 use courierust::courierust_io::{Read, Write};
-use courierust::Result as IoResult;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 
 /// Bytes the reader task may hold before it stops prefetching.
@@ -59,6 +59,19 @@ struct Inbound {
     bytes: VecDeque<u8>,
     eof: bool,
     error: Option<String>,
+}
+
+/// Lock a queue, recovering from poisoning.
+///
+/// These are plain byte buffers: the data behind a poisoned lock is still
+/// consistent enough to keep moving bytes, and a single panic in a worker task
+/// must not turn every later `lock()` into a panic of its own. (`parking_lot`,
+/// used everywhere else in this crate, has no poisoning at all — this keeps the
+/// bridge consistent with that.)
+fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
+    mutex
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 struct Outbound {
@@ -96,10 +109,7 @@ impl DuplexShim {
     ///
     /// `wake` runs every time inbound bytes arrive, so the caller's blocking
     /// loop waits on one queue instead of on a timer.
-    pub fn new<S>(
-        stream: S,
-        wake: impl Fn() + Send + Sync + 'static,
-    ) -> (ReadHalf, WriteHalf, Self)
+    pub fn new<S>(stream: S, wake: impl Fn() + Send + Sync + 'static) -> (ReadHalf, WriteHalf, Self)
     where
         S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
     {
@@ -150,7 +160,7 @@ impl DuplexShim {
         loop {
             match reader.read(&mut buffer).await {
                 Ok(0) => {
-                    state.inbound.lock().expect("inbound lock").eof = true;
+                    lock(&state.inbound).eof = true;
                     state.read_ready.notify_all();
                     wake();
                     return;
@@ -158,28 +168,16 @@ impl DuplexShim {
                 Ok(n) => {
                     // Backpressure: stop pulling bytes we cannot hand over.
                     // The guard never spans an await, so the task stays `Send`.
-                    while state
-                        .inbound
-                        .lock()
-                        .expect("inbound lock")
-                        .bytes
-                        .len()
-                        >= INBOUND_CAPACITY
-                    {
+                    while lock(&state.inbound).bytes.len() >= INBOUND_CAPACITY {
                         state.drained.notified().await;
                     }
 
-                    state
-                        .inbound
-                        .lock()
-                        .expect("inbound lock")
-                        .bytes
-                        .extend(&buffer[..n]);
+                    lock(&state.inbound).bytes.extend(&buffer[..n]);
                     state.read_ready.notify_all();
                     wake();
                 }
                 Err(error) => {
-                    state.inbound.lock().expect("inbound lock").error = Some(error.to_string());
+                    lock(&state.inbound).error = Some(error.to_string());
                     state.read_ready.notify_all();
                     wake();
                     return;
@@ -203,7 +201,7 @@ impl DuplexShim {
             // Decide under the lock, act outside it: a guard that lives across
             // an await would make this future non-`Send`.
             let action = {
-                let mut outbound = state.outbound.lock().expect("outbound lock");
+                let mut outbound = lock(&state.outbound);
                 if outbound.closed {
                     Action::Shutdown
                 } else if !outbound.bytes.is_empty() {
@@ -231,7 +229,7 @@ impl DuplexShim {
                 Action::Data(chunk) => {
                     if let Err(error) = writer.write_all(&chunk).await {
                         tracing::debug!("outbound write failed: {error}");
-                        let mut outbound = state.outbound.lock().expect("outbound lock");
+                        let mut outbound = lock(&state.outbound);
                         outbound.closed = true;
                         outbound.bytes.clear();
                         drop(outbound);
@@ -253,7 +251,7 @@ impl DuplexShim {
 
 impl Drop for DuplexShim {
     fn drop(&mut self) {
-        self.state.outbound.lock().expect("outbound lock").closed = true;
+        lock(&self.state.outbound).closed = true;
         self.state.write_ready.notify_all();
         self.reader_task.abort();
     }
@@ -270,7 +268,7 @@ impl Read for ReadHalf {
             return Ok(0);
         }
 
-        let mut inbound = self.state.inbound.lock().expect("inbound lock");
+        let mut inbound = lock(&self.state.inbound);
 
         if !inbound.bytes.is_empty() {
             let take = inbound.bytes.len().min(buf.len());
@@ -303,7 +301,7 @@ pub struct WriteHalf {
 
 impl Write for WriteHalf {
     fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        let mut outbound = self.state.outbound.lock().expect("outbound lock");
+        let mut outbound = lock(&self.state.outbound);
 
         if outbound.closed {
             return Err(Error::io("the transport is closed"));
@@ -322,7 +320,7 @@ impl Write for WriteHalf {
                 .state
                 .write_ready
                 .wait_timeout(outbound, deadline - now)
-                .expect("outbound lock");
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             outbound = guard;
         }
 
@@ -335,7 +333,7 @@ impl Write for WriteHalf {
 
     fn flush(&mut self) -> IoResult<()> {
         let target = {
-            let mut outbound = self.state.outbound.lock().expect("outbound lock");
+            let mut outbound = lock(&self.state.outbound);
             outbound.flush_requested = true;
             outbound.flushed.wrapping_add(1)
         };
@@ -344,7 +342,7 @@ impl Write for WriteHalf {
 
         // Best effort: wait for the writer task to see and honour the request.
         let deadline = std::time::Instant::now() + std::time::Duration::from_millis(500);
-        let mut guard = self.state.outbound.lock().expect("outbound lock");
+        let mut guard = lock(&self.state.outbound);
         loop {
             if guard.flushed == target {
                 break;
@@ -357,7 +355,7 @@ impl Write for WriteHalf {
                 .state
                 .write_ready
                 .wait_timeout(guard, deadline - now)
-                .expect("outbound lock");
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             guard = next;
         }
 

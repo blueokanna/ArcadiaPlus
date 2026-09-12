@@ -183,14 +183,15 @@ pub async fn connect(
         "dialling QUIC"
     );
 
-    let attempt =
-        tokio::task::spawn_blocking(move || -> Result<(Arc<QuicClient>, Arc<ClientConnection>)> {
+    let attempt = tokio::task::spawn_blocking(
+        move || -> Result<(Arc<QuicClient>, Arc<ClientConnection>)> {
             let client = Arc::new(QuicClient::new(config));
             let connection = client.connect().map_err(ProtocolError::from)?;
             Ok((client, connection))
-        })
-        .await
-        .map_err(|error| ProtocolError::Quic(format!("QUIC connect task failed: {error}")))?;
+        },
+    )
+    .await
+    .map_err(|error| ProtocolError::Quic(format!("QUIC connect task failed: {error}")))?;
 
     let (client, connection) = attempt?;
     Ok(Arc::new(QuicConnection {
@@ -238,11 +239,10 @@ impl QuicConnection {
     /// Open a client-initiated bidirectional stream.
     pub async fn open_bi(&self) -> Result<(QuicSend, QuicRecv)> {
         let connection = Arc::clone(&self.connection);
-        let (send, recv) = tokio::task::spawn_blocking(move || {
-            connection.open_bi().map_err(ProtocolError::from)
-        })
-        .await
-        .map_err(|error| ProtocolError::Quic(format!("open_bi task failed: {error}")))??;
+        let (send, recv) =
+            tokio::task::spawn_blocking(move || connection.open_bi().map_err(ProtocolError::from))
+                .await
+                .map_err(|error| ProtocolError::Quic(format!("open_bi task failed: {error}")))??;
         Ok((QuicSend::new(send)?, QuicRecv::new(recv)?))
     }
 
@@ -255,11 +255,10 @@ impl QuicConnection {
     /// Open a client-initiated unidirectional stream.
     pub async fn open_uni(&self) -> Result<QuicSend> {
         let connection = Arc::clone(&self.connection);
-        let send = tokio::task::spawn_blocking(move || {
-            connection.open_uni().map_err(ProtocolError::from)
-        })
-        .await
-        .map_err(|error| ProtocolError::Quic(format!("open_uni task failed: {error}")))??;
+        let send =
+            tokio::task::spawn_blocking(move || connection.open_uni().map_err(ProtocolError::from))
+                .await
+                .map_err(|error| ProtocolError::Quic(format!("open_uni task failed: {error}")))??;
         QuicSend::new(send)
     }
 
@@ -269,12 +268,10 @@ impl QuicConnection {
     /// stream, which can be long after the request that triggers it.
     pub async fn accept_uni(&self) -> Result<QuicRecv> {
         let connection = Arc::clone(&self.connection);
-        let recv = run_blocking_dedicated("veloguard-quic-accept", move || {
-            connection.accept_uni()
-        })
-        .await
-        .map_err(|error| ProtocolError::Quic(format!("accept_uni thread failed: {error}")))?
-        .map_err(ProtocolError::from)?;
+        let recv = run_blocking_dedicated("veloguard-quic-accept", move || connection.accept_uni())
+            .await
+            .map_err(|error| ProtocolError::Quic(format!("accept_uni thread failed: {error}")))?
+            .map_err(ProtocolError::from)?;
         QuicRecv::new(recv)
     }
 
@@ -315,22 +312,26 @@ impl QuicConnection {
         let connection = Arc::clone(&self.connection);
         std::thread::Builder::new()
             .name("veloguard-quic-datagrams".to_string())
-            .spawn(move || loop {
-                match connection.read_datagram() {
-                    Ok(datagram) => {
-                        if tx.blocking_send(Ok(Bytes::from(datagram))).is_err() {
+            .spawn(move || {
+                loop {
+                    match connection.read_datagram() {
+                        Ok(datagram) => {
+                            if tx.blocking_send(Ok(Bytes::from(datagram))).is_err() {
+                                break;
+                            }
+                        }
+                        Err(error) => {
+                            // The connection is gone (closed or idle-timed-out);
+                            // readers learn it from the channel, once.
+                            let _ = tx.blocking_send(Err(std::io::Error::other(error.to_string())));
                             break;
                         }
                     }
-                    Err(error) => {
-                        // The connection is gone (closed or idle-timed-out);
-                        // readers learn it from the channel, once.
-                        let _ = tx.blocking_send(Err(std::io::Error::other(error.to_string())));
-                        break;
-                    }
                 }
             })
-            .map_err(|error| ProtocolError::Quic(format!("cannot start datagram thread: {error}")))?;
+            .map_err(|error| {
+                ProtocolError::Quic(format!("cannot start datagram thread: {error}"))
+            })?;
         Ok(rx)
     }
 }
@@ -344,9 +345,8 @@ pub struct QuicSend {
 impl QuicSend {
     fn new(stream: QuicSendStream) -> Result<Self> {
         let id = stream.id();
-        let writer = BlockingWriter::spawn(QuicSendWriter(stream)).map_err(|error| {
-            ProtocolError::Quic(format!("cannot start stream writer: {error}"))
-        })?;
+        let writer = BlockingWriter::spawn(QuicSendWriter(stream))
+            .map_err(|error| ProtocolError::Quic(format!("cannot start stream writer: {error}")))?;
         Ok(Self { writer, id })
     }
 
@@ -394,9 +394,8 @@ pub struct QuicRecv {
 impl QuicRecv {
     fn new(stream: QuicRecvStream) -> Result<Self> {
         let id = stream.id();
-        let reader = BlockingReader::spawn(stream).map_err(|error| {
-            ProtocolError::Quic(format!("cannot start stream reader: {error}"))
-        })?;
+        let reader = BlockingReader::spawn(stream)
+            .map_err(|error| ProtocolError::Quic(format!("cannot start stream reader: {error}")))?;
         Ok(Self { reader, id })
     }
 
@@ -414,7 +413,11 @@ impl QuicRecv {
         let mut out = Vec::new();
         let mut chunk = [0u8; 4096];
         loop {
-            let n = self.reader.read(&mut chunk).await.map_err(ProtocolError::Io)?;
+            let n = self
+                .reader
+                .read(&mut chunk)
+                .await
+                .map_err(ProtocolError::Io)?;
             if n == 0 {
                 return Ok(out);
             }
@@ -568,7 +571,9 @@ mod tests {
             CongestionControl::Bbr
         );
         assert_eq!(
-            "BBR".parse::<CongestionControl>().expect("case-insensitive"),
+            "BBR"
+                .parse::<CongestionControl>()
+                .expect("case-insensitive"),
             CongestionControl::Bbr
         );
         assert_eq!(

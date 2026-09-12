@@ -42,12 +42,12 @@ impl OutboundProxy for DirectOutbound {
             TargetAddr::Ip(addr) => *addr,
             TargetAddr::Domain(domain, port) => {
                 let addr_str = format!("{}:{}", domain, port);
-                let resolved = tokio::net::lookup_host(&addr_str)
+
+                tokio::net::lookup_host(&addr_str)
                     .await
                     .map_err(|e| Error::network(format!("Failed to resolve {}: {}", domain, e)))?
                     .next()
-                    .ok_or_else(|| Error::network(format!("No address found for {}", domain)))?;
-                resolved
+                    .ok_or_else(|| Error::network(format!("No address found for {}", domain)))?
             }
         };
 
@@ -241,10 +241,8 @@ where
         Ok::<(), std::io::Error>(())
     };
 
-    // Run both directions concurrently and wait for both to complete
     let (result_a, result_b) = tokio::join!(a_to_b, b_to_a);
 
-    // Return error only if both failed with non-connection errors
     match (result_a, result_b) {
         (Ok(_), Ok(_)) => Ok(()),
         (Ok(_), Err(_)) | (Err(_), Ok(_)) => {

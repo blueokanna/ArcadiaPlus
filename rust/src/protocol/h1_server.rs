@@ -109,9 +109,10 @@ impl Response {
     /// HTML/text helper used by the inbounds when they answer directly.
     pub fn text(status: u16, body: impl Into<String>) -> Self {
         let mut response = Self::new(status, Bytes::from(body.into()));
-        response
-            .headers
-            .push(("content-type".to_string(), "text/plain; charset=utf-8".to_string()));
+        response.headers.push((
+            "content-type".to_string(),
+            "text/plain; charset=utf-8".to_string(),
+        ));
         response
     }
 
@@ -168,10 +169,11 @@ where
 
     /// Read one request, or `None` when the peer closed the connection cleanly.
     pub async fn read_request(&mut self) -> io::Result<Option<Request>> {
-        let head = match read_head_block(&mut self.stream, &mut self.buffer, self.head_limit).await? {
-            Some(head) => head,
-            None => return Ok(None),
-        };
+        let head =
+            match read_head_block(&mut self.stream, &mut self.buffer, self.head_limit).await? {
+                Some(head) => head,
+                None => return Ok(None),
+            };
 
         let (method, target, version, headers) = parse_head(&head)?;
         self.version = version;
@@ -207,10 +209,7 @@ where
             }
         } else if has_body {
             if let Ok(name) = "content-length".parse::<HeaderName>() {
-                let _ = headers.insert(
-                    name,
-                    HeaderValue::from(response.body.len().to_string()),
-                );
+                let _ = headers.insert(name, HeaderValue::from(response.body.len().to_string()));
             }
         } else if let Ok(name) = "content-length".parse::<HeaderName>() {
             let _ = headers.insert(name, HeaderValue::from_static("0"));
@@ -530,7 +529,10 @@ fn body_length(headers: &HeaderMap) -> io::Result<BodyLength> {
         return Ok(BodyLength::Chunked);
     }
 
-    match headers.get("content-length").and_then(|value| value.to_str().ok()) {
+    match headers
+        .get("content-length")
+        .and_then(|value| value.to_str().ok())
+    {
         Some(value) => value
             .trim()
             .parse::<usize>()

@@ -441,21 +441,21 @@ impl TcpConnection {
                     }
                 }
 
-                if let Some((seg_seq, skip)) = found {
-                    if let Some(data) = self.ooo_segments.remove(&seg_seq) {
-                        let new_data = &data[skip..];
-                        debug!(
-                            "Delivering partial OOO segment: seq={}, skip={}, len={}",
-                            seg_seq,
-                            skip,
-                            new_data.len()
-                        );
-                        self.ooo_size -= data.len();
-                        self.recv_buf.extend(new_data);
-                        self.rcv_nxt = self.rcv_nxt.wrapping_add(new_data.len() as u32);
-                        self.bytes_rx += new_data.len() as u64;
-                        continue;
-                    }
+                if let Some((seg_seq, skip)) = found
+                    && let Some(data) = self.ooo_segments.remove(&seg_seq)
+                {
+                    let new_data = &data[skip..];
+                    debug!(
+                        "Delivering partial OOO segment: seq={}, skip={}, len={}",
+                        seg_seq,
+                        skip,
+                        new_data.len()
+                    );
+                    self.ooo_size -= data.len();
+                    self.recv_buf.extend(new_data);
+                    self.rcv_nxt = self.rcv_nxt.wrapping_add(new_data.len() as u32);
+                    self.bytes_rx += new_data.len() as u64;
+                    continue;
                 }
                 break;
             }

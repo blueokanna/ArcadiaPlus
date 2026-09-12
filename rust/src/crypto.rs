@@ -19,7 +19,9 @@
 pub use corduit::crypto::digest::Digest;
 
 /// Hash implementations (MD-style and BLAKE family).
-pub use corduit::crypto::hash::{Blake2b, Blake2s, Blake3, Md5, Sha1, Sha224, Sha256, Sha384, Sha512};
+pub use corduit::crypto::hash::{
+    Blake2b, Blake2s, Blake3, Md5, Sha1, Sha224, Sha256, Sha384, Sha512,
+};
 
 /// HKDF over any [`Digest`].
 pub use corduit::crypto::kdf::{Hkdf, HkdfError};
@@ -152,7 +154,7 @@ pub mod x25519 {
 /// paths already wrote, and it is the more readable of the two.
 pub mod base64 {
     pub use corduit::crypto::encoding::{
-        decode, encode, encoded_len, Alphabet, Config, DecodeError,
+        Alphabet, Config, DecodeError, decode, encode, encoded_len,
     };
 
     /// Standard alphabet, padded.
@@ -186,7 +188,7 @@ pub mod base64 {
 
 /// Hex, for wire dumps and test vectors.
 pub mod hex {
-    use corduit::crypto::encoding::{hex_decode, hex_encode, HexDecodeError};
+    use corduit::crypto::encoding::{HexDecodeError, hex_decode, hex_encode};
 
     /// Lowercase hex of `data`.
     pub fn encode(data: impl AsRef<[u8]>) -> std::string::String {

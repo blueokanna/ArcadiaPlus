@@ -15,14 +15,8 @@ pub struct TlsConnector {
 
 impl TlsConnector {
     pub fn new(config: ClientConfig) -> Result<Self> {
-        let mut root_store = rustls::RootCertStore::empty();
-
-        let certs = rustls_native_certs::load_native_certs();
-        for cert in certs.certs {
-            root_store.add(cert).ok();
-        }
-
-        let builder = rustls::ClientConfig::builder().with_root_certificates(root_store);
+        let builder = rustls::ClientConfig::builder()
+            .with_root_certificates(crate::tls_policy::platform_root_store());
 
         let mut tls_config = if config.skip_cert_verify {
             let verifier = Arc::new(SkipServerVerification);

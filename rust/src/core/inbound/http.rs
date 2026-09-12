@@ -202,13 +202,8 @@ impl HttpInbound {
                 continue;
             }
 
-            match http_forward::forward(
-                &request,
-                &router,
-                &outbound_manager,
-                DEFAULT_MAX_BODY_LEN,
-            )
-            .await
+            match http_forward::forward(&request, &router, &outbound_manager, DEFAULT_MAX_BODY_LEN)
+                .await
             {
                 Forwarded::Tunnel(tunnel) => {
                     // The connection becomes a raw pipe; there is no "next

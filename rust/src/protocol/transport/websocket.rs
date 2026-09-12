@@ -229,16 +229,19 @@ impl WebSocketTransport {
 
     /// Validate the upgrade answer.
     fn check_upgrade(head: &[u8], key: &str) -> Result<()> {
-        let text = std::str::from_utf8(head)
-            .map_err(|_| TransportError::Handshake("the upgrade answer is not UTF-8".to_string()))?;
+        let text = std::str::from_utf8(head).map_err(|_| {
+            TransportError::Handshake("the upgrade answer is not UTF-8".to_string())
+        })?;
 
         let mut lines = text.split("\r\n");
         let status_line = lines
             .next()
             .ok_or_else(|| TransportError::Handshake("empty upgrade answer".to_string()))?;
 
-        let (status, _version) = courierust::courierust_h1::parse_status_line(status_line.as_bytes())
-            .map_err(|error| TransportError::Handshake(format!("malformed status line: {error}")))?;
+        let (status, _version) = courierust::courierust_h1::parse_status_line(
+            status_line.as_bytes(),
+        )
+        .map_err(|error| TransportError::Handshake(format!("malformed status line: {error}")))?;
 
         if status.as_u16() != 101 {
             return Err(TransportError::Handshake(format!(
@@ -478,7 +481,8 @@ impl<S: AsyncRead + AsyncWrite + Unpin> AsyncWrite for WsStream<S> {
         // error is surfaced here rather than swallowed — the frame is already
         // in the queue, so losing the error would turn a dead socket into a
         // silent stall.
-        if let Poll::Ready(Err(error)) = flush_queue(&mut this.write, Pin::new(&mut this.stream), cx)
+        if let Poll::Ready(Err(error)) =
+            flush_queue(&mut this.write, Pin::new(&mut this.stream), cx)
         {
             return Poll::Ready(Err(error));
         }
@@ -549,9 +553,11 @@ impl<S> WsStream<S> {
             }
             OP_PING => {
                 // §5.5.3: the pong must carry the ping's application data.
-                self.write.push(OP_PONG, true, &frame.payload).map_err(|detail| {
-                    protocol_error(&format!("could not answer a ping: {detail}"))
-                })?;
+                self.write
+                    .push(OP_PONG, true, &frame.payload)
+                    .map_err(|detail| {
+                        protocol_error(&format!("could not answer a ping: {detail}"))
+                    })?;
             }
             OP_PONG => {}
             OP_CLOSE => {
@@ -562,16 +568,14 @@ impl<S> WsStream<S> {
                 } else {
                     &[]
                 };
-                self.write
-                    .push(OP_CLOSE, true, status)
-                    .map_err(|detail| protocol_error(&format!("could not answer a close: {detail}")))?;
+                self.write.push(OP_CLOSE, true, status).map_err(|detail| {
+                    protocol_error(&format!("could not answer a close: {detail}"))
+                })?;
                 self.close_sent = true;
                 self.read.seen_close = true;
             }
             other => {
-                return Err(protocol_error(&format!(
-                    "unknown opcode 0x{other:x}"
-                )));
+                return Err(protocol_error(&format!("unknown opcode 0x{other:x}")));
             }
         }
 
@@ -892,7 +896,12 @@ mod tests {
             }
             len => len as usize,
         };
-        let mask = [bytes[cursor], bytes[cursor + 1], bytes[cursor + 2], bytes[cursor + 3]];
+        let mask = [
+            bytes[cursor],
+            bytes[cursor + 1],
+            bytes[cursor + 2],
+            bytes[cursor + 3],
+        ];
         cursor += 4;
         let mut payload = bytes[cursor..cursor + len].to_vec();
         mask_in_place(&mut payload, mask);
@@ -902,9 +911,7 @@ mod tests {
     #[test]
     fn client_frames_are_masked_and_round_trip() {
         let mut queue = FrameQueue::new();
-        queue
-            .push(OP_BINARY, true, b"hello ws")
-            .expect("frame");
+        queue.push(OP_BINARY, true, b"hello ws").expect("frame");
 
         let (fin, opcode, payload) = decode_client_frame(&queue.bytes);
         assert!(fin);
@@ -1101,12 +1108,8 @@ mod tests {
         });
 
         let stream = TcpStream::connect(addr).await.expect("connect");
-        let transport = WebSocketTransport::new(
-            WebSocketConfig::default(),
-            "127.0.0.1",
-            addr.port(),
-            false,
-        );
+        let transport =
+            WebSocketTransport::new(WebSocketConfig::default(), "127.0.0.1", addr.port(), false);
 
         let error = match transport.connect(stream).await {
             Ok(_) => panic!("a 200 answer must not be accepted"),
@@ -1146,12 +1149,8 @@ mod tests {
         });
 
         let stream = TcpStream::connect(addr).await.expect("connect");
-        let transport = WebSocketTransport::new(
-            WebSocketConfig::default(),
-            "127.0.0.1",
-            addr.port(),
-            false,
-        );
+        let transport =
+            WebSocketTransport::new(WebSocketConfig::default(), "127.0.0.1", addr.port(), false);
 
         let error = match transport.connect(stream).await {
             Ok(_) => panic!("a wrong accept key must not be accepted"),
@@ -1204,7 +1203,10 @@ mod tests {
                 .await
                 .expect("ping head");
             socket.write_all(b"hi!").await.expect("ping body");
-            socket.write_all(&[0x80 | OP_TEXT, 2]).await.expect("text head");
+            socket
+                .write_all(&[0x80 | OP_TEXT, 2])
+                .await
+                .expect("text head");
             socket.write_all(b"ok").await.expect("text body");
 
             let mut header = [0u8; 2];
@@ -1219,12 +1221,8 @@ mod tests {
         });
 
         let stream = TcpStream::connect(addr).await.expect("connect");
-        let transport = WebSocketTransport::new(
-            WebSocketConfig::default(),
-            "127.0.0.1",
-            addr.port(),
-            false,
-        );
+        let transport =
+            WebSocketTransport::new(WebSocketConfig::default(), "127.0.0.1", addr.port(), false);
         let mut client = transport.connect(stream).await.expect("handshake");
 
         let mut message = [0u8; 2];

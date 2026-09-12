@@ -224,13 +224,8 @@ impl MixedInbound {
                 continue;
             }
 
-            match http_forward::forward(
-                &request,
-                &router,
-                &outbound_manager,
-                DEFAULT_MAX_BODY_LEN,
-            )
-            .await
+            match http_forward::forward(&request, &router, &outbound_manager, DEFAULT_MAX_BODY_LEN)
+                .await
             {
                 Forwarded::Tunnel(tunnel) => {
                     return http_forward::open_tunnel(connection, tunnel, "mixed").await;

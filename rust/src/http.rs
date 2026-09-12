@@ -354,7 +354,10 @@ fn request_blocking(
                 // configuration mistake, not a reason to send a request that
                 // means something else.
                 _ => {
-                    return Err(HttpError::new(url, format!("invalid request header '{name}'")));
+                    return Err(HttpError::new(
+                        url,
+                        format!("invalid request header '{name}'"),
+                    ));
                 }
             }
         }

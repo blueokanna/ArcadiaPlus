@@ -223,9 +223,12 @@ impl TuicConnection {
                             &addr,
                             chunk,
                         )?;
-                        self.connection.send_datagram(bytes::Bytes::from(msg)).await.map_err(
-                            |e| Error::network(format!("Failed to send UDP fragment: {e}")),
-                        )?;
+                        self.connection
+                            .send_datagram(bytes::Bytes::from(msg))
+                            .await
+                            .map_err(|e| {
+                                Error::network(format!("Failed to send UDP fragment: {e}"))
+                            })?;
                     }
                 }
             }
@@ -270,9 +273,10 @@ impl TuicConnection {
                     parse_udp_packet(&datagram)?
                 }
                 UdpRelayMode::Quic => {
-                    let mut stream = self.connection.accept_uni().await.map_err(|e| {
-                        Error::network(format!("Failed to accept UDP stream: {e}"))
-                    })?;
+                    let mut stream =
+                        self.connection.accept_uni().await.map_err(|e| {
+                            Error::network(format!("Failed to accept UDP stream: {e}"))
+                        })?;
                     let data = stream.read_all(65536).await?;
                     parse_udp_packet(&data)?
                 }
@@ -656,7 +660,11 @@ impl TuicOutbound {
             None => CongestionControl::default(),
         };
 
-        let udp_relay_mode = match config.options.get("udp-relay-mode").map(yaml_value_to_string) {
+        let udp_relay_mode = match config
+            .options
+            .get("udp-relay-mode")
+            .map(yaml_value_to_string)
+        {
             Some(value) => value.parse::<UdpRelayMode>().map_err(|error| {
                 Error::config(format!("TUIC outbound '{}': {error}", config.tag))
             })?,
@@ -749,8 +757,7 @@ impl TuicOutbound {
             return Ok(Arc::clone(connection));
         }
 
-        let remote =
-            quic_client::resolve(&self.tuic_config.server, self.tuic_config.port).await?;
+        let remote = quic_client::resolve(&self.tuic_config.server, self.tuic_config.port).await?;
 
         // `disable-sni` cannot be honoured by this transport (see the warning at
         // construction): the certificate name is always the SNI, so the dialled
@@ -761,8 +768,7 @@ impl TuicOutbound {
             .clone()
             .unwrap_or_else(|| self.tuic_config.server.clone());
 
-        let connection =
-            quic_client::connect(&self.quic_tuning, remote, &server_name).await?;
+        let connection = quic_client::connect(&self.quic_tuning, remote, &server_name).await?;
 
         debug!("TUIC QUIC connection established to {remote}");
 
@@ -1032,12 +1038,16 @@ mod tests {
     fn t_uic_fragments_reassemble_out_of_order() {
         let mut assembler = TuicFragAssembler::new();
         let target = TargetAddr::Domain("example.com".to_string(), 53);
-        assert!(assembler
-            .add(9, 1, 3, target.clone(), b"bb".to_vec())
-            .is_none());
-        assert!(assembler
-            .add(9, 2, 3, target.clone(), b"cc".to_vec())
-            .is_none());
+        assert!(
+            assembler
+                .add(9, 1, 3, target.clone(), b"bb".to_vec())
+                .is_none()
+        );
+        assert!(
+            assembler
+                .add(9, 2, 3, target.clone(), b"cc".to_vec())
+                .is_none()
+        );
         let (target_out, payload) = assembler
             .add(9, 0, 3, target.clone(), b"aa".to_vec())
             .expect("complete");

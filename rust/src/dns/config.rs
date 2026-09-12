@@ -265,10 +265,10 @@ impl UpstreamConfig {
     }
 
     fn parse_host_port(s: &str, default_port: u16) -> (String, u16) {
-        if let Some((host, port_str)) = s.rsplit_once(':') {
-            if let Ok(port) = port_str.parse() {
-                return (host.to_string(), port);
-            }
+        if let Some((host, port_str)) = s.rsplit_once(':')
+            && let Ok(port) = port_str.parse()
+        {
+            return (host.to_string(), port);
         }
         (s.to_string(), default_port)
     }
@@ -281,13 +281,10 @@ impl UpstreamConfig {
             UpstreamProtocol::DoH => 443,
         });
 
-        // Try to parse as IP address first
         if let Ok(ip) = self.address.parse::<IpAddr>() {
             return Some(SocketAddr::new(ip, port));
         }
 
-        // For domain names, we need to resolve them first
-        // This is handled by the DNS client
         None
     }
 }

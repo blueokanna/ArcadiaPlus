@@ -323,10 +323,10 @@ impl Router {
         let now = Instant::now();
         {
             let mut cache = DNS_CACHE.lock().await;
-            if let Some(cached) = cache.get(&normalized) {
-                if cached.expires_at > now {
-                    return cached.addresses.clone();
-                }
+            if let Some(cached) = cache.get(&normalized)
+                && cached.expires_at > now
+            {
+                return cached.addresses.clone();
             }
             cache.pop(&normalized);
         }
@@ -507,19 +507,18 @@ impl Router {
         for part in pattern.split(',') {
             let part = part.trim();
             if part.contains('-') {
-                if let Some((start, end)) = part.split_once('-') {
-                    if let (Ok(start), Ok(end)) =
+                if let Some((start, end)) = part.split_once('-')
+                    && let (Ok(start), Ok(end)) =
                         (start.trim().parse::<u16>(), end.trim().parse::<u16>())
-                    {
-                        if port >= start && port <= end {
-                            return true;
-                        }
-                    }
-                }
-            } else if let Ok(single_port) = part.parse::<u16>() {
-                if port == single_port {
+                    && port >= start
+                    && port <= end
+                {
                     return true;
                 }
+            } else if let Ok(single_port) = part.parse::<u16>()
+                && port == single_port
+            {
+                return true;
             }
         }
         false
@@ -533,27 +532,27 @@ impl Router {
             return true;
         }
 
-        if let Some(name) = process_name.rsplit(['/', '\\']).next() {
-            if name.to_lowercase() == pattern_lower {
-                return true;
-            }
+        if let Some(name) = process_name.rsplit(['/', '\\']).next()
+            && name.to_lowercase() == pattern_lower
+        {
+            return true;
         }
 
         if let Some(name_without_ext) = pattern_lower.strip_suffix(".exe") {
             if process_lower == name_without_ext {
                 return true;
             }
-            if let Some(proc_name) = process_name.rsplit(['/', '\\']).next() {
-                if proc_name.to_lowercase() == name_without_ext {
-                    return true;
-                }
+            if let Some(proc_name) = process_name.rsplit(['/', '\\']).next()
+                && proc_name.to_lowercase() == name_without_ext
+            {
+                return true;
             }
         }
 
-        if let Some(proc_without_ext) = process_lower.strip_suffix(".exe") {
-            if proc_without_ext == pattern_lower {
-                return true;
-            }
+        if let Some(proc_without_ext) = process_lower.strip_suffix(".exe")
+            && proc_without_ext == pattern_lower
+        {
+            return true;
         }
 
         false

@@ -10,8 +10,7 @@ use tokio_rustls::TlsConnector;
 
 use super::{Result, TransportError};
 
-#[cfg(feature = "tls")]
-use crate::protocol::tls::SkipServerVerification;
+use crate::tls_policy::SkipServerVerification;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
@@ -85,14 +84,8 @@ impl TlsTransport {
     }
 
     fn build_connector(config: &TlsConfig) -> Result<TlsConnector> {
-        let mut root_store = rustls::RootCertStore::empty();
-
-        let certs = rustls_native_certs::load_native_certs();
-        for cert in certs.certs {
-            root_store.add(cert).ok();
-        }
-
-        let builder = rustls::ClientConfig::builder().with_root_certificates(root_store);
+        let builder = rustls::ClientConfig::builder()
+            .with_root_certificates(crate::tls_policy::platform_root_store());
 
         let mut tls_config = if config.skip_cert_verify {
             let verifier = Arc::new(SkipServerVerification);
@@ -218,57 +211,6 @@ impl<S: AsyncWrite + Unpin> AsyncWrite for TlsStream<S> {
 
     fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         Pin::new(&mut self.inner).poll_shutdown(cx)
-    }
-}
-
-#[cfg(not(feature = "tls"))]
-#[derive(Debug)]
-struct SkipServerVerification;
-
-#[cfg(not(feature = "tls"))]
-impl rustls::client::danger::ServerCertVerifier for SkipServerVerification {
-    fn verify_server_cert(
-        &self,
-        _end_entity: &rustls::pki_types::CertificateDer<'_>,
-        _intermediates: &[rustls::pki_types::CertificateDer<'_>],
-        _server_name: &ServerName<'_>,
-        _ocsp_response: &[u8],
-        _now: rustls::pki_types::UnixTime,
-    ) -> std::result::Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
-        Ok(rustls::client::danger::ServerCertVerified::assertion())
-    }
-
-    fn verify_tls12_signature(
-        &self,
-        _message: &[u8],
-        _cert: &rustls::pki_types::CertificateDer<'_>,
-        _dss: &rustls::DigitallySignedStruct,
-    ) -> std::result::Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
-    }
-
-    fn verify_tls13_signature(
-        &self,
-        _message: &[u8],
-        _cert: &rustls::pki_types::CertificateDer<'_>,
-        _dss: &rustls::DigitallySignedStruct,
-    ) -> std::result::Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
-    }
-
-    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        vec![
-            rustls::SignatureScheme::RSA_PKCS1_SHA256,
-            rustls::SignatureScheme::RSA_PKCS1_SHA384,
-            rustls::SignatureScheme::RSA_PKCS1_SHA512,
-            rustls::SignatureScheme::ECDSA_NISTP256_SHA256,
-            rustls::SignatureScheme::ECDSA_NISTP384_SHA384,
-            rustls::SignatureScheme::ECDSA_NISTP521_SHA512,
-            rustls::SignatureScheme::RSA_PSS_SHA256,
-            rustls::SignatureScheme::RSA_PSS_SHA384,
-            rustls::SignatureScheme::RSA_PSS_SHA512,
-            rustls::SignatureScheme::ED25519,
-        ]
     }
 }
 

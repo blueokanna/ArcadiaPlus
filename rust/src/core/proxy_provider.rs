@@ -171,16 +171,13 @@ impl ProxyProvider {
             .as_ref()
             .ok_or_else(|| Error::config("HTTP proxy provider requires 'url' field"))?;
 
-        if let Some(path) = &self.config.path {
-            if Path::new(path).exists() {
-                if let Ok(content) = tokio::fs::read_to_string(path).await {
-                    return Ok(content);
-                }
-            }
+        if let Some(path) = &self.config.path
+            && Path::new(path).exists()
+            && let Ok(content) = tokio::fs::read_to_string(path).await
+        {
+            return Ok(content);
         }
 
-        // One HTTP stack for the whole product: `crate::http` speaks it over
-        // `courierust` with TLS 1.2/1.3 and the platform trust store.
         let content = crate::http::get_text(url).await.map_err(|error| {
             Error::network(format!("Failed to fetch proxies from '{url}': {error}"))
         })?;
@@ -201,10 +198,10 @@ impl ProxyProvider {
             proxies: Option<Vec<OutboundConfig>>,
         }
 
-        if let Ok(yaml_content) = serde_yaml::from_str::<ProxyFile>(content) {
-            if let Some(proxies) = yaml_content.proxies {
-                return Ok(proxies);
-            }
+        if let Ok(yaml_content) = serde_yaml::from_str::<ProxyFile>(content)
+            && let Some(proxies) = yaml_content.proxies
+        {
+            return Ok(proxies);
         }
 
         if let Ok(proxies) = serde_yaml::from_str::<Vec<OutboundConfig>>(content) {

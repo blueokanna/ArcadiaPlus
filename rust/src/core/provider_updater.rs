@@ -103,23 +103,20 @@ impl ProviderUpdater {
                         break;
                     }
 
-                    if config.enable_proxy_provider_update {
-                        if let Some(ref manager) = proxy_manager {
+                    if config.enable_proxy_provider_update
+                        && let Some(ref manager) = proxy_manager {
                             Self::update_proxy_providers(manager).await;
                         }
-                    }
 
-                    if config.enable_rule_provider_update {
-                        if let Some(ref manager) = rule_manager {
+                    if config.enable_rule_provider_update
+                        && let Some(ref manager) = rule_manager {
                             Self::update_rule_providers(manager).await;
                         }
-                    }
 
-                    if config.enable_health_check {
-                        if let Some(ref manager) = proxy_manager {
+                    if config.enable_health_check
+                        && let Some(ref manager) = proxy_manager {
                             Self::health_check_proxies(manager).await;
                         }
-                    }
                 }
                 _ = &mut shutdown_rx => {
                     tracing::info!("Provider updater received shutdown signal");

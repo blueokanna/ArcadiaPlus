@@ -218,19 +218,17 @@ impl DnsManager {
 
         let server = DnsServer::new(config.clone())?;
 
-        // Store server reference
         {
             let mut server_lock = self.server.write().await;
             *server_lock = Some(server);
         }
 
-        // Start server in background
         let server_lock = self.server.clone();
         tokio::spawn(async move {
-            if let Some(server) = server_lock.read().await.as_ref() {
-                if let Err(e) = server.start().await {
-                    warn!("DNS server error: {}", e);
-                }
+            if let Some(server) = server_lock.read().await.as_ref()
+                && let Err(e) = server.start().await
+            {
+                warn!("DNS server error: {}", e);
             }
         });
 
@@ -379,12 +377,6 @@ pub struct CacheStatistics {
     pub misses: u64,
     /// Hit rate (0.0 - 1.0)
     pub hit_rate: f64,
-}
-
-impl Default for DnsManager {
-    fn default() -> Self {
-        Self::new().expect("Failed to create default DNS manager")
-    }
 }
 
 #[cfg(test)]

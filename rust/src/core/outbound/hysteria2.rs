@@ -1,4 +1,4 @@
-﻿//! The Hysteria2 outbound, speaking the real protocol over corduit's QUIC.
+//! The Hysteria2 outbound, speaking the real protocol over corduit's QUIC.
 //!
 //! ## What the protocol actually is
 //!
@@ -153,11 +153,7 @@ pub struct Hysteria2Connection {
 }
 
 impl Hysteria2Connection {
-    pub fn new(
-        connection: Arc<QuicConnection>,
-        password: String,
-        down_mbps: Option<u32>,
-    ) -> Self {
+    pub fn new(connection: Arc<QuicConnection>, password: String, down_mbps: Option<u32>) -> Self {
         Self {
             connection,
             password,
@@ -221,8 +217,10 @@ impl Hysteria2Connection {
             (b"hysteria-cc-rx", rx_bps.to_string().into_bytes()),
             (b"hysteria-padding", padding),
         ];
-        let field_refs: Vec<(&[u8], &[u8])> =
-            fields.iter().map(|(name, value)| (*name, value.as_slice())).collect();
+        let field_refs: Vec<(&[u8], &[u8])> = fields
+            .iter()
+            .map(|(name, value)| (*name, value.as_slice()))
+            .collect();
         let qpack = encode_literal_fields(&field_refs);
 
         let mut msg = Vec::with_capacity(qpack.len() + 8);
@@ -322,9 +320,7 @@ impl Hysteria2Connection {
             self.connection
                 .send_datagram(bytes::Bytes::from(msg))
                 .await
-                .map_err(|error| {
-                    Error::network(format!("Failed to send UDP fragment: {error}"))
-                })?;
+                .map_err(|error| Error::network(format!("Failed to send UDP fragment: {error}")))?;
         }
         debug!(
             "Hysteria2 UDP packet sent to {target} ({} bytes, {} fragments)",
@@ -337,11 +333,9 @@ impl Hysteria2Connection {
     /// Receive the next complete UDP payload (reassembling fragments).
     pub async fn recv_udp_packet(&self) -> Result<(u32, TargetAddr, Vec<u8>)> {
         loop {
-            let datagram = self
-                .connection
-                .recv_datagram()
-                .await
-                .map_err(|error| Error::network(format!("Failed to receive UDP datagram: {error}")))?;
+            let datagram = self.connection.recv_datagram().await.map_err(|error| {
+                Error::network(format!("Failed to receive UDP datagram: {error}"))
+            })?;
 
             let (session_id, packet_id, frag_id, frag_count, target, payload) =
                 parse_udp_message(&datagram)?;
@@ -351,9 +345,9 @@ impl Hysteria2Connection {
             }
 
             let mut assembler = self.assembler.lock().await;
-            if let Some((target, full)) = assembler.add(
-                session_id, packet_id, frag_id, frag_count, target, payload,
-            ) {
+            if let Some((target, full)) =
+                assembler.add(session_id, packet_id, frag_id, frag_count, target, payload)
+            {
                 return Ok((session_id, target, full));
             }
         }
@@ -547,7 +541,11 @@ where
 }
 
 /// Read one HTTP/3 frame: `[frame_type varint][length varint][payload]`.
-async fn read_h3_frame<R>(reader: &mut R, max_len: usize, deadline: Instant) -> Result<(u64, Vec<u8>)>
+async fn read_h3_frame<R>(
+    reader: &mut R,
+    max_len: usize,
+    deadline: Instant,
+) -> Result<(u64, Vec<u8>)>
 where
     R: AsyncRead + Unpin,
 {
@@ -696,7 +694,9 @@ fn parse_udp_message(data: &[u8]) -> Result<(u32, u16, u8, u8, TargetAddr, Vec<u
 
 /// Parse a QUIC varint from a byte slice, returning `(value, rest)`.
 fn read_varint_slice(data: &[u8]) -> Result<(u64, &[u8])> {
-    let first = *data.first().ok_or_else(|| Error::protocol("Empty varint"))?;
+    let first = *data
+        .first()
+        .ok_or_else(|| Error::protocol("Empty varint"))?;
     let len = 1usize << (first >> 6);
     if data.len() < len {
         return Err(Error::protocol("Truncated varint"));
@@ -713,7 +713,10 @@ fn random_padding() -> Vec<u8> {
     let len = 8 + (usize::from(crate::crypto::random_u8()) % 16);
     let mut out = Vec::with_capacity(len);
     for _ in 0..len {
-        out.push(AUTH_PADDING_ALPHABET[usize::from(crate::crypto::random_u8()) % AUTH_PADDING_ALPHABET.len()]);
+        out.push(
+            AUTH_PADDING_ALPHABET
+                [usize::from(crate::crypto::random_u8()) % AUTH_PADDING_ALPHABET.len()],
+        );
     }
     out
 }
@@ -931,7 +934,10 @@ impl Hysteria2Outbound {
 
         debug!(
             "Creating Hysteria2 outbound: server={}:{}, obfs={:?}, up={:?}Mbps, down={:?}Mbps",
-            hy2_config.server, hy2_config.port, hy2_config.obfs, hy2_config.up_mbps,
+            hy2_config.server,
+            hy2_config.port,
+            hy2_config.obfs,
+            hy2_config.up_mbps,
             hy2_config.down_mbps
         );
 
@@ -1141,16 +1147,15 @@ impl OutboundProxy for Hysteria2Outbound {
         let client_to_remote = async {
             let mut buf = vec![0u8; 16 * 1024];
             loop {
-                let n = client_reader
-                    .read(&mut buf)
-                    .await
-                    .map_err(|error| Error::network(format!("Failed to read from inbound: {error}")))?;
+                let n = client_reader.read(&mut buf).await.map_err(|error| {
+                    Error::network(format!("Failed to read from inbound: {error}"))
+                })?;
                 if n == 0 {
                     break;
                 }
-                send.write_all(&buf[..n])
-                    .await
-                    .map_err(|error| Error::network(format!("Failed to write to Hysteria2: {error}")))?;
+                send.write_all(&buf[..n]).await.map_err(|error| {
+                    Error::network(format!("Failed to write to Hysteria2: {error}"))
+                })?;
 
                 tracker.add_global_upload(n as u64);
                 if let Some(connection) = &upload_tracker {
@@ -1297,12 +1302,16 @@ mod tests {
     fn fragment_assembler_reassembles_in_order() {
         let mut assembler = FragAssembler::new();
         let target = TargetAddr::Domain("example.com".to_string(), 53);
-        assert!(assembler
-            .add(7, 42, 1, 3, target.clone(), b"bb".to_vec())
-            .is_none());
-        assert!(assembler
-            .add(7, 42, 0, 3, target.clone(), b"aa".to_vec())
-            .is_none());
+        assert!(
+            assembler
+                .add(7, 42, 1, 3, target.clone(), b"bb".to_vec())
+                .is_none()
+        );
+        assert!(
+            assembler
+                .add(7, 42, 0, 3, target.clone(), b"aa".to_vec())
+                .is_none()
+        );
         let (target_out, payload) = assembler
             .add(7, 42, 2, 3, target.clone(), b"cc".to_vec())
             .expect("complete");
@@ -1333,10 +1342,7 @@ mod tests {
     #[test]
     fn port_spec_parsing_expands_ranges() {
         assert_eq!(parse_port_spec("443").expect("single"), vec![443]);
-        assert_eq!(
-            parse_port_spec("80,443").expect("list"),
-            vec![80, 443]
-        );
+        assert_eq!(parse_port_spec("80,443").expect("list"), vec![80, 443]);
         assert_eq!(
             parse_port_spec("20000-20003").expect("range"),
             vec![20000, 20001, 20002, 20003]
@@ -1426,7 +1432,9 @@ mod tests {
         client.write_all(&frame).await.expect("write");
         drop(client);
 
-        await_auth_response(&mut server).await.expect("233 accepted");
+        await_auth_response(&mut server)
+            .await
+            .expect("233 accepted");
     }
 
     #[tokio::test]
@@ -1462,7 +1470,9 @@ mod tests {
         client.write_all(&stream).await.expect("write");
         drop(client);
 
-        await_auth_response(&mut server).await.expect("233 accepted");
+        await_auth_response(&mut server)
+            .await
+            .expect("233 accepted");
     }
 
     #[tokio::test]

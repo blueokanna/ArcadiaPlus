@@ -68,7 +68,9 @@ pub struct DohServerConfig {
 impl Default for DohServerConfig {
     fn default() -> Self {
         Self {
-            listen: "127.0.0.1:8443".parse().unwrap(),
+            // Built from octets rather than parsed from a string: a default
+            // value must not be able to fail.
+            listen: SocketAddr::from(([127, 0, 0, 1], 8443)),
             cert_path: String::new(),
             key_path: String::new(),
             path: "/dns-query".to_string(),
@@ -277,7 +279,11 @@ impl DohServer {
     }
 
     /// Handle HTTP request
-    async fn handle_request(request: &Request, resolver: &DnsResolver, expected_path: &str) -> Response {
+    async fn handle_request(
+        request: &Request,
+        resolver: &DnsResolver,
+        expected_path: &str,
+    ) -> Response {
         // The target may carry a query string (`?dns=…`); the routing decision
         // is about the path alone.
         let path = request.target.split('?').next().unwrap_or("");
@@ -375,11 +381,8 @@ impl DohServer {
                             IpAddr::V6(v6) => RData::AAAA(hickory_proto::rr::rdata::AAAA(v6)),
                         };
 
-                        let record = Record::from_rdata(
-                            query.name().clone(),
-                            MAX_AGE_SECONDS,
-                            rdata,
-                        );
+                        let record =
+                            Record::from_rdata(query.name().clone(), MAX_AGE_SECONDS, rdata);
                         response.add_answer(record);
                     }
 

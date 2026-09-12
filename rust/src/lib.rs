@@ -41,6 +41,8 @@ pub mod netstack;
 pub mod protocol;
 
 mod error;
+/// Outbound TLS trust policy: the shared root store and the skip-verify verifier.
+pub mod tls_policy;
 mod types;
 
 #[cfg(target_os = "android")]

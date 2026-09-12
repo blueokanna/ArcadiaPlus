@@ -2,11 +2,9 @@ use crate::core::config::OutboundConfig;
 use crate::core::connection_tracker::{TrackedConnection, global_tracker};
 use crate::core::error::{Error, Result};
 use crate::core::outbound::{AsyncReadWrite, OutboundProxy, TargetAddr};
-use crate::core::tls::SkipServerVerification;
 use std::sync::Arc;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::{TcpStream, UdpSocket};
-use tokio_rustls::TlsConnector;
 use tokio_rustls::rustls::pki_types::ServerName;
 use uuid::Uuid;
 
@@ -181,32 +179,6 @@ impl VlessOutbound {
         })
     }
 
-    fn create_tls_connector(&self) -> Result<TlsConnector> {
-        use tokio_rustls::rustls::{ClientConfig, RootCertStore};
-
-        let mut root_store = RootCertStore::empty();
-        let certs = rustls_native_certs::load_native_certs();
-        for cert in certs.certs {
-            root_store.add(cert).ok();
-        }
-
-        let builder = ClientConfig::builder().with_root_certificates(root_store);
-
-        let mut tls_config = if self.skip_cert_verify {
-            let verifier = Arc::new(SkipServerVerification);
-            ClientConfig::builder()
-                .dangerous()
-                .with_custom_certificate_verifier(verifier)
-                .with_no_client_auth()
-        } else {
-            builder.with_no_client_auth()
-        };
-
-        tls_config.alpn_protocols = self.alpn.iter().map(|s| s.as_bytes().to_vec()).collect();
-
-        Ok(TlsConnector::from(Arc::new(tls_config)))
-    }
-
     async fn connect_tls(&self) -> Result<tokio_rustls::client::TlsStream<TcpStream>> {
         let addr = format!("{}:{}", self.server, self.port);
         let stream = TcpStream::connect(&addr).await.map_err(|e| {
@@ -215,7 +187,7 @@ impl VlessOutbound {
 
         stream.set_nodelay(true).ok();
 
-        let connector = self.create_tls_connector()?;
+        let connector = crate::tls_policy::client_connector(&self.alpn, self.skip_cert_verify);
         let server_name = ServerName::try_from(self.sni.clone())
             .map_err(|_| Error::config(format!("Invalid SNI: {}", self.sni)))?;
 

@@ -63,7 +63,7 @@ pub struct DotClient {
 impl DotClient {
     /// Create a new DoT client
     pub fn new(server: &str, port: u16, tls_name: Option<&str>) -> Result<Self> {
-        let tls_connector = Self::create_tls_connector()?;
+        let tls_connector = crate::tls_policy::client_connector(&[], false);
 
         Ok(Self {
             server: server.to_string(),
@@ -76,7 +76,7 @@ impl DotClient {
 
     /// Create with configuration
     pub fn with_config(config: DotClientConfig) -> Result<Self> {
-        let tls_connector = Self::create_tls_connector()?;
+        let tls_connector = crate::tls_policy::client_connector(&[], false);
 
         Ok(Self {
             server: config.server.clone(),
@@ -85,18 +85,6 @@ impl DotClient {
             tls_connector,
             timeout: config.timeout,
         })
-    }
-
-    /// Create TLS connector with system root certificates
-    fn create_tls_connector() -> Result<TlsConnector> {
-        let mut root_store = rustls::RootCertStore::empty();
-        root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
-
-        let config = rustls::ClientConfig::builder()
-            .with_root_certificates(root_store)
-            .with_no_client_auth();
-
-        Ok(TlsConnector::from(Arc::new(config)))
     }
 
     /// Resolve a domain name to IP addresses

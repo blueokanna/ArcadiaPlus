@@ -396,26 +396,25 @@ impl SolidStack {
             }
         );
 
-        if domain.is_none() {
-            if let IpAddr::V4(ip) = dst_addr.ip() {
-                if self.fake_ip_pool.is_fake_ip(ip) {
-                    warn!(
-                        "Cannot proxy connection to Fake-IP {} without domain mapping",
-                        ip
-                    );
-                    self.send_tcp_packet(
-                        dst_addr,
-                        src_addr,
-                        0,
-                        tcp_info.seq.wrapping_add(1),
-                        TcpFlags::rst_ack(),
-                        &[],
-                        None,
-                    )
-                    .await?;
-                    return Ok(());
-                }
-            }
+        if domain.is_none()
+            && let IpAddr::V4(ip) = dst_addr.ip()
+            && self.fake_ip_pool.is_fake_ip(ip)
+        {
+            warn!(
+                "Cannot proxy connection to Fake-IP {} without domain mapping",
+                ip
+            );
+            self.send_tcp_packet(
+                dst_addr,
+                src_addr,
+                0,
+                tcp_info.seq.wrapping_add(1),
+                TcpFlags::rst_ack(),
+                &[],
+                None,
+            )
+            .await?;
+            return Ok(());
         }
 
         let conn = self
@@ -1215,22 +1214,22 @@ impl StackProxy {
                 })
             };
 
-            if let Some((seq, ack, src_ip, dst_ip)) = fin_info {
-                if let Some(ref tx) = tun_tx {
-                    let packet = build_ipv4_tcp(
-                        src_ip,
-                        dst_ip,
-                        dst_addr.port(),
-                        src_addr.port(),
-                        seq,
-                        ack,
-                        TcpFlags::fin_ack(),
-                        65535,
-                        &[],
-                        None,
-                    );
-                    let _ = tx.send(BytesMut::from(&packet[..])).await;
-                }
+            if let Some((seq, ack, src_ip, dst_ip)) = fin_info
+                && let Some(ref tx) = tun_tx
+            {
+                let packet = build_ipv4_tcp(
+                    src_ip,
+                    dst_ip,
+                    dst_addr.port(),
+                    src_addr.port(),
+                    seq,
+                    ack,
+                    TcpFlags::fin_ack(),
+                    65535,
+                    &[],
+                    None,
+                );
+                let _ = tx.send(BytesMut::from(&packet[..])).await;
             }
 
             tcp_manager.remove_connection(src_addr, dst_addr);

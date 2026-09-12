@@ -35,7 +35,9 @@ use courierust::courierust_hpack::{HeaderField, HeaderList};
 use courierust::courierust_io::{Read, Write};
 use parking_lot::{Condvar, Mutex};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, error::TryRecvError, unbounded_channel};
+use tokio::sync::mpsc::{
+    UnboundedReceiver, UnboundedSender, error::TryRecvError, unbounded_channel,
+};
 
 use super::io_shim::DuplexShim;
 use super::transport::{Result, TransportError};
@@ -84,7 +86,10 @@ impl WriteGate {
     }
 
     fn release(&self, bytes: usize) {
-        self.queued.fetch_sub(bytes.min(self.queued.load(Ordering::Acquire)), Ordering::AcqRel);
+        self.queued.fetch_sub(
+            bytes.min(self.queued.load(Ordering::Acquire)),
+            Ordering::AcqRel,
+        );
         if let Some(waker) = self.waker.lock().take() {
             waker.wake();
         }
@@ -258,15 +263,10 @@ impl H2Stream {
                                         if end_stream && !sent_end {
                                             sent_end = true;
                                             if let Err(error) = session
-                                                .send_data(
-                                                    id,
-                                                    courierust::Bytes::new(),
-                                                    true,
-                                                )
+                                                .send_data(id, courierust::Bytes::new(), true)
                                                 .and_then(|_| session.flush())
                                             {
-                                                close_reason =
-                                                    Some(format!("end_stream: {error}"));
+                                                close_reason = Some(format!("end_stream: {error}"));
                                                 break;
                                             }
                                         }
@@ -302,7 +302,10 @@ impl H2Stream {
                                     .and_then(|field| field.value.to_str().ok())
                                     .and_then(|value| value.parse::<u16>().ok())
                                     .unwrap_or(0);
-                                if event_tx.send(SessionEvent::ResponseHeaders(status)).is_err() {
+                                if event_tx
+                                    .send(SessionEvent::ResponseHeaders(status))
+                                    .is_err()
+                                {
                                     return;
                                 }
                                 if end_stream && event_tx.send(SessionEvent::EndStream).is_err() {
@@ -443,11 +446,7 @@ fn send_all(
 
     while sent < bytes.len() {
         let accepted = session
-            .send_data(
-                stream_id,
-                courierust::Bytes::from(&bytes[sent..]),
-                false,
-            )
+            .send_data(stream_id, courierust::Bytes::from(&bytes[sent..]), false)
             .map_err(|error| error.to_string())?;
 
         if accepted == 0 {
@@ -606,14 +605,8 @@ pub fn request_fields(
     };
 
     let mut fields = vec![
-        HeaderField::new(
-            pseudo(":method"),
-            HeaderValue::from(method.to_string()),
-        ),
-        HeaderField::new(
-            pseudo(":scheme"),
-            HeaderValue::from_static("https"),
-        ),
+        HeaderField::new(pseudo(":method"), HeaderValue::from(method.to_string())),
+        HeaderField::new(pseudo(":scheme"), HeaderValue::from_static("https")),
         HeaderField::new(
             pseudo(":authority"),
             HeaderValue::from(authority.to_string()),

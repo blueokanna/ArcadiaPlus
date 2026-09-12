@@ -148,14 +148,13 @@ impl RouteManager {
         for line in stdout.lines() {
             if line.contains("0.0.0.0") && !line.contains("On-link") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 3 {
-                    if let Ok(gw) = parts[2].parse::<Ipv4Addr>() {
-                        if !gw.is_unspecified() {
-                            self.original_gateway = Some(gw.into());
-                            debug!("Found original gateway: {}", gw);
-                            break;
-                        }
-                    }
+                if parts.len() >= 3
+                    && let Ok(gw) = parts[2].parse::<Ipv4Addr>()
+                    && !gw.is_unspecified()
+                {
+                    self.original_gateway = Some(gw.into());
+                    debug!("Found original gateway: {}", gw);
+                    break;
                 }
             }
         }

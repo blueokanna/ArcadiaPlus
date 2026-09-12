@@ -66,7 +66,8 @@ impl HandshakeState {
         let (ephemeral_private, ephemeral_public) = super::crypto::generate_keypair();
 
         let mut local_index_bytes = [0u8; 4];
-        crate::crypto::fill_random(&mut local_index_bytes).expect("Failed to generate random index");
+        crate::crypto::fill_random(&mut local_index_bytes)
+            .expect("Failed to generate random index");
         let local_index = u32::from_le_bytes(local_index_bytes);
 
         Self {
@@ -97,7 +98,8 @@ impl HandshakeState {
         let (ephemeral_private, ephemeral_public) = super::crypto::generate_keypair();
 
         let mut local_index_bytes = [0u8; 4];
-        crate::crypto::fill_random(&mut local_index_bytes).expect("Failed to generate random index");
+        crate::crypto::fill_random(&mut local_index_bytes)
+            .expect("Failed to generate random index");
         let local_index = u32::from_le_bytes(local_index_bytes);
 
         Self {

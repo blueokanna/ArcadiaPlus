@@ -1824,10 +1824,11 @@ fn ss_cipher_spec(cipher: &str) -> std::result::Result<SsCipherSpec, String> {
 fn ss_derive_subkey(
     password: &str,
     salt: &[u8],
-    key_len: usize,) -> std::result::Result<Vec<u8>, String> {
+    key_len: usize,
+) -> std::result::Result<Vec<u8>, String> {
     use crate::crypto::Hkdf;
-    use crate::crypto::{Digest, Md5};
     use crate::crypto::Sha1;
+    use crate::crypto::{Digest, Md5};
 
     let mut key = Vec::new();
     let mut prev: Vec<u8> = Vec::new();
@@ -2277,18 +2278,18 @@ async fn stop_linux_tun_runtime() -> Vec<String> {
 
 #[cfg(windows)]
 async fn stop_windows_tun_runtime() -> Vec<String> {
-    if let Some(mut routes) = crate::take_windows_route_manager() {
-        if let Err(error) = routes.disable_global_mode() {
-            crate::set_windows_route_manager(routes);
-            return vec![format!("failed to restore routes: {error}")];
-        }
+    if let Some(mut routes) = crate::take_windows_route_manager()
+        && let Err(error) = routes.disable_global_mode()
+    {
+        crate::set_windows_route_manager(routes);
+        return vec![format!("failed to restore routes: {error}")];
     }
 
-    if let Some(mut device) = crate::take_windows_tun_device() {
-        if let Err(error) = device.stop().await {
-            crate::set_windows_tun_device(device);
-            return vec![format!("failed to stop TUN device: {error}")];
-        }
+    if let Some(mut device) = crate::take_windows_tun_device()
+        && let Err(error) = device.stop().await
+    {
+        crate::set_windows_tun_device(device);
+        return vec![format!("failed to stop TUN device: {error}")];
     }
     if let Some(processor) = crate::take_windows_vpn_processor() {
         processor.stop();

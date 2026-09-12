@@ -35,7 +35,9 @@ pub struct DotServerConfig {
 impl Default for DotServerConfig {
     fn default() -> Self {
         Self {
-            listen: "127.0.0.1:853".parse().unwrap(),
+            // Built from octets rather than parsed from a string: a default
+            // value must not be able to fail.
+            listen: SocketAddr::from(([127, 0, 0, 1], 853)),
             cert_path: String::new(),
             key_path: String::new(),
             timeout_secs: 30,

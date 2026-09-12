@@ -96,10 +96,10 @@ impl AuthStore {
 
     /// Verify a username/password pair.
     pub fn verify(&self, username: &str, password: &str) -> bool {
-        self.users
-            .iter()
-            .any(|(user, pass)| constant_time_eq(user.as_bytes(), username.as_bytes())
-                && constant_time_eq(pass.as_bytes(), password.as_bytes()))
+        self.users.iter().any(|(user, pass)| {
+            constant_time_eq(user.as_bytes(), username.as_bytes())
+                && constant_time_eq(pass.as_bytes(), password.as_bytes())
+        })
     }
 
     /// Validate an HTTP `Proxy-Authorization` header value.
@@ -190,9 +190,10 @@ impl AuthStore {
         }
 
         let mut username = vec![0u8; usize::from(head[1])];
-        stream.read_exact(&mut username).await.map_err(|err| {
-            Error::network(format!("Failed to read SOCKS5 username: {err}"))
-        })?;
+        stream
+            .read_exact(&mut username)
+            .await
+            .map_err(|err| Error::network(format!("Failed to read SOCKS5 username: {err}")))?;
 
         let mut password_len = [0u8; 1];
         stream.read_exact(&mut password_len).await.map_err(|err| {
@@ -200,19 +201,17 @@ impl AuthStore {
         })?;
 
         let mut password = vec![0u8; usize::from(password_len[0])];
-        stream.read_exact(&mut password).await.map_err(|err| {
-            Error::network(format!("Failed to read SOCKS5 password: {err}"))
-        })?;
+        stream
+            .read_exact(&mut password)
+            .await
+            .map_err(|err| Error::network(format!("Failed to read SOCKS5 password: {err}")))?;
 
         let username = String::from_utf8_lossy(&username).into_owned();
         let password = String::from_utf8_lossy(&password).into_owned();
         let accepted = self.verify(&username, &password);
 
         stream
-            .write_all(&[
-                SOCKS5_USERPASS_VERSION,
-                if accepted { 0x00 } else { 0x01 },
-            ])
+            .write_all(&[SOCKS5_USERPASS_VERSION, if accepted { 0x00 } else { 0x01 }])
             .await
             .map_err(|err| Error::network(format!("Failed to send SOCKS5 auth result: {err}")))?;
 
@@ -428,7 +427,9 @@ mod tests {
         let (mut client, mut server) = tokio::io::duplex(128);
         client.write_all(&[0x05, 0x02, 0x00, 0x02]).await.unwrap();
         client
-            .write_all(&[0x01, 5, b'a', b'l', b'i', b'c', b'e', 6, b's', b'3', b'c', b'r', b'e', b't'])
+            .write_all(&[
+                0x01, 5, b'a', b'l', b'i', b'c', b'e', 6, b's', b'3', b'c', b'r', b'e', b't',
+            ])
             .await
             .unwrap();
 
@@ -443,7 +444,9 @@ mod tests {
         let (mut client, mut server) = tokio::io::duplex(128);
         client.write_all(&[0x05, 0x01, 0x02]).await.unwrap();
         client
-            .write_all(&[0x01, 5, b'a', b'l', b'i', b'c', b'e', 5, b'w', b'r', b'o', b'n', b'g'])
+            .write_all(&[
+                0x01, 5, b'a', b'l', b'i', b'c', b'e', 5, b'w', b'r', b'o', b'n', b'g',
+            ])
             .await
             .unwrap();
 

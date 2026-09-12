@@ -78,10 +78,10 @@ const WINTUN_SHA256_ENV: &str = "VELOGUARD_WINTUN_SHA256";
 /// Get the path where wintun.dll should be located
 #[cfg(windows)]
 pub fn get_wintun_dll_path() -> Result<PathBuf> {
-    if let Ok(exe_path) = std::env::current_exe() {
-        if let Some(exe_dir) = exe_path.parent() {
-            return Ok(exe_dir.join("wintun.dll"));
-        }
+    if let Ok(exe_path) = std::env::current_exe()
+        && let Some(exe_dir) = exe_path.parent()
+    {
+        return Ok(exe_dir.join("wintun.dll"));
     }
     Ok(std::env::current_dir()
         .map_err(|e| NetStackError::TunError(format!("Failed to get current directory: {}", e)))?

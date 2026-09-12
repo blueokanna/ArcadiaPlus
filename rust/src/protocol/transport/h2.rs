@@ -22,8 +22,8 @@ use std::task::{Context, Poll};
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
-use crate::protocol::http2;
 use super::{Result, TransportError};
+use crate::protocol::http2;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct H2Config {
@@ -147,9 +147,10 @@ impl H2Stream {
             return Ok(());
         }
 
-        let transport = self.transport.take().ok_or_else(|| {
-            TransportError::H2("the transport was already consumed".to_string())
-        })?;
+        let transport = self
+            .transport
+            .take()
+            .ok_or_else(|| TransportError::H2("the transport was already consumed".to_string()))?;
 
         let extra: Vec<(&str, &str)> = self
             .extra
@@ -172,13 +173,16 @@ impl H2Stream {
 
     /// The response status observed while opening the stream.
     pub fn status(&self) -> u16 {
-        self.stream.as_ref().map(http2::H2Stream::status).unwrap_or(0)
+        self.stream
+            .as_ref()
+            .map(http2::H2Stream::status)
+            .unwrap_or(0)
     }
 
     fn stream_mut(&mut self) -> io::Result<&mut http2::H2Stream> {
-        self.stream.as_mut().ok_or_else(|| {
-            io::Error::new(io::ErrorKind::NotConnected, "H2 stream not initialized")
-        })
+        self.stream
+            .as_mut()
+            .ok_or_else(|| io::Error::new(io::ErrorKind::NotConnected, "H2 stream not initialized"))
     }
 }
 
@@ -241,8 +245,10 @@ mod tests {
 
     #[test]
     fn authority_prefers_the_configured_host() {
-        let mut config = H2Config::default();
-        config.host = Some("front.example".to_string());
+        let config = H2Config {
+            host: Some("front.example".to_string()),
+            ..H2Config::default()
+        };
         let transport = H2Transport::new(config, "203.0.113.7", 8443);
         assert_eq!(transport.authority(), "front.example:8443");
     }

@@ -23,36 +23,36 @@ impl ConfigValidator {
             return Err(Error::config("Invalid port: must be between 1 and 65535"));
         }
 
-        if let Some(socks_port) = general.socks_port {
-            if socks_port == 0 {
-                return Err(Error::config(
-                    "Invalid socks_port: must be between 1 and 65535",
-                ));
-            }
+        if let Some(socks_port) = general.socks_port
+            && socks_port == 0
+        {
+            return Err(Error::config(
+                "Invalid socks_port: must be between 1 and 65535",
+            ));
         }
 
-        if let Some(redir_port) = general.redir_port {
-            if redir_port == 0 {
-                return Err(Error::config(
-                    "Invalid redir_port: must be between 1 and 65535",
-                ));
-            }
+        if let Some(redir_port) = general.redir_port
+            && redir_port == 0
+        {
+            return Err(Error::config(
+                "Invalid redir_port: must be between 1 and 65535",
+            ));
         }
 
-        if let Some(tproxy_port) = general.tproxy_port {
-            if tproxy_port == 0 {
-                return Err(Error::config(
-                    "Invalid tproxy_port: must be between 1 and 65535",
-                ));
-            }
+        if let Some(tproxy_port) = general.tproxy_port
+            && tproxy_port == 0
+        {
+            return Err(Error::config(
+                "Invalid tproxy_port: must be between 1 and 65535",
+            ));
         }
 
-        if let Some(mixed_port) = general.mixed_port {
-            if mixed_port == 0 {
-                return Err(Error::config(
-                    "Invalid mixed_port: must be between 1 and 65535",
-                ));
-            }
+        if let Some(mixed_port) = general.mixed_port
+            && mixed_port == 0
+        {
+            return Err(Error::config(
+                "Invalid mixed_port: must be between 1 and 65535",
+            ));
         }
 
         // Validate bind address

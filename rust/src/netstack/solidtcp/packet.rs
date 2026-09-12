@@ -332,12 +332,12 @@ pub fn build_ipv4_tcp(
     pkt[tcp_start + 13] = flags.to_byte();
     pkt[tcp_start + 14..tcp_start + 16].copy_from_slice(&window.to_be_bytes());
 
-    if flags.syn {
-        if let Some(mss_val) = mss {
-            pkt[tcp_start + 20] = 2;
-            pkt[tcp_start + 21] = 4;
-            pkt[tcp_start + 22..tcp_start + 24].copy_from_slice(&mss_val.to_be_bytes());
-        }
+    if flags.syn
+        && let Some(mss_val) = mss
+    {
+        pkt[tcp_start + 20] = 2;
+        pkt[tcp_start + 21] = 4;
+        pkt[tcp_start + 22..tcp_start + 24].copy_from_slice(&mss_val.to_be_bytes());
     }
 
     let payload_start = tcp_start + tcp_hdr_len;

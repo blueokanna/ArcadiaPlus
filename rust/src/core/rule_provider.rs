@@ -184,15 +184,15 @@ impl RuleProvider {
         cache_path: &Option<PathBuf>,
         message: String,
     ) -> Result<String> {
-        if let Some(path) = cache_path {
-            if let Ok(content) = tokio::fs::read_to_string(path).await {
-                tracing::warn!(
-                    "Using cached rule provider '{}' after refresh failed: {}",
-                    self.config.name,
-                    message
-                );
-                return Ok(content);
-            }
+        if let Some(path) = cache_path
+            && let Ok(content) = tokio::fs::read_to_string(path).await
+        {
+            tracing::warn!(
+                "Using cached rule provider '{}' after refresh failed: {}",
+                self.config.name,
+                message
+            );
+            return Ok(content);
         }
         Err(Error::network(message))
     }
@@ -208,15 +208,15 @@ impl RuleProvider {
     fn parse_domain_rules(&self, content: &str) -> Result<Vec<CompiledRuleEntry>> {
         let mut rules = Vec::new();
 
-        if let Ok(yaml_content) = serde_yaml::from_str::<serde_yaml::Value>(content) {
-            if let Some(payload) = yaml_content.get("payload").and_then(|v| v.as_sequence()) {
-                for item in payload {
-                    if let Some(domain) = item.as_str() {
-                        rules.push(self.parse_domain_entry(domain));
-                    }
+        if let Ok(yaml_content) = serde_yaml::from_str::<serde_yaml::Value>(content)
+            && let Some(payload) = yaml_content.get("payload").and_then(|v| v.as_sequence())
+        {
+            for item in payload {
+                if let Some(domain) = item.as_str() {
+                    rules.push(self.parse_domain_entry(domain));
                 }
-                return Ok(rules);
             }
+            return Ok(rules);
         }
 
         for line in content.lines() {
@@ -257,17 +257,17 @@ impl RuleProvider {
     fn parse_ipcidr_rules(&self, content: &str) -> Result<Vec<CompiledRuleEntry>> {
         let mut rules = Vec::new();
 
-        if let Ok(yaml_content) = serde_yaml::from_str::<serde_yaml::Value>(content) {
-            if let Some(payload) = yaml_content.get("payload").and_then(|v| v.as_sequence()) {
-                for item in payload {
-                    if let Some(cidr) = item.as_str() {
-                        if let Ok(network) = cidr.parse::<IpNet>() {
-                            rules.push(CompiledRuleEntry::IpCidr(network));
-                        }
-                    }
+        if let Ok(yaml_content) = serde_yaml::from_str::<serde_yaml::Value>(content)
+            && let Some(payload) = yaml_content.get("payload").and_then(|v| v.as_sequence())
+        {
+            for item in payload {
+                if let Some(cidr) = item.as_str()
+                    && let Ok(network) = cidr.parse::<IpNet>()
+                {
+                    rules.push(CompiledRuleEntry::IpCidr(network));
                 }
-                return Ok(rules);
             }
+            return Ok(rules);
         }
 
         for line in content.lines() {
@@ -286,17 +286,17 @@ impl RuleProvider {
     fn parse_classical_rules(&self, content: &str) -> Result<Vec<CompiledRuleEntry>> {
         let mut rules = Vec::new();
 
-        if let Ok(yaml_content) = serde_yaml::from_str::<serde_yaml::Value>(content) {
-            if let Some(payload) = yaml_content.get("payload").and_then(|v| v.as_sequence()) {
-                for item in payload {
-                    if let Some(rule_str) = item.as_str() {
-                        if let Some(entry) = self.parse_classical_entry(rule_str) {
-                            rules.push(entry);
-                        }
-                    }
+        if let Ok(yaml_content) = serde_yaml::from_str::<serde_yaml::Value>(content)
+            && let Some(payload) = yaml_content.get("payload").and_then(|v| v.as_sequence())
+        {
+            for item in payload {
+                if let Some(rule_str) = item.as_str()
+                    && let Some(entry) = self.parse_classical_entry(rule_str)
+                {
+                    rules.push(entry);
                 }
-                return Ok(rules);
             }
+            return Ok(rules);
         }
 
         for line in content.lines() {

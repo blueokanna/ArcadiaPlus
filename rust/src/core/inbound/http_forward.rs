@@ -34,7 +34,9 @@ use crate::core::connection_tracker::{TrackedConnection, global_tracker};
 use crate::core::error::{Error, Result};
 use crate::core::outbound::{OutboundManager, OutboundProxy, TargetAddr};
 use crate::core::routing::Router;
-use crate::protocol::h1_client::{self, DEFAULT_MAX_BODY_LEN, DEFAULT_MAX_HEAD_LEN, UpstreamRequest};
+use crate::protocol::h1_client::{
+    self, DEFAULT_MAX_BODY_LEN, DEFAULT_MAX_HEAD_LEN, UpstreamRequest,
+};
 use crate::protocol::h1_server::{H1Connection, PrefixedStream, Request, Response};
 
 /// Time budget for the upstream leg of one proxied request.
@@ -90,9 +92,7 @@ pub async fn forward(
     max_body: usize,
 ) -> Forwarded {
     let Some(destination) = destination_of(request) else {
-        return Forwarded::Response(bad_request(
-            "the request target carries no usable host",
-        ));
+        return Forwarded::Response(bad_request("the request target carries no usable host"));
     };
 
     let outbound_tag = router
@@ -174,17 +174,15 @@ where
     // not depend on the answer.
     let destination_ip = match target {
         TargetAddr::Ip(addr) => Some(addr.ip().to_string()),
-        TargetAddr::Domain(ref domain, port) => {
-            tokio::time::timeout(
-                LOOKUP_TIMEOUT,
-                tokio::net::lookup_host(format!("{domain}:{port}")),
-            )
-            .await
-            .ok()
-            .and_then(|result| result.ok())
-            .and_then(|mut addrs| addrs.next())
-            .map(|addr| addr.ip().to_string())
-        }
+        TargetAddr::Domain(ref domain, port) => tokio::time::timeout(
+            LOOKUP_TIMEOUT,
+            tokio::net::lookup_host(format!("{domain}:{port}")),
+        )
+        .await
+        .ok()
+        .and_then(|result| result.ok())
+        .and_then(|mut addrs| addrs.next())
+        .map(|addr| addr.ip().to_string()),
     };
 
     let tracker = global_tracker();
@@ -453,10 +451,7 @@ fn bad_gateway(detail: &str) -> Response {
 
 /// A `400` with a plain-text explanation.
 fn bad_request(detail: &str) -> Response {
-    Response::text(
-        StatusCode::BAD_REQUEST.as_u16(),
-        format!("{detail}\r\n"),
-    )
+    Response::text(StatusCode::BAD_REQUEST.as_u16(), format!("{detail}\r\n"))
 }
 
 #[cfg(test)]
@@ -468,10 +463,8 @@ mod tests {
     fn request(method: Method, target: &str, host: Option<&str>) -> Request {
         let mut headers = HeaderMap::new();
         if let Some(host) = host
-            && let (Ok(name), Ok(value)) = (
-                "host".parse(),
-                HeaderValue::from_bytes(host.as_bytes()),
-            )
+            && let (Ok(name), Ok(value)) =
+                ("host".parse(), HeaderValue::from_bytes(host.as_bytes()))
         {
             headers.insert(name, value);
         }
@@ -496,7 +489,11 @@ mod tests {
 
     #[test]
     fn origin_form_targets_pass_through() {
-        let form = origin_form(&request(Method::GET, "/index.html?x=1", Some("example.com")));
+        let form = origin_form(&request(
+            Method::GET,
+            "/index.html?x=1",
+            Some("example.com"),
+        ));
         assert_eq!(form, "/index.html?x=1");
     }
 

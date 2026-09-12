@@ -133,8 +133,14 @@ pub async fn exchange<S: AsyncRead + AsyncWrite + Unpin>(
         .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))?;
 
     let mut head = Vec::with_capacity(512);
-    courierust_h1::write_request_head(&mut head, request.method, &target, Version::HTTP_11, &headers)
-        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))?;
+    courierust_h1::write_request_head(
+        &mut head,
+        request.method,
+        &target,
+        Version::HTTP_11,
+        &headers,
+    )
+    .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error.to_string()))?;
 
     stream.write_all(&head).await?;
     if !request.body.is_empty() {
@@ -154,15 +160,18 @@ async fn read_response<S: AsyncRead + Unpin>(
 ) -> io::Result<UpstreamResponse> {
     let mut buffer = BytesMut::with_capacity(8 * 1024);
 
-    let block = read_head_block(stream, &mut buffer, max_head).await?.ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::UnexpectedEof,
-            "upstream closed before sending a response",
-        )
-    })?;
+    let block = read_head_block(stream, &mut buffer, max_head)
+        .await?
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "upstream closed before sending a response",
+            )
+        })?;
 
-    let text = std::str::from_utf8(&block)
-        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "the response head is not UTF-8"))?;
+    let text = std::str::from_utf8(&block).map_err(|_| {
+        io::Error::new(io::ErrorKind::InvalidData, "the response head is not UTF-8")
+    })?;
 
     let mut lines = text.split("\r\n");
     let status_line = lines.next().ok_or_else(|| {
@@ -218,11 +227,7 @@ enum BodyMode {
 }
 
 /// Decide how to delimit the body of a response to `method`.
-fn body_mode(
-    method: &Method,
-    status: StatusCode,
-    headers: &HeaderMap,
-) -> io::Result<BodyMode> {
+fn body_mode(method: &Method, status: StatusCode, headers: &HeaderMap) -> io::Result<BodyMode> {
     // RFC 9112 §6.3: a response to `HEAD`, and every 1xx/204/304 response, has
     // no body no matter what the framing headers claim. The check comes first
     // on purpose — reading a body a 204 does not have would consume the head of
@@ -418,7 +423,10 @@ mod tests {
             "connection".parse().expect("name"),
             HeaderValue::from_static("keep-alive"),
         );
-        headers.append("x-keep".parse().expect("name"), HeaderValue::from_static("1"));
+        headers.append(
+            "x-keep".parse().expect("name"),
+            HeaderValue::from_static("1"),
+        );
         strip_hop_by_hop(&mut headers);
 
         assert!(headers.get("connection").is_none());

@@ -88,14 +88,13 @@ impl DnsResolver {
         }
 
         // 2. Check Fake-IP (for A records only)
-        if record_type == RecordType::A {
-            if let Some(ref fake_ip) = self.fake_ip {
-                if !fake_ip.should_filter(name) {
-                    let ip = fake_ip.allocate(name)?;
-                    debug!("Fake-IP: {} -> {}", name, ip);
-                    return Ok(vec![IpAddr::V4(ip)]);
-                }
-            }
+        if record_type == RecordType::A
+            && let Some(ref fake_ip) = self.fake_ip
+            && !fake_ip.should_filter(name)
+        {
+            let ip = fake_ip.allocate(name)?;
+            debug!("Fake-IP: {} -> {}", name, ip);
+            return Ok(vec![IpAddr::V4(ip)]);
         }
 
         // 3. Check cache
@@ -171,10 +170,8 @@ impl DnsResolver {
 
         for answer in &response.answers {
             match &answer.data {
-                RData::A(a) => {
-                    if record_type == RecordType::A {
-                        ips.push(IpAddr::V4(a.0));
-                    }
+                RData::A(a) if record_type == RecordType::A => {
+                    ips.push(IpAddr::V4(a.0));
                 }
                 RData::AAAA(aaaa) if record_type == RecordType::AAAA => {
                     ips.push(IpAddr::V6(aaaa.0));
@@ -218,11 +215,11 @@ impl DnsResolver {
         // Check IP CIDR filter (additional custom ranges)
         for ip in ips {
             for cidr in &filter.ipcidr {
-                if let Ok(network) = cidr.parse::<ipnet::IpNet>() {
-                    if network.contains(ip) {
-                        debug!("IP {} matches fallback CIDR filter {}", ip, cidr);
-                        return true;
-                    }
+                if let Ok(network) = cidr.parse::<ipnet::IpNet>()
+                    && network.contains(ip)
+                {
+                    debug!("IP {} matches fallback CIDR filter {}", ip, cidr);
+                    return true;
                 }
             }
         }

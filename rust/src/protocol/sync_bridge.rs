@@ -280,7 +280,10 @@ impl AsyncWrite for BlockingWriter {
         }
 
         match this.tx.poll_reserve(cx) {
-            Poll::Ready(Ok(())) => match this.tx.send_item(WriteItem::Data(Bytes::copy_from_slice(buf))) {
+            Poll::Ready(Ok(())) => match this
+                .tx
+                .send_item(WriteItem::Data(Bytes::copy_from_slice(buf)))
+            {
                 Ok(()) => Poll::Ready(Ok(buf.len())),
                 Err(_) => Poll::Ready(Err(io::Error::new(
                     io::ErrorKind::BrokenPipe,
@@ -301,10 +304,7 @@ impl AsyncWrite for BlockingWriter {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_shutdown(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<io::Result<()>> {
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         let this = self.get_mut();
         if this.finished {
             return Poll::Ready(Ok(()));
@@ -519,10 +519,13 @@ mod tests {
         drop(pipe.feed);
 
         let mut buf = [0u8; 8];
-        let n = tokio::time::timeout(std::time::Duration::from_secs(5), async_reader.read(&mut buf))
-            .await
-            .expect("read must not hang")
-            .expect("read");
+        let n = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            async_reader.read(&mut buf),
+        )
+        .await
+        .expect("read must not hang")
+        .expect("read");
         assert_eq!(n, 0, "a closed blocking stream reads as EOF");
     }
 

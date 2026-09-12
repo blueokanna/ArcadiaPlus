@@ -124,10 +124,10 @@ impl VeloGuard {
 
     /// Get uptime in seconds
     pub fn uptime_secs(&self) -> u64 {
-        if let Ok(start_time) = self.start_time.read() {
-            if let Some(start) = *start_time {
-                return start.elapsed().as_secs();
-            }
+        if let Ok(start_time) = self.start_time.read()
+            && let Some(start) = *start_time
+        {
+            return start.elapsed().as_secs();
         }
         0
     }

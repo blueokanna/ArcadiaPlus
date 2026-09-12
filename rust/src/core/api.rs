@@ -156,12 +156,12 @@ impl ApiServer {
             return Err(Error::config("the REST API is already running"));
         }
 
-        let listener = TcpListener::bind(addr)
-            .await
-            .map_err(|error| Error::network(format!("failed to bind the REST API to {addr}: {error}")))?;
-        let local = listener
-            .local_addr()
-            .map_err(|error| Error::network(format!("failed to read the REST API address: {error}")))?;
+        let listener = TcpListener::bind(addr).await.map_err(|error| {
+            Error::network(format!("failed to bind the REST API to {addr}: {error}"))
+        })?;
+        let local = listener.local_addr().map_err(|error| {
+            Error::network(format!("failed to read the REST API address: {error}"))
+        })?;
 
         let state = self.state.clone();
         let cancel_token = self.cancel_token.clone();
@@ -254,9 +254,7 @@ async fn dispatch(state: &ApiState, request: &Request) -> Response {
         ("GET", "/api/v1/traffic") => json(ApiResponse::success(traffic_stats(state))),
         ("POST", "/api/v1/traffic/reset") => {
             state.traffic_stats.reset().await;
-            json(ApiResponse::success(
-                "Traffic statistics reset".to_string(),
-            ))
+            json(ApiResponse::success("Traffic statistics reset".to_string()))
         }
         ("GET", "/api/v1/health") => json(ApiResponse::success(health(state))),
         ("GET", "/api/v1/proxies") => json(ApiResponse::success(proxies(state).await)),
@@ -271,9 +269,8 @@ async fn dispatch(state: &ApiState, request: &Request) -> Response {
             json(proxy(state, tag).await)
         }
         _ => {
-            let mut response = json::<()>(ApiResponse::error(format!(
-                "no route for {method} {path}"
-            )));
+            let mut response =
+                json::<()>(ApiResponse::error(format!("no route for {method} {path}")));
             response.status = 404;
             response
         }
@@ -331,10 +328,7 @@ fn health(state: &ApiState) -> Vec<HealthResponse> {
         .map(|(tag, status)| {
             let (status_str, details) = match status {
                 HealthStatus::Healthy => ("healthy".to_string(), None),
-                HealthStatus::Unhealthy {
-                    reason,
-                    last_error,
-                } => {
+                HealthStatus::Unhealthy { reason, last_error } => {
                     let details = match (reason, last_error) {
                         (reason, Some(error)) => format!("{reason}: {error}"),
                         (reason, None) => reason,
@@ -452,15 +446,14 @@ mod tests {
 
     #[test]
     fn the_error_envelope_has_a_stable_shape() {
-        let encoded = serde_json::to_string(&ApiResponse::<()>::error("boom".to_string()))
-            .expect("encode");
+        let encoded =
+            serde_json::to_string(&ApiResponse::<()>::error("boom".to_string())).expect("encode");
         assert_eq!(encoded, r#"{"success":false,"data":null,"error":"boom"}"#);
     }
 
     #[test]
     fn the_success_envelope_has_a_stable_shape() {
-        let encoded =
-            serde_json::to_string(&ApiResponse::success(42u32)).expect("encode");
+        let encoded = serde_json::to_string(&ApiResponse::success(42u32)).expect("encode");
         assert_eq!(encoded, r#"{"success":true,"data":42,"error":null}"#);
     }
 
