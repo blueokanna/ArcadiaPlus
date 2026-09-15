@@ -67,7 +67,7 @@ Clear ownership boundaries matter more than adding macros, generics, or complex 
 
 ## Prerequisites
 
-- Flutter SDK compatible with Dart `^3.10.4`
+- Flutter SDK (Dart `^3.12.0`; CI uses Flutter 3.47.2)
 - Stable Rust with edition 2021 and workspace resolver 3 support
 - Android: Android SDK, NDK, and JDK 17
 - Windows: Visual Studio C++ toolchain, Wintun, and elevation

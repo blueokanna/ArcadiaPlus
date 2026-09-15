@@ -2,9 +2,15 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "merge-rust-verify-2",
+			"label": "ci-reverify",
 			"type": "shell",
-			"command": "$env:PATH = $env:USERPROFILE + '\\.cargo\\bin;' + $env:PATH; $cargo = Join-Path $env:USERPROFILE '.cargo\\bin\\cargo.exe'; Set-Location d:\\RustProject\\VeloGuard\\rust; & $cargo clippy --workspace --all-targets --all-features --locked -- -D warnings *> $env:TEMP\\vg-verify\\rclippy2.log; & $cargo test --workspace --all-targets *> $env:TEMP\\vg-verify\\rtest2.log; Write-Output RUST_VERIFY_2_DONE",
+			"command": "Set-Location d:\\RustProject\\VeloGuard; flutter pub get 2>&1 | Out-File -Encoding utf8 $env:TEMP\\vg-verify\\pubget2.txt; flutter pub get --enforce-lockfile 2>&1 | Out-File -Encoding utf8 $env:TEMP\\vg-verify\\enforce2.txt; git diff --stat 2>&1 | Out-File -Encoding utf8 $env:TEMP\\vg-verify\\diffstat2.txt; flutter analyze 2>&1 | Out-File -Encoding utf8 $env:TEMP\\vg-verify\\analyze2.txt; flutter test 2>&1 | Out-File -Encoding utf8 $env:TEMP\\vg-verify\\test2.txt; Write-Output REVERIFY_DONE",
+			"problemMatcher": []
+		},
+		{
+			"label": "ci-fix-push",
+			"type": "shell",
+			"command": "$lines = @('Fix CI dependency resolution: align Flutter and Dart SDK with pubspec.lock', '', 'CI used Flutter 3.44.6 (Dart 3.10.4) while pubspec.lock was produced with Dart 3.13.2 and requires dart >= 3.12.0, so flutter pub get --enforce-lockfile could never succeed there. CI, release, and environment.sdk now agree on Flutter 3.47.2 and Dart ^3.12.0.'); $lines | Out-File -Encoding utf8 $env:TEMP\\vg-verify\\commitmsg.txt; Set-Location d:\\RustProject\\VeloGuard; git add .github/workflows/ci.yml .github/workflows/release.yml .vscode/tasks.json README.md README_EN.md pubspec.yaml; git commit -F $env:TEMP\\vg-verify\\commitmsg.txt 2>&1 | Out-File -Encoding utf8 $env:TEMP\\vg-verify\\commit.txt; git push origin main 2>&1 | Out-File -Encoding utf8 $env:TEMP\\vg-verify\\push.txt; Write-Output PUSH_DONE",
 			"problemMatcher": []
 		}
 	]

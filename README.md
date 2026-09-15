@@ -67,7 +67,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 
 ## 环境要求
 
-- Flutter SDK 对应 Dart `^3.10.4`
+- Flutter SDK（Dart `^3.12.0`；CI 使用 Flutter 3.47.2）
 - Rust stable，支持 edition 2021 和 workspace resolver 3
 - Android：Android SDK、NDK、JDK 17
 - Windows：Visual Studio C++ 工具链；Wintun/管理员权限

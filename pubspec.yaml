@@ -5,7 +5,7 @@ publish_to: 'none'
 version: 1.0.2+2
 
 environment:
-  sdk: ^3.10.4
+  sdk: ^3.12.0
 
 dependencies:
   flutter:
@@ -20,15 +20,14 @@ dependencies:
 
   # Material Design 3 and UI components
   material_design_icons_flutter: ^7.0.7296
-  # 2.x pulls material_ui, which wants Dart >= 3.12; 1.9 is the newest 1.x.
+  # 2.x pulls material_ui; this line stays on the 1.x series.
   dynamic_color: ^1.9.0
 
   # State management
   provider: ^6.1.5
 
   # Navigation and routing
-  # 18.x needs Dart >= 3.12; this toolchain is 3.11, so 17.5 is the newest
-  # version that actually resolves. Bump together with the SDK.
+  # Pinned to the newest 17.x; bump together with the SDK.
   go_router: ^17.5.0
 
   # Utilities
