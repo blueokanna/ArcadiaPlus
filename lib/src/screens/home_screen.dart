@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:veloguard/src/providers/app_state_provider.dart';
+import 'package:veloguard/src/providers/general_settings_provider.dart';
 import 'package:veloguard/src/providers/theme_provider.dart';
 import 'package:veloguard/src/widgets/traffic_chart.dart';
 import 'package:veloguard/src/widgets/status_card.dart';
@@ -128,6 +129,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       downloadSpeed: appState.currentDownloadSpeed,
                       uploadSpeed: appState.currentUploadSpeed,
                       isProxyRunning: appState.isServiceRunning,
+                      proxyPort: context
+                          .watch<GeneralSettingsProvider>()
+                          .mixedPort,
                     ),
 
                     ResponsiveSpacing(multiplier: 3),

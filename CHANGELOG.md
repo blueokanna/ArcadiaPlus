@@ -15,6 +15,7 @@
 - Upgraded flutter_rust_bridge to 2.13.0 on both sides and added ffigen for the web bindings.
 - Trimmed the workspace dependency list to corduit, RecurseX, flutter_rust_bridge, tokio, tracing, once_cell, parking_lot, and jni on Android.
 - Relicensed the project under the PolyForm Perimeter License 1.0.1 plus the licensor's no-unlawful-use term, and aligned the in-app license name, about strings, disclaimer text, and platform metadata in all eleven locales with the new terms.
+- Merged the earlier single-crate iteration back into the bridge workspace: the corduit 0.1.5 bridge stays the engine surface, cargokit and the bridge generator point at `rust/veloguard-lib` again, the Rust toolchain is pinned to 1.97.0 so local builds lint with the same compiler as CI, and the iteration's UI fixes (a proxy-aware IP check that follows the configured mixed port, the `file_picker` 12 reader) plus its CI action bumps and the pub-host lockfile step were kept.
 
 ## 1.0.1
 

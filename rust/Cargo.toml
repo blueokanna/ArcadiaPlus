@@ -6,8 +6,9 @@ members = ["veloguard-lib"]
 edition = "2021"
 license-file = "../LICENSE"
 version = "1.0.2"
+rust-version = "1.88"
 authors = ["blueokanna"]
-description = "Cross-platform proxy client core for VeloGuard"
+description = "A cross-platform basic proxy client core for VeloGuard"
 
 [workspace.dependencies]
 corduit = { version = "0.1.5", features = ["hysteria2", "reality", "tuic"] }

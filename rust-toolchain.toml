@@ -1,0 +1,14 @@
+# Toolchain pin: local builds, `flutter build` (through cargokit) and CI must all
+# lint/compile with exactly the same rustc + clippy, otherwise clippy lints that
+# only exist in newer releases (e.g. `collapsible_if` in 1.97) fail in CI while
+# staying invisible on a developer machine.
+
+[toolchain]
+channel = "1.97.0"
+components = ["clippy", "rustfmt"]
+targets = [
+    "aarch64-linux-android",
+    "armv7-linux-androideabi",
+    "i686-linux-android",
+    "x86_64-linux-android",
+]

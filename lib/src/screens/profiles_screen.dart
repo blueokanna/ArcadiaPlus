@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -568,28 +568,28 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
 
     try {
       // Use file_picker to select a file
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['yaml', 'yml', 'json', 'txt'],
-        allowMultiple: false,
       );
 
-      if (result == null || result.files.isEmpty) {
+      if (file == null) {
         return; // User cancelled
       }
 
-      final file = result.files.first;
       String? content;
-      String fileName = file.name;
+      final fileName = file.name;
 
-      // Read file content
-      if (file.bytes != null) {
-        // Web or mobile - bytes available directly
-        content = String.fromCharCodes(file.bytes!);
-      } else if (file.path != null) {
-        // Desktop - read from path
-        final fileObj = File(file.path!);
-        content = await fileObj.readAsString();
+      // file_picker 12 exposes one cross-platform reader: `readAsBytes()`.
+      // The old `bytes` field only existed on web/mobile and `path` only on
+      // desktop, which is how the two branches here used to drift apart.
+      try {
+        final bytes = await file.readAsBytes();
+        if (bytes.isNotEmpty) {
+          content = utf8.decode(bytes);
+        }
+      } on FormatException {
+        content = null;
       }
 
       if (content == null || content.isEmpty) {

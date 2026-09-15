@@ -2,10 +2,10 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "scout-corduit-api",
+			"label": "merge-rust-verify-2",
 			"type": "shell",
-			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\blueo\\AppData\\Local\\Temp\\scout-api.ps1",
-			"group": "build"
+			"command": "$env:PATH = $env:USERPROFILE + '\\.cargo\\bin;' + $env:PATH; $cargo = Join-Path $env:USERPROFILE '.cargo\\bin\\cargo.exe'; Set-Location d:\\RustProject\\VeloGuard\\rust; & $cargo clippy --workspace --all-targets --all-features --locked -- -D warnings *> $env:TEMP\\vg-verify\\rclippy2.log; & $cargo test --workspace --all-targets *> $env:TEMP\\vg-verify\\rtest2.log; Write-Output RUST_VERIFY_2_DONE",
+			"problemMatcher": []
 		}
 	]
 }
