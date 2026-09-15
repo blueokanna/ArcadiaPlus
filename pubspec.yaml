@@ -16,7 +16,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   rust_lib_veloguard:
     path: rust_builder
-  flutter_rust_bridge: 2.12.0
+  flutter_rust_bridge: 2.13.0
 
   # Material Design 3 and UI components
   material_design_icons_flutter: ^7.0.7296
@@ -59,6 +59,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  ffigen: ^21.0.0
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
 

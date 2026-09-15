@@ -14,6 +14,7 @@ class DnsSettings {
   final bool ipv6;
   final bool followRules;
   final bool preferH3;
+  final bool useRecursiveResolver;
   final String dnsMode;
   final String fakeIpRange;
   final List<String> fakeIpFilter;
@@ -33,6 +34,7 @@ class DnsSettings {
     this.ipv6 = false,
     this.followRules = true,
     this.preferH3 = false,
+    this.useRecursiveResolver = false,
     this.dnsMode = 'fake-ip',
     this.fakeIpRange = '198.18.0.1/16',
     this.fakeIpFilter = const [],
@@ -56,6 +58,7 @@ class DnsSettings {
     'ipv6': ipv6,
     'followRules': followRules,
     'preferH3': preferH3,
+    'useRecursiveResolver': useRecursiveResolver,
     'dnsMode': dnsMode,
     'fakeIpRange': fakeIpRange,
     'fakeIpFilter': fakeIpFilter,
@@ -76,6 +79,7 @@ class DnsSettings {
     ipv6: json['ipv6'] as bool? ?? false,
     followRules: json['followRules'] as bool? ?? true,
     preferH3: json['preferH3'] as bool? ?? false,
+    useRecursiveResolver: json['useRecursiveResolver'] as bool? ?? false,
     dnsMode: json['dnsMode'] as String? ?? 'fake-ip',
     fakeIpRange: json['fakeIpRange'] as String? ?? '198.18.0.1/16',
     fakeIpFilter: (json['fakeIpFilter'] as List?)?.cast<String>() ?? [],
@@ -103,6 +107,7 @@ class DnsSettings {
     bool? ipv6,
     bool? followRules,
     bool? preferH3,
+    bool? useRecursiveResolver,
     String? dnsMode,
     String? fakeIpRange,
     List<String>? fakeIpFilter,
@@ -122,6 +127,7 @@ class DnsSettings {
       ipv6: ipv6 ?? this.ipv6,
       followRules: followRules ?? this.followRules,
       preferH3: preferH3 ?? this.preferH3,
+      useRecursiveResolver: useRecursiveResolver ?? this.useRecursiveResolver,
       dnsMode: dnsMode ?? this.dnsMode,
       fakeIpRange: fakeIpRange ?? this.fakeIpRange,
       fakeIpFilter: fakeIpFilter ?? this.fakeIpFilter,

@@ -13,6 +13,16 @@ cd /D "%CARGOKIT_TOOL_TEMP_DIR%"
 SET BUILD_TOOL_PKG_DIR=%BASEDIR%build_tool
 SET DART=%FLUTTER_ROOT%\bin\cache\dart-sdk\bin\dart
 
+REM cargokit shells out to `rustup run <toolchain> cargo`, and cargo resolves
+REM `rustc` from PATH. A standalone Rust installation sitting earlier on PATH
+REM (a plain "Rust stable MSVC <version>" directory, for example) then wins
+REM over the toolchain's own rustc and the crate fails to compile with a
+REM cargo/rustc version mismatch. Putting the rustup shim first keeps cargo
+REM and rustc on the same toolchain.
+if exist "%USERPROFILE%\.cargo\bin\rustc.exe" (
+    set "PATH=%USERPROFILE%\.cargo\bin;%PATH%"
+)
+
 set BUILD_TOOL_PKG_DIR_POSIX=%BUILD_TOOL_PKG_DIR:\=/%
 
 (

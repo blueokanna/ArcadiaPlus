@@ -4,7 +4,7 @@
   "description": "A modern cross-platform proxy client built with Flutter and Rust",
   "main": "",
   "author": "blueokanna",
-  "license": "MIT",
+  "license": "PolyForm-Perimeter-1.0.1",
   "dependencies": {},
   "devDependencies": {
     "@ohos/hypium": "1.0.19",

@@ -216,6 +216,23 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                         onChanged: (v) => dnsSettings.setPreferH3(v),
                       ),
                     ),
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    AdaptiveListTile(
+                      title: const Text('Recursive Resolver'),
+                      subtitle: const Text(
+                        'Resolve from the DNS root locally (RecurseX) '
+                        'instead of forwarding to upstream servers',
+                      ),
+                      leading: Icon(
+                        Icons.hub_outlined,
+                        color: colorScheme.primary,
+                      ),
+                      trailing: Switch.adaptive(
+                        value: dnsSettings.useRecursiveResolver,
+                        onChanged: (v) =>
+                            dnsSettings.setUseRecursiveResolver(v),
+                      ),
+                    ),
                   ],
                 ),
               ),

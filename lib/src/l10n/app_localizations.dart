@@ -739,9 +739,18 @@ const Map<String, String> _deStrings = {
   'disclaimerDesc': 'Nutzungsbedingungen und rechtliche Hinweise',
   'disclaimerTitle': 'Nutzungsbedingungen',
   'disclaimerContent':
-      'VeloGuard ist ein Netzwerk-Proxy-Tool, das nur für legale Zwecke verwendet werden darf.',
+      'VeloGuard ist ein Netzwerk-Proxy-Client und darf nur im Rahmen '
+      'des für Sie geltenden Rechts eingesetzt werden. Sie sind selbst '
+      'dafür verantwortlich, dass Ihre Nutzung lokales Recht, die '
+      'Bedingungen genutzter Netzwerke sowie Export- und '
+      'Sanktionsvorschriften einhält. Eine rechtswidrige Nutzung ist '
+      'kein zulässiger Zweck und verstößt gegen die Lizenz. Soweit '
+      'gesetzlich zulässig, übernehmen Autoren und Mitwirkende keine '
+      'Haftung für Folgen, die Dritte durch eine rechtswidrige Nutzung '
+      'dieser Software oder darauf aufbauender Werke verursachen.',
   'disclaimerWarning':
-      'Die illegale Nutzung von Proxy-Tools kann rechtliche Konsequenzen haben.',
+      'Die rechtswidrige Nutzung dieser Software verstößt gegen die '
+      'Lizenz und kann rechtliche Folgen haben.',
   'understood': 'Verstanden',
   'aboutCatClash': 'Über VeloGuard',
   'aboutCatClashDesc': 'Erfahren Sie mehr über diese App',
@@ -755,10 +764,10 @@ const Map<String, String> _deStrings = {
   'featureRules': 'Flexible Routing-Regeln',
   'featureDns': 'Integrierter DNS-Server',
   'supportedProtocols': 'Unterstützte Protokolle',
-  'openSource': 'Open Source',
+  'openSource': 'Source-Available',
   'openSourceDesc': 'Entwickelt mit Flutter & Rust',
   'license': 'Lizenz',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': 'FEHLER',
   'warning': 'WARNUNG',
   'info': 'INFO',
@@ -1019,9 +1028,18 @@ const Map<String, String> _enStrings = {
   'disclaimer': 'Disclaimer',
   'disclaimerDesc': 'Terms of use and legal notices',
   'disclaimerTitle': 'Terms of Use',
-  'disclaimerContent': 'VeloGuard is a network proxy tool for legal use only.',
+  'disclaimerContent':
+      'VeloGuard is a network proxy client that may be used only where '
+      'the law allows. You are responsible for keeping your use '
+      'compliant with local law, the terms of the networks you rely '
+      'on, and applicable export-control and sanctions rules. Unlawful '
+      'use is not a permitted purpose and violates the license. As far '
+      'as the law allows, the authors and contributors accept no '
+      'liability for consequences caused by anyone using this software, '
+      'or a work based on it, to break the law.',
   'disclaimerWarning':
-      'Illegal use of proxy tools may result in legal consequences.',
+      'Using this software to break the law violates the license and '
+      'can carry legal consequences.',
   'understood': 'Understood',
   'aboutCatClash': 'About VeloGuard',
   'aboutCatClashDesc': 'Learn more about this app',
@@ -1035,10 +1053,10 @@ const Map<String, String> _enStrings = {
   'featureRules': 'Flexible routing rules',
   'featureDns': 'Built-in DNS server',
   'supportedProtocols': 'Supported Protocols',
-  'openSource': 'Open Source',
+  'openSource': 'Source Available',
   'openSourceDesc': 'Built with Flutter & Rust',
   'license': 'License',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': 'ERROR',
   'warning': 'WARNING',
   'info': 'INFO',
@@ -1358,9 +1376,18 @@ const Map<String, String> _esStrings = {
   'disclaimerDesc': 'Términos de uso y avisos legales',
   'disclaimerTitle': 'Términos de uso',
   'disclaimerContent':
-      'VeloGuard es una herramienta de proxy de red solo para uso legal.',
+      'VeloGuard es un cliente proxy de red que solo puede usarse donde '
+      'la ley lo permita. Eres responsable de que tu uso cumpla la '
+      'legislación local, las condiciones de las redes que utilices y '
+      'las normas aplicables de control de exportaciones y sanciones. '
+      'El uso ilícito no es un fin permitido y supone un incumplimiento '
+      'de la licencia. En la medida en que la ley lo permita, los '
+      'autores y colaboradores no asumen responsabilidad por las '
+      'consecuencias del uso ilícito de este software o de una obra '
+      'derivada por parte de terceros.',
   'disclaimerWarning':
-      'El uso ilegal de herramientas de proxy puede tener consecuencias legales.',
+      'Usar este software para infringir la ley incumple la licencia y '
+      'puede acarrear consecuencias legales.',
   'understood': 'Entendido',
   'aboutCatClash': 'Acerca de VeloGuard',
   'aboutCatClashDesc': 'Más información sobre esta aplicación',
@@ -1374,10 +1401,10 @@ const Map<String, String> _esStrings = {
   'featureRules': 'Reglas de enrutamiento flexibles',
   'featureDns': 'Servidor DNS integrado',
   'supportedProtocols': 'Protocolos soportados',
-  'openSource': 'Código abierto',
+  'openSource': 'Código disponible',
   'openSourceDesc': 'Construido con Flutter y Rust',
   'license': 'Licencia',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': 'ERROR',
   'warning': 'ADVERTENCIA',
   'info': 'INFO',
@@ -1643,9 +1670,19 @@ const Map<String, String> _frStrings = {
   'disclaimerDesc': 'Conditions d\'utilisation et mentions légales',
   'disclaimerTitle': 'Conditions d\'utilisation',
   'disclaimerContent':
-      'VeloGuard est un outil de proxy réseau à usage légal uniquement.',
+      'VeloGuard est un client proxy réseau qui ne peut être utilisé '
+      'que là où la loi le permet. Il vous appartient de veiller à ce '
+      'que votre usage respecte la législation locale, les conditions '
+      'des réseaux que vous utilisez ainsi que les règles applicables '
+      'en matière de contrôle des exportations et de sanctions. Un '
+      'usage illicite n\'est pas un objectif autorisé et constitue une '
+      'violation de la licence. Dans la mesure permise par la loi, les '
+      'auteurs et contributeurs déclinent toute responsabilité quant '
+      'aux conséquences d\'un usage illicite de ce logiciel, ou d\'une '
+      'œuvre dérivée, par des tiers.',
   'disclaimerWarning':
-      'L\'utilisation illégale d\'outils de proxy peut entraîner des conséquences juridiques.',
+      'Utiliser ce logiciel pour enfreindre la loi viole la licence et '
+      'peut entraîner des conséquences juridiques.',
   'understood': 'Compris',
   'aboutCatClash': 'À propos de VeloGuard',
   'aboutCatClashDesc': 'En savoir plus sur cette application',
@@ -1659,10 +1696,10 @@ const Map<String, String> _frStrings = {
   'featureRules': 'Règles de routage flexibles',
   'featureDns': 'Serveur DNS intégré',
   'supportedProtocols': 'Protocoles supportés',
-  'openSource': 'Open Source',
+  'openSource': 'Source disponible',
   'openSourceDesc': 'Construit avec Flutter et Rust',
   'license': 'Licence',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': 'ERREUR',
   'warning': 'AVERTISSEMENT',
   'info': 'INFO',
@@ -1925,9 +1962,18 @@ const Map<String, String> _itStrings = {
   'disclaimerDesc': 'Termini di utilizzo e avvisi legali',
   'disclaimerTitle': 'Termini di utilizzo',
   'disclaimerContent':
-      'VeloGuard è uno strumento proxy di rete solo per uso legale.',
+      'VeloGuard è un client proxy di rete che può essere usato solo '
+      'dove la legge lo consente. Sei responsabile della conformità '
+      'del tuo uso alla legislazione locale, ai termini delle reti che '
+      'utilizzi e alle norme applicabili in materia di controllo delle '
+      'esportazioni e sanzioni. L\'uso illecito non è uno scopo '
+      'consentito e costituisce una violazione della licenza. Nei '
+      'limiti consentiti dalla legge, autori e contributori non '
+      'assumono responsabilità per le conseguenze di un uso illecito '
+      'di questo software o di un\'opera derivata da parte di terzi.',
   'disclaimerWarning':
-      'L\'uso illegale di strumenti proxy può comportare conseguenze legali.',
+      'Usare questo software per violare la legge infrange la licenza '
+      'e può comportare conseguenze legali.',
   'understood': 'Capito',
   'aboutCatClash': 'Info su VeloGuard',
   'aboutCatClashDesc': 'Scopri di più su questa app',
@@ -1941,10 +1987,10 @@ const Map<String, String> _itStrings = {
   'featureRules': 'Regole di routing flessibili',
   'featureDns': 'Server DNS integrato',
   'supportedProtocols': 'Protocolli supportati',
-  'openSource': 'Open Source',
+  'openSource': 'Sorgente disponibile',
   'openSourceDesc': 'Costruito con Flutter e Rust',
   'license': 'Licenza',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': 'ERRORE',
   'warning': 'AVVISO',
   'info': 'INFO',
@@ -2202,8 +2248,12 @@ const Map<String, String> _jaStrings = {
   'disclaimer': '免責事項',
   'disclaimerDesc': '利用規約と法的通知',
   'disclaimerTitle': '利用規約',
-  'disclaimerContent': 'VeloGuardは合法的な使用のみを目的としたネットワークプロキシツールです。',
-  'disclaimerWarning': 'プロキシツールの違法使用は法的結果を招く可能性があります。',
+  'disclaimerContent':
+      'VeloGuard はネットワークプロキシクライアントであり、お使いの地域の法令が認める範囲でのみ利用できます。'
+      '利用にあたっては、現地の法令、接続するネットワークの利用条件、および適用される輸出管理・制裁関連の規制を遵守する責任が利用者にあります。'
+      '違法な用途は許容された目的に該当せず、ライセンス違反となります。'
+      '法律で認められる範囲において、本ソフトウェアまたはその派生作品が第三者による違法行為に使用されたことによる結果について、作者および貢献者は責任を負いません。',
+  'disclaimerWarning': '本ソフトウェアを違法行為に使用することはライセンス違反であり、法的な結果を招く可能性があります。',
   'understood': '了解',
   'aboutCatClash': 'VeloGuardについて',
   'aboutCatClashDesc': 'このアプリについて詳しく',
@@ -2216,10 +2266,10 @@ const Map<String, String> _jaStrings = {
   'featureRules': '柔軟なルーティングルール',
   'featureDns': '内蔵DNSサーバー',
   'supportedProtocols': 'サポートされているプロトコル',
-  'openSource': 'オープンソース',
+  'openSource': 'ソース公開',
   'openSourceDesc': 'FlutterとRustで構築',
   'license': 'ライセンス',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': 'エラー',
   'warning': '警告',
   'info': '情報',
@@ -2475,8 +2525,12 @@ const Map<String, String> _koStrings = {
   'disclaimer': '면책 조항',
   'disclaimerDesc': '이용 약관 및 법적 고지',
   'disclaimerTitle': '이용 약관',
-  'disclaimerContent': 'VeloGuard는 합법적인 용도로만 사용되는 네트워크 프록시 도구입니다.',
-  'disclaimerWarning': '프록시 도구의 불법 사용은 법적 결과를 초래할 수 있습니다.',
+  'disclaimerContent':
+      'VeloGuard는 네트워크 프록시 클라이언트이며, 해당 지역 법률이 허용하는 범위에서만 사용할 수 있습니다. '
+      '현지 법률, 이용하는 네트워크의 이용 조건, 적용되는 수출 통제 및 제재 규정을 준수할 책임은 사용자에게 있습니다. '
+      '위법한 사용은 허용된 목적에 해당하지 않으며 라이선스 위반입니다. '
+      '법률이 허용하는 범위에서, 제3자가 이 소프트웨어 또는 이를 기반으로 한 파생 저작물을 위법하게 사용함으로써 발생하는 결과에 대해 저자와 기여자는 책임을 지지 않습니다.',
+  'disclaimerWarning': '이 소프트웨어를 위법하게 사용하는 것은 라이선스 위반이며 법적 결과를 초래할 수 있습니다.',
   'understood': '이해했습니다',
   'aboutCatClash': 'VeloGuard 정보',
   'aboutCatClashDesc': '이 앱에 대해 자세히 알아보기',
@@ -2490,10 +2544,10 @@ const Map<String, String> _koStrings = {
   'featureRules': '유연한 라우팅 규칙',
   'featureDns': '내장 DNS 서버',
   'supportedProtocols': '지원되는 프로토콜',
-  'openSource': '오픈 소스',
+  'openSource': '소스 공개',
   'openSourceDesc': 'Flutter와 Rust로 구축',
   'license': '라이선스',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': '오류',
   'warning': '경고',
   'info': '정보',
@@ -2755,9 +2809,18 @@ const Map<String, String> _ptStrings = {
   'disclaimerDesc': 'Termos de uso e avisos legais',
   'disclaimerTitle': 'Termos de uso',
   'disclaimerContent':
-      'VeloGuard é uma ferramenta de proxy de rede apenas para uso legal.',
+      'O VeloGuard é um cliente proxy de rede que só pode ser usado '
+      'onde a lei permitir. Você é responsável por manter o seu uso em '
+      'conformidade com a legislação local, com os termos das redes que '
+      'utilizar e com as normas aplicáveis de controle de exportação e '
+      'sanções. O uso ilícito não é uma finalidade permitida e viola a '
+      'licença. Na medida permitida pela lei, os autores e '
+      'contribuidores não assumem responsabilidade pelas consequências '
+      'do uso ilícito deste software, ou de uma obra derivada, por '
+      'terceiros.',
   'disclaimerWarning':
-      'O uso ilegal de ferramentas de proxy pode resultar em consequências legais.',
+      'Usar este software para infringir a lei viola a licença e pode '
+      'acarretar consequências legais.',
   'understood': 'Entendido',
   'aboutCatClash': 'Sobre VeloGuard',
   'aboutCatClashDesc': 'Saiba mais sobre este app',
@@ -2771,10 +2834,10 @@ const Map<String, String> _ptStrings = {
   'featureRules': 'Regras de roteamento flexíveis',
   'featureDns': 'Servidor DNS integrado',
   'supportedProtocols': 'Protocolos suportados',
-  'openSource': 'Código aberto',
+  'openSource': 'Código disponível',
   'openSourceDesc': 'Construído com Flutter e Rust',
   'license': 'Licença',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': 'ERRO',
   'warning': 'AVISO',
   'info': 'INFO',
@@ -3037,9 +3100,18 @@ const Map<String, String> _ruStrings = {
   'disclaimerDesc': 'Условия использования и юридические уведомления',
   'disclaimerTitle': 'Условия использования',
   'disclaimerContent':
-      'VeloGuard - это инструмент сетевого прокси только для законного использования.',
+      'VeloGuard — это клиент сетевого прокси, и использовать его '
+      'можно только там, где это допускает закон. Вы сами отвечаете '
+      'за соблюдение местного законодательства, условий используемых '
+      'сетей, а также применимых правил экспортного контроля и '
+      'санкций. Противоправное использование не является разрешённой '
+      'целью и нарушает лицензию. В пределах, допускаемых законом, '
+      'авторы и участники не несут ответственности за последствия '
+      'противоправного использования этого ПО или производных работ '
+      'третьими лицами.',
   'disclaimerWarning':
-      'Незаконное использование прокси-инструментов может повлечь юридические последствия.',
+      'Использование этого ПО в нарушение закона нарушает лицензию и '
+      'может повлечь юридические последствия.',
   'understood': 'Понятно',
   'aboutCatClash': 'О VeloGuard',
   'aboutCatClashDesc': 'Узнать больше об этом приложении',
@@ -3053,10 +3125,10 @@ const Map<String, String> _ruStrings = {
   'featureRules': 'Гибкие правила маршрутизации',
   'featureDns': 'Встроенный DNS-сервер',
   'supportedProtocols': 'Поддерживаемые протоколы',
-  'openSource': 'Открытый исходный код',
+  'openSource': 'Доступный исходный код',
   'openSourceDesc': 'Создано на Flutter и Rust',
   'license': 'Лицензия',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': 'ОШИБКА',
   'warning': 'ПРЕДУПРЕЖДЕНИЕ',
   'info': 'ИНФО',
@@ -3314,8 +3386,12 @@ const Map<String, String> _zhCNStrings = {
   'disclaimer': '免责声明',
   'disclaimerDesc': '使用条款和法律声明',
   'disclaimerTitle': '使用条款',
-  'disclaimerContent': 'VeloGuard 是一款网络代理工具，仅供合法用途使用。',
-  'disclaimerWarning': '非法使用代理工具可能导致法律后果。',
+  'disclaimerContent':
+      'VeloGuard 是网络代理客户端，只可在你所在司法辖区法律允许的范围内使用。'
+      '你需要自行确保使用行为符合当地法律、所接入网络的条款以及适用的出口管制与制裁规定。'
+      '违法用途不属于授权目的，并构成对许可条款的违反。'
+      '在法律允许的范围内，任何人使用本软件或其衍生作品从事违法行为所产生的后果，作者与贡献者均不承担责任。',
+  'disclaimerWarning': '将本软件用于违法用途会违反许可条款，并可能带来法律后果。',
   'understood': '我已了解',
   'aboutCatClash': '关于 VeloGuard',
   'aboutCatClashDesc': '了解更多关于此应用',
@@ -3329,10 +3405,10 @@ const Map<String, String> _zhCNStrings = {
   'featureRules': '灵活的路由规则',
   'featureDns': '内置 DNS 服务器',
   'supportedProtocols': '支持的协议',
-  'openSource': '开源项目',
+  'openSource': '源码开放',
   'openSourceDesc': '使用 Flutter & Rust 构建',
   'license': '许可证',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': '错误',
   'warning': '警告',
   'info': '信息',
@@ -3642,8 +3718,12 @@ const Map<String, String> _zhTWStrings = {
   'disclaimer': '免責聲明',
   'disclaimerDesc': '使用條款和法律聲明',
   'disclaimerTitle': '使用條款',
-  'disclaimerContent': 'VeloGuard 是一款網路代理工具，僅供合法用途使用。',
-  'disclaimerWarning': '非法使用代理工具可能導致法律後果。',
+  'disclaimerContent':
+      'VeloGuard 是網路代理客戶端，僅可在你所在司法管轄區法律允許的範圍內使用。'
+      '你需要自行確保使用行為符合當地法律、所連接網路的條款以及適用的出口管制與制裁規定。'
+      '違法用途不屬於授權目的，並構成對授權條款的違反。'
+      '在法律允許的範圍內，任何人使用本軟體或其衍生作品從事違法行為所產生的後果，作者與貢獻者均不承擔責任。',
+  'disclaimerWarning': '將本軟體用於違法用途會違反授權條款，並可能帶來法律後果。',
   'understood': '我已了解',
   'aboutCatClash': '關於 VeloGuard',
   'aboutCatClashDesc': '了解更多關於此應用程式',
@@ -3657,10 +3737,10 @@ const Map<String, String> _zhTWStrings = {
   'featureRules': '靈活的路由規則',
   'featureDns': '內建 DNS 伺服器',
   'supportedProtocols': '支援的協定',
-  'openSource': '開源專案',
+  'openSource': '原始碼開放',
   'openSourceDesc': '使用 Flutter & Rust 建置',
   'license': '授權條款',
-  'licenseName': 'AGPL-3.0',
+  'licenseName': 'PolyForm Perimeter 1.0.1',
   'error': '錯誤',
   'warning': '警告',
   'info': '資訊',

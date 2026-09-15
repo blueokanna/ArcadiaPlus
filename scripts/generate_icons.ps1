@@ -48,20 +48,70 @@ function Write-Png([System.Drawing.Image]$Image, [int]$Size, [string]$RelativePa
     }
 }
 
-function Get-PngBytes([System.Drawing.Image]$Image, [int]$Size) {
+function Get-IcoImageBytes([System.Drawing.Image]$Image, [int]$Size) {
+    # MSVC's resource compiler rejects PNG-compressed ICO entries
+    # (RC2176 "old DIB"), so every entry is written as a 32bpp BMP:
+    # BITMAPINFOHEADER, bottom-up BGRA pixels, then a 1bpp AND mask whose
+    # bits stay zero because the alpha channel carries the transparency.
     $bitmap = New-IconBitmap $Image $Size
-    $stream = [System.IO.MemoryStream]::new()
     try {
-        $bitmap.Save($stream, [System.Drawing.Imaging.ImageFormat]::Png)
-        return $stream.ToArray()
+        $stride = $Size * 4
+        $maskStride = [int]([Math]::Ceiling($Size / 32.0) * 4)
+        $maskSize = $maskStride * $Size
+        $stream = [System.IO.MemoryStream]::new()
+        $writer = [System.IO.BinaryWriter]::new($stream)
+        try {
+            $writer.Write([uint32]40)
+            $writer.Write([int32]$Size)
+            $writer.Write([int32]($Size * 2))
+            $writer.Write([uint16]1)
+            $writer.Write([uint16]32)
+            $writer.Write([uint32]0)
+            $writer.Write([uint32]($stride * $Size + $maskSize))
+            $writer.Write([int32]0)
+            $writer.Write([int32]0)
+            $writer.Write([uint32]0)
+            $writer.Write([uint32]0)
+
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $Size, $Size)
+            $data = $bitmap.LockBits(
+                $rect,
+                [System.Drawing.Imaging.ImageLockMode]::ReadOnly,
+                [System.Drawing.Imaging.PixelFormat]::Format32bppArgb
+            )
+            try {
+                $row = [byte[]]::new($stride)
+                for ($y = $Size - 1; $y -ge 0; $y--) {
+                    [System.Runtime.InteropServices.Marshal]::Copy(
+                        [System.IntPtr]::Add($data.Scan0, $y * $stride),
+                        $row,
+                        0,
+                        $stride
+                    )
+                    $writer.Write($row, 0, $stride)
+                }
+            } finally {
+                $bitmap.UnlockBits($data)
+            }
+
+            $writer.Write([byte[]]::new($maskSize), 0, $maskSize)
+            $writer.Flush()
+            # The leading comma stops PowerShell from enumerating the byte
+            # array into its output stream; without it each call site would
+            # receive one element per byte and every ICONDIRENTRY would carry
+            # a bogus size, which rc.exe rejects with RC2176.
+            return ,$stream.ToArray()
+        } finally {
+            $writer.Dispose()
+            $stream.Dispose()
+        }
     } finally {
-        $stream.Dispose()
         $bitmap.Dispose()
     }
 }
 
 function Write-Ico([System.Drawing.Image]$Image, [int[]]$Sizes, [string]$RelativePath) {
-    $images = @($Sizes | ForEach-Object { Get-PngBytes $Image $_ })
+    $images = @($Sizes | ForEach-Object { Get-IcoImageBytes $Image $_ })
     $path = Resolve-RepoPath $RelativePath
     [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($path)) | Out-Null
     $stream = [System.IO.File]::Create($path)

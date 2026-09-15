@@ -42,6 +42,9 @@ class AppStateProvider extends ChangeNotifier {
   // Timer for periodic status/traffic/connection refresh
   Timer? _statusTimer;
 
+  // Address of the running RecurseX recursive resolver, when enabled
+  String? _recursiveDnsAddress;
+
   // Current speed values (from Rust tracker)
   BigInt _currentUploadSpeed = BigInt.zero;
   BigInt _currentDownloadSpeed = BigInt.zero;
@@ -164,17 +167,23 @@ class AppStateProvider extends ChangeNotifier {
         'General settings loaded: mixedPort=${generalSettings.mixedPort}, socksPort=${generalSettings.socksPort}',
       );
 
+      // Bring the recursive resolver up before the config is generated so
+      // the DNS section can point corduit at it.
+      await _ensureRecursiveDns();
+
       // Convert Clash YAML to VeloGuard JSON format with user settings
       final jsonConfig = ConfigConverter.convertClashYamlToJson(
         configContent,
         generalSettings: generalSettings,
+        recursiveDnsAddress: _recursiveDnsAddress,
+        onWarning: (message) => debugPrint('Config: $message'),
       );
 
       debugPrint('JSON config generated, length: ${jsonConfig.length}');
 
       // Initialize VeloGuard with the converted config
-      debugPrint('Calling initializeVeloguard...');
-      await initializeVeloguard(configJson: jsonConfig);
+      debugPrint('Calling initializeCorduit...');
+      await initializeCorduit(configJson: jsonConfig);
       _isInitialized = true;
       debugPrint('VeloGuard initialized from active profile: $activeProfileId');
       notifyListeners();
@@ -182,6 +191,41 @@ class AppStateProvider extends ChangeNotifier {
       debugPrint('Failed to initialize from active profile: $e');
       debugPrint('Stack trace: $stackTrace');
       _isInitialized = false;
+    }
+  }
+
+  /// Bring the RecurseX front-end up when the DNS settings ask for local
+  /// recursion, and remember the bound address so the next config
+  /// conversion can point corduit at it.
+  Future<void> _ensureRecursiveDns() async {
+    try {
+      final dnsSettings = await StorageService.instance.getDnsSettings();
+      if (!dnsSettings.useRecursiveResolver) {
+        await _stopRecursiveDns();
+        return;
+      }
+
+      // Port 0 asks the OS for a free port, so the resolver never fights
+      // with a system DNS service for 53.
+      _recursiveDnsAddress = await startRecursiveDns(listen: '127.0.0.1:0');
+      debugPrint(
+        'RecurseX recursive resolver listening on $_recursiveDnsAddress',
+      );
+    } catch (e) {
+      _recursiveDnsAddress = null;
+      debugPrint('Failed to start the recursive resolver: $e');
+    }
+  }
+
+  Future<void> _stopRecursiveDns() async {
+    // Unconditional: the Rust side treats stopping a stopped front-end as a
+    // no-op, and this way a half-initialised state cannot leak a listener.
+    try {
+      await stopRecursiveDns();
+    } catch (e) {
+      debugPrint('Failed to stop the recursive resolver: $e');
+    } finally {
+      _recursiveDnsAddress = null;
     }
   }
 
@@ -329,7 +373,7 @@ class AppStateProvider extends ChangeNotifier {
       // First, ensure any previous instance is stopped
       try {
         debugPrint('Ensuring previous instance is stopped...');
-        await stopVeloguard();
+        await stopCorduit();
         // Wait for ports to be fully released
         await Future.delayed(const Duration(milliseconds: 1000));
       } catch (e) {
@@ -342,7 +386,7 @@ class AppStateProvider extends ChangeNotifier {
 
       // Start the proxy
       debugPrint('Starting VeloGuard proxy...');
-      await startVeloguard();
+      await startCorduit();
 
       // Set running state immediately after successful start
       _isServiceRunning = true;
@@ -353,7 +397,7 @@ class AppStateProvider extends ChangeNotifier {
 
       // Verify the proxy is actually running
       try {
-        final status = await getVeloguardStatus();
+        final status = await getCorduitStatus();
         debugPrint('Proxy status after start: running=${status.running}');
         if (!status.running) {
           debugPrint('WARNING: Proxy reports not running after start!');
@@ -401,7 +445,7 @@ class AppStateProvider extends ChangeNotifier {
         bool proxyReady = false;
         for (int checkAttempt = 1; checkAttempt <= 3; checkAttempt++) {
           try {
-            final status = await getVeloguardStatus();
+            final status = await getCorduitStatus();
             if (status.running) {
               proxyReady = true;
               debugPrint('Proxy ready on check attempt $checkAttempt');
@@ -508,7 +552,8 @@ class AppStateProvider extends ChangeNotifier {
         debugPrint('System proxy disabled automatically');
       }
 
-      await stopVeloguard();
+      await stopCorduit();
+      await _stopRecursiveDns();
       _isServiceRunning = false;
       _isInitialized =
           false; // Mark as not initialized so we re-init on next start
@@ -577,7 +622,7 @@ class AppStateProvider extends ChangeNotifier {
     _isRefreshing = true;
 
     try {
-      _proxyStatus = await getVeloguardStatus();
+      _proxyStatus = await getCorduitStatus();
       _trafficStats = await getTrafficStats();
 
       // Only update isServiceRunning from proxyStatus if we got a valid response
@@ -669,7 +714,7 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await initializeVeloguard(configJson: configJson);
+      await initializeCorduit(configJson: configJson);
       await _refreshStatus();
     } catch (e) {
       debugPrint('Failed to load configuration: $e');
@@ -689,7 +734,7 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await reloadVeloguard(configJson: configJson);
+      await reloadCorduit(configJson: configJson);
       await _refreshStatus();
     } catch (e) {
       debugPrint('Failed to reload configuration: $e');

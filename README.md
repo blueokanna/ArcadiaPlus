@@ -9,28 +9,29 @@
   <a href="README_EN.md">English</a>
 </p>
 
+> 状态：预发布。本仓库尚未达到在全部六个目标平台与全部协议上提供生产支持的标准。本文档只描述代码与验证证据支持的能力。
+
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust workspace：核心代理、DNS、网络栈、协议与 Flutter Rust Bridge 分层。
-- 配置转换采用失败关闭策略：未知入站、出站、规则类型和无效 options 会拒绝加载，绝不静默降级为 `DIRECT`。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.1.5 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- 配置转换采用显式降级：corduit 无法构建的协议节点会被丢弃、引用回落 `DIRECT`，corduit 没有对应类型的规则会被跳过——每次降级都通过 `onWarning` 上报，不静默处理。
+- 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - Android、Windows、Linux 共用 Rust TUN 数据包处理器，各平台独立管理设备生命周期。
 - Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/veloguard.png` 统一生成。
 
 ## 协议状态
 
-| 协议 | 当前状态 | 说明 |
+协议实现位于 corduit 0.1.5；本仓库只负责把它们接进 Flutter，并未对真实服务端互操作做验证。
+
+| 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
-| HTTP / SOCKS5 | 已实现 | TCP 出站；仍需发布环境端到端测试 |
-| Shadowsocks | 实验性 | 自研 TCP/UDP 加密路径和单元测试；未提供真实服务端互操作证据 |
-| VMess | 实验性 | 自研协议与传输层；未提供 Xray 互操作测试 |
-| VLESS | 实验性 | 自研 TCP/UDP/TLS 路径；未提供 Xray 互操作测试 |
-| Trojan | 实验性 | 自研 TCP/UDP/TLS 路径；未提供标准服务端互操作测试 |
-| WireGuard | 不可用于生产 | 握手/加密和 UDP 路径存在；TCP 路径缺少完整 TCP/IP 状态机、重传和拥塞控制 |
-| TUIC v5 | 实验性 | 基于 Quinn 的实现；缺少真实 TUIC 服务端兼容性测试 |
-| Hysteria 2 | 不可用于生产 | 当前自定义 QUIC 鉴权/帧格式未证明符合 Hysteria 2 标准 |
-| Hysteria v1 | 未实现 | 不再错误映射为 Hysteria 2；配置会明确失败 |
-| NaiveProxy | 未实现 | 配置会明确失败，不会绕过代理直连 |
+| HTTP / SOCKS5 | corduit | 出入站路径均在引擎内 |
+| Shadowsocks | corduit | 含 AEAD 与流密码路径 |
+| VMess / VLESS / Trojan | corduit | 含 WebSocket、gRPC、TLS 传输 |
+| TUIC / Hysteria 2 | corduit（`tuic`、`hysteria2` feature） | QUIC 路径，本构建已启用 |
+| WireGuard | corduit（`wireguard` feature） | 隧道路径，本构建已启用 |
+| ShadowsocksR / Hysteria v1 / shadowquic | 不支持 | 桥接层在配置转换时丢弃该节点并回落引用，同时上报警告 |
 
 协议进入“已支持”状态至少需要：官方/主流服务端互操作测试、TCP 与 UDP 测试、认证失败测试、断线重连测试，以及各目标平台上的集成测试。
 
@@ -50,15 +51,17 @@
 ```text
 Flutter UI / Provider
         |
-Flutter Rust Bridge
+Flutter Rust Bridge（生成绑定）
         |
-veloguard-lib (FFI 与平台入口)
+veloguard-lib（唯一桥接 crate：异步适配、DTO 映射、平台入口）
         |
-veloguard-core (配置、路由、入站、出站)
-        +-- veloguard-dns
-        +-- veloguard-netstack
-        +-- veloguard-protocol
+corduit 0.1.5（引擎：配置、路由、出入站、DNS、TUN、全部协议）
+        +-- courierust（HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS 栈）
+        +-- nextjson / rustbinary（配置与二进制编解码）
+RecurseX 0.1.0（可选：本地递归 DNS 前端，由桥接层托管生命周期）
 ```
+
+corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个引擎调用派发到阻塞工作线程（`run`），因此代理启停、延迟探测或 TUN 切换都不会卡住 Flutter 隔离区。
 
 保持边界清晰比无目的地增加宏、泛型或复杂生命周期更重要。Rust 代码只在能减少重复、表达所有权或实现零成本抽象时使用这些能力。
 
@@ -80,8 +83,14 @@ flutter test
 
 cd rust
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+```
+
+Dart 桥接代码由 `flutter_rust_bridge.yaml` 驱动生成；改动 Rust 侧 `api`/`types` 后必须重新执行：
+
+```bash
+flutter_rust_bridge_codegen generate
 ```
 
 平台构建必须在对应宿主和 SDK 上执行：
@@ -132,6 +141,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
 3. 为每个协议建立容器化互操作测试矩阵，并在 CI 中覆盖 TCP、UDP、IPv4、IPv6、重连和错误认证。
 4. 在六个平台完成签名发布构建、安装、启停、休眠恢复、网络切换和泄漏测试。
 
+## 免责声明
+
+- **合法使用是唯一被授权的用途。** VeloGuard 是网络工具，本身不提供代理服务器、节点或订阅；你需要自行准备配置，并对其合法性负责。
+- **合规责任在你自己。** 你需要确保使用行为符合所在司法管辖区的法律、所接入网络的条款，以及适用的出口管制与制裁规定。将本软件或其改动、衍生作品用于违法用途，不在许可范围内，并构成对[许可条款](LICENSE)的违反。
+- **作者与贡献者不承担责任。** 在法律允许的最大范围内，作者与贡献者对因使用或无法使用本软件产生的任何直接或间接损失不负责，也不对任何人（无论是否经你授权）使用本软件从事违法行为引发的后果负责。
+- **不构成法律意见。** 本文档与应用内提示只是风险说明，不是法律建议；需要时请咨询执业律师。
+- **无担保。** 软件按「现状」提供，不附带任何明示或默示保证（见 `LICENSE` 的 *No Liability* 一节）。
+
 ## 许可证
 
-[GNU Affero General Public License v3.0 or later](LICENSE)
+**PolyForm Perimeter License 1.0.1**——见 [`LICENSE`](LICENSE)：正文是官方 [PolyForm Perimeter
+1.0.1](https://polyformproject.org/licenses/perimeter/1.0.1)，末尾多出一段由许可人自己增加的附加条款。
+
+实际含义：
+
+- **可免费用于除「竞争产品」之外的任何目的。** 阅读、构建、修改、自托管、内嵌进公司内部或客户系统、教学使用、随非竞争软件分发：都允许。不允许的是向他人提供替代本软件功能或价值的产品——包括以服务接口形式提供，也包括移植到其它语言（见
+  [Noncompete](https://polyformproject.org/licenses/perimeter/1.0.1/#noncompete) 与
+  [Competition](https://polyformproject.org/licenses/perimeter/1.0.1/#competition)）。
+- **不是 OSI 认可的开源许可**，而是 *source-available（源码可获取）* 许可：源码可以按上面的条款阅读和修改，而且你转发出去的副本，接收方也同时得到这份条款。
+- **必须保留署名通知。** 分发本软件或其任何部分时，必须随附 `LICENSE` 全文（或上述官方链接），以及其中的 `Required Notice: Copyright 2026 blueokanna and HyphenTeam (https://github.com/blueokanna/Courierust)`（见 *Notices*）。
+- **无担保、无责任**（在法律允许范围内），并且末尾那段附加条款把同样的限制延伸到「他人用本软件（或其改动/衍生作品）从事违法行为」的情形（见 `LICENSE` 末尾 *Additional Term Adopted by the Licensor*）。

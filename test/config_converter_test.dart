@@ -3,8 +3,28 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:veloguard/src/services/config_converter.dart';
 
+/// Decodes the converter output into the JSON map corduit will see.
+Map<String, dynamic> convert(
+  String yaml, {
+  void Function(String)? onWarning,
+  String? recursiveDnsAddress,
+}) {
+  return jsonDecode(
+        ConfigConverter.convertClashYamlToJson(
+          yaml,
+          onWarning: onWarning,
+          recursiveDnsAddress: recursiveDnsAddress,
+        ),
+      )
+      as Map<String, dynamic>;
+}
+
+/// The FFI contract carries protocol options as a JSON string.
+Map<String, dynamic> optionsOf(Object? raw) =>
+    jsonDecode(raw! as String) as Map<String, dynamic>;
+
 void main() {
-  test('Clash rule providers are preserved for the Rust router', () {
+  test('rule providers are preserved for the Rust router', () {
     const yaml = '''
 port: 7890
 proxies: []
@@ -17,13 +37,11 @@ rule-providers:
     path: ./ruleset/proxy.yaml
     interval: 86400
 rules:
-  - RULE-SET,proxy,PROXY
+  - RULE-SET,proxy,DIRECT
   - MATCH,DIRECT
 ''';
 
-    final converted =
-        jsonDecode(ConfigConverter.convertClashYamlToJson(yaml))
-            as Map<String, dynamic>;
+    final converted = convert(yaml);
     final providers = converted['rule_providers'] as List<dynamic>;
     final rules = converted['rules'] as List<dynamic>;
 
@@ -40,7 +58,7 @@ rules:
     expect(rules.first, {
       'rule_type': 'rule_set',
       'payload': 'proxy',
-      'outbound': 'PROXY',
+      'outbound': 'DIRECT',
       'process_name': null,
     });
   });
@@ -54,10 +72,7 @@ rules:
   - MATCH,DIRECT
 ''';
 
-    final converted =
-        jsonDecode(ConfigConverter.convertClashYamlToJson(yaml))
-            as Map<String, dynamic>;
-    final rules = converted['rules'] as List<dynamic>;
+    final rules = convert(yaml)['rules'] as List<dynamic>;
 
     expect(rules.first, {
       'rule_type': 'ip_cidr',
@@ -82,10 +97,7 @@ rules:
   - DOMAIN-SUFFIX,cn,DIRECT
 ''';
 
-    final converted =
-        jsonDecode(ConfigConverter.convertClashYamlToJson(yaml))
-            as Map<String, dynamic>;
-    final rules = converted['rules'] as List<dynamic>;
+    final rules = convert(yaml)['rules'] as List<dynamic>;
 
     expect(rules.last, {
       'rule_type': 'match',
@@ -105,11 +117,148 @@ proxies:
 rules: []
 ''';
 
-    final converted =
-        jsonDecode(ConfigConverter.convertClashYamlToJson(yaml))
-            as Map<String, dynamic>;
-    final rules = converted['rules'] as List<dynamic>;
+    final rules = convert(yaml)['rules'] as List<dynamic>;
 
     expect(rules.single['outbound'], 'node-1');
+  });
+
+  test('inbounds and outbounds follow the corduit FFI contract', () {
+    const yaml = '''
+mixed-port: 7897
+proxies:
+  - name: ss-1
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: secret
+proxy-groups:
+  - name: PROXY
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    proxies: [ss-1]
+rules:
+  - MATCH,PROXY
+''';
+
+    final converted = convert(yaml);
+    final inbounds = converted['inbounds'] as List<dynamic>;
+    final outbounds = converted['outbounds'] as List<dynamic>;
+
+    // Inbounds name their type explicitly and carry an options document.
+    expect((inbounds.single as Map)['inbound_type'], 'mixed');
+    expect(optionsOf((inbounds.single as Map)['options']), isEmpty);
+
+    final ss = outbounds.firstWhere((o) => (o as Map)['tag'] == 'ss-1') as Map;
+    expect(ss['outbound_type'], 'shadowsocks');
+    expect(ss['server'], 'example.com');
+    expect(ss['port'], 8388);
+
+    final group =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'PROXY') as Map;
+    expect(group['outbound_type'], 'urltest');
+    expect(group['server'], isNull);
+    expect(optionsOf(group['options']), {
+      'outbounds': ['ss-1'],
+      'url': 'http://www.gstatic.com/generate_204',
+      'interval': 300,
+    });
+  });
+
+  test('protocol options travel as a JSON string with Clash keys', () {
+    const yaml = '''
+proxies:
+  - name: ss-1
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-256-gcm
+    password: secret
+    udp: true
+rules: []
+''';
+
+    final outbounds = convert(yaml)['outbounds'] as List<dynamic>;
+    final ss = outbounds.firstWhere((o) => (o as Map)['tag'] == 'ss-1') as Map;
+
+    expect(optionsOf(ss['options']), {
+      'cipher': 'aes-256-gcm',
+      'password': 'secret',
+      'udp': true,
+    });
+  });
+
+  test(
+    'protocols corduit cannot build are dropped and references rewritten',
+    () {
+      const yaml = '''
+proxies:
+  - name: quic-node
+    type: quic
+    server: example.com
+    port: 443
+    password: secret
+  - name: ok-node
+    type: trojan
+    server: example.com
+    port: 443
+    password: secret
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [quic-node, ok-node]
+rules:
+  - DOMAIN-SUFFIX,example.com,quic-node
+  - MATCH,PROXY
+''';
+
+      final warnings = <String>[];
+      final converted = convert(yaml, onWarning: warnings.add);
+      final outbounds = converted['outbounds'] as List<dynamic>;
+      final rules = converted['rules'] as List<dynamic>;
+
+      expect(outbounds.where((o) => (o as Map)['tag'] == 'quic-node'), isEmpty);
+
+      final group =
+          outbounds.firstWhere((o) => (o as Map)['tag'] == 'PROXY') as Map;
+      expect(optionsOf(group['options'])['outbounds'], ['ok-node']);
+
+      expect((rules.first as Map)['outbound'], 'DIRECT');
+      expect(warnings, isNotEmpty);
+    },
+  );
+
+  test('rule types corduit has no rule for are skipped', () {
+    const yaml = '''
+proxies: []
+proxy-groups: []
+rules:
+  - GEOSITE,category-ads-all,DIRECT
+  - MATCH,DIRECT
+''';
+
+    final warnings = <String>[];
+    final rules =
+        convert(yaml, onWarning: warnings.add)['rules'] as List<dynamic>;
+
+    expect(rules, hasLength(1));
+    expect((rules.single as Map)['rule_type'], 'match');
+    expect(warnings, isNotEmpty);
+  });
+
+  test('a running recursive resolver leads the nameserver list', () {
+    const yaml = '''
+dns:
+  nameserver: [1.1.1.1]
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns =
+        convert(yaml, recursiveDnsAddress: '127.0.0.1:5353')['dns'] as Map;
+
+    expect(dns['nameservers'], ['127.0.0.1:5353', '1.1.1.1']);
   });
 }

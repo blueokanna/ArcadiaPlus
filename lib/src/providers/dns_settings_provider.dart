@@ -17,6 +17,7 @@ class DnsSettingsProvider extends ChangeNotifier {
   bool get ipv6 => _settings.ipv6;
   bool get followRules => _settings.followRules;
   bool get preferH3 => _settings.preferH3;
+  bool get useRecursiveResolver => _settings.useRecursiveResolver;
   String get dnsMode => _settings.dnsMode;
   String get fakeIpRange => _settings.fakeIpRange;
   List<String> get fakeIpFilter => _settings.fakeIpFilter;
@@ -97,6 +98,12 @@ class DnsSettingsProvider extends ChangeNotifier {
 
   Future<void> setPreferH3(bool value) async {
     _settings = _settings.copyWith(preferH3: value);
+    await _saveSettings();
+    notifyListeners();
+  }
+
+  Future<void> setUseRecursiveResolver(bool value) async {
+    _settings = _settings.copyWith(useRecursiveResolver: value);
     await _saveSettings();
     notifyListeners();
   }

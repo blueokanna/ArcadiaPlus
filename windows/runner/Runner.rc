@@ -93,7 +93,7 @@ BEGIN
             VALUE "FileDescription", "VeloGuard - Modern Proxy Client" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "VeloGuard" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2025 BlueOkanna. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 blueokanna and HyphenTeam." "\0"
             VALUE "OriginalFilename", "VeloGuard.exe" "\0"
             VALUE "ProductName", "VeloGuard" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

@@ -12,15 +12,15 @@ general:
 dns:
   enable: true
   listen: "0.0.0.0:53"
-  default_nameserver:
+  nameservers:
+    - "https://dns.google/dns-query"
     - "8.8.8.8"
     - "1.1.1.1"
-  nameserver:
-    - "https://dns.google/dns-query"
   fallback:
     - "8.8.8.8"
     - "tcp://1.1.1.1"
-  fake_ip_range: "198.18.0.0/16"
+  # normal | fake-ip
+  enhanced_mode: fake-ip
 
 inbounds:
   - type: socks5
@@ -53,4 +53,5 @@ rules:
     outbound: direct
 
   - type: match
+    payload: ""
     outbound: proxy

@@ -199,6 +199,8 @@ class ConfigConverter {
   static String convertClashYamlToJson(
     String yamlContent, {
     GeneralSettings? generalSettings,
+    String? recursiveDnsAddress,
+    void Function(String message)? onWarning,
   }) {
     try {
       final yamlMap = loadYaml(yamlContent);
@@ -210,6 +212,8 @@ class ConfigConverter {
       final veloguardConfig = _convertClashToVeloGuard(
         config,
         generalSettings: generalSettings,
+        recursiveDnsAddress: recursiveDnsAddress,
+        onWarning: onWarning,
       );
 
       return jsonEncode(veloguardConfig);
@@ -243,13 +247,24 @@ class ConfigConverter {
   static Map<String, dynamic> _convertClashToVeloGuard(
     Map<String, dynamic> clash, {
     GeneralSettings? generalSettings,
+    String? recursiveDnsAddress,
+    void Function(String message)? onWarning,
   }) {
+    final (outbounds, availableOutbounds) = _extractOutbounds(
+      clash,
+      onWarning: onWarning,
+    );
+
     return {
       'general': _extractGeneralConfig(clash, generalSettings: generalSettings),
-      'dns': _extractDnsConfig(clash),
+      'dns': _extractDnsConfig(clash, recursiveDnsAddress: recursiveDnsAddress),
       'inbounds': _extractInbounds(clash, generalSettings: generalSettings),
-      'outbounds': _extractOutbounds(clash),
-      'rules': _extractRules(clash),
+      'outbounds': outbounds,
+      'rules': _extractRules(
+        clash,
+        availableOutbounds: availableOutbounds,
+        onWarning: onWarning,
+      ),
       'rule_providers': _extractRuleProviders(clash),
     };
   }
@@ -342,15 +357,26 @@ class ConfigConverter {
     };
   }
 
-  static Map<String, dynamic> _extractDnsConfig(Map<String, dynamic> clash) {
+  static Map<String, dynamic> _extractDnsConfig(
+    Map<String, dynamic> clash, {
+    String? recursiveDnsAddress,
+  }) {
     final dns = clash['dns'] as Map<String, dynamic>? ?? {};
+    final configured =
+        (dns['nameserver'] as List?)?.map((e) => e.toString()).toList() ??
+        ['8.8.8.8', '1.1.1.1'];
+
+    // A running RecurseX front-end stays authoritative: put it first and
+    // every forwarded query becomes a recursive one, with the configured
+    // upstreams kept behind it as fallbacks.
+    final nameservers = recursiveDnsAddress == null
+        ? configured
+        : [recursiveDnsAddress, ...configured];
 
     return {
       'enable': dns['enable'] ?? true,
       'listen': dns['listen'] ?? '0.0.0.0:53',
-      'nameservers':
-          (dns['nameserver'] as List?)?.map((e) => e.toString()).toList() ??
-          ['8.8.8.8', '1.1.1.1'],
+      'nameservers': nameservers,
       'fallback':
           (dns['fallback'] as List?)?.map((e) => e.toString()).toList() ?? [],
       'enhanced_mode': dns['enhanced-mode'] ?? 'fake-ip',
@@ -428,10 +454,18 @@ class ConfigConverter {
     return inbounds;
   }
 
-  static List<Map<String, dynamic>> _extractOutbounds(
-    Map<String, dynamic> clash,
-  ) {
+  /// Converts `proxies` and `proxy-groups` into corduit outbounds.
+  ///
+  /// Returns the outbounds plus every tag the finished config declares.
+  /// A proxy whose protocol corduit cannot build is dropped, and because
+  /// corduit's validator rejects dangling references, group members and
+  /// rule targets are filtered against that tag set.
+  static (List<Map<String, dynamic>>, Set<String>) _extractOutbounds(
+    Map<String, dynamic> clash, {
+    void Function(String message)? onWarning,
+  }) {
     final outbounds = <Map<String, dynamic>>[];
+    final dropped = <String>{};
     final proxies = clash['proxies'] as List? ?? [];
     final proxyGroups = clash['proxy-groups'] as List? ?? [];
 
@@ -459,6 +493,16 @@ class ConfigConverter {
         final proxyType =
             proxyMap['type']?.toString().toLowerCase() ?? 'unknown';
         final name = proxyMap['name']?.toString() ?? 'proxy';
+        final mappedType = _mapProxyType(proxyType);
+
+        if (mappedType == null) {
+          dropped.add(name);
+          onWarning?.call(
+            'Proxy "$name" is a "$proxyType" node, which corduit cannot build. '
+            'The node was dropped; references to it fall back to DIRECT.',
+          );
+          continue;
+        }
 
         // Remove common fields for options
         final options = Map<String, dynamic>.from(proxyMap);
@@ -468,14 +512,33 @@ class ConfigConverter {
         options.remove('port');
 
         outbounds.add({
-          'outbound_type': _mapProxyType(proxyType),
+          'outbound_type': mappedType,
           'tag': name,
           'server': proxyMap['server']?.toString(),
           'port': proxyMap['port'] is int
               ? proxyMap['port']
               : int.tryParse(proxyMap['port']?.toString() ?? ''),
+          // corduit's FFI contract takes the protocol options as a JSON
+          // string and decodes them into the engine's option map, keeping
+          // the original Clash names (cipher, uuid, alterId, ws-opts, ...).
           'options': jsonEncode(options),
         });
+      }
+    }
+
+    // Everything the finished config will declare, groups included: a group
+    // may legitimately point at another group.
+    final declared = <String>{'DIRECT', 'REJECT'};
+    for (final outbound in outbounds) {
+      declared.add(outbound['tag'] as String);
+    }
+    for (final group in proxyGroups) {
+      if (group is Map) {
+        final groupName = (_convertToMap(group) as Map<String, dynamic>)['name']
+            ?.toString();
+        if (groupName != null && groupName.isNotEmpty) {
+          declared.add(groupName);
+        }
       }
     }
 
@@ -486,9 +549,21 @@ class ConfigConverter {
         final groupType =
             groupMap['type']?.toString().toLowerCase() ?? 'select';
         final name = groupMap['name']?.toString() ?? 'group';
-        final groupProxies =
+        final rawMembers =
             (groupMap['proxies'] as List?)?.map((e) => e.toString()).toList() ??
             [];
+
+        final members = <String>[];
+        for (final member in rawMembers) {
+          if (declared.contains(member)) {
+            members.add(member);
+          } else {
+            onWarning?.call(
+              'Proxy group "$name" references "$member", which the config does '
+              'not declare as a usable outbound; the member was dropped.',
+            );
+          }
+        }
 
         // Map proxy group type to outbound type
         String outboundType;
@@ -513,7 +588,9 @@ class ConfigConverter {
         }
 
         // Build options map for group
-        final optionsMap = <String, dynamic>{'outbounds': groupProxies};
+        final optionsMap = <String, dynamic>{
+          'outbounds': members.isEmpty ? const ['DIRECT'] : members,
+        };
         if (groupMap['url'] != null) {
           optionsMap['url'] = groupMap['url'];
         }
@@ -531,17 +608,19 @@ class ConfigConverter {
       }
     }
 
-    return outbounds;
+    return (outbounds, declared);
   }
 
-  static String _mapProxyType(String clashType) {
+  /// Maps a Clash proxy type onto a corduit outbound type.
+  ///
+  /// `null` means corduit has no way to build this protocol (shadowsocksr,
+  /// hysteria v1 and shadowquic today); such a node is dropped from the
+  /// outbound list and every reference to it is rewritten.
+  static String? _mapProxyType(String clashType) {
     switch (clashType) {
       case 'ss':
       case 'shadowsocks':
         return 'shadowsocks';
-      case 'ssr':
-      case 'shadowsocksr':
-        return 'shadowsocksr';
       case 'vmess':
         return 'vmess';
       case 'vless':
@@ -553,25 +632,38 @@ class ConfigConverter {
       case 'socks5':
       case 'socks':
         return 'socks5';
-      case 'hysteria':
-        return 'hysteria';
       case 'hysteria2':
+      case 'hy2':
         return 'hysteria2';
       case 'wireguard':
         return 'wireguard';
       case 'tuic':
         return 'tuic';
-      case 'quic':
-      case 'shadowquic':
-        return 'quic';
       default:
-        return clashType;
+        return null;
     }
   }
 
-  static List<Map<String, dynamic>> _extractRules(Map<String, dynamic> clash) {
+  static List<Map<String, dynamic>> _extractRules(
+    Map<String, dynamic> clash, {
+    required Set<String> availableOutbounds,
+    void Function(String message)? onWarning,
+  }) {
     final rules = <Map<String, dynamic>>[];
     final clashRules = clash['rules'] as List? ?? [];
+
+    // corduit validates cross references, so a target that does not exist
+    // has to become DIRECT here or the whole config is rejected.
+    String resolveTarget(String target, String source) {
+      if (availableOutbounds.contains(target)) {
+        return target;
+      }
+      onWarning?.call(
+        'Rule "$source" targets "$target", which the config does not '
+        'declare; the rule falls back to DIRECT.',
+      );
+      return 'DIRECT';
+    }
 
     for (final rule in clashRules) {
       if (rule is String) {
@@ -582,11 +674,20 @@ class ConfigConverter {
           final outbound = parts.length >= 3
               ? parts[2].trim()
               : parts[1].trim();
+          final mappedType = _mapRuleType(ruleType);
+
+          if (mappedType == null) {
+            onWarning?.call(
+              'Rule "$rule" uses "$ruleType", which corduit has no rule type '
+              'for; the rule was skipped.',
+            );
+            continue;
+          }
 
           rules.add({
-            'rule_type': _mapRuleType(ruleType),
+            'rule_type': mappedType,
             'payload': payload,
-            'outbound': outbound,
+            'outbound': resolveTarget(outbound, rule),
             'process_name': null,
           });
         }
@@ -598,7 +699,7 @@ class ConfigConverter {
       rules.add({
         'rule_type': 'match',
         'payload': '',
-        'outbound': _defaultRuleOutbound(clash),
+        'outbound': resolveTarget(_defaultRuleOutbound(clash), 'MATCH'),
         'process_name': null,
       });
     }
@@ -630,7 +731,12 @@ class ConfigConverter {
     return 'DIRECT';
   }
 
-  static String _mapRuleType(String clashRuleType) {
+  /// Maps a Clash rule type onto a corduit rule type.
+  ///
+  /// `null` means corduit has no matching rule type (GEOSITE and similar);
+  /// the rule is skipped, because an unknown type would fail config
+  /// validation and take the whole profile down with it.
+  static String? _mapRuleType(String clashRuleType) {
     switch (clashRuleType.toUpperCase()) {
       case 'DOMAIN':
         return 'domain';
@@ -638,11 +744,15 @@ class ConfigConverter {
         return 'domain_suffix';
       case 'DOMAIN-KEYWORD':
         return 'domain_keyword';
+      case 'DOMAIN-REGEX':
+        return 'domain_regex';
       case 'GEOIP':
         return 'geoip';
       case 'IP-CIDR':
       case 'IP-CIDR6':
         return 'ip_cidr';
+      case 'SRC-IP-CIDR':
+        return 'src_ip_cidr';
       case 'PROCESS-NAME':
         return 'process_name';
       case 'MATCH':
@@ -655,7 +765,7 @@ class ConfigConverter {
       case 'SRC-PORT':
         return 'src_port';
       default:
-        return clashRuleType.toLowerCase().replaceAll('-', '_');
+        return null;
     }
   }
 }

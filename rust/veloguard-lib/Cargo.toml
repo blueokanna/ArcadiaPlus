@@ -2,48 +2,27 @@
 name = "veloguard-lib"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
+license-file.workspace = true
+description = "VeloGuard ⇄ corduit FFI bridge for Flutter (flutter_rust_bridge)"
 
 [lib]
+# The Flutter build chain loads this artifact by name
+# (`System.loadLibrary("rust_lib_veloguard")` on Android, the same stem
+# in the Xcode / CMake / Cargokit wiring). Renaming it would break every
+# platform target, so the stem is intentionally kept stable.
 name = "rust_lib_veloguard"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-aes-gcm = { workspace = true }
-anyhow = { workspace = true }
-bytes = { workspace = true }
-chrono = { workspace = true }
+corduit = { workspace = true }
 flutter_rust_bridge = { workspace = true }
-futures = { workspace = true }
-getrandom = { workspace = true }
-hkdf = { workspace = true }
-http-body-util = { workspace = true }
-hyper = { workspace = true }
-hyper-util = { workspace = true }
-md-5 = { workspace = true }
 once_cell = { workspace = true }
 parking_lot = { workspace = true }
-reqwest = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-serde_yaml = { workspace = true }
-sha1 = { workspace = true }
-sysinfo = { workspace = true }
-thiserror = { workspace = true }
+recurse-x = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-url = { workspace = true }
-veloguard-core = { workspace = true }
-veloguard-netstack = { workspace = true }
-
-[target.'cfg(unix)'.dependencies]
-libc = { workspace = true }
 
 [target.'cfg(target_os = "android")'.dependencies]
-jni = "0.21"
+jni = { workspace = true }
 tracing-android = "0.2"
-
-[dev-dependencies]
-proptest = { workspace = true }
-tokio-test = { workspace = true }

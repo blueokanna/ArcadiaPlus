@@ -4,7 +4,7 @@
   "description": "CatClash entry module",
   "main": "",
   "author": "blueokanna",
-  "license": "MIT",
+  "license": "PolyForm-Perimeter-1.0.1",
   "dependencies": {
     "@aspect/flutter_ohos": "file:../har/flutter.har"
   }

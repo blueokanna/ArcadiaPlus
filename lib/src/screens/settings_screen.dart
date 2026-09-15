@@ -478,7 +478,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
                         title: Text(l10n?.license ?? '许可证'),
-                        subtitle: Text(l10n?.licenseName ?? 'AGPL-3.0'),
+                        subtitle: Text(
+                          l10n?.licenseName ?? 'PolyForm Perimeter 1.0.1',
+                        ),
                         leading: Icon(
                           Icons.article_outlined,
                           color: colorScheme.primary,
@@ -588,7 +590,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       applicationName: 'VeloGuard',
       applicationVersion: _packageInfo?.version ?? '1.0.0',
-      applicationLegalese: '© 2024-2026 VeloGuard. AGPL-3.0 License.',
+      applicationLegalese:
+          '© 2026 blueokanna and HyphenTeam. PolyForm Perimeter License 1.0.1.',
     );
   }
 
@@ -790,7 +793,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              l10n?.openSource ?? '开源项目',
+                              l10n?.openSource ?? '源码开放',
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w600),
                             ),

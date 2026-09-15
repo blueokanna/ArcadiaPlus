@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "scout-corduit-api",
+			"type": "shell",
+			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\blueo\\AppData\\Local\\Temp\\scout-api.ps1",
+			"group": "build"
+		}
+	]
+}

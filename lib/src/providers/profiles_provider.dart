@@ -435,19 +435,10 @@ class ProfilesProvider extends ChangeNotifier {
       // Convert Clash YAML to VeloGuard JSON format
       final jsonConfig = ConfigConverter.convertClashYamlToJson(configContent);
 
-      // Initialize VeloGuard with the converted config
-      try {
-        await initializeVeloguard(configJson: jsonConfig);
-      } catch (e) {
-        // If initialization fails, try using YAML directly
-        debugPrint('JSON initialization failed, trying YAML: $e');
-        try {
-          await startProxyFromYaml(yamlConfig: configContent);
-        } catch (yamlError) {
-          debugPrint('YAML initialization also failed: $yamlError');
-          throw Exception('Failed to initialize proxy: $e');
-        }
-      }
+      // Every corduit entry point takes the config as JSON, so a failed
+      // conversion or initialization is reported as-is rather than retried
+      // with the raw YAML text.
+      await initializeCorduit(configJson: jsonConfig);
 
       debugPrint('Proxy initialized with profile $_activeProfileId');
       notifyListeners();

@@ -14,25 +14,24 @@
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
-- A layered Rust workspace for the proxy core, DNS, network stack, protocols, and Flutter Rust Bridge API.
-- Fail-closed configuration conversion: unknown inbound, outbound, and rule types, plus malformed options, are rejected instead of silently becoming `DIRECT`.
+- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.1.5, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
+- Explicit configuration downgrades: a node whose protocol corduit cannot build is dropped and its references fall back to `DIRECT`, and a rule type corduit has no rule for is skipped — every downgrade is reported through `onWarning`, never silent.
+- Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
 - Shared Rust TUN packet processing for Android, Windows, and Linux, with platform-owned device lifecycles.
 - Generated app icons for Windows, macOS, Linux, Android, iOS, and HarmonyOS NEXT from `assets/veloguard.png`.
 
 ## Protocol Status
 
-| Protocol | Status | Evidence and limitations |
+The protocol implementations live in corduit 0.1.5. This repository wires them into Flutter and has not run real-server interoperability tests itself.
+
+| Protocol | Implementation | Notes |
 | --- | --- | --- |
-| HTTP / SOCKS5 | Implemented | TCP outbound; release-environment end-to-end tests are still required |
-| Shadowsocks | Experimental | Custom TCP/UDP crypto path and unit tests; no real-server interoperability evidence |
-| VMess | Experimental | Custom protocol/transports; no Xray interoperability suite |
-| VLESS | Experimental | Custom TCP/UDP/TLS path; no Xray interoperability suite |
-| Trojan | Experimental | Custom TCP/UDP/TLS path; no standard-server interoperability suite |
-| WireGuard | Not production-ready | Handshake/crypto and UDP paths exist; TCP lacks a complete TCP/IP state machine, retransmission, and congestion control |
-| TUIC v5 | Experimental | Quinn-based implementation without a real TUIC server compatibility suite |
-| Hysteria 2 | Not production-ready | The custom QUIC authentication/framing is not proven compatible with the Hysteria 2 specification |
-| Hysteria v1 | Not implemented | It is no longer misclassified as Hysteria 2; configuration fails explicitly |
-| NaiveProxy | Not implemented | Configuration fails explicitly and never bypasses the proxy through a direct fallback |
+| HTTP / SOCKS5 | corduit | Inbound and outbound paths inside the engine |
+| Shadowsocks | corduit | AEAD and stream ciphers |
+| VMess / VLESS / Trojan | corduit | WebSocket, gRPC, and TLS transports |
+| TUIC / Hysteria 2 | corduit (`tuic`, `hysteria2` features) | QUIC paths, enabled in this build |
+| WireGuard | corduit (`wireguard` feature) | Tunnel path, enabled in this build |
+| ShadowsocksR / Hysteria v1 / shadowquic | Unsupported | The bridge drops such nodes during conversion, rewrites references, and raises a warning |
 
 A protocol can move to “supported” only after interoperability tests against mainstream servers, TCP and UDP coverage, authentication failure tests, reconnect tests, and target-platform integration tests.
 
@@ -52,15 +51,17 @@ A protocol can move to “supported” only after interoperability tests against
 ```text
 Flutter UI / Provider
         |
-Flutter Rust Bridge
+Flutter Rust Bridge (generated bindings)
         |
-veloguard-lib (FFI and platform entry points)
+veloguard-lib (the only bridge crate: async adaptation, DTO mapping, platform entry points)
         |
-veloguard-core (configuration, routing, inbound, outbound)
-        +-- veloguard-dns
-        +-- veloguard-netstack
-        +-- veloguard-protocol
+corduit 0.1.5 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
+        +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
+        +-- nextjson / rustbinary (config and binary codecs)
+RecurseX 0.1.0 (optional local recursive DNS front-end, lifecycle owned by the bridge)
 ```
+
+corduit is synchronous while the Dart surface stays `Future`-based, so the bridge dispatches every engine call onto a blocking worker (`run`). Starting the proxy, probing latency, or toggling TUN therefore never stalls the Flutter isolate.
 
 Clear ownership boundaries matter more than adding macros, generics, or complex lifetimes without a measurable benefit. These Rust features should be used only for useful zero-cost abstractions, ownership modeling, or meaningful deduplication.
 
@@ -82,8 +83,14 @@ flutter test
 
 cd rust
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --all-features -- -D warnings
-cargo test --workspace --all-features
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+```
+
+The Dart bindings are generated from `flutter_rust_bridge.yaml`; after changing Rust `api`/`types`, regenerate them:
+
+```bash
+flutter_rust_bridge_codegen generate
 ```
 
 Build each target on its supported host and SDK:
@@ -132,6 +139,21 @@ The `version` in `pubspec.yaml`, the top changelog section, and the `vMAJOR.MINO
 3. Add a containerized interoperability matrix for every protocol, covering TCP, UDP, IPv4, IPv6, reconnects, and authentication failures.
 4. Complete signed release builds and installation, start/stop, sleep/resume, network-switch, and leak tests on all six platforms.
 
+## Disclaimer
+
+- **Lawful use is the only permitted purpose.** VeloGuard is a network tool. It ships no proxy servers, nodes, or subscriptions; you supply your own configuration and are responsible for it.
+- **The compliance burden is yours.** Keep your use within the law of every jurisdiction that applies to you, the terms of the networks you rely on, and applicable export-control and sanctions rules. Using this software, or a change or new work based on it, to break the law is not a permitted purpose and violates the [license terms](LICENSE).
+- **The authors and contributors accept no liability.** As far as the law allows, they are not liable for any direct or indirect loss arising from use or inability to use this software, nor for any consequence of anyone using it unlawfully, whether or not you authorized that use.
+- **This is not legal advice.** The warnings here and in the app describe risk only; they are not a legal opinion. Consult a qualified lawyer when you need one.
+- **No warranty.** The software comes as is, without any express or implied warranty, including merchantability, fitness for a particular purpose, and non-infringement (see *No Liability* in `LICENSE`).
+
 ## License
 
-[GNU Affero General Public License v3.0 or later](LICENSE)
+**PolyForm Perimeter License 1.0.1** — see [`LICENSE`](LICENSE): the text is the official [PolyForm Perimeter 1.0.1](https://polyformproject.org/licenses/perimeter/1.0.1), with one additional term appended by the licensor.
+
+What that means in practice:
+
+- **Free for any purpose except competing products.** Reading, building, modifying, self-hosting, embedding in internal or customer systems, teaching, and shipping alongside non-competing software are all allowed. What is not allowed is providing others a product that substitutes for this software's functionality or value — including as a service interface, and including a port to another language (see [Noncompete](https://polyformproject.org/licenses/perimeter/1.0.1/#noncompete) and [Competition](https://polyformproject.org/licenses/perimeter/1.0.1/#competition)).
+- **Not an OSI-approved open-source license**, but a *source-available* license: you can read and modify the source under the terms above, and anyone you pass a copy to receives these same terms.
+- **Keep the required notice.** When you distribute the software or any part of it, pass along the full `LICENSE` text (or the official link above) and the `Required Notice: Copyright 2026 blueokanna and HyphenTeam (https://github.com/blueokanna/Courierust)` line it carries (see *Notices*).
+- **No warranty, no liability** (as far as the law allows), and the appended term extends the same limit to anyone using this software, or a work based on it, to break the law (see *Additional Term Adopted by the Licensor* at the end of `LICENSE`).
