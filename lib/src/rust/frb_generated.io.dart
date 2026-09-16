@@ -1894,6 +1894,28 @@ class RustLibWire implements BaseWire {
       _wire__crate__api__set_android_vpn_fdPtr
           .asFunction<void Function(int, int)>();
 
+  void wire__crate__api__set_geoip_database_path(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> path,
+  ) {
+    return _wire__crate__api__set_geoip_database_path(port_, path);
+  }
+
+  late final _wire__crate__api__set_geoip_database_pathPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )
+        >
+      >('frbgen_veloguard_wire__crate__api__set_geoip_database_path');
+  late final _wire__crate__api__set_geoip_database_path =
+      _wire__crate__api__set_geoip_database_pathPtr
+          .asFunction<
+            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
+          >();
+
   void wire__crate__api__set_log_level(
     int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> level,

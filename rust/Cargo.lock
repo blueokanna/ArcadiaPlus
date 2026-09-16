@@ -789,6 +789,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
+name = "lib-veloguard"
+version = "1.0.2"
+dependencies = [
+ "corduit",
+ "flutter_rust_bridge",
+ "jni",
+ "once_cell",
+ "parking_lot",
+ "recurse-x",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1606,22 +1621,6 @@ name = "valuable"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
-
-[[package]]
-name = "veloguard-lib"
-version = "1.0.2"
-dependencies = [
- "corduit",
- "flutter_rust_bridge",
- "jni",
- "once_cell",
- "parking_lot",
- "recurse-x",
- "tokio",
- "tracing",
- "tracing-android",
- "tracing-subscriber",
-]
 
 [[package]]
 name = "version_check"

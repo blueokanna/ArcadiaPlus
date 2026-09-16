@@ -46,47 +46,48 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               // 系统代理
-              _buildSectionHeader(
-                context,
-                l10n?.systemProxy ?? 'System Proxy',
-                Icons.public_outlined,
-              ),
-              Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerLow,
-                child: Column(
-                  children: [
-                    AdaptiveListTile(
-                      title: Text(l10n?.systemProxy ?? 'System Proxy'),
-                      subtitle: Text(
-                        networkSettings.systemProxy
-                            ? (l10n?.enabled ?? 'Enabled')
-                            : (l10n?.disabled ?? 'Disabled'),
-                      ),
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: networkSettings.systemProxy
-                              ? colorScheme.primaryContainer
-                              : colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.public,
-                          color: networkSettings.systemProxy
-                              ? colorScheme.primary
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                      trailing: Switch.adaptive(
-                        value: networkSettings.systemProxy,
-                        onChanged: (value) =>
-                            networkSettings.setSystemProxy(value),
-                      ),
-                    ),
-                  ],
+              if (networkSettings.supportsSystemProxy) ...[
+                _buildSectionHeader(
+                  context,
+                  l10n?.systemProxy ?? 'System Proxy',
+                  Icons.public_outlined,
                 ),
-              ),
+                Card(
+                  elevation: 0,
+                  color: colorScheme.surfaceContainerLow,
+                  child: Column(
+                    children: [
+                      AdaptiveListTile(
+                        title: Text(l10n?.systemProxy ?? 'System Proxy'),
+                        subtitle: Text(
+                          networkSettings.systemProxy
+                              ? (l10n?.enabled ?? 'Enabled')
+                              : (l10n?.disabled ?? 'Disabled'),
+                        ),
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: networkSettings.systemProxy
+                                ? colorScheme.primaryContainer
+                                : colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.public,
+                            color: networkSettings.systemProxy
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        trailing: Switch.adaptive(
+                          value: networkSettings.systemProxy,
+                          onChanged: (value) => _applySystemProxy(value),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 16),
 
@@ -231,59 +232,9 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                       ),
                       trailing: Switch.adaptive(
                         value: networkSettings.tunEnabled,
-                        onChanged: (value) =>
-                            networkSettings.setTunEnabled(value),
+                        onChanged: (value) => _applyTun(value),
                       ),
                     ),
-                    if (networkSettings.tunEnabled) ...[
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      AdaptiveListTile(
-                        title: Text(l10n?.tunStack ?? 'Stack Mode'),
-                        subtitle: Text(
-                          _getStackText(networkSettings.tunStack, l10n),
-                        ),
-                        leading: Icon(
-                          Icons.layers_outlined,
-                          color: colorScheme.primary,
-                        ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DropdownButton<String>(
-                            value: networkSettings.tunStack,
-                            underline: const SizedBox.shrink(),
-                            isDense: true,
-                            borderRadius: BorderRadius.circular(12),
-                            dropdownColor: colorScheme.surfaceContainerHigh,
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'gvisor',
-                                child: Text('gVisor'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'system',
-                                child: Text('System'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'mixed',
-                                child: Text('Mixed'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                networkSettings.setTunStack(value);
-                              }
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -301,35 +252,6 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                   color: colorScheme.surfaceContainerLow,
                   child: Column(
                     children: [
-                      AdaptiveListTile(
-                        title: Text(l10n?.uwpLoopback ?? 'UWP Loopback'),
-                        subtitle: Text(
-                          networkSettings.uwpLoopback
-                              ? (l10n?.enabled ?? 'Enabled')
-                              : (l10n?.disabled ?? 'Disabled'),
-                        ),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: networkSettings.uwpLoopback
-                                ? colorScheme.primaryContainer
-                                : colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.lock_open,
-                            color: networkSettings.uwpLoopback
-                                ? colorScheme.primary
-                                : colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        trailing: Switch.adaptive(
-                          value: networkSettings.uwpLoopback,
-                          onChanged: (value) =>
-                              networkSettings.setUwpLoopback(value),
-                        ),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
                         title: Text(
                           l10n?.uwpLoopbackTool ?? 'UWP Loopback Tool',
@@ -477,16 +399,50 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
     );
   }
 
-  String _getStackText(String stack, AppLocalizations? l10n) {
-    switch (stack) {
-      case 'gvisor':
-        return 'gVisor (${l10n?.stackRecommended ?? 'Recommended'})';
-      case 'system':
-        return 'System';
-      case 'mixed':
-        return 'Mixed';
-      default:
-        return stack;
+  /// Applies the system proxy and reports a rejection instead of leaving the
+  /// switch in a state the platform never reached.
+  Future<void> _applySystemProxy(bool value) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = Theme.of(context).colorScheme.error;
+    final l10n = AppLocalizations.of(context);
+    final provider = context.read<NetworkSettingsProvider>();
+
+    try {
+      await provider.setSystemProxy(value);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            '${l10n?.systemProxy ?? 'System Proxy'}: '
+            '${l10n?.failed ?? 'Failed'} ($e)',
+          ),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: errorColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _applyTun(bool value) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final errorColor = Theme.of(context).colorScheme.error;
+    final l10n = AppLocalizations.of(context);
+    final provider = context.read<NetworkSettingsProvider>();
+
+    try {
+      await provider.setTunEnabled(value);
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('${l10n?.tunMode ?? 'TUN Mode'}: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: errorColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
     }
   }
 

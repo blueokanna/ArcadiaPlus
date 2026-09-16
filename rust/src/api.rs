@@ -48,6 +48,30 @@ pub fn init_app() {
     let _ = crate::logging::init(tracing::Level::INFO);
 }
 
+/// Point the engine's GeoIP matcher at a database file on disk.
+///
+/// corduit resolves `Country.mmdb` from `CORDUIT_GEOIP_DB`, or next to the
+/// running executable. Neither applies to a Flutter app: the asset bundle is
+/// sealed inside the APK / `.app` / install directory. The Dart side unpacks
+/// the bundled database to a real path and registers it here, which must
+/// happen before [`initialize_corduit`] — that call is where the router
+/// builds its matcher, and `GEOIP` rules stay inert without a database.
+///
+/// A missing file is reported instead of silently leaving `GEOIP` rules
+/// unmatched, so a broken deployment cannot pass for a working one.
+#[frb]
+pub async fn set_geoip_database_path(path: String) -> std::result::Result<(), String> {
+    run(move || {
+        let database = std::path::Path::new(&path);
+        if !database.is_file() {
+            return Err(format!("GeoIP database not found at {path}"));
+        }
+        std::env::set_var("CORDUIT_GEOIP_DB", database);
+        Ok(())
+    })
+    .await
+}
+
 /// Validate a config without starting anything.
 #[frb]
 pub async fn test_config(config_json: String) -> std::result::Result<bool, String> {
@@ -487,9 +511,14 @@ pub async fn get_windows_tun_stats() -> std::result::Result<(u64, u64, u64, u64,
 {
     run(|| {
         engine::api::get_windows_tun_stats().map(
-            |(rx_bytes, tx_bytes, rx_packets, tx_packets, tcp, udp)| {
+            |(packets_received, packets_sent, bytes_received, bytes_sent, tcp, udp)| {
                 (
-                    rx_bytes, tx_bytes, rx_packets, tx_packets, tcp as u64, udp as u64,
+                    packets_received,
+                    packets_sent,
+                    bytes_received,
+                    bytes_sent,
+                    tcp as u64,
+                    udp as u64,
                 )
             },
         )

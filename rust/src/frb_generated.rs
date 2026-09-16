@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueNom,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1785504117;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 611365399;
 
 // Section: executor
 
@@ -1112,6 +1112,30 @@ fn wire__crate__api__set_android_vpn_fd_impl(
                         let output_ok = Ok::<_, ()>({
                             crate::api::set_android_vpn_fd(api_fd).await;
                         })?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__set_geoip_database_path_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    path: impl CstDecode<String>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_geoip_database_path",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_path = path.cst_decode();
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::set_geoip_database_path(api_path).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -4091,6 +4115,14 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_veloguard_wire__crate__api__set_geoip_database_path(
+        port_: i64,
+        path: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__api__set_geoip_database_path_impl(port_, path)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_veloguard_wire__crate__api__set_log_level(
         port_: i64,
         level: *mut wire_cst_list_prim_u_8_strict,
@@ -5655,6 +5687,14 @@ mod web {
         fd: i32,
     ) {
         wire__crate__api__set_android_vpn_fd_impl(port_, fd)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__set_geoip_database_path(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        path: String,
+    ) {
+        wire__crate__api__set_geoip_database_path_impl(port_, path)
     }
 
     #[wasm_bindgen]

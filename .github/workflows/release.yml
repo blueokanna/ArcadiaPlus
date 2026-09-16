@@ -169,7 +169,12 @@ jobs:
 
       - name: Lint Android release
         working-directory: android
-        run: ./gradlew lintRelease
+        run: |
+          set -euo pipefail
+          # Scope lint to this app module: a bare `lintRelease` also runs the
+          # lint task of every Flutter plugin checked out under the pub cache,
+          # and those third-party sources are not ours to fix.
+          ./gradlew :app:lintRelease
 
       - name: Create checksum-verified update metadata
         shell: bash

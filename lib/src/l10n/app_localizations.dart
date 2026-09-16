@@ -196,7 +196,6 @@ class AppLocalizations {
   String get bypassDomainsDesc => _getLocalizedString('bypassDomainsDesc');
   String get tunMode => _getLocalizedString('tunMode');
   String get tunModeDesc => _getLocalizedString('tunModeDesc');
-  String get tunStack => _getLocalizedString('tunStack');
   String get uwpLoopback => _getLocalizedString('uwpLoopback');
   String get uwpLoopbackTool => _getLocalizedString('uwpLoopbackTool');
   String get uwpLoopbackToolDesc => _getLocalizedString('uwpLoopbackToolDesc');
@@ -205,7 +204,6 @@ class AppLocalizations {
   String get requiresAdmin => _getLocalizedString('requiresAdmin');
   String get uwpToolOpened => _getLocalizedString('uwpToolOpened');
   String get uwpToolFailed => _getLocalizedString('uwpToolFailed');
-  String get stackRecommended => _getLocalizedString('stackRecommended');
   String get enabled => _getLocalizedString('enabled');
   String get disabled => _getLocalizedString('disabled');
 
@@ -696,7 +694,6 @@ const Map<String, String> _deStrings = {
   'bypassDomainsDesc': 'Nur wirksam, wenn Systemproxy aktiviert ist',
   'tunMode': 'TUN-Modus',
   'tunModeDesc': 'Erfordert Administratorrechte',
-  'tunStack': 'Stack-Modus',
   'uwpLoopback': 'UWP-Loopback',
   'uwpLoopbackTool': 'UWP-Loopback-Tool',
   'uwpLoopbackToolDesc': 'AppContainer-Loopback-Ausnahme-Tool öffnen',
@@ -706,7 +703,6 @@ const Map<String, String> _deStrings = {
   'requiresAdmin': 'Dieser Vorgang erfordert Administratorrechte',
   'uwpToolOpened': 'UWP-Loopback-Tool geöffnet',
   'uwpToolFailed': 'UWP-Loopback-Tool konnte nicht geöffnet werden',
-  'stackRecommended': 'Empfohlen',
   'enabled': 'Aktiviert',
   'disabled': 'Deaktiviert',
   'activeConnections': 'Aktive Verbindungen',
@@ -985,7 +981,6 @@ const Map<String, String> _enStrings = {
   'bypassDomainsDesc': 'Only effective when system proxy is enabled',
   'tunMode': 'TUN Mode',
   'tunModeDesc': 'Requires administrator privileges',
-  'tunStack': 'Stack Mode',
   'uwpLoopback': 'UWP Loopback',
   'uwpLoopbackTool': 'UWP Loopback Tool',
   'uwpLoopbackToolDesc': 'Open AppContainer loopback exemption tool',
@@ -996,7 +991,6 @@ const Map<String, String> _enStrings = {
   'uwpToolOpened': 'UWP loopback tool opened',
   'uwpToolFailed':
       'Failed to open UWP loopback tool, please try running as administrator',
-  'stackRecommended': 'Recommended',
   'enabled': 'Enabled',
   'disabled': 'Disabled',
   'activeConnections': 'Active Connections',
@@ -1331,7 +1325,6 @@ const Map<String, String> _esStrings = {
       'Solo efectivo cuando el proxy del sistema está habilitado',
   'tunMode': 'Modo TUN',
   'tunModeDesc': 'Requiere privilegios de administrador',
-  'tunStack': 'Modo de pila',
   'uwpLoopback': 'Loopback UWP',
   'uwpLoopbackTool': 'Herramienta de loopback UWP',
   'uwpLoopbackToolDesc':
@@ -1342,7 +1335,6 @@ const Map<String, String> _esStrings = {
   'requiresAdmin': 'Esta operación requiere privilegios de administrador',
   'uwpToolOpened': 'Herramienta de loopback UWP abierta',
   'uwpToolFailed': 'Error al abrir la herramienta de loopback UWP',
-  'stackRecommended': 'Recomendado',
   'enabled': 'Habilitado',
   'disabled': 'Deshabilitado',
   'activeConnections': 'Conexiones activas',
@@ -1626,7 +1618,6 @@ const Map<String, String> _frStrings = {
       'Effectif uniquement lorsque le proxy système est activé',
   'tunMode': 'Mode TUN',
   'tunModeDesc': 'Nécessite des privilèges administrateur',
-  'tunStack': 'Mode de pile',
   'uwpLoopback': 'Loopback UWP',
   'uwpLoopbackTool': 'Outil de loopback UWP',
   'uwpLoopbackToolDesc':
@@ -1637,7 +1628,6 @@ const Map<String, String> _frStrings = {
   'requiresAdmin': 'Cette opération nécessite des privilèges administrateur',
   'uwpToolOpened': 'Outil de loopback UWP ouvert',
   'uwpToolFailed': 'Échec de l\'ouverture de l\'outil de loopback UWP',
-  'stackRecommended': 'Recommandé',
   'enabled': 'Activé',
   'disabled': 'Désactivé',
   'activeConnections': 'Connexions actives',
@@ -1919,7 +1909,6 @@ const Map<String, String> _itStrings = {
   'bypassDomainsDesc': 'Efficace solo quando il proxy di sistema è abilitato',
   'tunMode': 'Modalità TUN',
   'tunModeDesc': 'Richiede privilegi di amministratore',
-  'tunStack': 'Modalità stack',
   'uwpLoopback': 'Loopback UWP',
   'uwpLoopbackTool': 'Strumento loopback UWP',
   'uwpLoopbackToolDesc': 'Apri strumento di esenzione loopback AppContainer',
@@ -1929,7 +1918,6 @@ const Map<String, String> _itStrings = {
   'requiresAdmin': 'Questa operazione richiede privilegi di amministratore',
   'uwpToolOpened': 'Strumento loopback UWP aperto',
   'uwpToolFailed': 'Impossibile aprire lo strumento loopback UWP',
-  'stackRecommended': 'Consigliato',
   'enabled': 'Abilitato',
   'disabled': 'Disabilitato',
   'activeConnections': 'Connessioni attive',
@@ -2209,7 +2197,6 @@ const Map<String, String> _jaStrings = {
   'bypassDomainsDesc': 'システムプロキシが有効な場合のみ有効',
   'tunMode': 'TUNモード',
   'tunModeDesc': '管理者権限が必要',
-  'tunStack': 'スタックモード',
   'uwpLoopback': 'UWPループバック',
   'uwpLoopbackTool': 'UWPループバックツール',
   'uwpLoopbackToolDesc': 'AppContainerループバック除外ツールを開く',
@@ -2218,7 +2205,6 @@ const Map<String, String> _jaStrings = {
   'requiresAdmin': 'この操作には管理者権限が必要です',
   'uwpToolOpened': 'UWPループバックツールを開きました',
   'uwpToolFailed': 'UWPループバックツールを開けませんでした',
-  'stackRecommended': '推奨',
   'enabled': '有効',
   'disabled': '無効',
   'activeConnections': 'アクティブな接続',
@@ -2486,7 +2472,6 @@ const Map<String, String> _koStrings = {
   'bypassDomainsDesc': '시스템 프록시가 활성화된 경우에만 유효',
   'tunMode': 'TUN 모드',
   'tunModeDesc': '관리자 권한 필요',
-  'tunStack': '스택 모드',
   'uwpLoopback': 'UWP 루프백',
   'uwpLoopbackTool': 'UWP 루프백 도구',
   'uwpLoopbackToolDesc': 'AppContainer 루프백 예외 도구 열기',
@@ -2495,7 +2480,6 @@ const Map<String, String> _koStrings = {
   'requiresAdmin': '이 작업에는 관리자 권한이 필요합니다',
   'uwpToolOpened': 'UWP 루프백 도구 열림',
   'uwpToolFailed': 'UWP 루프백 도구를 열 수 없습니다',
-  'stackRecommended': '권장',
   'enabled': '활성화됨',
   'disabled': '비활성화됨',
   'activeConnections': '활성 연결',
@@ -2766,7 +2750,6 @@ const Map<String, String> _ptStrings = {
       'Efetivo apenas quando o proxy do sistema está habilitado',
   'tunMode': 'Modo TUN',
   'tunModeDesc': 'Requer privilégios de administrador',
-  'tunStack': 'Modo de pilha',
   'uwpLoopback': 'Loopback UWP',
   'uwpLoopbackTool': 'Ferramenta de loopback UWP',
   'uwpLoopbackToolDesc': 'Abrir ferramenta de isenção de loopback AppContainer',
@@ -2776,7 +2759,6 @@ const Map<String, String> _ptStrings = {
   'requiresAdmin': 'Esta operação requer privilégios de administrador',
   'uwpToolOpened': 'Ferramenta de loopback UWP aberta',
   'uwpToolFailed': 'Falha ao abrir ferramenta de loopback UWP',
-  'stackRecommended': 'Recomendado',
   'enabled': 'Habilitado',
   'disabled': 'Desabilitado',
   'activeConnections': 'Conexões ativas',
@@ -3057,7 +3039,6 @@ const Map<String, String> _ruStrings = {
   'bypassDomainsDesc': 'Действует только при включённом системном прокси',
   'tunMode': 'Режим TUN',
   'tunModeDesc': 'Требуются права администратора',
-  'tunStack': 'Режим стека',
   'uwpLoopback': 'UWP Loopback',
   'uwpLoopbackTool': 'Инструмент UWP Loopback',
   'uwpLoopbackToolDesc': 'Открыть инструмент исключения loopback AppContainer',
@@ -3067,7 +3048,6 @@ const Map<String, String> _ruStrings = {
   'requiresAdmin': 'Эта операция требует прав администратора',
   'uwpToolOpened': 'Инструмент UWP loopback открыт',
   'uwpToolFailed': 'Не удалось открыть инструмент UWP loopback',
-  'stackRecommended': 'Рекомендуется',
   'enabled': 'Включено',
   'disabled': 'Отключено',
   'activeConnections': 'Активные подключения',
@@ -3346,7 +3326,6 @@ const Map<String, String> _zhCNStrings = {
   'bypassDomainsDesc': '仅在系统代理启用时生效',
   'tunMode': 'TUN 模式',
   'tunModeDesc': '需要管理员权限',
-  'tunStack': '协议栈模式',
   'uwpLoopback': 'UWP 回环',
   'uwpLoopbackTool': 'UWP 回环工具',
   'uwpLoopbackToolDesc': '打开 AppContainer 回环豁免工具',
@@ -3356,7 +3335,6 @@ const Map<String, String> _zhCNStrings = {
   'requiresAdmin': '此操作需要管理员权限',
   'uwpToolOpened': 'UWP 回环工具已打开',
   'uwpToolFailed': '无法打开 UWP 回环工具，请尝试以管理员身份运行',
-  'stackRecommended': '推荐',
   'enabled': '已启用',
   'disabled': '已禁用',
   'activeConnections': '活动连接',
@@ -3678,7 +3656,6 @@ const Map<String, String> _zhTWStrings = {
   'bypassDomainsDesc': '僅在系統代理啟用時生效',
   'tunMode': 'TUN 模式',
   'tunModeDesc': '需要管理員權限',
-  'tunStack': '協定堆疊模式',
   'uwpLoopback': 'UWP 回環',
   'uwpLoopbackTool': 'UWP 回環工具',
   'uwpLoopbackToolDesc': '開啟 AppContainer 回環豁免工具',
@@ -3688,7 +3665,6 @@ const Map<String, String> _zhTWStrings = {
   'requiresAdmin': '此操作需要管理員權限',
   'uwpToolOpened': 'UWP 回環工具已開啟',
   'uwpToolFailed': '無法開啟 UWP 回環工具，請嘗試以管理員身分執行',
-  'stackRecommended': '建議',
   'enabled': '已啟用',
   'disabled': '已停用',
   'activeConnections': '活動連線',

@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Scoped Android release lint to the app module (`./gradlew :app:lintRelease`) in both workflows: a bare `lintRelease` also runs the lint task of every Flutter plugin in the pub cache, and `shared_preferences_android` 2.4.27 fails its own lint with `MemberExtensionConflict` on AGP 8.14, which no change in this repository can fix.
+- Added rule set ownership on the Dart side: providers are downloaded over TLS with conditional requests, cached under the app support directory, normalised from YAML `payload:` documents into the line format the engine parses, and refreshed daily (or on the declared interval) before the profile is converted; the engine now always receives local `file` providers, so an unreachable rule source can no longer abort start-up.
+- A `RULE-SET` rule whose provider has no local copy is skipped with a warning instead of failing engine validation, matching Clash's behaviour for an unloaded provider.
+- Registered the bundled `Country.mmdb` with the engine: the asset is unpacked into the app support directory and exported through `CORDUIT_GEOIP_DB` before the engine starts, and `GEOIP` rules now match instead of silently doing nothing.
+- Fixed Android mode handling: the VPN route is always `0.0.0.0/0` and the engine decides rule/global/direct per connection, so switching modes no longer changes which traffic is captured; the notification reports the new mode, and tunnel establishment runs off the main thread.
+- Fixed mode switching on Linux and macOS, where `setProxyMode` reported failure while the engine had already applied the mode; Windows global mode rebuilds the TUN routes when the route table is not in global mode yet.
+- Unified system proxy handling into one implementation: Windows snapshots and restores the previous WinINET settings (including the bypass list), Linux checks every `gsettings` exit code instead of assuming success, and macOS reports `networksetup` failures.
+- Made the TUN switch drive the real tunnel, and removed the placeholder TUN stack selector, the UWP toggle that only ran a fixed Edge command, the unused UWP/auto-start/dead service paths, and the unused `autoStart` storage APIs.
+- Hardened the Android manifest: `allowBackup` is off (proxy credentials must not leave the device), `QUERY_ALL_PACKAGES` and the unused boot/wake permissions are gone, and the network security policy now denies cleartext except for loopback and private ranges.
+- Trimmed status polling: connections are polled every third tick, the always-empty subscription list call is gone, and system info refreshes every five seconds instead of three.
+
 ## 1.0.2
 
 - Replaced the in-repository proxy core with corduit 0.1.5. `veloguard-core`, `veloguard-dns`, `veloguard-netstack`, and `veloguard-protocol` are gone; the workspace now contains the Flutter Rust Bridge adapter only.

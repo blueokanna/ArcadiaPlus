@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config xmlns:tools="http://schemas.android.com/tools">
-    <!-- 允许明文流量（代理需要） -->
-    <!-- Proxy endpoints and subscriptions may explicitly use plaintext protocols. -->
+    <!-- The platform's own networking (plugins, system components) is TLS-only.
+         Proxy protocols that are configured with plaintext URLs are spoken by
+         the Rust engine over raw sockets, which this policy does not govern. -->
     <base-config
-        cleartextTrafficPermitted="true"
+        cleartextTrafficPermitted="false"
         tools:ignore="InsecureBaseConfiguration">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-    
-    <!-- 本地代理域名 -->
+
+    <!-- Loopback and RFC 1918 addresses stay reachable without TLS. -->
     <domain-config cleartextTrafficPermitted="true">
         <domain includeSubdomains="true">localhost</domain>
         <domain includeSubdomains="true">127.0.0.1</domain>

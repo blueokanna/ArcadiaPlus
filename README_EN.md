@@ -17,6 +17,8 @@
 - A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.1.5, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
 - Explicit configuration downgrades: a node whose protocol corduit cannot build is dropped and its references fall back to `DIRECT`, and a rule type corduit has no rule for is skipped — every downgrade is reported through `onWarning`, never silent.
 - Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
+- Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
+- The GeoIP database ships with the installer (`assets/Country.mmdb`), is unpacked into the app support directory at start-up, and is registered with the engine; a failure to unpack or register is recorded, and `GEOIP` rules simply do not match while it is missing — never a silent downgrade.
 - Shared Rust TUN packet processing for Android, Windows, and Linux, with platform-owned device lifecycles.
 - Generated app icons for Windows, macOS, Linux, Android, iOS, and HarmonyOS NEXT from `assets/veloguard.png`.
 
@@ -41,10 +43,31 @@ A protocol can move to “supported” only after interoperability tests against
 | --- | --- | --- | --- | --- |
 | Android | Present | N/A | `VpnService` path implemented | Requires device, ABI, and long-running regression tests |
 | Windows | Present | Implemented | Wintun path implemented | Requires Windows 10/11 tests with elevation |
-| Linux | Present | GNOME settings path | IPv4 global-mode path implemented | Requires root/device testing; rule/direct modes fail closed until socket marking or interface binding is implemented |
+| Linux | Present | GNOME settings path (every `gsettings` exit code is checked) | IPv4 TUN path provided by corduit | Needs root/device testing; the data path points the default route at the TUN and exempts only proxy server addresses, so engine-dialled direct traffic can loop back into the tunnel — rule/direct modes are not claimed until that is verified on hardware |
 | macOS | Present | `networksetup` path | No Network Extension | Full-tunnel support cannot be claimed |
 | iOS | Present | N/A | No Packet Tunnel Extension | Application shell only |
 | HarmonyOS NEXT | Project skeleton | N/A | Explicitly returns `OHOS_VPN_UNSUPPORTED` | Not releasable |
+
+## Routing Modes
+
+`rule` / `global` / `direct` are decided inside the engine: the inbounds, the TUN data path, and the Android VPN all hand their connections to one router, so switching modes never requires rebuilding the tunnel.
+
+| Platform | What a mode switch does | Notes |
+| --- | --- | --- |
+| Android | `set_android_proxy_mode` (engine runtime mode) plus the notification text | The VPN route is always `0.0.0.0/0` and the engine decides per dial; every port-53 query that enters the tunnel is answered by the netstack's fake-IP resolver |
+| Windows | `set_windows_proxy_mode` | Switching to `global` while the route table is not in global mode is retried through `enable_tun_mode_with_mode("global")`, which rebuilds the routes |
+| Linux / macOS | `set_proxy_mode` (engine runtime mode) | The Linux TUN data path dials through the local SOCKS inbound, so the mode applies at dial time |
+| System proxy | Independent of the mode | Points at the local mixed port; Linux checks every `gsettings` exit code, and Windows snapshots the previous proxy settings before enabling and restores them on disable |
+
+Rule sets refresh at start-up, after a profile update, and on a 15-minute due check. Only providers whose declared interval (one day by default) has elapsed actually make a network request, and those requests carry `If-None-Match` / `If-Modified-Since`; a 304 means the cached copy is current. A refreshed rule set lands on a content-addressed file name, which changes the config, so the running engine loads the new content on the next `reload_corduit`.
+
+## Known Limitations
+
+These are stored today but do not change runtime behaviour; they are listed so they are not mistaken for working features:
+
+- Every field on the DNS settings page other than “local recursive resolution” (`useRecursiveResolver`, which starts RecurseX and points the engine's upstreams at it). The engine takes its DNS configuration from the profile's `dns` section (`enable` / `listen` / `nameservers` / `fallback` / `enhanced-mode`), and corduit's `DnsConfig` has no `nameserver-policy`, `fallback-filter`, `hosts`, or `prefer-h3` field.
+- The hosts mapping on the General settings page, for the same reason: there is no hosts table in the engine's DNS configuration.
+- The system proxy bypass list reaches Windows (`ProxyOverride`) and Linux (`ignore-hosts`); the macOS `networksetup` path currently only sets or clears the proxies themselves.
 
 ## Architecture
 
@@ -117,7 +140,7 @@ The script generates and validates Android, iOS, macOS, Windows, Linux, Web, and
 
 ## Automated Verification
 
-Every push and pull request runs Dart formatting, Flutter analysis and tests, an Android debug APK build, Android release lint, Rust formatting, Clippy with warnings denied, and all workspace tests. The release workflow repeats those checks while creating a signed APK.
+Every push and pull request runs Dart formatting, Flutter analysis and tests, an Android debug APK build, Android release lint (`./gradlew :app:lintRelease`, scoped to this app module — an unqualified `lintRelease` also lints plugin sources that live outside this repository), Rust formatting, Clippy with warnings denied, and all workspace tests. The release workflow repeats those checks while creating a signed APK.
 
 An automated build is not evidence of VPN behavior or protocol interoperability. Android VPN traffic, privileged Windows/Linux TUN routing, Apple Network Extension, HarmonyOS VPN FD handling, and real-server protocol compatibility remain subject to the release gates below.
 

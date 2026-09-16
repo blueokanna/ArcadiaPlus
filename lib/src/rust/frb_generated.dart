@@ -67,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -1785504117;
+  int get rustContentHash => 611365399;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -181,6 +181,8 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiSetAndroidProxyMode({required String mode});
 
   Future<void> crateApiSetAndroidVpnFd({required int fd});
+
+  Future<void> crateApiSetGeoipDatabasePath({required String path});
 
   Future<void> crateApiSetLogLevel({required String level});
 
@@ -1341,6 +1343,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiSetAndroidVpnFdConstMeta =>
       const TaskConstMeta(debugName: "set_android_vpn_fd", argNames: ["fd"]);
+
+  @override
+  Future<void> crateApiSetGeoipDatabasePath({required String path}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          var arg0 = cst_encode_String(path);
+          return wire.wire__crate__api__set_geoip_database_path(port_, arg0);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiSetGeoipDatabasePathConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSetGeoipDatabasePathConstMeta =>
+      const TaskConstMeta(
+        debugName: "set_geoip_database_path",
+        argNames: ["path"],
+      );
 
   @override
   Future<void> crateApiSetLogLevel({required String level}) {

@@ -92,6 +92,9 @@ flutter:
   
   assets:
     - assets/veloguard.png
+    # GeoIP country database for `GEOIP` routing rules; installed into the
+    # app's support directory and registered with the engine at start-up.
+    - assets/Country.mmdb
     - assets/fonts/LICENSE-Roboto.txt
 
   fonts:

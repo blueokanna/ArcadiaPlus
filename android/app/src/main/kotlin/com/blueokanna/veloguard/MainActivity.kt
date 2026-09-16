@@ -97,9 +97,6 @@ class MainActivity : FlutterActivity() {
                 "getProxyMode" -> {
                     result.success(VeloGuardVpnService.proxyMode.name.lowercase())
                 }
-                "getInstalledApps" -> {
-                    result.success(getInstalledApps())
-                }
                 "getDeviceInfo" -> {
                     result.success(getDeviceInfo())
                 }
@@ -290,17 +287,6 @@ class MainActivity : FlutterActivity() {
     private fun stopVpnService() {
         Log.d(TAG, "Stopping VPN service...")
         VeloGuardVpnService.stopVpnFromOutside(this)
-    }
-    
-    private fun getInstalledApps(): List<Map<String, String>> {
-        val pm = packageManager
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-        return apps.map { app ->
-            mapOf(
-                "packageName" to app.packageName,
-                "appName" to (pm.getApplicationLabel(app)?.toString() ?: app.packageName)
-            )
-        }
     }
     
     private fun getDeviceInfo(): Map<String, Any> {

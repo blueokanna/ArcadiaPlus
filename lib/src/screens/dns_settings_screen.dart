@@ -5,6 +5,13 @@ import 'package:veloguard/src/providers/dns_settings_provider.dart';
 import 'package:veloguard/src/widgets/adaptive_list_tile.dart';
 import 'package:veloguard/src/l10n/app_localizations.dart';
 
+/// DNS settings, limited to what the engine can carry.
+///
+/// `overrideDns` decides which DNS section the engine receives: this screen's
+/// (`dns.enable` / `dns.listen` / `dns.nameservers` / `dns.fallback` /
+/// `dns.enhanced_mode`), or the one the profile declares. Without the switch
+/// on, the profile wins, which is what "use the DNS my subscription ships"
+/// means.
 class DnsSettingsScreen extends StatefulWidget {
   const DnsSettingsScreen({super.key});
 
@@ -13,28 +20,14 @@ class DnsSettingsScreen extends StatefulWidget {
 }
 
 class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
-  final _listenController = TextEditingController();
-  final _fakeIpRangeController = TextEditingController();
-  final _addItemController = TextEditingController();
-
-  @override
-  void dispose() {
-    _listenController.dispose();
-    _fakeIpRangeController.dispose();
-    _addItemController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
 
     return Consumer<DnsSettingsProvider>(
       builder: (context, dnsSettings, child) {
-        _listenController.text = dnsSettings.listen;
-        _fakeIpRangeController.text = dnsSettings.fakeIpRange;
-
         return Scaffold(
           appBar: AppBar(
             title: Text(l10n?.dnsSettings ?? 'DNS Settings'),
@@ -60,7 +53,8 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                       title: Text(l10n?.overrideDns ?? 'Override DNS'),
                       subtitle: Text(
                         l10n?.overrideDnsDesc ??
-                            'Override system DNS when enabled',
+                            'Replace the profile DNS section with the settings '
+                                'on this page',
                       ),
                       leading: Icon(
                         Icons.dns_outlined,
@@ -105,62 +99,46 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                         context,
                         l10n?.listenAddress ?? 'Listen Address',
                         dnsSettings.listen,
-                        (v) => dnsSettings.setListen(v),
+                        (v) => dnsSettings.setListen(v.trim()),
                       ),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              // Hosts 设置
-              _buildSectionHeader(
-                context,
-                l10n?.hostsSettings ?? 'Hosts Settings',
-                Icons.home_outlined,
-              ),
-              Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerLow,
-                child: Column(
-                  children: [
-                    AdaptiveListTile(
-                      title: Text(l10n?.useHosts ?? 'Use Hosts'),
-                      subtitle: Text(
-                        l10n?.useHostsDesc ?? 'Use custom hosts mapping',
+              if (!dnsSettings.overrideDns) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        size: 20,
+                        color: colorScheme.tertiary,
                       ),
-                      leading: Icon(
-                        Icons.list_alt_outlined,
-                        color: colorScheme.primary,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Override DNS is off: the engine uses the DNS '
+                          'section from the active profile. Everything below '
+                          'is applied once the switch is on.',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ),
-                      trailing: Switch.adaptive(
-                        value: dnsSettings.useHosts,
-                        onChanged: (v) => dnsSettings.setUseHosts(v),
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
-                      title: Text(l10n?.useSystemHosts ?? 'Use System Hosts'),
-                      subtitle: Text(
-                        l10n?.useSystemHostsDesc ?? 'Read system hosts file',
-                      ),
-                      leading: Icon(
-                        Icons.computer_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: Switch.adaptive(
-                        value: dnsSettings.useSystemHosts,
-                        onChanged: (v) => dnsSettings.setUseSystemHosts(v),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
 
               const SizedBox(height: 24),
 
-              // 高级设置
               _buildSectionHeader(
                 context,
                 l10n?.advancedSettings ?? 'Advanced Settings',
@@ -172,56 +150,10 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                 child: Column(
                   children: [
                     AdaptiveListTile(
-                      title: Text(l10n?.ipv6 ?? 'IPv6'),
-                      subtitle: Text(
-                        l10n?.ipv6DnsDesc ?? 'Enable IPv6 DNS resolution',
-                      ),
-                      leading: Icon(
-                        Icons.six_k_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: Switch.adaptive(
-                        value: dnsSettings.ipv6,
-                        onChanged: (v) => dnsSettings.setIpv6(v),
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
-                      title: Text(l10n?.followRules ?? 'Follow Rules'),
-                      subtitle: Text(
-                        l10n?.followRulesDesc ??
-                            'DNS requests follow proxy rules',
-                      ),
-                      leading: Icon(
-                        Icons.rule_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: Switch.adaptive(
-                        value: dnsSettings.followRules,
-                        onChanged: (v) => dnsSettings.setFollowRules(v),
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
-                      title: Text(l10n?.preferH3 ?? 'Prefer HTTP/3'),
-                      subtitle: Text(
-                        l10n?.preferH3Desc ?? 'DoH prefers HTTP/3',
-                      ),
-                      leading: Icon(
-                        Icons.speed_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: Switch.adaptive(
-                        value: dnsSettings.preferH3,
-                        onChanged: (v) => dnsSettings.setPreferH3(v),
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
                       title: const Text('Recursive Resolver'),
                       subtitle: const Text(
-                        'Resolve from the DNS root locally (RecurseX) '
-                        'instead of forwarding to upstream servers',
+                        'Resolve from the DNS root locally (RecurseX) instead '
+                        'of forwarding to upstream servers',
                       ),
                       leading: Icon(
                         Icons.hub_outlined,
@@ -233,28 +165,10 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                             dnsSettings.setUseRecursiveResolver(v),
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // DNS 模式
-              _buildSectionHeader(
-                context,
-                l10n?.dnsMode ?? 'DNS Mode',
-                Icons.dns_outlined,
-              ),
-              Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerLow,
-                child: Column(
-                  children: [
+                    const Divider(height: 1, indent: 16, endIndent: 16),
                     AdaptiveListTile(
                       title: Text(l10n?.dnsMode ?? 'DNS Mode'),
-                      subtitle: Text(
-                        _getDnsModeText(dnsSettings.dnsMode, l10n),
-                      ),
+                      subtitle: Text(_getDnsModeText(dnsSettings.dnsMode, l10n)),
                       leading: Icon(
                         Icons.settings_input_component_outlined,
                         color: colorScheme.primary,
@@ -282,10 +196,6 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                               value: 'fake-ip',
                               child: Text('Fake-IP'),
                             ),
-                            DropdownMenuItem(
-                              value: 'redir-host',
-                              child: Text('Redir-Host'),
-                            ),
                           ],
                           onChanged: (v) {
                             if (v != null) dnsSettings.setDnsMode(v);
@@ -293,50 +203,12 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                         ),
                       ),
                     ),
-                    if (dnsSettings.dnsMode == 'fake-ip') ...[
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      AdaptiveListTile(
-                        title: Text(l10n?.fakeIpRange ?? 'Fake-IP Range'),
-                        subtitle: Text(dnsSettings.fakeIpRange),
-                        leading: Icon(
-                          Icons.lan_outlined,
-                          color: colorScheme.primary,
-                        ),
-                        trailing: const Icon(Icons.edit_outlined),
-                        onTap: () => _showEditDialog(
-                          context,
-                          l10n?.fakeIpRange ?? 'Fake-IP Range',
-                          dnsSettings.fakeIpRange,
-                          (v) => dnsSettings.setFakeIpRange(v),
-                        ),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      AdaptiveListTile(
-                        title: Text(l10n?.fakeIpFilter ?? 'Fake-IP Filter'),
-                        subtitle: Text(
-                          '${dnsSettings.fakeIpFilter.length} ${l10n?.items ?? 'items'}',
-                        ),
-                        leading: Icon(
-                          Icons.filter_list_outlined,
-                          color: colorScheme.primary,
-                        ),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showListEditor(
-                          context,
-                          l10n?.fakeIpFilter ?? 'Fake-IP Filter',
-                          dnsSettings.fakeIpFilter,
-                          (item) => dnsSettings.addFakeIpFilter(item),
-                          (item) => dnsSettings.removeFakeIpFilter(item),
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
 
               const SizedBox(height: 24),
 
-              // DNS 服务器
               _buildSectionHeader(
                 context,
                 l10n?.dnsServers ?? 'DNS Servers',
@@ -347,25 +219,6 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                 color: colorScheme.surfaceContainerLow,
                 child: Column(
                   children: [
-                    AdaptiveListTile(
-                      title: Text(l10n?.defaultDns ?? 'Default DNS'),
-                      subtitle: Text(
-                        '${dnsSettings.defaultNameservers.length} ${l10n?.servers ?? 'servers'}',
-                      ),
-                      leading: Icon(
-                        Icons.dns_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showListEditor(
-                        context,
-                        l10n?.defaultDns ?? 'Default DNS',
-                        dnsSettings.defaultNameservers,
-                        (item) => dnsSettings.addDefaultNameserver(item),
-                        (item) => dnsSettings.removeDefaultNameserver(item),
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
                     AdaptiveListTile(
                       title: Text(l10n?.nameservers ?? 'Nameservers'),
                       subtitle: Text(
@@ -401,131 +254,6 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                         dnsSettings.fallback,
                         (item) => dnsSettings.addFallback(item),
                         (item) => dnsSettings.removeFallback(item),
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
-                      title: Text(l10n?.proxyDns ?? 'Proxy DNS'),
-                      subtitle: Text(
-                        '${dnsSettings.proxyNameservers.length} ${l10n?.servers ?? 'servers'}',
-                      ),
-                      leading: Icon(
-                        Icons.vpn_key_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showListEditor(
-                        context,
-                        l10n?.proxyDns ?? 'Proxy DNS',
-                        dnsSettings.proxyNameservers,
-                        (item) => dnsSettings.addProxyNameserver(item),
-                        (item) => dnsSettings.removeProxyNameserver(item),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Fallback 过滤器
-              _buildSectionHeader(
-                context,
-                l10n?.fallbackFilter ?? 'Fallback Filter',
-                Icons.filter_alt_outlined,
-              ),
-              Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerLow,
-                child: Column(
-                  children: [
-                    AdaptiveListTile(
-                      title: const Text('GeoIP'),
-                      subtitle: Text(
-                        l10n?.enableGeoipFilter ?? 'Enable GeoIP filter',
-                      ),
-                      leading: Icon(
-                        Icons.location_on_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: Switch.adaptive(
-                        value: dnsSettings.fallbackFilter.geoip,
-                        onChanged: (v) => dnsSettings.setFallbackFilterGeoip(v),
-                      ),
-                    ),
-                    if (dnsSettings.fallbackFilter.geoip) ...[
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      AdaptiveListTile(
-                        title: Text(l10n?.geoipCode ?? 'GeoIP Code'),
-                        subtitle: Text(dnsSettings.fallbackFilter.geoipCode),
-                        leading: Icon(
-                          Icons.flag_outlined,
-                          color: colorScheme.primary,
-                        ),
-                        trailing: const Icon(Icons.edit_outlined),
-                        onTap: () => _showEditDialog(
-                          context,
-                          l10n?.geoipCode ?? 'GeoIP Code',
-                          dnsSettings.fallbackFilter.geoipCode,
-                          (v) => dnsSettings.setFallbackFilterGeoipCode(v),
-                        ),
-                      ),
-                    ],
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
-                      title: Text(l10n?.geosite ?? 'Geosite'),
-                      subtitle: Text(
-                        '${dnsSettings.fallbackFilter.geosite.length} ${l10n?.items ?? 'items'}',
-                      ),
-                      leading: Icon(
-                        Icons.language_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showListEditor(
-                        context,
-                        l10n?.geosite ?? 'Geosite',
-                        dnsSettings.fallbackFilter.geosite,
-                        (item) => dnsSettings.addFallbackFilterGeosite(item),
-                        (item) => dnsSettings.removeFallbackFilterGeosite(item),
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
-                      title: Text(l10n?.ipCidr ?? 'IP/CIDR'),
-                      subtitle: Text(
-                        '${dnsSettings.fallbackFilter.ipCidr.length} ${l10n?.items ?? 'items'}',
-                      ),
-                      leading: Icon(
-                        Icons.router_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showListEditor(
-                        context,
-                        l10n?.ipCidr ?? 'IP/CIDR',
-                        dnsSettings.fallbackFilter.ipCidr,
-                        (item) => dnsSettings.addFallbackFilterIpCidr(item),
-                        (item) => dnsSettings.removeFallbackFilterIpCidr(item),
-                      ),
-                    ),
-                    const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
-                      title: Text(l10n?.domain ?? 'Domain'),
-                      subtitle: Text(
-                        '${dnsSettings.fallbackFilter.domain.length} ${l10n?.items ?? 'items'}',
-                      ),
-                      leading: Icon(
-                        Icons.domain_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showListEditor(
-                        context,
-                        l10n?.domain ?? 'Domain',
-                        dnsSettings.fallbackFilter.domain,
-                        (item) => dnsSettings.addFallbackFilterDomain(item),
-                        (item) => dnsSettings.removeFallbackFilterDomain(item),
                       ),
                     ),
                   ],
@@ -572,8 +300,6 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
         return l10n?.normalMode ?? 'Normal Mode';
       case 'fake-ip':
         return l10n?.fakeIpMode ?? 'Fake-IP Mode';
-      case 'redir-host':
-        return l10n?.redirHostMode ?? 'Redir-Host Mode';
       default:
         return mode;
     }

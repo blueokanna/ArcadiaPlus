@@ -1,7 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:veloguard/src/services/platform_proxy_service.dart';
 import 'package:veloguard/src/services/storage_service.dart';
+import 'package:veloguard/src/utils/platform_utils.dart';
 
+/// Owns the network-related switches and applies them to the platform.
+///
+/// Every setter reports what actually happened: the platform proxy and the
+/// tunnel are operated through [PlatformProxyService] and their live state is
+/// what gets stored, so a switch can never show "on" for a setting the OS
+/// refused.
 class NetworkSettingsProvider extends ChangeNotifier {
   NetworkSettings _settings = NetworkSettings();
   bool _isLoading = false;
@@ -13,11 +21,10 @@ class NetworkSettingsProvider extends ChangeNotifier {
   bool get systemProxy => _settings.systemProxy;
   List<String> get bypassDomains => _settings.bypassDomains;
   bool get tunEnabled => _settings.tunEnabled;
-  String get tunStack => _settings.tunStack;
-  bool get uwpLoopback => _settings.uwpLoopback;
 
-  // Check if running on Windows
-  bool get isWindows => Platform.isWindows;
+  /// Whether this platform has a system-wide proxy concept at all.
+  bool get supportsSystemProxy =>
+      !Platform.isAndroid && !Platform.isIOS && !PlatformUtils.isOHOS;
 
   NetworkSettingsProvider() {
     _loadSettings();
@@ -29,6 +36,16 @@ class NetworkSettingsProvider extends ChangeNotifier {
 
     try {
       _settings = await StorageService.instance.getNetworkSettings();
+      // Both switches are process-scoped facts, not preferences: read what the
+      // platform reports right now so a restart cannot leave a stale "on".
+      final systemProxyLive = supportsSystemProxy
+          ? await PlatformProxyService.instance.checkSystemProxyStatus()
+          : false;
+      final tunLive = await PlatformProxyService.instance.checkTunModeStatus();
+      _settings = _settings.copyWith(
+        systemProxy: systemProxyLive,
+        tunEnabled: tunLive,
+      );
     } catch (e) {
       debugPrint('Failed to load network settings: $e');
     } finally {
@@ -45,30 +62,51 @@ class NetworkSettingsProvider extends ChangeNotifier {
     }
   }
 
+  /// Enables or disables the platform's own proxy configuration.
+  ///
+  /// Throws when the platform rejects the change, so the caller can surface it
+  /// instead of leaving a switch that lies about the system state.
   Future<void> setSystemProxy(bool value) async {
-    _settings = _settings.copyWith(systemProxy: value);
-    await _saveSettings();
-
-    if (value) {
-      await _enableSystemProxy();
-    } else {
-      await _disableSystemProxy();
+    if (!supportsSystemProxy) {
+      throw UnsupportedError('This platform has no system proxy setting');
     }
 
+    if (value) {
+      final applied = await _applySystemProxy();
+      if (!applied) {
+        throw StateError('The platform refused the proxy settings');
+      }
+    } else {
+      final applied = await PlatformProxyService.instance.disableSystemProxy();
+      if (!applied) {
+        throw StateError('The platform refused to restore the proxy settings');
+      }
+    }
+
+    _settings = _settings.copyWith(
+      systemProxy: await PlatformProxyService.instance.checkSystemProxyStatus(),
+    );
+    await _saveSettings();
     notifyListeners();
   }
 
   Future<void> setBypassDomains(List<String> domains) async {
     _settings = _settings.copyWith(bypassDomains: domains);
     await _saveSettings();
+    // The bypass list is part of the platform proxy configuration, so it only
+    // reaches the OS by writing the settings again.
+    if (_settings.systemProxy) {
+      if (!await _applySystemProxy()) {
+        debugPrint('Failed to re-apply the system proxy after a bypass change');
+      }
+    }
     notifyListeners();
   }
 
   Future<void> addBypassDomain(String domain) async {
-    if (!_settings.bypassDomains.contains(domain)) {
-      final newList = List<String>.from(_settings.bypassDomains)..add(domain);
-      await setBypassDomains(newList);
-    }
+    if (_settings.bypassDomains.contains(domain)) return;
+    final newList = List<String>.from(_settings.bypassDomains)..add(domain);
+    await setBypassDomains(newList);
   }
 
   Future<void> removeBypassDomain(String domain) async {
@@ -76,233 +114,35 @@ class NetworkSettingsProvider extends ChangeNotifier {
     await setBypassDomains(newList);
   }
 
+  /// Enables or disables the tunnel, in the mode the engine is currently in.
+  ///
+  /// Throws when the platform refuses, and stores the tunnel's own state.
   Future<void> setTunEnabled(bool value) async {
-    _settings = _settings.copyWith(tunEnabled: value);
-    await _saveSettings();
-
-    // TUN mode requires admin privileges
-    if (value) {
-      await _enableTun();
-    } else {
-      await _disableTun();
+    final service = PlatformProxyService.instance;
+    final applied = value
+        ? await service.enableTunMode(mode: service.currentProxyMode)
+        : await service.disableTunMode();
+    if (!applied) {
+      throw StateError(
+        value
+            ? 'The tunnel could not be started (privileges missing or another '
+                  'VPN holds the slot)'
+            : 'The tunnel could not be stopped',
+      );
     }
 
-    notifyListeners();
-  }
-
-  Future<void> setTunStack(String stack) async {
-    if (!['gvisor', 'system', 'mixed'].contains(stack)) {
-      debugPrint('Invalid TUN stack: $stack');
-      return;
-    }
-
-    _settings = _settings.copyWith(tunStack: stack);
+    _settings = _settings.copyWith(tunEnabled: service.tunModeEnabled);
     await _saveSettings();
     notifyListeners();
   }
 
-  Future<void> setUwpLoopback(bool value) async {
-    if (!Platform.isWindows) return;
-
-    _settings = _settings.copyWith(uwpLoopback: value);
-    await _saveSettings();
-
-    if (value) {
-      await _enableUwpLoopback();
-    }
-
-    notifyListeners();
-  }
-
-  // Platform-specific implementations
-  Future<void> _enableSystemProxy() async {
-    try {
-      final generalSettings = await StorageService.instance
-          .getGeneralSettings();
-      final proxyHost = generalSettings.bindAddress.contains(':')
-          ? '::1'
-          : '127.0.0.1';
-      final proxyPort = generalSettings.mixedPort.toString();
-      final endpointHost = proxyHost.contains(':') ? '[$proxyHost]' : proxyHost;
-      final httpProxy = '$endpointHost:$proxyPort';
-      if (Platform.isWindows) {
-        final bypass = _settings.bypassDomains.join(';');
-        final overrideValue = bypass.isNotEmpty ? '$bypass;<local>' : '<local>';
-        // Windows: Set system proxy via registry
-        await Process.run('reg', [
-          'add',
-          r'HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings',
-          '/v',
-          'ProxyEnable',
-          '/t',
-          'REG_DWORD',
-          '/d',
-          '1',
-          '/f',
-        ]);
-        await Process.run('reg', [
-          'add',
-          r'HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings',
-          '/v',
-          'ProxyServer',
-          '/t',
-          'REG_SZ',
-          '/d',
-          httpProxy,
-          '/f',
-        ]);
-        await Process.run('reg', [
-          'add',
-          r'HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings',
-          '/v',
-          'ProxyOverride',
-          '/t',
-          'REG_SZ',
-          '/d',
-          overrideValue,
-          '/f',
-        ]);
-
-        // Also configure WinHTTP to ensure system components use the proxy
-        await Process.run('netsh', ['winhttp', 'set', 'proxy', httpProxy]);
-      } else if (Platform.isMacOS) {
-        // macOS: Use networksetup
-        await Process.run('networksetup', [
-          '-setwebproxy',
-          'Wi-Fi',
-          proxyHost,
-          proxyPort,
-        ]);
-        await Process.run('networksetup', [
-          '-setsecurewebproxy',
-          'Wi-Fi',
-          proxyHost,
-          proxyPort,
-        ]);
-        await Process.run('networksetup', [
-          '-setsocksfirewallproxy',
-          'Wi-Fi',
-          proxyHost,
-          proxyPort,
-        ]);
-      } else if (Platform.isLinux) {
-        // Linux: Set GNOME proxy settings
-        await Process.run('gsettings', [
-          'set',
-          'org.gnome.system.proxy',
-          'mode',
-          'manual',
-        ]);
-        await Process.run('gsettings', [
-          'set',
-          'org.gnome.system.proxy.http',
-          'host',
-          proxyHost,
-        ]);
-        await Process.run('gsettings', [
-          'set',
-          'org.gnome.system.proxy.http',
-          'port',
-          proxyPort,
-        ]);
-      }
-    } catch (e) {
-      debugPrint('Failed to enable system proxy: $e');
-    }
-  }
-
-  Future<void> _disableSystemProxy() async {
-    try {
-      if (Platform.isWindows) {
-        await Process.run('reg', [
-          'add',
-          r'HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings',
-          '/v',
-          'ProxyEnable',
-          '/t',
-          'REG_DWORD',
-          '/d',
-          '0',
-          '/f',
-        ]);
-        await Process.run('reg', [
-          'add',
-          r'HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings',
-          '/v',
-          'ProxyOverride',
-          '/t',
-          'REG_SZ',
-          '/d',
-          '',
-          '/f',
-        ]);
-        await Process.run('netsh', ['winhttp', 'reset', 'proxy']);
-      } else if (Platform.isMacOS) {
-        await Process.run('networksetup', [
-          '-setwebproxystate',
-          'Wi-Fi',
-          'off',
-        ]);
-        await Process.run('networksetup', [
-          '-setsecurewebproxystate',
-          'Wi-Fi',
-          'off',
-        ]);
-        await Process.run('networksetup', [
-          '-setsocksfirewallproxystate',
-          'Wi-Fi',
-          'off',
-        ]);
-      } else if (Platform.isLinux) {
-        await Process.run('gsettings', [
-          'set',
-          'org.gnome.system.proxy',
-          'mode',
-          'none',
-        ]);
-      }
-    } catch (e) {
-      debugPrint('Failed to disable system proxy: $e');
-    }
-  }
-
-  Future<void> _enableTun() async {
-    // TUN mode is handled by the Rust backend
-    debugPrint('TUN mode enabled with stack: ${_settings.tunStack}');
-  }
-
-  Future<void> _disableTun() async {
-    debugPrint('TUN mode disabled');
-  }
-
-  Future<void> _enableUwpLoopback() async {
-    if (!Platform.isWindows) return;
-
-    try {
-      // Enable UWP loopback exemption
-      // This requires admin privileges
-      final result = await Process.run('powershell', [
-        '-Command',
-        'CheckNetIsolation LoopbackExempt -a -n="Microsoft.MicrosoftEdge_8wekyb3d8bbwe"',
-      ]);
-      debugPrint('UWP Loopback result: ${result.stdout}');
-    } catch (e) {
-      debugPrint('Failed to enable UWP loopback: $e');
-    }
-  }
-
-  /// Generate config JSON with current network settings
-  Map<String, dynamic> generateNetworkConfig() {
-    return {
-      'tun': {
-        'enable': _settings.tunEnabled,
-        'stack': _settings.tunStack,
-        'auto-route': true,
-        'auto-detect-interface': true,
-      },
-      'mixed-port': 7890,
-      'socks-port': 7891,
-      'allow-lan': false,
-    };
+  Future<bool> _applySystemProxy() async {
+    final general = await StorageService.instance.getGeneralSettings();
+    final host = general.bindAddress.contains(':') ? '::1' : '127.0.0.1';
+    return PlatformProxyService.instance.enableSystemProxy(
+      host: host,
+      httpPort: general.mixedPort,
+      bypass: _settings.bypassDomains,
+    );
   }
 }

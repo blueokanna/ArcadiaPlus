@@ -196,10 +196,18 @@ class ConfigConverter {
 
   /// Convert Clash YAML config to VeloGuard JSON config
   /// If generalSettings is provided, it will override the port settings from YAML
+  ///
+  /// [ruleProviderPaths] maps a `rule-providers` name onto the local file the
+  /// `RuleProviderService` has already downloaded and normalised. Providers
+  /// without a local copy are dropped together with the `RULE-SET` rules that
+  /// reference them, which is how Clash behaves with an unloaded provider:
+  /// the rule simply does not match and evaluation falls through.
   static String convertClashYamlToJson(
     String yamlContent, {
     GeneralSettings? generalSettings,
+    DnsSettings? dnsSettings,
     String? recursiveDnsAddress,
+    Map<String, String>? ruleProviderPaths,
     void Function(String message)? onWarning,
   }) {
     try {
@@ -212,7 +220,9 @@ class ConfigConverter {
       final veloguardConfig = _convertClashToVeloGuard(
         config,
         generalSettings: generalSettings,
+        dnsSettings: dnsSettings,
         recursiveDnsAddress: recursiveDnsAddress,
+        ruleProviderPaths: ruleProviderPaths,
         onWarning: onWarning,
       );
 
@@ -247,7 +257,9 @@ class ConfigConverter {
   static Map<String, dynamic> _convertClashToVeloGuard(
     Map<String, dynamic> clash, {
     GeneralSettings? generalSettings,
+    DnsSettings? dnsSettings,
     String? recursiveDnsAddress,
+    Map<String, String>? ruleProviderPaths,
     void Function(String message)? onWarning,
   }) {
     final (outbounds, availableOutbounds) = _extractOutbounds(
@@ -255,29 +267,62 @@ class ConfigConverter {
       onWarning: onWarning,
     );
 
+    final (ruleProviders, availableRuleSets) = _extractRuleProviders(
+      clash,
+      localPaths: ruleProviderPaths,
+      onWarning: onWarning,
+    );
+
     return {
-      'general': _extractGeneralConfig(clash, generalSettings: generalSettings),
-      'dns': _extractDnsConfig(clash, recursiveDnsAddress: recursiveDnsAddress),
+      'general': _extractGeneralConfig(
+        clash,
+        generalSettings: generalSettings,
+        onWarning: onWarning,
+      ),
+      'dns': _extractDnsConfig(
+        clash,
+        dnsSettings: dnsSettings,
+        recursiveDnsAddress: recursiveDnsAddress,
+      ),
       'inbounds': _extractInbounds(clash, generalSettings: generalSettings),
       'outbounds': outbounds,
       'rules': _extractRules(
         clash,
         availableOutbounds: availableOutbounds,
+        availableRuleSets: availableRuleSets,
         onWarning: onWarning,
       ),
-      'rule_providers': _extractRuleProviders(clash),
+      'rule_providers': ruleProviders,
     };
   }
 
-  static List<Map<String, dynamic>> _extractRuleProviders(
-    Map<String, dynamic> clash,
-  ) {
+  /// Builds the engine's `rule_providers` section from the profile and the
+  /// local copies the rule provider service produced.
+  ///
+  /// The engine is always handed `type: file` providers: it loads them from
+  /// disk in one synchronous step, so an unreachable rule source can never
+  /// fail or stall engine start-up. Returns the provider list together with
+  /// the set of names that are actually backed by a file, so `RULE-SET` rules
+  /// referencing a missing provider can be dropped instead of failing
+  /// validation inside the engine.
+  static (List<Map<String, dynamic>>, Set<String>) _extractRuleProviders(
+    Map<String, dynamic> clash, {
+    Map<String, String>? localPaths,
+    void Function(String message)? onWarning,
+  }) {
     final source = clash['rule-providers'];
-    if (source is! Map) return const [];
+    if (source is! Map) {
+      return (const <Map<String, dynamic>>[], const <String>{});
+    }
 
     final providers = <Map<String, dynamic>>[];
+    final ready = <String>{};
+
     for (final entry in source.entries) {
-      if (entry.value is! Map) continue;
+      final name = entry.key.toString();
+      if (entry.value is! Map) {
+        throw FormatException('Rule provider "$name" is not a mapping');
+      }
       final config = Map<String, dynamic>.from(entry.value as Map);
       final type = (config['type'] ?? 'http').toString().toLowerCase();
       final behavior = (config['behavior'] ?? 'classical')
@@ -289,22 +334,54 @@ class ConfigConverter {
       if (!const {'domain', 'ipcidr', 'classical'}.contains(behavior)) {
         throw FormatException('Unsupported rule provider behavior: $behavior');
       }
+      if (type == 'http' && (config['url']?.toString().isEmpty ?? true)) {
+        throw FormatException('Rule provider "$name" needs a url');
+      }
+      if (type == 'file' && (config['path']?.toString().isEmpty ?? true)) {
+        throw FormatException('Rule provider "$name" needs a path');
+      }
 
+      final localPath = localPaths?[name];
+      if (localPath == null) {
+        onWarning?.call(
+          'Rule provider "$name" has no local copy; its rules are inactive '
+          'until the rule set is downloaded.',
+        );
+        continue;
+      }
+
+      ready.add(name);
       providers.add({
-        'name': entry.key.toString(),
-        'type': type,
+        'name': name,
+        'type': 'file',
         'behavior': behavior,
-        'url': config['url']?.toString(),
-        'path': config['path']?.toString(),
-        'interval': config['interval'] is int ? config['interval'] : 86400,
+        'path': localPath,
+        // The engine re-reads a local provider on this interval. Refreshed
+        // rule sets land on a new content-addressed path, so a real update is
+        // picked up on the next reload rather than this timer; the floor
+        // keeps a profile that declares a tiny interval from making the
+        // background updater spin.
+        'interval': _providerInterval(config['interval']),
       });
     }
-    return providers;
+
+    return (providers, ready);
+  }
+
+  static int _providerInterval(Object? declared) {
+    const floor = 600;
+    const fallback = 86400;
+    final value = declared is int
+        ? declared
+        : int.tryParse(declared?.toString() ?? '');
+    if (value == null) return fallback;
+    return value < floor ? floor : value;
   }
 
   static Map<String, dynamic> _extractGeneralConfig(
     Map<String, dynamic> clash, {
     GeneralSettings? generalSettings,
+    void Function(String message)? onWarning,
   }) {
     // Use generalSettings if provided, otherwise fall back to YAML values
     final httpPort = generalSettings?.httpPort ?? clash['port'] ?? 7890;
@@ -314,6 +391,15 @@ class ConfigConverter {
     final ipv6 = generalSettings?.ipv6 ?? clash['ipv6'] ?? false;
     final tcpConcurrent =
         generalSettings?.tcpConcurrent ?? clash['tcp-concurrent'] ?? false;
+    final authentication = clash['authentication'] is List
+        ? (clash['authentication'] as List).map((auth) {
+            final parts = auth.toString().split(':');
+            return {
+              'username': parts.isNotEmpty ? parts[0] : '',
+              'password': parts.length > 1 ? parts[1] : '',
+            };
+          }).toList()
+        : null;
     var bindAddress =
         generalSettings?.bindAddress ?? clash['bind-address'] ?? '*';
 
@@ -326,6 +412,16 @@ class ConfigConverter {
       }
     }
 
+    if (allowLan && bindAddress != '127.0.0.1' && bindAddress != '::1') {
+      onWarning?.call(
+        authentication == null || authentication.isEmpty
+            ? 'allow-lan is on and no inbound authentication is configured: '
+                  'every host that can reach this machine may use the proxy.'
+            : 'allow-lan is on: the proxy listens on $bindAddress and is '
+                  'reachable from the local network.',
+      );
+    }
+
     final mode = generalSettings?.mode ?? clash['mode'] ?? 'rule';
     final logLevel = generalSettings?.logLevel ?? clash['log-level'] ?? 'info';
 
@@ -335,15 +431,7 @@ class ConfigConverter {
       'redir_port': clash['redir-port'],
       'tproxy_port': clash['tproxy-port'],
       'mixed_port': mixedPort,
-      'authentication': clash['authentication'] != null
-          ? (clash['authentication'] as List).map((auth) {
-              final parts = auth.toString().split(':');
-              return {
-                'username': parts.isNotEmpty ? parts[0] : '',
-                'password': parts.length > 1 ? parts[1] : '',
-              };
-            }).toList()
-          : null,
+      'authentication': authentication,
       'allow_lan': allowLan,
       'bind_address': bindAddress,
       'mode': mode,
@@ -357,14 +445,25 @@ class ConfigConverter {
     };
   }
 
+  /// Builds the engine's `dns` section.
+  ///
+  /// Two sources exist and one has to win: the profile's own `dns` block, or
+  /// the app's DNS settings once the user turns on "override DNS". The switch
+  /// is what makes the choice explicit instead of silently preferring one.
   static Map<String, dynamic> _extractDnsConfig(
     Map<String, dynamic> clash, {
+    DnsSettings? dnsSettings,
     String? recursiveDnsAddress,
   }) {
-    final dns = clash['dns'] as Map<String, dynamic>? ?? {};
-    final configured =
-        (dns['nameserver'] as List?)?.map((e) => e.toString()).toList() ??
-        ['8.8.8.8', '1.1.1.1'];
+    final override = dnsSettings != null && dnsSettings.overrideDns;
+    final dns = override
+        ? const <String, dynamic>{}
+        : (clash['dns'] as Map<String, dynamic>? ?? {});
+
+    final configured = override
+        ? dnsSettings.nameservers
+        : (dns['nameserver'] as List?)?.map((e) => e.toString()).toList() ??
+              const ['8.8.8.8', '1.1.1.1'];
 
     // A running RecurseX front-end stays authoritative: put it first and
     // every forwarded query becomes a recursive one, with the configured
@@ -373,13 +472,21 @@ class ConfigConverter {
         ? configured
         : [recursiveDnsAddress, ...configured];
 
+    final fallback = override
+        ? dnsSettings.fallback
+        : (dns['fallback'] as List?)?.map((e) => e.toString()).toList() ??
+              const <String>[];
+
     return {
-      'enable': dns['enable'] ?? true,
-      'listen': dns['listen'] ?? '0.0.0.0:53',
+      'enable': override ? dnsSettings.enable : (dns['enable'] ?? true),
+      'listen': override
+          ? dnsSettings.listen
+          : (dns['listen'] ?? '127.0.0.1:53'),
       'nameservers': nameservers,
-      'fallback':
-          (dns['fallback'] as List?)?.map((e) => e.toString()).toList() ?? [],
-      'enhanced_mode': dns['enhanced-mode'] ?? 'fake-ip',
+      'fallback': fallback,
+      'enhanced_mode': override
+          ? dnsSettings.dnsMode
+          : (dns['enhanced-mode'] ?? 'fake-ip'),
     };
   }
 
@@ -647,6 +754,7 @@ class ConfigConverter {
   static List<Map<String, dynamic>> _extractRules(
     Map<String, dynamic> clash, {
     required Set<String> availableOutbounds,
+    required Set<String> availableRuleSets,
     void Function(String message)? onWarning,
   }) {
     final rules = <Map<String, dynamic>>[];
@@ -680,6 +788,19 @@ class ConfigConverter {
             onWarning?.call(
               'Rule "$rule" uses "$ruleType", which corduit has no rule type '
               'for; the rule was skipped.',
+            );
+            continue;
+          }
+
+          // The engine rejects a RULE-SET naming an unconfigured provider, and
+          // a provider without a local copy was dropped above. Skipping the
+          // rule keeps the rest of the profile usable and matches Clash's
+          // behaviour for a provider that never loaded.
+          if (mappedType == 'rule_set' &&
+              !availableRuleSets.contains(payload)) {
+            onWarning?.call(
+              'Rule "$rule" references the rule set "$payload", which is not '
+              'available; the rule was skipped.',
             );
             continue;
           }

@@ -146,9 +146,24 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                           ],
                           onChanged: (value) async {
                             if (value == null) return;
+                            final messenger = ScaffoldMessenger.of(context);
                             final mode = ProxyMode.values.byName(value);
                             final applied = await appState.setProxyMode(mode);
-                            if (applied) await settings.setMode(value);
+                            if (!mounted) return;
+                            if (applied) {
+                              await settings.setMode(value);
+                            } else {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${l10n?.failed ?? 'Failed'}: '
+                                    '${l10n?.mode ?? 'Mode'} $value',
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                  backgroundColor: colorScheme.error,
+                                ),
+                              );
+                            }
                           },
                         ),
                       ),
@@ -271,35 +286,6 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                       trailing: const Icon(Icons.info_outline),
                       onTap: () =>
                           _showBindAddressInfo(context, settings, l10n),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Hosts 映射
-              _buildSectionHeader(
-                context,
-                l10n?.hostsMapping ?? 'Hosts Mapping',
-                Icons.home_outlined,
-              ),
-              Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerLow,
-                child: Column(
-                  children: [
-                    AdaptiveListTile(
-                      title: Text(l10n?.hosts ?? 'Hosts'),
-                      subtitle: Text(
-                        '${settings.hosts.length} ${l10n?.items ?? "items"}',
-                      ),
-                      leading: Icon(
-                        Icons.list_alt_outlined,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showHostsEditor(context, settings, l10n),
                     ),
                   ],
                 ),

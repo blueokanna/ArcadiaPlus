@@ -17,6 +17,8 @@
 - Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.1.5 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 配置转换采用显式降级：corduit 无法构建的协议节点会被丢弃、引用回落 `DIRECT`，corduit 没有对应类型的规则会被跳过——每次降级都通过 `onWarning` 上报，不静默处理。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
+- 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
+- GeoIP 数据库随安装包分发（`assets/Country.mmdb`），启动时解包到应用支持目录并注册给引擎；解包或注册失败会记录原因，此时 `GEOIP` 规则不会被匹配——不静默降级。
 - Android、Windows、Linux 共用 Rust TUN 数据包处理器，各平台独立管理设备生命周期。
 - Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/veloguard.png` 统一生成。
 
@@ -41,10 +43,31 @@
 | --- | --- | --- | --- | --- |
 | Android | 有 | 不适用 | `VpnService` 路径已实现 | 需要真机、ABI 和长连接回归测试 |
 | Windows | 有 | 已实现 | Wintun 路径已实现 | 需要管理员权限和 Windows 10/11 实机测试 |
-| Linux | 有 | GNOME 设置路径 | 已实现仅 IPv4 的 global 模式路径 | 仍需 root/实机验证；在完成 socket mark 或物理网卡绑定前，rule/direct 模式会主动拒绝 |
+| Linux | 有 | GNOME 设置路径（逐条校验 `gsettings` 退出码） | corduit 提供 IPv4 TUN 路径 | 需 root/实机验证；数据面把默认路由指向 TUN 且只豁免代理服务器地址，rule/direct 模式下引擎直连的流量存在回到 TUN 的风险，验证前不宣称可用 |
 | macOS | 有 | `networksetup` 路径 | 未实现 Network Extension | 不能宣称全局代理支持 |
 | iOS | 有 | 不适用 | 未实现 Packet Tunnel Extension | 仅应用壳 |
 | HarmonyOS NEXT | 有工程骨架 | 不适用 | 明确返回 `OHOS_VPN_UNSUPPORTED` | 不可发布 |
+
+## 路由模式
+
+`rule` / `global` / `direct` 的判定全部在引擎里完成：inbound、TUN 数据面与 Android VPN 都把连接交给同一个路由器，所以切换模式从不需要重建隧道。
+
+| 平台 | 切换模式时做什么 | 说明 |
+| --- | --- | --- |
+| Android | `set_android_proxy_mode`（引擎运行时模式）+ 通知文案 | VPN 路由固定 `0.0.0.0/0`，模式由引擎在拨号时决定；进隧道的 53 端口查询统一由 netstack 的 fake-IP 解析器应答 |
+| Windows | `set_windows_proxy_mode` | 切到 `global` 时若路由表还没进入全局模式，改用 `enable_tun_mode_with_mode("global")` 重建路由 |
+| Linux / macOS | `set_proxy_mode`（引擎运行时模式） | Linux 的 TUN 数据面把连接转给本地 SOCKS inbound，模式在拨号时生效 |
+| 系统代理 | 与模式无关 | 指向本地 mixed 端口；Linux 逐条校验 `gsettings` 退出码，Windows 启用前会快照原代理设置并在关闭时恢复 |
+
+规则集刷新时机：应用启动、profile 更新，以及每 15 分钟一次的到期检查。只有声明间隔（默认一天）已过的规则集才真正发起网络请求，且带 `If-None-Match` / `If-Modified-Since` 条件头，304 视为已是最新；刷新后的文件按内容哈希命名，配置随之变化，运行中的引擎在下一次 `reload_corduit` 会立即装载新内容。
+
+## 已知限制
+
+以下能力目前会被保存但不会改变运行时行为，写入文档以便不被当成已生效：
+
+- DNS 设置页除“本地递归解析”（`useRecursiveResolver`，会拉起 RecurseX 并把引擎上游指向它）以外的字段：引擎的 DNS 配置来自 profile 的 `dns` 段（`enable` / `listen` / `nameservers` / `fallback` / `enhanced-mode`），corduit 的 `DnsConfig` 没有 `nameserver-policy`、`fallback-filter`、`hosts`、`prefer-h3` 等字段。
+- General 设置页的 hosts 映射（同一个原因：引擎 DNS 配置里没有 hosts 表）。
+- 系统代理的 bypass 列表：Windows（`ProxyOverride`）与 Linux（`ignore-hosts`）会下发，macOS 的 `networksetup` 路径暂时只在启用/关闭时设置代理本身。
 
 ## 架构
 
@@ -117,7 +140,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
 
 ## 自动化验证
 
-每次 push 和 pull request 都会执行 Dart 格式检查、Flutter 分析与测试、Android Debug APK 构建、Android Release lint、Rust 格式检查、将警告视为错误的 Clippy，以及 Rust 全工作区测试。发布工作流会在生成签名 APK 时重复这些检查。
+每次 push 和 pull request 都会执行 Dart 格式检查、Flutter 分析与测试、Android Debug APK 构建、Android Release lint（`./gradlew :app:lintRelease`，只 lint 本应用模块——不带前缀的 `lintRelease` 会连带仓库外的插件源码一起报错）、Rust 格式检查、将警告视为错误的 Clippy，以及 Rust 全工作区测试。发布工作流会在生成签名 APK 时重复这些检查。
 
 自动构建通过不等于 VPN 行为或协议互操作已经得到证明。Android VPN 真实流量、Windows/Linux 特权 TUN 路由、Apple Network Extension、HarmonyOS VPN FD 处理，以及真实服务端协议兼容性，仍必须满足下方发布门槛。
 

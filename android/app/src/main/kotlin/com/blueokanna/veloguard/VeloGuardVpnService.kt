@@ -251,6 +251,12 @@ class VeloGuardVpnService : VpnService() {
         fun setProxyMode(mode: ProxyMode) {
             _proxyMode = mode
             Log.d(TAG, "Proxy mode set to: $mode")
+            // The routing decision is the engine's; this only keeps the mode
+            // shown in the notification honest.
+            instance?.let { service ->
+                service.currentMode = mode
+                service.refreshNotification()
+            }
         }
         
     }
@@ -396,8 +402,13 @@ class VeloGuardVpnService : VpnService() {
                 // Android gives startForegroundService() only a short deadline
                 // to publish its notification. VPN takeover/retry can exceed it.
                 startForeground(NOTIFICATION_ID, createNotification())
-                
-                startVpn()
+
+                // Establishing the tunnel retries and sleeps; the main thread
+                // must stay free to answer the system's callbacks.
+                Thread(
+                    { startVpn() },
+                    "veloguard-vpn-start",
+                ).start()
             }
             ACTION_STOP -> {
                 stopVpnInternal()
@@ -449,21 +460,21 @@ class VeloGuardVpnService : VpnService() {
                 .setSession("VeloGuard")
                 .setMtu(1500)
                 .addAddress("198.18.0.1", 16)
+                // Every DNS query that enters the tunnel is answered by the
+                // engine's fake-IP resolver, whichever server the app asks for,
+                // so the tunnel's own address is the only one that belongs in
+                // the interface configuration. Listing public resolvers here
+                // would let Android resolve outside the tunnel.
                 .addDnsServer("198.18.0.2")
-                .addDnsServer("8.8.8.8")
-                .addDnsServer("1.1.1.1")
                 .setBlocking(false)
-            
-            when (currentMode) {
-                ProxyMode.GLOBAL, ProxyMode.RULE -> {
-                    builder.addRoute("0.0.0.0", 0)
-                    Log.d(TAG, "Added route: 0.0.0.0/0 (all traffic)")
-                }
-                ProxyMode.DIRECT -> {
-                    builder.addRoute("198.18.0.0", 16)
-                    Log.d(TAG, "Added route: 198.18.0.0/16 (Fake-IP only)")
-                }
-            }
+
+            // Route selection is not mode dependent: rule, global and direct
+            // all capture the full default route, and the engine decides per
+            // connection which outbound to dial (the same semantics as any
+            // Clash client with a TUN device). Narrowing the route would take
+            // traffic out of the engine's hands, not out of the proxy.
+            builder.addRoute("0.0.0.0", 0)
+            Log.d(TAG, "Added route: 0.0.0.0/0 (all traffic)")
             
             try {
                 builder.addDisallowedApplication(packageName)
@@ -610,6 +621,15 @@ class VeloGuardVpnService : VpnService() {
         }
     }
     
+    private fun refreshNotification() {
+        try {
+            getSystemService(NotificationManager::class.java)
+                .notify(NOTIFICATION_ID, createNotification())
+        } catch (error: Exception) {
+            Log.w(TAG, "Failed to refresh the VPN notification: ${error.message}")
+        }
+    }
+
     private fun createNotification(): Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP

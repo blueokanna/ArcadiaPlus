@@ -94,7 +94,15 @@ jobs:
 
       - name: Lint Android release
         working-directory: android
-        run: ./gradlew lintRelease
+        run: |
+          set -euo pipefail
+          # `lintRelease` without a project prefix resolves in *every* Gradle
+          # project that has such a task, which includes each Flutter plugin
+          # checked out under the pub cache. Their lint tasks fail on their own
+          # sources (e.g. `shared_preferences_android` trips
+          # `MemberExtensionConflict` on AGP 8.14), and a third-party plugin is
+          # not ours to fix. Lint this app module only.
+          ./gradlew :app:lintRelease
 
   rust:
     name: Rust format, lint, and test

@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:veloguard/src/services/storage_service.dart';
 import 'package:veloguard/src/services/config_converter.dart';
-import 'package:veloguard/src/rust/api.dart';
-import 'package:veloguard/src/services/native_core_service.dart';
+import 'package:veloguard/src/services/rule_provider_service.dart';
 
 class ProfilesProvider extends ChangeNotifier {
   List<ProfileConfig> _profiles = [];
@@ -244,6 +243,22 @@ class ProfilesProvider extends ChangeNotifier {
         _profiles[index] = updatedProfile;
       }
 
+      // Rule sets are pulled from their own sources, so a subscription update
+      // that keeps pointing at the same URLs would otherwise keep serving a
+      // stale rule set until the daily refresh comes round.
+      final warnings = <String>[];
+      final report = await RuleProviderService.instance.prepare(
+        id,
+        configContent,
+        onWarning: warnings.add,
+      );
+      final failed = report.failed;
+      if (failed.isNotEmpty) {
+        _error = failed
+            .map((state) => '${state.name}: ${state.error}')
+            .join('; ');
+      }
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -260,6 +275,7 @@ class ProfilesProvider extends ChangeNotifier {
   Future<void> deleteProfile(String id) async {
     try {
       await StorageService.instance.deleteProfile(id);
+      await RuleProviderService.instance.forgetProfile(id);
       _profiles.removeWhere((p) => p.id == id);
 
       if (_activeProfileId == id) {
@@ -401,61 +417,5 @@ class ProfilesProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  /// Initialize the proxy with the active profile config
-  /// This should be called when user wants to start the proxy
-  Future<bool> initializeActiveProfile() async {
-    if (_activeProfileId == null) {
-      _error = 'No profile selected';
-      notifyListeners();
-      return false;
-    }
-
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      // Get profile config
-      final configContent = await StorageService.instance.getProfileConfig(
-        _activeProfileId!,
-      );
-      if (configContent == null) {
-        throw Exception('Profile config not found');
-      }
-
-      // Check if RustLib is initialized
-      if (!NativeCoreService.instance.isReady) {
-        _error = 'Native library not loaded. Cannot start proxy.';
-        notifyListeners();
-        return false;
-      }
-
-      // Convert Clash YAML to VeloGuard JSON format
-      final jsonConfig = ConfigConverter.convertClashYamlToJson(configContent);
-
-      // Every corduit entry point takes the config as JSON, so a failed
-      // conversion or initialization is reported as-is rather than retried
-      // with the raw YAML text.
-      await initializeCorduit(configJson: jsonConfig);
-
-      debugPrint('Proxy initialized with profile $_activeProfileId');
-      notifyListeners();
-      return true;
-    } catch (e) {
-      debugPrint('Failed to initialize proxy: $e');
-      _error = e.toString();
-      notifyListeners();
-      return false;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<String?> getActiveProfileConfig() async {
-    if (_activeProfileId == null) return null;
-    return StorageService.instance.getProfileConfig(_activeProfileId!);
   }
 }

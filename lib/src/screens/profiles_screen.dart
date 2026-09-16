@@ -712,12 +712,19 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
       case 'update':
         final success = await provider.updateProfile(profile.id);
         if (!mounted) return;
-        if (success) {
-          _showSnackBar('Profile updated successfully');
-        } else {
+        if (!success) {
           _showSnackBar(
             'Failed to update: ${provider.error ?? "Unknown error"}',
           );
+        } else if (provider.error != null) {
+          // The subscription itself refreshed; the rule sets that go with it
+          // did not, so say so instead of claiming a clean update.
+          _showSnackBar(
+            'Profile updated, rule sets unavailable: '
+            '${provider.error}',
+          );
+        } else {
+          _showSnackBar('Profile updated successfully');
         }
         break;
       case 'edit':

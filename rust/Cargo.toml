@@ -1,16 +1,12 @@
-[workspace]
-resolver = "3"
-members = ["veloguard-lib"]
-
-[workspace.package]
+[package]
+name = "lib-veloguard"
 edition = "2021"
 license-file = "../LICENSE"
 version = "1.0.2"
-rust-version = "1.88"
 authors = ["blueokanna"]
 description = "A cross-platform basic proxy client core for VeloGuard"
 
-[workspace.dependencies]
+[dependencies]
 corduit = { version = "0.1.5", features = ["hysteria2", "reality", "tuic"] }
 flutter_rust_bridge = "=2.13.0"
 jni = "0.21"

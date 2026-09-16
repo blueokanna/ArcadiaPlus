@@ -9,6 +9,20 @@ import 'types.dart';
 
 // These functions are ignored because they are not marked as `pub`: `run`
 
+/// Point the engine's GeoIP matcher at a database file on disk.
+///
+/// corduit resolves `Country.mmdb` from `CORDUIT_GEOIP_DB`, or next to the
+/// running executable. Neither applies to a Flutter app: the asset bundle is
+/// sealed inside the APK / `.app` / install directory. The Dart side unpacks
+/// the bundled database to a real path and registers it here, which must
+/// happen before [`initialize_corduit`] — that call is where the router
+/// builds its matcher, and `GEOIP` rules stay inert without a database.
+///
+/// A missing file is reported instead of silently leaving `GEOIP` rules
+/// unmatched, so a broken deployment cannot pass for a working one.
+Future<void> setGeoipDatabasePath({required String path}) =>
+    RustLib.instance.api.crateApiSetGeoipDatabasePath(path: path);
+
 /// Validate a config without starting anything.
 Future<bool> testConfig({required String configJson}) =>
     RustLib.instance.api.crateApiTestConfig(configJson: configJson);

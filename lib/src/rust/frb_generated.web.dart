@@ -1075,6 +1075,11 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__set_android_vpn_fd(NativePortType port_, int fd) =>
       wasmModule.wire__crate__api__set_android_vpn_fd(port_, fd);
 
+  void wire__crate__api__set_geoip_database_path(
+    NativePortType port_,
+    String path,
+  ) => wasmModule.wire__crate__api__set_geoip_database_path(port_, path);
+
   void wire__crate__api__set_log_level(NativePortType port_, String level) =>
       wasmModule.wire__crate__api__set_log_level(port_, level);
 
@@ -1382,6 +1387,11 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__api__set_android_vpn_fd(
     NativePortType port_,
     int fd,
+  );
+
+  external void wire__crate__api__set_geoip_database_path(
+    NativePortType port_,
+    String path,
   );
 
   external void wire__crate__api__set_log_level(

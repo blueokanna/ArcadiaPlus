@@ -114,15 +114,21 @@ class _QuickActionsState extends State<QuickActions> {
 
     try {
       final success = await appState.setProxyMode(mode);
-      if (success) {
-        AnimationUtils.selectionHaptic();
-        if (!mounted) return;
+      if (!mounted) return;
+      if (!success) {
         final l10n = AppLocalizations.of(context);
-        final modeText = mode == ProxyMode.global
-            ? (l10n?.globalProxy ?? 'Global Proxy')
-            : (l10n?.ruleMode ?? 'Rule Mode');
-        _showSnackBar('${l10n?.switchedTo ?? "Switched to"} $modeText');
+        _showSnackBar(
+          '${l10n?.failed ?? 'Failed'}: ${mode.name}',
+          isError: true,
+        );
+        return;
       }
+      AnimationUtils.selectionHaptic();
+      final l10n = AppLocalizations.of(context);
+      final modeText = mode == ProxyMode.global
+          ? (l10n?.globalProxy ?? 'Global Proxy')
+          : (l10n?.ruleMode ?? 'Rule Mode');
+      _showSnackBar('${l10n?.switchedTo ?? "Switched to"} $modeText');
     } finally {
       if (mounted) {
         setState(() {

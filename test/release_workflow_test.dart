@@ -19,7 +19,8 @@ void main() {
       source,
       contains('cargo test --manifest-path rust/Cargo.toml --workspace'),
     );
-    expect(source, contains('run: ./gradlew lintRelease'));
+    expect(source, contains('./gradlew :app:lintRelease'));
+    expect(source, isNot(contains('run: ./gradlew lintRelease')));
     expect(source, contains(r'tag_name: ${{ steps.release.outputs.tag }}'));
     expect(source, contains('prerelease: false'));
     expect(source.toLowerCase(), isNot(contains('nightly')));
@@ -38,7 +39,8 @@ void main() {
     expect(source, contains('flutter analyze'));
     expect(source, contains('flutter test'));
     expect(source, contains('flutter build apk --debug'));
-    expect(source, contains('run: ./gradlew lintRelease'));
+    expect(source, contains('./gradlew :app:lintRelease'));
+    expect(source, isNot(contains('run: ./gradlew lintRelease')));
     expect(source, contains('cargo fmt --all -- --check'));
     expect(source, contains('--all-targets --all-features --locked'));
     expect(source, contains('-D warnings'));

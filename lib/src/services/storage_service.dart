@@ -4,189 +4,73 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// DNS settings model
+/// DNS settings model.
+///
+/// Only the knobs the engine can actually carry are modelled here
+/// (`dns.enable`, `dns.listen`, `dns.nameservers`, `dns.fallback`,
+/// `dns.enhanced_mode`). Clash fields such as `nameserver-policy`,
+/// `fallback-filter`, `fake-ip-range` or a hosts table have no counterpart in
+/// the engine's DNS configuration, and keeping them in the UI would promise
+/// behaviour that cannot happen.
 class DnsSettings {
   final bool enable;
   final bool overrideDns;
   final String listen;
-  final bool useHosts;
-  final bool useSystemHosts;
-  final bool ipv6;
-  final bool followRules;
-  final bool preferH3;
   final bool useRecursiveResolver;
   final String dnsMode;
-  final String fakeIpRange;
-  final List<String> fakeIpFilter;
-  final List<String> defaultNameservers;
-  final Map<String, String> nameserverPolicy;
   final List<String> nameservers;
   final List<String> fallback;
-  final List<String> proxyNameservers;
-  final DnsFallbackFilter fallbackFilter;
 
   DnsSettings({
     this.enable = true,
     this.overrideDns = false,
-    this.listen = '0.0.0.0:53',
-    this.useHosts = true,
-    this.useSystemHosts = true,
-    this.ipv6 = false,
-    this.followRules = true,
-    this.preferH3 = false,
+    this.listen = '127.0.0.1:53',
     this.useRecursiveResolver = false,
     this.dnsMode = 'fake-ip',
-    this.fakeIpRange = '198.18.0.1/16',
-    this.fakeIpFilter = const [],
-    this.defaultNameservers = const ['8.8.8.8', '1.1.1.1'],
-    this.nameserverPolicy = const {},
     this.nameservers = const [
       'https://dns.google/dns-query',
       'https://cloudflare-dns.com/dns-query',
     ],
     this.fallback = const [],
-    this.proxyNameservers = const [],
-    DnsFallbackFilter? fallbackFilter,
-  }) : fallbackFilter = fallbackFilter ?? DnsFallbackFilter();
+  });
 
   Map<String, dynamic> toJson() => {
     'enable': enable,
     'overrideDns': overrideDns,
     'listen': listen,
-    'useHosts': useHosts,
-    'useSystemHosts': useSystemHosts,
-    'ipv6': ipv6,
-    'followRules': followRules,
-    'preferH3': preferH3,
     'useRecursiveResolver': useRecursiveResolver,
     'dnsMode': dnsMode,
-    'fakeIpRange': fakeIpRange,
-    'fakeIpFilter': fakeIpFilter,
-    'defaultNameservers': defaultNameservers,
-    'nameserverPolicy': nameserverPolicy,
     'nameservers': nameservers,
     'fallback': fallback,
-    'proxyNameservers': proxyNameservers,
-    'fallbackFilter': fallbackFilter.toJson(),
   };
 
   factory DnsSettings.fromJson(Map<String, dynamic> json) => DnsSettings(
     enable: json['enable'] as bool? ?? true,
     overrideDns: json['overrideDns'] as bool? ?? false,
-    listen: json['listen'] as String? ?? '0.0.0.0:53',
-    useHosts: json['useHosts'] as bool? ?? true,
-    useSystemHosts: json['useSystemHosts'] as bool? ?? true,
-    ipv6: json['ipv6'] as bool? ?? false,
-    followRules: json['followRules'] as bool? ?? true,
-    preferH3: json['preferH3'] as bool? ?? false,
+    listen: json['listen'] as String? ?? '127.0.0.1:53',
     useRecursiveResolver: json['useRecursiveResolver'] as bool? ?? false,
     dnsMode: json['dnsMode'] as String? ?? 'fake-ip',
-    fakeIpRange: json['fakeIpRange'] as String? ?? '198.18.0.1/16',
-    fakeIpFilter: (json['fakeIpFilter'] as List?)?.cast<String>() ?? [],
-    defaultNameservers:
-        (json['defaultNameservers'] as List?)?.cast<String>() ??
-        ['8.8.8.8', '1.1.1.1'],
-    nameserverPolicy:
-        (json['nameserverPolicy'] as Map?)?.cast<String, String>() ?? {},
-    nameservers: (json['nameservers'] as List?)?.cast<String>() ?? [],
-    fallback: (json['fallback'] as List?)?.cast<String>() ?? [],
-    proxyNameservers: (json['proxyNameservers'] as List?)?.cast<String>() ?? [],
-    fallbackFilter: json['fallbackFilter'] != null
-        ? DnsFallbackFilter.fromJson(
-            json['fallbackFilter'] as Map<String, dynamic>,
-          )
-        : DnsFallbackFilter(),
+    nameservers: (json['nameservers'] as List?)?.cast<String>() ?? const [],
+    fallback: (json['fallback'] as List?)?.cast<String>() ?? const [],
   );
 
   DnsSettings copyWith({
     bool? enable,
     bool? overrideDns,
     String? listen,
-    bool? useHosts,
-    bool? useSystemHosts,
-    bool? ipv6,
-    bool? followRules,
-    bool? preferH3,
     bool? useRecursiveResolver,
     String? dnsMode,
-    String? fakeIpRange,
-    List<String>? fakeIpFilter,
-    List<String>? defaultNameservers,
-    Map<String, String>? nameserverPolicy,
     List<String>? nameservers,
     List<String>? fallback,
-    List<String>? proxyNameservers,
-    DnsFallbackFilter? fallbackFilter,
   }) {
     return DnsSettings(
       enable: enable ?? this.enable,
       overrideDns: overrideDns ?? this.overrideDns,
       listen: listen ?? this.listen,
-      useHosts: useHosts ?? this.useHosts,
-      useSystemHosts: useSystemHosts ?? this.useSystemHosts,
-      ipv6: ipv6 ?? this.ipv6,
-      followRules: followRules ?? this.followRules,
-      preferH3: preferH3 ?? this.preferH3,
       useRecursiveResolver: useRecursiveResolver ?? this.useRecursiveResolver,
       dnsMode: dnsMode ?? this.dnsMode,
-      fakeIpRange: fakeIpRange ?? this.fakeIpRange,
-      fakeIpFilter: fakeIpFilter ?? this.fakeIpFilter,
-      defaultNameservers: defaultNameservers ?? this.defaultNameservers,
-      nameserverPolicy: nameserverPolicy ?? this.nameserverPolicy,
       nameservers: nameservers ?? this.nameservers,
       fallback: fallback ?? this.fallback,
-      proxyNameservers: proxyNameservers ?? this.proxyNameservers,
-      fallbackFilter: fallbackFilter ?? this.fallbackFilter,
-    );
-  }
-}
-
-/// DNS fallback filter settings
-class DnsFallbackFilter {
-  final bool geoip;
-  final String geoipCode;
-  final List<String> geosite;
-  final List<String> ipCidr;
-  final List<String> domain;
-
-  DnsFallbackFilter({
-    this.geoip = true,
-    this.geoipCode = 'CN',
-    this.geosite = const [],
-    this.ipCidr = const [],
-    this.domain = const [],
-  });
-
-  Map<String, dynamic> toJson() => {
-    'geoip': geoip,
-    'geoipCode': geoipCode,
-    'geosite': geosite,
-    'ipCidr': ipCidr,
-    'domain': domain,
-  };
-
-  factory DnsFallbackFilter.fromJson(Map<String, dynamic> json) =>
-      DnsFallbackFilter(
-        geoip: json['geoip'] as bool? ?? true,
-        geoipCode: json['geoipCode'] as String? ?? 'CN',
-        geosite: (json['geosite'] as List?)?.cast<String>() ?? [],
-        ipCidr: (json['ipCidr'] as List?)?.cast<String>() ?? [],
-        domain: (json['domain'] as List?)?.cast<String>() ?? [],
-      );
-
-  DnsFallbackFilter copyWith({
-    bool? geoip,
-    String? geoipCode,
-    List<String>? geosite,
-    List<String>? ipCidr,
-    List<String>? domain,
-  }) {
-    return DnsFallbackFilter(
-      geoip: geoip ?? this.geoip,
-      geoipCode: geoipCode ?? this.geoipCode,
-      geosite: geosite ?? this.geosite,
-      ipCidr: ipCidr ?? this.ipCidr,
-      domain: domain ?? this.domain,
     );
   }
 }
@@ -436,23 +320,17 @@ class NetworkSettings {
   final bool systemProxy;
   final List<String> bypassDomains;
   final bool tunEnabled;
-  final String tunStack; // 'gvisor', 'system', 'mixed'
-  final bool uwpLoopback; // Windows only
 
   NetworkSettings({
     this.systemProxy = false,
     this.bypassDomains = const [],
     this.tunEnabled = false,
-    this.tunStack = 'mixed',
-    this.uwpLoopback = false,
   });
 
   Map<String, dynamic> toJson() => {
     'systemProxy': systemProxy,
     'bypassDomains': bypassDomains,
     'tunEnabled': tunEnabled,
-    'tunStack': tunStack,
-    'uwpLoopback': uwpLoopback,
   };
 
   factory NetworkSettings.fromJson(Map<String, dynamic> json) =>
@@ -464,23 +342,17 @@ class NetworkSettings {
                 .toList() ??
             [],
         tunEnabled: json['tunEnabled'] as bool? ?? false,
-        tunStack: json['tunStack'] as String? ?? 'mixed',
-        uwpLoopback: json['uwpLoopback'] as bool? ?? false,
       );
 
   NetworkSettings copyWith({
     bool? systemProxy,
     List<String>? bypassDomains,
     bool? tunEnabled,
-    String? tunStack,
-    bool? uwpLoopback,
   }) {
     return NetworkSettings(
       systemProxy: systemProxy ?? this.systemProxy,
       bypassDomains: bypassDomains ?? this.bypassDomains,
       tunEnabled: tunEnabled ?? this.tunEnabled,
-      tunStack: tunStack ?? this.tunStack,
-      uwpLoopback: uwpLoopback ?? this.uwpLoopback,
     );
   }
 }
@@ -621,14 +493,6 @@ class StorageService {
 
   Future<void> setLogLevel(String level) async {
     await _prefs?.setString('logLevel', level);
-  }
-
-  Future<bool> getAutoStart() async {
-    return _prefs?.getBool('autoStart') ?? false;
-  }
-
-  Future<void> setAutoStart(bool value) async {
-    await _prefs?.setBool('autoStart', value);
   }
 
   // ==================== DNS Settings ====================

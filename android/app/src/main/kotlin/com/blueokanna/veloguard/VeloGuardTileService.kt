@@ -23,9 +23,11 @@ class VeloGuardTileService : TileService() {
             }
             startService(intent)
         } else {
+            // Starting the tunnel is driven by the Flutter engine (config,
+            // rule sets, DNS), so the tile opens the app instead of inventing
+            // a second startup path.
             val intent = Intent(this, MainActivity::class.java).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                putExtra("start_vpn", true)
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 val pendingIntent = PendingIntent.getActivity(

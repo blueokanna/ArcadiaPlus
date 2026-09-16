@@ -3,12 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veloguard/src/rust/api.dart';
-import 'package:veloguard/src/rust/api.dart' as rust_api;
 import 'package:veloguard/src/rust/types.dart';
 import 'package:veloguard/src/services/storage_service.dart';
 import 'package:veloguard/src/services/config_converter.dart';
 import 'package:veloguard/src/services/platform_proxy_service.dart';
 import 'package:veloguard/src/services/native_core_service.dart';
+import 'package:veloguard/src/services/rule_provider_service.dart';
+import 'package:veloguard/src/utils/platform_utils.dart';
 
 class AppStateProvider extends ChangeNotifier {
   // App state
@@ -17,7 +18,6 @@ class AppStateProvider extends ChangeNotifier {
   bool _isInitialized = false;
   ProxyStatus? _proxyStatus;
   TrafficStats? _trafficStats;
-  List<ConnectionInfo> _connections = [];
   List<ActiveConnection> _activeConnections = [];
   SystemInfo? _systemInfo;
   String _logLevel = 'info';
@@ -41,6 +41,8 @@ class AppStateProvider extends ChangeNotifier {
   Timer? _systemInfoTimer;
   // Timer for periodic status/traffic/connection refresh
   Timer? _statusTimer;
+  // Timer that refreshes rule sets once their interval elapses
+  Timer? _ruleSetTimer;
 
   // Address of the running RecurseX recursive resolver, when enabled
   String? _recursiveDnsAddress;
@@ -48,6 +50,20 @@ class AppStateProvider extends ChangeNotifier {
   // Current speed values (from Rust tracker)
   BigInt _currentUploadSpeed = BigInt.zero;
   BigInt _currentDownloadSpeed = BigInt.zero;
+
+  // Rule set state, kept so the UI can show freshness and warnings
+  RuleProviderReport _ruleSetReport = const RuleProviderReport.empty();
+  List<String> _configWarnings = const [];
+  bool _isRefreshingRuleSets = false;
+
+  // Profile and config that are currently loaded into the engine, kept for
+  // rule set refreshes and for detecting whether a reload is needed.
+  String? _activeProfileId;
+  String? _appliedConfigJson;
+  bool _isInitializingProfile = false;
+
+  // Tick counter that paces the slower per-second polls
+  int _statusTicks = 0;
 
   // Getters
   ThemeMode get themeMode => _themeMode;
@@ -57,7 +73,6 @@ class AppStateProvider extends ChangeNotifier {
   TrafficStats? get trafficStats => _trafficStats;
   BigInt get currentUploadSpeed => _currentUploadSpeed;
   BigInt get currentDownloadSpeed => _currentDownloadSpeed;
-  List<ConnectionInfo> get connections => _connections;
   List<ActiveConnection> get activeConnections => _activeConnections;
   BigInt get totalConnections => _totalConnections;
   BigInt get activeConnectionCount => _activeConnectionCount;
@@ -74,13 +89,32 @@ class AppStateProvider extends ChangeNotifier {
   String get version => _version;
   String get buildInfo => _buildInfo;
 
+  /// Rule set snapshot of the loaded profile (freshness, entry counts, errors).
+  RuleProviderReport get ruleSetReport => _ruleSetReport;
+
+  /// Conversion warnings of the last generated config (dropped nodes, missing
+  /// rule sets, unavailable outbound targets, …).
+  List<String> get configWarnings => _configWarnings;
+
+  bool get isRefreshingRuleSets => _isRefreshingRuleSets;
+
   AppStateProvider() {
+    RuleProviderService.instance.addListener(_onRuleProviderRefresh);
     _loadSettings();
     _loadSystemInfo();
     _loadVersionInfo();
     _initializeFromActiveProfile();
     _startSystemInfoTimer();
     _initializePlatformProxyService();
+  }
+
+  /// A rule set refresh outside this provider (profile update, manual action)
+  /// may have changed the files the engine is reading.
+  void _onRuleProviderRefresh() {
+    if (_isInitializingProfile) return;
+    final profileId = RuleProviderService.instance.lastProfileId;
+    if (profileId == null || profileId != _activeProfileId) return;
+    refreshRuleSets();
   }
 
   void _initializePlatformProxyService() {
@@ -93,15 +127,17 @@ class AppStateProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    RuleProviderService.instance.removeListener(_onRuleProviderRefresh);
     _systemInfoTimer?.cancel();
     _statusTimer?.cancel();
+    _ruleSetTimer?.cancel();
     super.dispose();
   }
 
-  // Start 3-second timer for system info refresh
+  // Start 5-second timer for system info refresh
   void _startSystemInfoTimer() {
     _systemInfoTimer?.cancel();
-    _systemInfoTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+    _systemInfoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       _loadSystemInfo();
     });
   }
@@ -139,6 +175,8 @@ class AppStateProvider extends ChangeNotifier {
     }
 
     try {
+      _isInitializingProfile = true;
+      _configWarnings = const [];
       final activeProfileId = await StorageService.instance
           .getActiveProfileId();
       if (activeProfileId == null) {
@@ -147,7 +185,6 @@ class AppStateProvider extends ChangeNotifier {
         return;
       }
 
-      debugPrint('Loading config for profile: $activeProfileId');
       final configContent = await StorageService.instance.getProfileConfig(
         activeProfileId,
       );
@@ -157,41 +194,118 @@ class AppStateProvider extends ChangeNotifier {
         return;
       }
 
-      debugPrint('Config content length: ${configContent.length}');
-
-      // Load general settings to override port configurations
       final generalSettings = await StorageService.instance
           .getGeneralSettings();
-
-      debugPrint(
-        'General settings loaded: mixedPort=${generalSettings.mixedPort}, socksPort=${generalSettings.socksPort}',
-      );
 
       // Bring the recursive resolver up before the config is generated so
       // the DNS section can point corduit at it.
       await _ensureRecursiveDns();
 
-      // Convert Clash YAML to VeloGuard JSON format with user settings
-      final jsonConfig = ConfigConverter.convertClashYamlToJson(
+      final (jsonConfig, report) = await _generateConfig(
+        activeProfileId,
         configContent,
-        generalSettings: generalSettings,
-        recursiveDnsAddress: _recursiveDnsAddress,
-        onWarning: (message) => debugPrint('Config: $message'),
+        generalSettings,
       );
 
-      debugPrint('JSON config generated, length: ${jsonConfig.length}');
-
-      // Initialize VeloGuard with the converted config
       debugPrint('Calling initializeCorduit...');
       await initializeCorduit(configJson: jsonConfig);
+      _activeProfileId = activeProfileId;
+      _appliedConfigJson = jsonConfig;
+      _ruleSetReport = report;
       _isInitialized = true;
+      _ensureRuleSetTimer();
       debugPrint('VeloGuard initialized from active profile: $activeProfileId');
       notifyListeners();
     } catch (e, stackTrace) {
       debugPrint('Failed to initialize from active profile: $e');
       debugPrint('Stack trace: $stackTrace');
       _isInitialized = false;
+    } finally {
+      _isInitializingProfile = false;
     }
+  }
+
+  /// Materialises the profile's rule sets and converts the profile into the
+  /// engine's JSON document, collecting every conversion warning.
+  Future<(String, RuleProviderReport)> _generateConfig(
+    String profileId,
+    String configContent,
+    GeneralSettings generalSettings,
+  ) async {
+    final warnings = <String>[];
+    final dnsSettings = await StorageService.instance.getDnsSettings();
+    final report = await RuleProviderService.instance.prepare(
+      profileId,
+      configContent,
+      onWarning: warnings.add,
+    );
+    final jsonConfig = ConfigConverter.convertClashYamlToJson(
+      configContent,
+      generalSettings: generalSettings,
+      dnsSettings: dnsSettings,
+      recursiveDnsAddress: _recursiveDnsAddress,
+      ruleProviderPaths: report.paths,
+      onWarning: warnings.add,
+    );
+    for (final state in report.states) {
+      if (state.error != null) {
+        debugPrint('Rule provider ${state.name}: ${state.error}');
+      }
+    }
+    _configWarnings = List.unmodifiable(warnings);
+    return (jsonConfig, report);
+  }
+
+  /// Re-checks every rule set against its declared interval and, when the
+  /// resulting config differs from the one the engine holds, reloads it.
+  ///
+  /// Called by the scheduler and by the UI's "update rule sets" action.
+  Future<bool> refreshRuleSets({bool force = false}) async {
+    if (_isRefreshingRuleSets) return false;
+
+    final profileId =
+        _activeProfileId ?? await StorageService.instance.getActiveProfileId();
+    if (profileId == null) return false;
+
+    _isRefreshingRuleSets = true;
+    notifyListeners();
+    try {
+      final configContent = await StorageService.instance.getProfileConfig(
+        profileId,
+      );
+      if (configContent == null) return false;
+
+      final generalSettings = await StorageService.instance
+          .getGeneralSettings();
+      final (jsonConfig, report) = await _generateConfig(
+        profileId,
+        configContent,
+        generalSettings,
+      );
+      _ruleSetReport = report;
+
+      if (_isServiceRunning && jsonConfig != _appliedConfigJson) {
+        await reloadCorduit(configJson: jsonConfig);
+        _appliedConfigJson = jsonConfig;
+      }
+      return true;
+    } catch (e) {
+      debugPrint('Failed to refresh rule sets: $e');
+      return false;
+    } finally {
+      _isRefreshingRuleSets = false;
+      notifyListeners();
+    }
+  }
+
+  /// Rule sets are checked every 15 minutes; only the providers whose declared
+  /// interval has elapsed actually hit the network, so the monthly cost of a
+  /// daily set is one metadata read per tick.
+  void _ensureRuleSetTimer() {
+    _ruleSetTimer?.cancel();
+    _ruleSetTimer = Timer.periodic(const Duration(minutes: 15), (_) {
+      refreshRuleSets();
+    });
   }
 
   /// Bring the RecurseX front-end up when the DNS settings ask for local
@@ -355,36 +469,17 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Try to initialize if not yet initialized
-      if (!_isInitialized) {
-        debugPrint(
-          'Service not initialized, initializing from active profile...',
-        );
-        await _initializeFromActiveProfile();
-      }
-
-      if (!_isInitialized) {
-        debugPrint('Cannot start service: No profile selected');
-        _isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      // First, ensure any previous instance is stopped
-      try {
-        debugPrint('Ensuring previous instance is stopped...');
-        await stopCorduit();
-        // Wait for ports to be fully released
-        await Future.delayed(const Duration(milliseconds: 1000));
-      } catch (e) {
-        debugPrint('Stop before start (expected if not running): $e');
-      }
-
-      // Re-initialize to get a fresh instance
+      // Every start rebuilds the engine from the profile on disk: the config
+      // may have changed (ports, mode, rule sets) since the last run, and
+      // `initialize_corduit` is also what releases a previous instance.
       debugPrint('Re-initializing VeloGuard...');
       await _initializeFromActiveProfile();
 
-      // Start the proxy
+      if (!_isInitialized) {
+        debugPrint('Cannot start service: No profile selected');
+        return false;
+      }
+
       debugPrint('Starting VeloGuard proxy...');
       await startCorduit();
 
@@ -414,6 +509,8 @@ class AppStateProvider extends ChangeNotifier {
       if (Platform.isWindows && _autoSystemProxy) {
         final generalSettings = await StorageService.instance
             .getGeneralSettings();
+        final networkSettings = await StorageService.instance
+            .getNetworkSettings();
         final port = generalSettings.mixedPort;
         final proxyHost = generalSettings.bindAddress.contains(':')
             ? '::1'
@@ -422,7 +519,7 @@ class AppStateProvider extends ChangeNotifier {
         final success = await PlatformProxyService.instance.enableSystemProxy(
           host: proxyHost,
           httpPort: port,
-          socksPort: generalSettings.socksPort,
+          bypass: networkSettings.bypassDomains,
         );
         if (success) {
           _systemProxyEnabledByUs = true;
@@ -432,70 +529,14 @@ class AppStateProvider extends ChangeNotifier {
         }
       }
 
-      // Android: Auto enable VPN to route traffic through proxy
-      // VPN must be enabled for apps to use the proxy on Android
+      // Android: the proxy alone does not capture any traffic, the VPN has to
+      // be up before the route to the proxy means anything.
       if (Platform.isAndroid) {
-        debugPrint('Android detected, auto enabling VPN...');
-        // Wait longer for proxy to be fully ready on first start
-        // This is critical - the proxy needs time to bind ports and initialize
-        // First start after installation needs more time
-        await Future.delayed(const Duration(milliseconds: 2000));
-
-        // Verify proxy is actually ready before enabling VPN
-        bool proxyReady = false;
-        for (int checkAttempt = 1; checkAttempt <= 3; checkAttempt++) {
-          try {
-            final status = await getCorduitStatus();
-            if (status.running) {
-              proxyReady = true;
-              debugPrint('Proxy ready on check attempt $checkAttempt');
-              break;
-            }
-            debugPrint(
-              'Proxy not ready yet (attempt $checkAttempt), waiting...',
-            );
-            await Future.delayed(const Duration(milliseconds: 1000));
-          } catch (e) {
-            debugPrint(
-              'Failed to check proxy status (attempt $checkAttempt): $e',
-            );
-            await Future.delayed(const Duration(milliseconds: 1000));
-          }
-        }
-
-        if (!proxyReady) {
+        if (!await _enableAndroidVpnWithRetry()) {
           debugPrint(
-            'WARNING: Proxy may not be fully ready, but proceeding with VPN...',
+            'Failed to enable the VPN; the proxy stays up so the user can '
+            'retry without restarting the service',
           );
-          // Give it one more chance
-          await Future.delayed(const Duration(milliseconds: 1500));
-        }
-
-        // Try to enable VPN with retry
-        bool vpnSuccess = false;
-        for (int attempt = 1; attempt <= 5; attempt++) {
-          debugPrint('VPN enable attempt $attempt/5...');
-          vpnSuccess = await PlatformProxyService.instance.enableTunMode(
-            mode: _proxyMode,
-          );
-          if (vpnSuccess) {
-            debugPrint('VPN enabled successfully on attempt $attempt');
-            // Wait for VPN to fully establish connection
-            await Future.delayed(const Duration(milliseconds: 800));
-            break;
-          }
-          if (attempt < 5) {
-            debugPrint('VPN enable failed, retrying in 2 seconds...');
-            await Future.delayed(const Duration(milliseconds: 2000));
-          }
-        }
-
-        if (!vpnSuccess) {
-          debugPrint(
-            'Failed to enable VPN after 5 attempts - VPN permission may be required',
-          );
-          // On Android, if VPN fails, the service is essentially not useful
-          // But we keep it running in case user wants to retry VPN manually
         }
       }
 
@@ -523,20 +564,9 @@ class AppStateProvider extends ChangeNotifier {
       // Stop status timer first to prevent concurrent refresh during shutdown
       _stopStatusTimer();
 
-      // Android: Always disable VPN FIRST when stopping service
-      // This ensures VPN is properly disconnected before stopping the proxy
-      if (Platform.isAndroid) {
-        debugPrint('Auto disabling VPN on Android...');
-        try {
-          // Stop Rust VPN processing first
-          await rust_api.stopAndroidVpn();
-          rust_api.clearAndroidVpnFd();
-          debugPrint('Rust VPN processing stopped');
-        } catch (e) {
-          debugPrint('Error stopping Rust VPN: $e');
-        }
-
-        // Then stop Android VPN service
+      // Android: take the VPN down before the engine stops, so no packet
+      // processor is left reading a closed descriptor.
+      if (Platform.isAndroid || PlatformUtils.isOHOS) {
         await PlatformProxyService.instance.disableTunMode();
         debugPrint('VPN disabled automatically');
 
@@ -559,7 +589,6 @@ class AppStateProvider extends ChangeNotifier {
           false; // Mark as not initialized so we re-init on next start
       _proxyStatus = null;
       _trafficStats = null;
-      _connections.clear();
       _activeConnections.clear();
       _totalConnections = BigInt.zero;
       _activeConnectionCount = BigInt.zero;
@@ -593,16 +622,21 @@ class AppStateProvider extends ChangeNotifier {
     // Wait for resources to be fully released
     await Future.delayed(const Duration(seconds: 2));
 
-    // Re-initialize and start
-    _isInitialized = false;
-    await _initializeFromActiveProfile();
+    await startService();
+  }
 
-    if (_isInitialized) {
-      await startService();
-      debugPrint('VeloGuard service restarted successfully');
-    } else {
-      debugPrint('Failed to restart VeloGuard service: initialization failed');
+  /// Brings the Android VPN up, retrying briefly: the platform needs a moment
+  /// to release the VPN slot after a competing tunnel is torn down.
+  Future<bool> _enableAndroidVpnWithRetry({int attempts = 3}) async {
+    for (var attempt = 1; attempt <= attempts; attempt++) {
+      if (await PlatformProxyService.instance.enableTunMode(mode: _proxyMode)) {
+        return true;
+      }
+      if (attempt < attempts) {
+        await Future.delayed(const Duration(milliseconds: 800));
+      }
     }
+    return false;
   }
 
   // Status refresh
@@ -655,10 +689,13 @@ class AppStateProvider extends ChangeNotifier {
         _currentDownloadSpeed = BigInt.zero;
       }
 
-      _connections = await getConnections();
-
-      // Get active connections from connection tracker
-      _activeConnections = await getActiveConnections();
+      // The connection list is only visible on its own screen and changes
+      // slowly; polling it every third tick keeps the one-second refresh to
+      // two bridge calls in the common case.
+      _statusTicks++;
+      if (_statusTicks % 3 == 0 || _activeConnections.isEmpty) {
+        _activeConnections = await getActiveConnections();
+      }
 
       // Get connection stats from tracker
       // Returns (total_count, total_upload, total_download, active_count) - all BigInt
@@ -840,19 +877,6 @@ class AppStateProvider extends ChangeNotifier {
       return 'Connected';
     } else {
       return 'Disconnected';
-    }
-  }
-
-  // Periodic status updates
-  void startPeriodicUpdates() {
-    // Update every 2 seconds when service is running
-    if (_isServiceRunning) {
-      Future.delayed(const Duration(seconds: 2), () {
-        if (_isServiceRunning) {
-          _refreshStatus();
-          startPeriodicUpdates();
-        }
-      });
     }
   }
 }

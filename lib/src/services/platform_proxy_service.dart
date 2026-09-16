@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:veloguard/src/rust/api.dart' as rust_api;
 import 'package:veloguard/src/utils/platform_utils.dart';
 
@@ -35,8 +37,12 @@ class PlatformProxyService {
     ProxyMode.rule => 3,
   };
 
-  /// Updates the router without starting a VPN. If a tunnel is already active,
-  /// its platform routing state is updated as part of the same operation.
+  /// Applies a routing mode to the engine and, only when a tunnel is up, to
+  /// the platform's own routing state.
+  ///
+  /// The engine mode is the authority on every platform: inbounds, the TUN
+  /// netstack and the VPN all funnel their connections through one router, so
+  /// a mode switch never needs the tunnel restarted.
   Future<bool> configureProxyMode(ProxyMode mode) async {
     try {
       _currentProxyMode = mode;
@@ -89,14 +95,18 @@ class PlatformProxyService {
     debugPrint('PlatformProxyService: MethodChannel handlers set up');
   }
 
+  /// Points the platform's proxy at the local mixed port.
+  ///
+  /// [httpPort] is the mixed port: it answers both plain HTTP and CONNECT,
+  /// which is all a system proxy setting can express on every platform here.
   Future<bool> enableSystemProxy({
     required String host,
     required int httpPort,
-    required int socksPort,
+    List<String> bypass = const [],
   }) async {
     try {
       if (Platform.isWindows) {
-        return await _enableWindowsSystemProxy(host, httpPort);
+        return await _enableWindowsSystemProxy(host, httpPort, bypass);
       }
       if (Platform.isAndroid || PlatformUtils.isOHOS) {
         return false;
@@ -105,7 +115,7 @@ class PlatformProxyService {
         return await _enableMacOSSystemProxy(host, httpPort);
       }
       if (Platform.isLinux) {
-        return await _enableLinuxSystemProxy(host, httpPort);
+        return await _enableLinuxSystemProxy(host, httpPort, bypass);
       }
       return false;
     } catch (e) {
@@ -138,7 +148,7 @@ class PlatformProxyService {
   Future<bool> enableTunMode({ProxyMode mode = ProxyMode.rule}) async {
     try {
       if (Platform.isWindows) {
-        return await _enableWindowsTun();
+        return await _enableWindowsTun(mode);
       }
       if (Platform.isAndroid) {
         return await _enableAndroidVpn(mode: mode);
@@ -149,6 +159,9 @@ class PlatformProxyService {
       if (Platform.isMacOS || Platform.isLinux) {
         final status = await rust_api.enableTunModeWithMode(mode: mode.name);
         _tunModeEnabled = status.enabled;
+        if (status.enabled) {
+          _currentProxyMode = mode;
+        }
         if (status.error case final error?) {
           debugPrint('Failed to enable TUN mode: $error');
         }
@@ -188,22 +201,34 @@ class PlatformProxyService {
     }
   }
 
-  Future<bool> _enableWindowsSystemProxy(String host, int port) async {
+  /// Points WinINET at the local mixed port.
+  ///
+  /// The previous values are snapshotted first: disabling the proxy restores
+  /// the user's own settings instead of clearing them. WinHTTP is deliberately
+  /// left alone — it is machine-wide configuration that services and system
+  /// components depend on, and hijacking it is not this app's business.
+  Future<bool> _enableWindowsSystemProxy(
+    String host,
+    int port,
+    List<String> bypass,
+  ) async {
+    final endpointHost = host.contains(':') && !host.startsWith('[')
+        ? '[$host]'
+        : host;
+    final endpoint = '$endpointHost:$port';
+    final override = <String>[...bypass, '<local>'].join(';');
+
     try {
-      final endpointHost = host.contains(':') && !host.startsWith('[')
-          ? '[$host]'
-          : host;
-      final result = await Process.run('powershell', [
-        '-Command',
-        '\$regPath = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings"; '
-            'Set-ItemProperty -Path \$regPath -Name ProxyEnable -Value 1; '
-            'Set-ItemProperty -Path \$regPath -Name ProxyServer -Value "$endpointHost:$port"',
-      ]);
-      if (result.exitCode == 0) {
-        _systemProxyEnabled = true;
-        return true;
+      await _snapshotWindowsProxySettings();
+      final enabled =
+          await _regAdd('ProxyEnable', 'REG_DWORD', '1') &&
+          await _regAdd('ProxyServer', 'REG_SZ', endpoint) &&
+          await _regAdd('ProxyOverride', 'REG_SZ', override);
+      _systemProxyEnabled = enabled;
+      if (!enabled) {
+        debugPrint('Windows system proxy could not be set completely');
       }
-      return false;
+      return enabled;
     } catch (e) {
       debugPrint('Windows proxy error: $e');
       return false;
@@ -212,29 +237,31 @@ class PlatformProxyService {
 
   Future<bool> _disableWindowsSystemProxy() async {
     try {
-      final result = await Process.run('powershell', [
-        '-Command',
-        '\$regPath = "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings"; '
-            'Set-ItemProperty -Path \$regPath -Name ProxyEnable -Value 0',
-      ]);
-      if (result.exitCode == 0) {
-        _systemProxyEnabled = false;
-        return true;
+      final restored = await _restoreWindowsProxySettings();
+      if (!restored) {
+        // No usable snapshot: fall back to switching the proxy off rather
+        // than leaving the machine pointed at a port nobody listens on.
+        await _regAdd('ProxyEnable', 'REG_DWORD', '0');
       }
-      return false;
+      _systemProxyEnabled = false;
+      return restored;
     } catch (e) {
       debugPrint('Windows proxy disable error: $e');
+      _systemProxyEnabled = false;
       return false;
     }
   }
 
-  Future<bool> _enableWindowsTun() async {
+  Future<bool> _enableWindowsTun(ProxyMode mode) async {
     try {
       await rust_api.ensureWintunDll();
-      final status = await rust_api.enableTunModeWithMode(
-        mode: _currentProxyMode.name,
-      );
+      final status = await rust_api.enableTunModeWithMode(mode: mode.name);
       _tunModeEnabled = status.enabled;
+      if (status.enabled) {
+        _currentProxyMode = mode;
+      } else if (status.error case final error?) {
+        debugPrint('Windows TUN error: $error');
+      }
       return _tunModeEnabled;
     } catch (e) {
       debugPrint('Windows TUN error: $e');
@@ -266,6 +293,14 @@ class PlatformProxyService {
       }
       return result;
     } catch (e) {
+      // The engine refuses `global` while a TUN route manager is up but not
+      // carrying global routes; rebuilding the tunnel is the documented way
+      // into that state, and it is what the user asked for by picking global
+      // while connected.
+      if (mode == ProxyMode.global && _tunModeEnabled) {
+        debugPrint('Entering global mode through the TUN route table: $e');
+        return enableWindowsTunWithMode(mode);
+      }
       debugPrint('Failed to set Windows proxy mode: $e');
       return false;
     }
@@ -273,16 +308,16 @@ class PlatformProxyService {
 
   /// Get current Windows proxy mode
   Future<String> getWindowsProxyMode() async {
-    if (!Platform.isWindows) return 'rule';
+    if (!Platform.isWindows) return _currentProxyMode.name;
     try {
       return await rust_api.getWindowsProxyModeStr();
     } catch (e) {
-      return 'rule';
+      return _currentProxyMode.name;
     }
   }
 
-  /// Get Windows TUN traffic statistics
-  /// Returns: (packetsReceived, packetsSent, bytesReceived, bytesSent, tcpConnections, udpSessions)
+  /// Windows TUN counters as `(packetsReceived, packetsSent, bytesReceived,
+  /// bytesSent, tcpConnections, udpSessions)`.
   Future<(int, int, int, int, int, int)> getWindowsTunStats() async {
     if (!Platform.isWindows) return (0, 0, 0, 0, 0, 0);
     try {
@@ -305,12 +340,13 @@ class PlatformProxyService {
   Future<bool> enableWindowsTunWithMode(ProxyMode mode) async {
     if (!Platform.isWindows) return false;
     try {
-      _currentProxyMode = mode;
       await rust_api.ensureWintunDll();
       final status = await rust_api.enableTunModeWithMode(mode: mode.name);
       _tunModeEnabled = status.enabled;
-      if (status.error != null) {
-        debugPrint('Windows TUN error: ${status.error}');
+      if (status.enabled) {
+        _currentProxyMode = mode;
+      } else if (status.error case final error?) {
+        debugPrint('Windows TUN error: $error');
       }
       return _tunModeEnabled;
     } catch (e) {
@@ -606,7 +642,7 @@ class PlatformProxyService {
       });
       if (result == true) {
         _currentProxyMode = mode;
-        rust_api.setAndroidProxyMode(mode: mode.name);
+        await rust_api.setAndroidProxyMode(mode: mode.name);
       }
       return result == true;
     } catch (e) {
@@ -615,15 +651,25 @@ class PlatformProxyService {
     }
   }
 
+  /// Hands a mode switch to the platform that owns the tunnel.
+  ///
+  /// Windows is the only platform where the route table depends on the mode
+  /// (global mode routes everything through the adapter); Android, HarmonyOS
+  /// and the desktop tunnels read the mode from the engine at dial time, so
+  /// they only record it. The engine itself was already switched by
+  /// [configureProxyMode].
   Future<bool> setProxyMode(ProxyMode mode) async {
     if (Platform.isAndroid) {
-      return await setAndroidProxyMode(mode);
-    } else if (PlatformUtils.isOHOS) {
-      return await setOhosProxyMode(mode);
-    } else if (Platform.isWindows) {
-      return await setWindowsProxyMode(mode);
+      return setAndroidProxyMode(mode);
     }
-    return false;
+    if (PlatformUtils.isOHOS) {
+      return setOhosProxyMode(mode);
+    }
+    if (Platform.isWindows) {
+      return setWindowsProxyMode(mode);
+    }
+    _currentProxyMode = mode;
+    return true;
   }
 
   Future<bool> setAndroidProxyMode(ProxyMode mode) async {
@@ -634,7 +680,7 @@ class PlatformProxyService {
       });
       if (result == true) {
         _currentProxyMode = mode;
-        rust_api.setAndroidProxyMode(mode: mode.name);
+        await rust_api.setAndroidProxyMode(mode: mode.name);
       }
       return result == true;
     } catch (e) {
@@ -645,36 +691,40 @@ class PlatformProxyService {
 
   Future<bool> _enableMacOSSystemProxy(String host, int port) async {
     try {
-      final servicesResult = await Process.run('networksetup', [
-        '-listallnetworkservices',
-      ]);
-      final services = servicesResult.stdout
-          .toString()
-          .split('\n')
-          .where((s) => s.isNotEmpty && !s.startsWith('*'))
-          .toList();
-      for (final service in services) {
-        await Process.run('networksetup', [
-          '-setwebproxy',
-          service,
-          host,
-          port.toString(),
-        ]);
-        await Process.run('networksetup', [
-          '-setsecurewebproxy',
-          service,
-          host,
-          port.toString(),
-        ]);
-        await Process.run('networksetup', ['-setwebproxystate', service, 'on']);
-        await Process.run('networksetup', [
-          '-setsecurewebproxystate',
-          service,
-          'on',
-        ]);
+      final services = await _macOSNetworkServices();
+      if (services.isEmpty) {
+        debugPrint('macOS proxy error: no network services to configure');
+        return false;
       }
-      _systemProxyEnabled = true;
-      return true;
+      var applied = true;
+      for (final service in services) {
+        applied =
+            await _macOSProxyCommand([
+              '-setwebproxy',
+              service,
+              host,
+              '$port',
+            ]) &&
+            applied;
+        applied =
+            await _macOSProxyCommand([
+              '-setsecurewebproxy',
+              service,
+              host,
+              '$port',
+            ]) &&
+            applied;
+        applied =
+            await _macOSProxyCommand([
+              '-setsocksfirewallproxy',
+              service,
+              host,
+              '$port',
+            ]) &&
+            applied;
+      }
+      _systemProxyEnabled = applied;
+      return applied;
     } catch (e) {
       debugPrint('macOS proxy error: $e');
       return false;
@@ -683,66 +733,99 @@ class PlatformProxyService {
 
   Future<bool> _disableMacOSSystemProxy() async {
     try {
-      final servicesResult = await Process.run('networksetup', [
-        '-listallnetworkservices',
-      ]);
-      final services = servicesResult.stdout
-          .toString()
-          .split('\n')
-          .where((s) => s.isNotEmpty && !s.startsWith('*'))
-          .toList();
+      final services = await _macOSNetworkServices();
+      var applied = true;
       for (final service in services) {
-        await Process.run('networksetup', [
-          '-setwebproxystate',
-          service,
-          'off',
-        ]);
-        await Process.run('networksetup', [
-          '-setsecurewebproxystate',
-          service,
-          'off',
-        ]);
+        applied =
+            await _macOSProxyCommand(['-setwebproxystate', service, 'off']) &&
+            applied;
+        applied =
+            await _macOSProxyCommand([
+              '-setsecurewebproxystate',
+              service,
+              'off',
+            ]) &&
+            applied;
+        applied =
+            await _macOSProxyCommand([
+              '-setsocksfirewallproxystate',
+              service,
+              'off',
+            ]) &&
+            applied;
       }
       _systemProxyEnabled = false;
-      return true;
+      return applied;
     } catch (e) {
       debugPrint('macOS proxy disable error: $e');
       return false;
     }
   }
 
-  Future<bool> _enableLinuxSystemProxy(String host, int port) async {
+  Future<List<String>> _macOSNetworkServices() async {
+    final result = await Process.run('networksetup', [
+      '-listallnetworkservices',
+    ]);
+    if (result.exitCode != 0) {
+      debugPrint('networksetup failed: ${result.stderr}');
+      return const [];
+    }
+    return result.stdout
+        .toString()
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty && !line.startsWith('*'))
+        .toList(growable: false);
+  }
+
+  Future<bool> _macOSProxyCommand(List<String> arguments) async {
+    final result = await Process.run('networksetup', arguments);
+    if (result.exitCode != 0) {
+      debugPrint('networksetup ${arguments.first} failed: ${result.stderr}');
+      return false;
+    }
+    return true;
+  }
+
+  /// Configures GNOME's proxy through gsettings.
+  ///
+  /// Every call is checked: `gsettings` exits non-zero on a desktop without
+  /// the schema (KDE, headless), and reporting success there would leave the
+  /// UI claiming a system proxy that does not exist.
+  Future<bool> _enableLinuxSystemProxy(
+    String host,
+    int port,
+    List<String> bypass,
+  ) async {
     try {
-      await Process.run('gsettings', [
-        'set',
-        'org.gnome.system.proxy',
-        'mode',
-        'manual',
-      ]);
-      await Process.run('gsettings', [
-        'set',
-        'org.gnome.system.proxy.http',
-        'host',
-        host,
-      ]);
-      await Process.run('gsettings', [
-        'set',
-        'org.gnome.system.proxy.http',
-        'port',
-        port.toString(),
-      ]);
-      await Process.run('gsettings', [
-        'set',
-        'org.gnome.system.proxy.https',
-        'host',
-        host,
-      ]);
-      await Process.run('gsettings', [
-        'set',
-        'org.gnome.system.proxy.https',
-        'port',
-        port.toString(),
-      ]);
+      final ignoreHosts = <String>{
+        'localhost',
+        '127.0.0.0/8',
+        '::1',
+        ...bypass,
+      }.toList(growable: false);
+
+      final commands = <List<String>>[
+        ['set', 'org.gnome.system.proxy', 'mode', 'manual'],
+        ['set', 'org.gnome.system.proxy.http', 'host', host],
+        ['set', 'org.gnome.system.proxy.http', 'port', '$port'],
+        ['set', 'org.gnome.system.proxy.https', 'host', host],
+        ['set', 'org.gnome.system.proxy.https', 'port', '$port'],
+        ['set', 'org.gnome.system.proxy.socks', 'host', host],
+        ['set', 'org.gnome.system.proxy.socks', 'port', '$port'],
+        [
+          'set',
+          'org.gnome.system.proxy',
+          'ignore-hosts',
+          _gvariantArray(ignoreHosts),
+        ],
+      ];
+
+      for (final command in commands) {
+        if (!await _runGsettings(command)) {
+          return false;
+        }
+      }
       _systemProxyEnabled = true;
       return true;
     } catch (e) {
@@ -753,35 +836,70 @@ class PlatformProxyService {
 
   Future<bool> _disableLinuxSystemProxy() async {
     try {
-      await Process.run('gsettings', [
+      final applied = await _runGsettings([
         'set',
         'org.gnome.system.proxy',
         'mode',
         'none',
       ]);
       _systemProxyEnabled = false;
-      return true;
+      return applied;
     } catch (e) {
       debugPrint('Linux proxy disable error: $e');
       return false;
     }
   }
 
+  Future<bool> _runGsettings(List<String> arguments) async {
+    try {
+      final result = await Process.run('gsettings', arguments);
+      if (result.exitCode != 0) {
+        debugPrint(
+          'gsettings ${arguments.take(3).join(' ')} failed: ${result.stderr}',
+        );
+        return false;
+      }
+      return true;
+    } on ProcessException catch (error) {
+      debugPrint('gsettings is unavailable: $error');
+      return false;
+    }
+  }
+
+  /// Builds the GVariant array literal `gsettings set` expects.
+  String _gvariantArray(List<String> values) {
+    final escaped = values
+        .map((value) {
+          final quoted = value.replaceAll(r'\', r'\\').replaceAll("'", r"\'");
+          return "'$quoted'";
+        })
+        .join(', ');
+    return '[$escaped]';
+  }
+
+  /// Reads the platform's own system-proxy state, so the UI can reflect what
+  /// is actually configured rather than what this process once believed.
   Future<bool> checkSystemProxyStatus() async {
     try {
       if (Platform.isWindows) {
-        final result = await Process.run('powershell', [
-          '-Command',
-          '(Get-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings").ProxyEnable',
-        ]);
-        _systemProxyEnabled = result.stdout.toString().trim() == '1';
+        final value = await _regQuery('ProxyEnable');
+        _systemProxyEnabled = value?['value'] == '1';
         return _systemProxyEnabled;
-      } else if (Platform.isAndroid) {
-        _systemProxyEnabled = false;
-        return false;
+      }
+      if (Platform.isLinux) {
+        final result = await Process.run('gsettings', [
+          'get',
+          'org.gnome.system.proxy',
+          'mode',
+        ]);
+        _systemProxyEnabled =
+            result.exitCode == 0 &&
+            result.stdout.toString().trim().replaceAll("'", '') == 'manual';
+        return _systemProxyEnabled;
       }
       return _systemProxyEnabled;
     } catch (e) {
+      debugPrint('Failed to read system proxy state: $e');
       return false;
     }
   }
@@ -826,62 +944,6 @@ class PlatformProxyService {
     }
   }
 
-  /// Check if native library is loaded (Android only)
-  /// Returns true if the Rust native library was loaded successfully
-  Future<bool> isNativeLibraryLoaded() async {
-    if (!Platform.isAndroid) {
-      try {
-        await rust_api.getVersion();
-        return true;
-      } catch (e) {
-        debugPrint('Failed to load native library: $e');
-        return false;
-      }
-    }
-    try {
-      final result = await _channel.invokeMethod('isNativeLibraryLoaded');
-      return result == true;
-    } catch (e) {
-      debugPrint('Failed to check native library status: $e');
-      return false;
-    }
-  }
-
-  /// Get detailed native library information (Android only)
-  /// Returns a map with library loading details for diagnostics
-  Future<Map<String, dynamic>> getNativeLibraryInfo() async {
-    if (!Platform.isAndroid) {
-      return {
-        'loaded': true,
-        'platform': Platform.operatingSystem,
-        'message': 'Native library check not applicable on this platform',
-      };
-    }
-    try {
-      final result = await _channel.invokeMethod('getNativeLibraryInfo');
-      if (result is Map) {
-        return Map<String, dynamic>.from(result);
-      }
-      return {
-        'loaded': false,
-        'error': 'Unexpected result type: ${result.runtimeType}',
-      };
-    } catch (e) {
-      debugPrint('Failed to get native library info: $e');
-      return {'loaded': false, 'error': e.toString()};
-    }
-  }
-
-  Future<bool> enableUwpLoopback() async {
-    if (!Platform.isWindows) return false;
-    try {
-      return await rust_api.enableUwpLoopback();
-    } catch (e) {
-      debugPrint('Failed to enable UWP loopback: $e');
-      return false;
-    }
-  }
-
   Future<bool> openUwpLoopbackUtility() async {
     if (!Platform.isWindows) return false;
     try {
@@ -890,5 +952,125 @@ class PlatformProxyService {
       debugPrint('Failed to open UWP loopback utility: $e');
       return false;
     }
+  }
+
+  // ==================== Windows registry helpers ====================
+
+  static const String _internetSettingsKey =
+      r'HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings';
+  static const List<String> _windowsProxyValues = [
+    'ProxyEnable',
+    'ProxyServer',
+    'ProxyOverride',
+  ];
+
+  Future<bool> _regAdd(String name, String type, String value) async {
+    final result = await Process.run('reg', [
+      'add',
+      _internetSettingsKey,
+      '/v',
+      name,
+      '/t',
+      type,
+      '/d',
+      value,
+      '/f',
+    ]);
+    if (result.exitCode != 0) {
+      debugPrint('reg add $name failed: ${result.stderr}');
+      return false;
+    }
+    return true;
+  }
+
+  Future<bool> _regDelete(String name) async {
+    final result = await Process.run('reg', [
+      'delete',
+      _internetSettingsKey,
+      '/v',
+      name,
+      '/f',
+    ]);
+    if (result.exitCode != 0) {
+      debugPrint('reg delete $name failed: ${result.stderr}');
+      return false;
+    }
+    return true;
+  }
+
+  /// Reads one value of the WinINET proxy settings, or `null` when it is unset.
+  Future<Map<String, String>?> _regQuery(String name) async {
+    final result = await Process.run('reg', [
+      'query',
+      _internetSettingsKey,
+      '/v',
+      name,
+    ]);
+    if (result.exitCode != 0) return null;
+
+    final pattern = RegExp(
+      '^\\s+${RegExp.escape(name)}\\s+(REG_\\w+)\\s+(.*)\$',
+      multiLine: true,
+    );
+    final match = pattern.firstMatch(result.stdout.toString());
+    if (match == null) return null;
+    return {'type': match.group(1)!, 'value': match.group(2)!.trim()};
+  }
+
+  Future<File> _windowsProxySnapshotFile() async {
+    final support = await getApplicationSupportDirectory();
+    return File(
+      '${support.path}${Platform.pathSeparator}windows-proxy-snapshot.json',
+    );
+  }
+
+  /// Records the current WinINET proxy values before this app changes them.
+  /// An existing snapshot is kept, so a second enable cannot overwrite the
+  /// user's original settings with values this app wrote earlier.
+  Future<void> _snapshotWindowsProxySettings() async {
+    final file = await _windowsProxySnapshotFile();
+    if (file.existsSync()) return;
+
+    final snapshot = <String, Map<String, String>?>{};
+    for (final name in _windowsProxyValues) {
+      snapshot[name] = await _regQuery(name);
+    }
+    await file.writeAsString(jsonEncode(snapshot), flush: true);
+  }
+
+  /// Puts the snapshot back and drops it. Returns false when there was no
+  /// snapshot to restore.
+  Future<bool> _restoreWindowsProxySettings() async {
+    final file = await _windowsProxySnapshotFile();
+    if (!file.existsSync()) return false;
+
+    final decoded = jsonDecode(await file.readAsString());
+    if (decoded is! Map) {
+      debugPrint('Windows proxy snapshot is malformed; clearing it');
+      await file.delete();
+      return false;
+    }
+
+    var restored = true;
+    for (final name in _windowsProxyValues) {
+      final record = decoded[name];
+      if (record is Map) {
+        restored =
+            await _regAdd(
+              name,
+              record['type']?.toString() ?? 'REG_SZ',
+              record['value']?.toString() ?? '',
+            ) &&
+            restored;
+      } else {
+        restored = await _regDelete(name) && restored;
+      }
+    }
+    if (restored) {
+      await file.delete();
+    } else {
+      debugPrint('Windows proxy settings could not be fully restored');
+    }
+    return restored;
   }
 }

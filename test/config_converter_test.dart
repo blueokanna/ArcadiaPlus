@@ -8,12 +8,14 @@ Map<String, dynamic> convert(
   String yaml, {
   void Function(String)? onWarning,
   String? recursiveDnsAddress,
+  Map<String, String>? ruleProviderPaths,
 }) {
   return jsonDecode(
         ConfigConverter.convertClashYamlToJson(
           yaml,
           onWarning: onWarning,
           recursiveDnsAddress: recursiveDnsAddress,
+          ruleProviderPaths: ruleProviderPaths,
         ),
       )
       as Map<String, dynamic>;
@@ -24,8 +26,10 @@ Map<String, dynamic> optionsOf(Object? raw) =>
     jsonDecode(raw! as String) as Map<String, dynamic>;
 
 void main() {
-  test('rule providers are preserved for the Rust router', () {
-    const yaml = '''
+  test(
+    'a provider with a local copy becomes a file provider for the engine',
+    () {
+      const yaml = '''
 port: 7890
 proxies: []
 proxy-groups: []
@@ -41,26 +45,62 @@ rules:
   - MATCH,DIRECT
 ''';
 
-    final converted = convert(yaml);
+      final warnings = <String>[];
+      final converted = convert(
+        yaml,
+        onWarning: warnings.add,
+        ruleProviderPaths: const {
+          'proxy': '/data/rule-providers/p1/proxy.abcd.rules',
+        },
+      );
+      final providers = converted['rule_providers'] as List<dynamic>;
+      final rules = converted['rules'] as List<dynamic>;
+
+      expect(providers, hasLength(1));
+      expect(providers.single, {
+        'name': 'proxy',
+        'type': 'file',
+        'behavior': 'domain',
+        'path': '/data/rule-providers/p1/proxy.abcd.rules',
+        'interval': 86400,
+      });
+      expect(rules.first, {
+        'rule_type': 'rule_set',
+        'payload': 'proxy',
+        'outbound': 'DIRECT',
+        'process_name': null,
+      });
+      expect(warnings, isEmpty);
+    },
+  );
+
+  test('a provider without a local copy takes its RULE-SET rules with it', () {
+    const yaml = '''
+proxies: []
+proxy-groups: []
+rule-providers:
+  proxy:
+    type: http
+    behavior: domain
+    url: https://example.com/proxy.txt
+rules:
+  - RULE-SET,proxy,REJECT
+  - DOMAIN,example.org,DIRECT
+  - MATCH,DIRECT
+''';
+
+    final warnings = <String>[];
+    final converted = convert(yaml, onWarning: warnings.add);
     final providers = converted['rule_providers'] as List<dynamic>;
     final rules = converted['rules'] as List<dynamic>;
 
-    expect(providers, hasLength(1));
-    expect(providers.single, {
-      'name': 'proxy',
-      'type': 'http',
-      'behavior': 'domain',
-      'url':
-          'https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt',
-      'path': './ruleset/proxy.yaml',
-      'interval': 86400,
-    });
-    expect(rules.first, {
-      'rule_type': 'rule_set',
-      'payload': 'proxy',
-      'outbound': 'DIRECT',
-      'process_name': null,
-    });
+    expect(providers, isEmpty);
+    expect(rules, hasLength(2));
+    expect(
+      rules.map((rule) => (rule as Map)['rule_type']),
+      isNot(contains('rule_set')),
+    );
+    expect(warnings.join('\n'), contains('proxy'));
   });
 
   test('Clash rule modifiers do not corrupt payload or outbound', () {
