@@ -1,4 +1,4 @@
 rust_input: crate::api
-rust_root: rust/veloguard-lib
+rust_root: rust
 dart_output: lib/src/rust
 full_dep: true

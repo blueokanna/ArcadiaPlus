@@ -1,5 +1,5 @@
 import 'dart:ffi' as ffi;
-import 'dart:io' show Platform, Directory, File;
+import 'dart:io' show Platform, Directory, File, FileSystemException;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -155,19 +155,41 @@ class NativeCoreService extends ChangeNotifier {
       final target = File(
         '${directory.path}${Platform.pathSeparator}Country.mmdb',
       );
+      final stamp = File('${target.path}.stamp');
+      final installed = await _readStamp(stamp);
+      final fingerprint = '${_fingerprint(bytes)}:${bytes.length}';
 
-      if (!target.existsSync() || target.lengthSync() != bytes.length) {
+      if (target.existsSync() && installed == fingerprint) {
+        debugPrint('GeoIP database already installed at ${target.path}');
+      } else {
         final temporary = File('${target.path}.tmp');
         await temporary.writeAsBytes(bytes, flush: true);
         await temporary.rename(target.path);
+        await stamp.writeAsString(fingerprint, flush: true);
+        debugPrint('GeoIP database installed at ${target.path}');
       }
 
       await setGeoipDatabasePath(path: target.path);
       _geoIpError = null;
-      debugPrint('GeoIP database installed at ${target.path}');
     } catch (error) {
       _geoIpError = error.toString();
       debugPrint('GeoIP database unavailable, GEOIP rules stay inert: $error');
     }
+  }
+
+  Future<String?> _readStamp(File stamp) async {
+    try {
+      return (await stamp.readAsString()).trim();
+    } on FileSystemException {
+      return null;
+    }
+  }
+
+  static int _fingerprint(Uint8List bytes) {
+    var hash = 0xcbf29ce484222325;
+    for (final byte in bytes) {
+      hash = (hash ^ byte) * 0x100000001b3;
+    }
+    return hash;
   }
 }

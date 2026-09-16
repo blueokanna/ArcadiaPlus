@@ -44,6 +44,12 @@ const MAX_TCP_CONNECTIONS: usize = 256;
 /// (RFC 1035 §4.2.1).
 const DEFAULT_UDP_PAYLOAD: usize = 512;
 
+/// Ceiling on the payload a UDP client can talk the front-end into emitting,
+/// whatever it advertises through EDNS0. Without it a client claiming a 64 KiB
+/// buffer receives responses that fragment and amplify far beyond what a
+/// resolver should ever put on the wire.
+const MAX_UDP_PAYLOAD: usize = 4096;
+
 static RESOLVER: OnceCell<Arc<Resolver>> = OnceCell::new();
 static SERVICE: Mutex<Option<Service>> = Mutex::new(None);
 
@@ -202,8 +208,7 @@ fn serve_udp(
         let spawned = thread::Builder::new()
             .name("recursive-dns-query".to_string())
             .spawn(move || {
-                let limit = advertised_udp_payload(&query);
-                let response = answer(&resolver, &query, Some(peer.ip()), Some(limit));
+                let response = answer(&resolver, &query, Some(peer.ip()), Transport::Udp);
                 let _ = socket.send_to(&response, peer);
                 counter.fetch_sub(1, Ordering::Relaxed);
             });
@@ -278,7 +283,7 @@ fn serve_connection(
 
         // TCP carries complete responses; the 16-bit frame length is the
         // only limit that applies.
-        let response = answer(&resolver, &query, client_ip, None);
+        let response = answer(&resolver, &query, client_ip, Transport::Tcp);
         let mut framed = Vec::with_capacity(response.len() + 2);
         framed.extend_from_slice(&(response.len() as u16).to_be_bytes());
         framed.extend_from_slice(&response);
@@ -314,6 +319,14 @@ fn read_polling(
     Ok(true)
 }
 
+/// Which transport delivered a query: only UDP responses have to fit the
+/// size the client advertised.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Transport {
+    Udp,
+    Tcp,
+}
+
 /// Frame a query through the resolver, degrading to FORMERR / SERVFAIL the
 /// way RFC 1035 §4.1.1 expects when a query is unparseable or the engine
 /// cannot produce an answer.
@@ -321,37 +334,50 @@ fn answer(
     resolver: &Resolver,
     query: &[u8],
     client_ip: Option<IpAddr>,
-    udp_limit: Option<usize>,
+    transport: Transport,
 ) -> Vec<u8> {
-    match Message::parse(query) {
-        Ok(message) => {
-            let mut response = resolver.handle_query(&message, client_ip);
-            if let Some(limit) = udp_limit {
-                response.truncate_for_udp(limit);
-            }
-            response.to_bytes().unwrap_or_else(|_| {
-                message
-                    .error_response(recurse_x::Rcode::SERVFAIL)
-                    .to_bytes()
-                    .unwrap_or_default()
-            })
-        }
-        Err(_) => {
-            let mut message = Message::new(0);
-            message.flags.qr = true;
-            message.flags.rcode = recurse_x::Rcode::FORMERR;
-            message.to_bytes().unwrap_or_default()
-        }
+    let Ok(message) = Message::parse(query) else {
+        return formerr(query);
+    };
+
+    let mut response = resolver.handle_query(&message, client_ip);
+    if transport == Transport::Udp {
+        let limit = clamp_udp_payload(message.edns.as_ref().map(|edns| edns.udp_payload_size));
+        response.truncate_for_udp(limit);
     }
+
+    response.to_bytes().unwrap_or_else(|_| {
+        message
+            .error_response(recurse_x::Rcode::SERVFAIL)
+            .to_bytes()
+            .unwrap_or_default()
+    })
 }
 
-/// The payload size the client advertised through EDNS, or the RFC 1035
-/// default.
-fn advertised_udp_payload(query: &[u8]) -> usize {
-    Message::parse(query)
-        .ok()
-        .and_then(|message| message.edns.map(|edns| edns.udp_payload_size as usize))
+/// The response size the client actually accepts: its EDNS0 advertisement,
+/// clamped to what a resolver should ever emit over UDP. A client asking for
+/// less than the RFC 1035 minimum gets the minimum.
+fn clamp_udp_payload(advertised: Option<u16>) -> usize {
+    advertised
+        .map(usize::from)
         .unwrap_or(DEFAULT_UDP_PAYLOAD)
+        .clamp(DEFAULT_UDP_PAYLOAD, MAX_UDP_PAYLOAD)
+}
+
+/// FORMERR for a query that cannot be parsed. The header ID is copied from
+/// the raw bytes: even a malformed query carries one, and a client drops an
+/// answer whose ID does not match the question it sent.
+fn formerr(query: &[u8]) -> Vec<u8> {
+    let id = if query.len() >= 2 {
+        u16::from_be_bytes([query[0], query[1]])
+    } else {
+        0
+    };
+
+    let mut message = Message::new(id);
+    message.flags.qr = true;
+    message.flags.rcode = recurse_x::Rcode::FORMERR;
+    message.to_bytes().unwrap_or_default()
 }
 
 fn is_transient(error: &std::io::Error) -> bool {
@@ -430,5 +456,25 @@ mod tests {
             ErrorKind::ConnectionReset
         )));
         assert!(!is_transient(&std::io::Error::from(ErrorKind::AddrInUse)));
+    }
+
+    #[test]
+    fn response_size_follows_the_advertised_payload() {
+        assert_eq!(clamp_udp_payload(None), DEFAULT_UDP_PAYLOAD);
+        assert_eq!(clamp_udp_payload(Some(0)), DEFAULT_UDP_PAYLOAD);
+        assert_eq!(clamp_udp_payload(Some(1232)), 1232);
+        assert_eq!(clamp_udp_payload(Some(u16::MAX)), MAX_UDP_PAYLOAD);
+    }
+
+    #[test]
+    fn formerr_echoes_the_query_id() {
+        let response = formerr(&[0xAB, 0xCD, 0x01, 0x00]);
+        let mut expected = Message::new(0xABCD);
+        expected.flags.qr = true;
+        expected.flags.rcode = recurse_x::Rcode::FORMERR;
+        assert_eq!(response, expected.to_bytes().unwrap());
+
+        // A datagram too short to carry an ID is still answered.
+        assert!(!formerr(&[]).is_empty());
     }
 }

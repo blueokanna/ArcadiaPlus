@@ -76,7 +76,7 @@ Flutter UI / Provider
         |
 Flutter Rust Bridge (generated bindings)
         |
-veloguard-lib (the only bridge crate: async adaptation, DTO mapping, platform entry points)
+lib-veloguard (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
 corduit 0.1.5 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
@@ -91,7 +91,7 @@ Clear ownership boundaries matter more than adding macros, generics, or complex 
 ## Prerequisites
 
 - Flutter SDK (Dart `^3.12.0`; CI uses Flutter 3.47.2)
-- Stable Rust with edition 2021 and workspace resolver 3 support
+- Rust ≥ 1.88 (edition 2021; `rust-toolchain.toml` pins 1.97.0 so local and CI lint with the same compiler)
 - Android: Android SDK, NDK, and JDK 17
 - Windows: Visual Studio C++ toolchain, Wintun, and elevation
 - macOS/iOS: Xcode and valid signing configuration

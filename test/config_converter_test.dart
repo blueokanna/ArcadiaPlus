@@ -301,4 +301,25 @@ rules: []
 
     expect(dns['nameservers'], ['127.0.0.1:5353', '1.1.1.1']);
   });
+
+  test('scalar dns entries survive as single-element lists', () {
+    const yaml = '''
+dns:
+  nameserver: 223.5.5.5
+  fallback: 8.8.4.4
+  nameserver-policy:
+    +.example.com: tcp://10.0.0.1:8080
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns = convert(yaml)['dns'] as Map;
+
+    expect(dns['nameservers'], ['223.5.5.5']);
+    expect(dns['fallback'], ['8.8.4.4']);
+    expect(dns['nameserver_policy'], {
+      '+.example.com': ['tcp://10.0.0.1:8080'],
+    });
+  });
 }

@@ -76,7 +76,7 @@ Flutter UI / Provider
         |
 Flutter Rust Bridge（生成绑定）
         |
-veloguard-lib（唯一桥接 crate：异步适配、DTO 映射、平台入口）
+lib-veloguard（rust/ 下的唯一桥接 crate：异步适配、DTO 映射、平台入口）
         |
 corduit 0.1.5（引擎：配置、路由、出入站、DNS、TUN、全部协议）
         +-- courierust（HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS 栈）
@@ -91,7 +91,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 ## 环境要求
 
 - Flutter SDK（Dart `^3.12.0`；CI 使用 Flutter 3.47.2）
-- Rust stable，支持 edition 2021 和 workspace resolver 3
+- Rust ≥ 1.88（edition 2021；`rust-toolchain.toml` 固定 1.97.0，本地与 CI 使用同一编译器跑 rustfmt/clippy）
 - Android：Android SDK、NDK、JDK 17
 - Windows：Visual Studio C++ 工具链；Wintun/管理员权限
 - macOS/iOS：Xcode 与有效签名配置

@@ -45,7 +45,7 @@ where
 #[frb(init)]
 pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
-    let _ = crate::logging::init(tracing::Level::INFO);
+    let _ = crate::logging::init(crate::logging::LogFilter::UpTo(tracing::Level::INFO));
 }
 
 /// Point the engine's GeoIP matcher at a database file on disk.

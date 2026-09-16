@@ -20,7 +20,6 @@ class AppStateProvider extends ChangeNotifier {
   TrafficStats? _trafficStats;
   List<ActiveConnection> _activeConnections = [];
   SystemInfo? _systemInfo;
-  String _logLevel = 'info';
   bool _isLoading = false;
   String _version = '';
   String _buildInfo = '';
@@ -79,7 +78,6 @@ class AppStateProvider extends ChangeNotifier {
   BigInt get totalUploadBytes => _totalUploadBytes;
   BigInt get totalDownloadBytes => _totalDownloadBytes;
   SystemInfo? get systemInfo => _systemInfo;
-  String get logLevel => _logLevel;
   bool get isLoading => _isLoading;
   bool get autoSystemProxy => _autoSystemProxy;
   bool get autoVpnClose => _autoVpnClose;
@@ -373,7 +371,6 @@ class AppStateProvider extends ChangeNotifier {
       (mode) => mode.name == themeModeString,
       orElse: () => ThemeMode.system,
     );
-    _logLevel = prefs.getString('logLevel') ?? 'info';
     _autoSystemProxy = prefs.getBool('autoSystemProxy') ?? true;
     _autoVpnClose = prefs.getBool('autoVpnClose') ?? true;
     _proxyMode = ProxyMode.values.firstWhere(
@@ -390,7 +387,6 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('themeMode', _themeMode.name);
-    await prefs.setString('logLevel', _logLevel);
     await prefs.setBool('autoSystemProxy', _autoSystemProxy);
     await prefs.setBool('autoVpnClose', _autoVpnClose);
   }
@@ -825,19 +821,23 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  // Log level management
-  Future<void> updateLogLevel(String level) async {
+  /// Pushes a level into the subscriber of the already running process.
+  ///
+  /// The persisted value belongs to `GeneralSettings`; this is only the live
+  /// half, so that changing the level takes effect without a restart. When
+  /// the bridge is not up yet there is nothing to apply it to — the level
+  /// travels through the configuration on the next start — which is not a
+  /// failure. `false` means the engine refused it, and the caller has to say so.
+  Future<bool> applyLogLevel(String level) async {
     if (!NativeCoreService.instance.isReady) {
-      debugPrint('Cannot update log level: RustLib not initialized');
-      return;
+      return true;
     }
     try {
       await setLogLevel(level: level);
-      _logLevel = level;
-      await _saveSettings();
-      notifyListeners();
+      return true;
     } catch (e) {
-      debugPrint('Failed to set log level: $e');
+      debugPrint('Failed to apply log level $level: $e');
+      return false;
     }
   }
 

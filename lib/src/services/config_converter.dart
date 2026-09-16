@@ -462,20 +462,35 @@ class ConfigConverter {
 
     final configured = override
         ? dnsSettings.nameservers
-        : (dns['nameserver'] as List?)?.map((e) => e.toString()).toList() ??
-              const ['8.8.8.8', '1.1.1.1'];
+        : _toStringList(dns['nameserver']);
+    final effectiveConfigured = configured.isEmpty
+        ? const ['8.8.8.8', '1.1.1.1']
+        : configured;
 
     // A running RecurseX front-end stays authoritative: put it first and
     // every forwarded query becomes a recursive one, with the configured
     // upstreams kept behind it as fallbacks.
     final nameservers = recursiveDnsAddress == null
-        ? configured
-        : [recursiveDnsAddress, ...configured];
+        ? effectiveConfigured
+        : [recursiveDnsAddress, ...effectiveConfigured];
 
     final fallback = override
         ? dnsSettings.fallback
-        : (dns['fallback'] as List?)?.map((e) => e.toString()).toList() ??
-              const <String>[];
+        : _toStringList(dns['fallback']);
+
+    // `nameserver-policy` always comes from the profile: it is how a
+    // subscription makes its own node domains resolvable (typically a
+    // private TCP resolver). Overriding the general DNS servers must not
+    // break the node bootstrap.
+    final policy = <String, List<String>>{};
+    final rawPolicy =
+        clash['dns']?['nameserver-policy'] as Map<String, dynamic>?;
+    rawPolicy?.forEach((key, value) {
+      final servers = _toStringList(value);
+      if (servers.isNotEmpty) {
+        policy[key] = servers;
+      }
+    });
 
     return {
       'enable': override ? dnsSettings.enable : (dns['enable'] ?? true),
@@ -487,7 +502,24 @@ class ConfigConverter {
       'enhanced_mode': override
           ? dnsSettings.dnsMode
           : (dns['enhanced-mode'] ?? 'fake-ip'),
+      'nameserver_policy': policy,
     };
+  }
+
+  /// Clash accepts a single server as a bare string wherever a list is also
+  /// valid (`nameserver: 223.5.5.5`, `nameserver-policy: {a.com: 1.1.1.1}`).
+  /// Normalizing both shapes here keeps scalar entries from being dropped.
+  static List<String> _toStringList(Object? value) {
+    if (value is String) {
+      return value.isEmpty ? const [] : [value];
+    }
+    if (value is List) {
+      return value
+          .map((entry) => entry.toString())
+          .where((entry) => entry.isNotEmpty)
+          .toList();
+    }
+    return const [];
   }
 
   static List<Map<String, dynamic>> _extractInbounds(

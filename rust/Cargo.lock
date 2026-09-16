@@ -263,9 +263,7 @@ dependencies = [
 
 [[package]]
 name = "corduit"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03766d6ecb256399d0e35aea9a8e2fbea1a33684fdbdfcc653e191ceff009fb6"
+version = "0.1.6"
 dependencies = [
  "bitflags 2.13.1",
  "bytes",
@@ -800,6 +798,7 @@ dependencies = [
  "recurse-x",
  "tokio",
  "tracing",
+ "tracing-android",
  "tracing-subscriber",
 ]
 
@@ -1199,9 +1198,9 @@ checksum = "69cdb34c158ceb288df11e18b4bd39de994f6657d83847bdffdbd7f346754b0f"
 
 [[package]]
 name = "recurse-x"
-version = "0.1.0"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a99aabd9dee2f522dacce84ea6db01766d7c105b450bd004d77f656c502c199"
+checksum = "d73415ed7ebfde549bacd01e0edd46e9c4c6a05d4f0eb5e150e6d02a00fa21d2"
 dependencies = [
  "courierust",
  "nextjson",

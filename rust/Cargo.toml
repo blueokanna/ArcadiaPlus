@@ -6,16 +6,23 @@ version = "1.0.2"
 authors = ["blueokanna"]
 description = "A cross-platform basic proxy client core for VeloGuard"
 
+[lib]
+name = "rust_lib_veloguard"
+crate-type = ["rlib", "cdylib", "staticlib"]
+
 [dependencies]
-corduit = { version = "0.1.5", features = ["hysteria2", "reality", "tuic"] }
+corduit = { version = "0.1.6", path = "../../Corduit" ,features = ["hysteria2", "reality", "tuic"] }
 flutter_rust_bridge = "=2.13.0"
-jni = "0.21"
 once_cell = "1.21.4"
 parking_lot = "0.12"
-recurse-x = "0.1.0"
+recurse-x = "0.2.0"
 tokio = { version = "1.53.1", features = ["rt"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = [
     "env-filter",
     "registry",
 ] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.21"
+tracing-android = "0.2"

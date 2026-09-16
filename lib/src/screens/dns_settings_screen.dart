@@ -168,7 +168,9 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     AdaptiveListTile(
                       title: Text(l10n?.dnsMode ?? 'DNS Mode'),
-                      subtitle: Text(_getDnsModeText(dnsSettings.dnsMode, l10n)),
+                      subtitle: Text(
+                        _getDnsModeText(dnsSettings.dnsMode, l10n),
+                      ),
                       leading: Icon(
                         Icons.settings_input_component_outlined,
                         color: colorScheme.primary,

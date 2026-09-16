@@ -5,7 +5,7 @@
 
 [toolchain]
 channel = "1.97.0"
-components = ["clippy", "rustfmt"]
+components = ["clippy", "rustfmt", "rust-analyzer"]
 targets = [
     "aarch64-linux-android",
     "armv7-linux-androideabi",

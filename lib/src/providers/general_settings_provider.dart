@@ -14,7 +14,6 @@ class GeneralSettingsProvider extends ChangeNotifier {
   int get httpPort => _settings.httpPort;
   int get socksPort => _settings.socksPort;
   int get mixedPort => _settings.mixedPort;
-  Map<String, String> get hosts => _settings.hosts;
   bool get ipv6 => _settings.ipv6;
   bool get allowLan => _settings.allowLan;
   bool get unifiedDelay => _settings.unifiedDelay;
@@ -83,24 +82,6 @@ class GeneralSettingsProvider extends ChangeNotifier {
     _settings = _settings.copyWith(mixedPort: value);
     await _saveSettings();
     notifyListeners();
-  }
-
-  Future<void> setHosts(Map<String, String> value) async {
-    _settings = _settings.copyWith(hosts: value);
-    await _saveSettings();
-    notifyListeners();
-  }
-
-  Future<void> addHost(String domain, String ip) async {
-    final newHosts = Map<String, String>.from(_settings.hosts);
-    newHosts[domain] = ip;
-    await setHosts(newHosts);
-  }
-
-  Future<void> removeHost(String domain) async {
-    final newHosts = Map<String, String>.from(_settings.hosts);
-    newHosts.remove(domain);
-    await setHosts(newHosts);
   }
 
   Future<void> setIpv6(bool value) async {
@@ -198,27 +179,5 @@ class GeneralSettingsProvider extends ChangeNotifier {
     _settings = _settings.copyWith(hapticFeedbackEnabled: value);
     await _saveSettings();
     notifyListeners();
-  }
-
-  /// Generate general config for Rust core
-  Map<String, dynamic> generateGeneralConfig() {
-    return {
-      'port': _settings.httpPort,
-      'socks-port': _settings.socksPort,
-      'mixed-port': _settings.mixedPort,
-      'allow-lan': _settings.allowLan,
-      'bind-address': _settings.bindAddress,
-      'mode': _settings.mode,
-      'log-level': _settings.logLevel,
-      'ipv6': _settings.ipv6,
-      'tcp-concurrent': _settings.tcpConcurrent,
-      'unified-delay': _settings.unifiedDelay,
-      'find-process-mode': _settings.findProcess ? 'always' : 'off',
-      'keep-alive-interval': _settings.tcpKeepAliveInterval,
-      'external-controller': _settings.externalController,
-      'external-ui': _settings.externalUi,
-      'secret': _settings.secret,
-      'hosts': _settings.hosts,
-    };
   }
 }

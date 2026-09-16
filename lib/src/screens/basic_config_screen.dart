@@ -192,6 +192,10 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                           borderRadius: BorderRadius.circular(12),
                           items: const [
                             DropdownMenuItem(
+                              value: 'silent',
+                              child: Text('SILENT'),
+                            ),
+                            DropdownMenuItem(
                               value: 'error',
                               child: Text('ERROR'),
                             ),
@@ -212,8 +216,21 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                               child: Text('TRACE'),
                             ),
                           ],
-                          onChanged: (v) {
-                            if (v != null) settings.setLogLevel(v);
+                          onChanged: (v) async {
+                            if (v == null) return;
+                            final messenger = ScaffoldMessenger.of(context);
+                            await settings.setLogLevel(v);
+                            if (await appState.applyLogLevel(v)) return;
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${l10n?.failed ?? 'Failed'}: '
+                                  '${l10n?.logLevel ?? 'Log Level'} $v',
+                                ),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: colorScheme.error,
+                              ),
+                            );
                           },
                         ),
                       ),
@@ -709,230 +726,5 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
         ],
       ),
     );
-  }
-
-  void _showHostsEditor(
-    BuildContext context,
-    GeneralSettingsProvider settings,
-    AppLocalizations? l10n,
-  ) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: colorScheme.surfaceContainerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) => _HostsEditorSheet(
-          hosts: settings.hosts,
-          onAdd: (domain, ip) => settings.addHost(domain, ip),
-          onRemove: (domain) => settings.removeHost(domain),
-          scrollController: scrollController,
-        ),
-      ),
-    );
-  }
-}
-
-class _HostsEditorSheet extends StatefulWidget {
-  final Map<String, String> hosts;
-  final Function(String, String) onAdd;
-  final Function(String) onRemove;
-  final ScrollController scrollController;
-
-  const _HostsEditorSheet({
-    required this.hosts,
-    required this.onAdd,
-    required this.onRemove,
-    required this.scrollController,
-  });
-
-  @override
-  State<_HostsEditorSheet> createState() => _HostsEditorSheetState();
-}
-
-class _HostsEditorSheetState extends State<_HostsEditorSheet> {
-  final _domainController = TextEditingController();
-  final _ipController = TextEditingController();
-  late Map<String, String> _hosts;
-
-  @override
-  void initState() {
-    super.initState();
-    _hosts = Map.from(widget.hosts);
-  }
-
-  @override
-  void dispose() {
-    _domainController.dispose();
-    _ipController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final l10n = AppLocalizations.of(context);
-
-    return SafeArea(
-      child: Column(
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            width: 32,
-            height: 4,
-            decoration: BoxDecoration(
-              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-            child: Row(
-              children: [
-                Icon(Icons.home_outlined, color: colorScheme.primary),
-                const SizedBox(width: 12),
-                Text(
-                  l10n?.hostsMapping ?? 'Hosts Mapping',
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _domainController,
-                    decoration: InputDecoration(
-                      hintText: l10n?.domain ?? 'Domain',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _ipController,
-                    decoration: InputDecoration(
-                      hintText: l10n?.ipAddress ?? 'IP Address',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: _addHost,
-                  icon: const Icon(Icons.add),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _hosts.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.inbox_outlined,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l10n?.noHostsMapping ?? 'No hosts mapping',
-                          style: textTheme.bodyLarge?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    controller: widget.scrollController,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _hosts.length,
-                    itemBuilder: (context, index) {
-                      final domain = _hosts.keys.elementAt(index);
-                      final ip = _hosts[domain]!;
-                      return Card(
-                        elevation: 0,
-                        color: colorScheme.surfaceContainerHigh,
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          title: Text(
-                            domain,
-                            style: const TextStyle(fontFamily: 'monospace'),
-                          ),
-                          subtitle: Text(
-                            ip,
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(
-                              Icons.delete_outline,
-                              color: colorScheme.error,
-                            ),
-                            onPressed: () => _removeHost(domain),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _addHost() {
-    final domain = _domainController.text.trim();
-    final ip = _ipController.text.trim();
-    if (domain.isNotEmpty && ip.isNotEmpty) {
-      widget.onAdd(domain, ip);
-      setState(() {
-        _hosts[domain] = ip;
-      });
-      _domainController.clear();
-      _ipController.clear();
-    }
-  }
-
-  void _removeHost(String domain) {
-    widget.onRemove(domain);
-    setState(() {
-      _hosts.remove(domain);
-    });
   }
 }

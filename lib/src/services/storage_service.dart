@@ -82,7 +82,6 @@ class GeneralSettings {
   final int httpPort;
   final int socksPort;
   final int mixedPort;
-  final Map<String, String> hosts;
   final bool ipv6;
   final bool allowLan;
   final bool unifiedDelay;
@@ -103,7 +102,6 @@ class GeneralSettings {
     this.httpPort = 7890,
     this.socksPort = 7891,
     this.mixedPort = 7897,
-    this.hosts = const {},
     this.ipv6 = false,
     this.allowLan = false,
     this.unifiedDelay = false,
@@ -125,7 +123,6 @@ class GeneralSettings {
     'httpPort': httpPort,
     'socksPort': socksPort,
     'mixedPort': mixedPort,
-    'hosts': hosts,
     'ipv6': ipv6,
     'allowLan': allowLan,
     'unifiedDelay': unifiedDelay,
@@ -163,7 +160,6 @@ class GeneralSettings {
       httpPort: json['httpPort'] as int? ?? 7890,
       socksPort: json['socksPort'] as int? ?? 7891,
       mixedPort: json['mixedPort'] as int? ?? 7897,
-      hosts: (json['hosts'] as Map?)?.cast<String, String>() ?? {},
       ipv6: ipv6,
       allowLan: allowLan,
       unifiedDelay: json['unifiedDelay'] as bool? ?? false,
@@ -186,7 +182,6 @@ class GeneralSettings {
     int? httpPort,
     int? socksPort,
     int? mixedPort,
-    Map<String, String>? hosts,
     bool? ipv6,
     bool? allowLan,
     bool? unifiedDelay,
@@ -207,7 +202,6 @@ class GeneralSettings {
       httpPort: httpPort ?? this.httpPort,
       socksPort: socksPort ?? this.socksPort,
       mixedPort: mixedPort ?? this.mixedPort,
-      hosts: hosts ?? this.hosts,
       ipv6: ipv6 ?? this.ipv6,
       allowLan: allowLan ?? this.allowLan,
       unifiedDelay: unifiedDelay ?? this.unifiedDelay,
