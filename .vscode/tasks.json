@@ -1155,6 +1155,16 @@
 			"label": "live-check",
 			"type": "shell",
 			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\live-check.cmd"
+		},
+		{
+			"label": "final-device",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\final-device.cmd"
+		},
+		{
+			"label": "git-final",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\git-final.cmd"
 		}
 	]
 }
