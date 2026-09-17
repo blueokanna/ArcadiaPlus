@@ -2,16 +2,17 @@
 name = "lib-veloguard"
 edition = "2021"
 license-file = "../LICENSE"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["blueokanna"]
-description = "A cross-platform basic proxy client core for VeloGuard"
+description = "A cross-platform basic proxy client rust core for VeloGuard"
+homepage = "https://github.com/blueokanna/VeloGuard"
 
 [lib]
 name = "rust_lib_veloguard"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-corduit = { version = "0.1.6", features = ["hysteria2", "reality", "tuic"] }
+corduit = { version = "0.1.7", features = ["hysteria2", "reality", "tuic"] }
 flutter_rust_bridge = "=2.13.0"
 once_cell = "1.21.4"
 parking_lot = "0.12"

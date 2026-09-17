@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:veloguard/src/rust/types.dart';
 import 'package:veloguard/src/utils/responsive_utils.dart';
 import 'package:veloguard/src/utils/animation_utils.dart';
+import 'package:veloguard/src/utils/app_lifecycle.dart';
 import 'package:veloguard/src/l10n/app_localizations.dart';
 
-/// Material Design 3 Expressive 风格的服务状态卡片
-/// 垂直布局：上方状态信息 + 下方控制按钮
 class StatusCard extends StatefulWidget {
   final bool isRunning;
   final bool isLoading;
@@ -57,6 +56,7 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
     );
     _statusController.forward();
 
+    AppLifecycle.instance.active.addListener(_updateAnimations);
     _updateAnimations();
   }
 
@@ -86,9 +86,16 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
     }
   }
 
+  /// The breathing indicator is a "the proxy is up" cue, so it is tied to the
+  /// proxy being up *and* the app being on screen.
   void _updateAnimations() {
-    if (!_reduceMotion && widget.isRunning && !widget.isLoading) {
-      _pulseController.repeat(reverse: true);
+    if (!_reduceMotion &&
+        AppLifecycle.instance.isActive &&
+        widget.isRunning &&
+        !widget.isLoading) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
     } else {
       _pulseController.stop();
       _pulseController.reset();
@@ -97,6 +104,7 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    AppLifecycle.instance.active.removeListener(_updateAnimations);
     _pulseController.dispose();
     _statusController.dispose();
     super.dispose();
@@ -147,7 +155,6 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 上方：状态指示器和文字
               Row(
                 children: [
                   _buildStatusIndicator(colorScheme, textTheme, l10n),
@@ -159,8 +166,6 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
               ),
 
               SizedBox(height: spacing * 2),
-
-              // 下方：控制按钮（全宽）
               _buildControlButton(colorScheme, textTheme, l10n, borderRadius),
             ],
           ),
@@ -177,56 +182,59 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
     final indicatorSize = 56.0;
     final iconSize = 28.0;
 
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: widget.isRunning && !widget.isLoading
-              ? _pulseAnimation.value
-              : 1.0,
-          child: AnimatedContainer(
-            duration: AnimationUtils.stateChangeDuration,
-            curve: AnimationUtils.stateChangeCurve,
-            width: indicatorSize,
-            height: indicatorSize,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: _getStatusColor(colorScheme).withValues(alpha: 0.15),
-              border: Border.all(
-                color: _getStatusColor(colorScheme).withValues(alpha: 0.4),
-                width: 2,
+    // Isolated so the pulse repaints this circle instead of the whole card.
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: widget.isRunning && !widget.isLoading
+                ? _pulseAnimation.value
+                : 1.0,
+            child: AnimatedContainer(
+              duration: AnimationUtils.stateChangeDuration,
+              curve: AnimationUtils.stateChangeCurve,
+              width: indicatorSize,
+              height: indicatorSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _getStatusColor(colorScheme).withValues(alpha: 0.15),
+                border: Border.all(
+                  color: _getStatusColor(colorScheme).withValues(alpha: 0.4),
+                  width: 2,
+                ),
               ),
-            ),
-            child: AnimatedSwitcher(
-              duration: AnimationUtils.iconMorphDuration,
-              switchInCurve: AnimationUtils.curveEmphasizedDecelerate,
-              switchOutCurve: AnimationUtils.curveEmphasizedAccelerate,
-              transitionBuilder: (child, animation) {
-                return ScaleTransition(
-                  scale: animation,
-                  child: FadeTransition(opacity: animation, child: child),
-                );
-              },
-              child: widget.isLoading
-                  ? SizedBox(
-                      key: const ValueKey('loading'),
-                      width: iconSize,
-                      height: iconSize,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
+              child: AnimatedSwitcher(
+                duration: AnimationUtils.iconMorphDuration,
+                switchInCurve: AnimationUtils.curveEmphasizedDecelerate,
+                switchOutCurve: AnimationUtils.curveEmphasizedAccelerate,
+                transitionBuilder: (child, animation) {
+                  return ScaleTransition(
+                    scale: animation,
+                    child: FadeTransition(opacity: animation, child: child),
+                  );
+                },
+                child: widget.isLoading
+                    ? SizedBox(
+                        key: const ValueKey('loading'),
+                        width: iconSize,
+                        height: iconSize,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: _getStatusColor(colorScheme),
+                        ),
+                      )
+                    : Icon(
+                        _getStatusIcon(),
+                        key: ValueKey(widget.isRunning),
+                        size: iconSize,
                         color: _getStatusColor(colorScheme),
                       ),
-                    )
-                  : Icon(
-                      _getStatusIcon(),
-                      key: ValueKey(widget.isRunning),
-                      size: iconSize,
-                      color: _getStatusColor(colorScheme),
-                    ),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -239,7 +247,6 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 状态标题
         AnimatedSwitcher(
           duration: AnimationUtils.stateChangeDuration,
           switchInCurve: AnimationUtils.curveEmphasizedDecelerate,
@@ -264,7 +271,6 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
 
         const SizedBox(height: 4),
 
-        // 状态描述
         AnimatedSwitcher(
           duration: AnimationUtils.durationMedium2,
           child: Text(

@@ -13,13 +13,29 @@
 //! resolver itself — along with its maintenance thread — is created once
 //! per process, because the cache it owns is exactly the state that makes
 //! recursion cheap.
+//!
+//! # Idle cost
+//!
+//! The front-end is meant to be affordable to leave running, which on a
+//! phone is a hard requirement rather than a nicety: a worker that polls
+//! its socket on a short timer keeps the CPU out of its deep sleep states
+//! for as long as the app lives, and the heat that comes with it is
+//! spent discovering that nothing had arrived. Both listeners therefore
+//! block indefinitely and [`stop`] wakes them explicitly (a datagram for
+//! UDP, a loopback connect for TCP, `shutdown` for sessions in flight).
+//! When the front-end is idle it costs nothing; callers are still expected
+//! to stop it when the proxy it serves is down, since a resolver nobody
+//! queries should not exist at all.
 
+use std::collections::HashMap;
 use std::io::{ErrorKind, Read, Write};
-use std::net::{IpAddr, TcpListener, TcpStream, ToSocketAddrs, UdpSocket};
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::net::{
+    IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, TcpListener, TcpStream, ToSocketAddrs, UdpSocket,
+};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
@@ -27,11 +43,25 @@ use recurse_x::{Message, Resolver, ResolverConfig};
 
 use crate::types::RecursiveDnsStatus;
 
-/// How long a worker blocks on `recv_from` before re-checking the stop flag.
-const UDP_READ_TIMEOUT: Duration = Duration::from_millis(200);
+/// Safety net for the UDP receive loop. The loop blocks for as long as it
+/// takes for a query to arrive and is woken by [`stop`]; this timeout only
+/// bounds how long a lost wake-up could strand the worker, so it is measured
+/// in whole seconds rather than milliseconds.
+const UDP_READ_TIMEOUT: Duration = Duration::from_secs(1);
 
-/// Poll interval for non-blocking `accept` loops and TCP reads.
-const TCP_POLL_INTERVAL: Duration = Duration::from_millis(20);
+/// How long a TCP session may stay silent before its worker gives up.
+const TCP_IDLE_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Timeout for a single wake-up connect attempt. Loopback handshakes complete
+/// in microseconds, so this only has to outlast a scheduling hiccup.
+const WAKE_CONNECT_TIMEOUT: Duration = Duration::from_millis(50);
+
+/// Total time [`stop`] may spend trying to release the accept loop.
+const WAKE_BUDGET: Duration = Duration::from_secs(2);
+
+/// Pause after an `accept` error that is not the stop flag, so a hard failure
+/// (descriptor exhaustion, …) cannot turn the loop into a spin.
+const ACCEPT_ERROR_BACKOFF: Duration = Duration::from_millis(250);
 
 /// Ceiling on in-flight queries. Beyond this the front-end drops datagrams
 /// (UDP) or refuses connections (TCP) rather than spawning unboundedly.
@@ -45,18 +75,27 @@ const MAX_TCP_CONNECTIONS: usize = 256;
 const DEFAULT_UDP_PAYLOAD: usize = 512;
 
 /// Ceiling on the payload a UDP client can talk the front-end into emitting,
-/// whatever it advertises through EDNS0. Without it a client claiming a 64 KiB
-/// buffer receives responses that fragment and amplify far beyond what a
-/// resolver should ever put on the wire.
+/// whatever it advertises through EDNS0.
 const MAX_UDP_PAYLOAD: usize = 4096;
 
 static RESOLVER: OnceCell<Arc<Resolver>> = OnceCell::new();
 static SERVICE: Mutex<Option<Service>> = Mutex::new(None);
 
+/// Live TCP sessions, keyed by an id, so [`stop`] can end a session that is
+/// parked in a blocking read. A thread sitting in `read` never observes the
+/// stop flag on its own; `shutdown` is what releases it.
+type ConnectionRegistry = Arc<Mutex<HashMap<u64, TcpStream>>>;
+
+/// Source of the ids in [`ConnectionRegistry`].
+static NEXT_CONNECTION_ID: AtomicU64 = AtomicU64::new(1);
+
 struct Service {
     listen: String,
+    bound: SocketAddr,
     stop: Arc<AtomicBool>,
-    handles: Vec<JoinHandle<()>>,
+    connections: ConnectionRegistry,
+    udp_worker: JoinHandle<()>,
+    tcp_acceptor: JoinHandle<()>,
 }
 
 /// The recursive resolver, created once per process.
@@ -64,8 +103,6 @@ fn resolver() -> Arc<Resolver> {
     RESOLVER
         .get_or_init(|| {
             let resolver = Arc::new(Resolver::new(ResolverConfig::default()));
-            // Cache sweep + prefetch. The handle is detached: the thread
-            // parks on the maintenance interval and exits with the process.
             let _ = resolver.spawn_maintenance();
             resolver
         })
@@ -100,39 +137,49 @@ pub fn start(listen: &str) -> Result<String, String> {
     let stop = Arc::new(AtomicBool::new(false));
     let udp_inflight = Arc::new(AtomicUsize::new(0));
     let tcp_inflight = Arc::new(AtomicUsize::new(0));
+    let connections: ConnectionRegistry = Arc::new(Mutex::new(HashMap::new()));
 
-    let mut handles = Vec::with_capacity(2);
-
-    {
+    let udp_worker = {
         let socket = Arc::new(udp);
         let resolver = resolver.clone();
         let stop = stop.clone();
         let inflight = udp_inflight.clone();
-        handles.push(spawn("recursive-dns-udp", move || {
+        spawn("recursive-dns-udp", move || {
             serve_udp(socket, resolver, stop, inflight)
-        })?);
-    }
+        })?
+    };
 
-    {
+    let tcp_acceptor = {
         let resolver = resolver.clone();
         let stop = stop.clone();
         let inflight = tcp_inflight.clone();
-        handles.push(spawn("recursive-dns-tcp", move || {
-            serve_tcp_listener(tcp, resolver, stop, inflight)
-        })?);
-    }
+        let connections = connections.clone();
+        spawn("recursive-dns-tcp", move || {
+            serve_tcp_listener(tcp, resolver, stop, inflight, connections)
+        })?
+    };
 
-    let bound = bound.to_string();
+    let listen = bound.to_string();
     *slot = Some(Service {
-        listen: bound.clone(),
+        listen: listen.clone(),
+        bound,
         stop,
-        handles,
+        connections,
+        udp_worker,
+        tcp_acceptor,
     });
-    Ok(bound)
+    Ok(listen)
 }
 
 /// Signal every worker and wait for them to leave their loops. The bound
 /// sockets close with the threads, so the port is free afterwards.
+///
+/// Both listeners block rather than poll (see [`configure`]), so stopping is
+/// an active operation: the flag alone would leave the UDP worker parked in
+/// `recv_from` and the TCP worker parked in `accept` until a real client
+/// happened to arrive — which, on an idle phone, may be never. A one-byte
+/// datagram and a loopback connect are what release them, and `shutdown`
+/// does the same for any session already in progress.
 pub fn stop() -> Result<(), String> {
     let service = SERVICE.lock().take();
     let Some(service) = service else {
@@ -140,12 +187,80 @@ pub fn stop() -> Result<(), String> {
     };
 
     service.stop.store(true, Ordering::Relaxed);
-    for handle in service.handles {
+
+    let wake = wake_target(service.bound);
+    wake_udp(&wake);
+    wake_tcp(&wake, &service.tcp_acceptor);
+
+    {
+        let mut live = service.connections.lock();
+        for (_, stream) in live.drain() {
+            let _ = stream.shutdown(std::net::Shutdown::Both);
+        }
+    }
+
+    for handle in [service.udp_worker, service.tcp_acceptor] {
         handle
             .join()
             .map_err(|_| "recursive DNS worker panicked".to_string())?;
     }
     Ok(())
+}
+
+/// The address to aim a wake-up at. A listener bound to a wildcard address
+/// does not accept packets addressed to the wildcard, so it is aimed at the
+/// loopback of the same family instead.
+fn wake_target(bound: SocketAddr) -> SocketAddr {
+    match bound.ip() {
+        IpAddr::V4(ip) if ip.is_unspecified() => {
+            SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), bound.port())
+        }
+        IpAddr::V6(ip) if ip.is_unspecified() => {
+            SocketAddr::new(IpAddr::V6(Ipv6Addr::LOCALHOST), bound.port())
+        }
+        _ => bound,
+    }
+}
+
+/// Hand the UDP worker one datagram so it re-reads the stop flag. The worker
+/// discards it: the flag is already set by the time the packet lands.
+fn wake_udp(target: &SocketAddr) {
+    let bind: SocketAddr = if target.is_ipv4() {
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 0)
+    } else {
+        SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), 0)
+    };
+    let Ok(socket) = UdpSocket::bind(bind) else {
+        return;
+    };
+    let _ = socket.send_to(&[0u8], target);
+}
+
+/// Hand the TCP worker one connection so its blocking `accept` returns.
+///
+/// A connect is only useful while the worker is actually parked in `accept`.
+/// Once it has left — which happens whenever it lost the race to the stop
+/// flag and exited at the top of its loop — connecting is not merely useless:
+/// a closed loopback port is not refused on every platform, so each attempt
+/// would burn its whole timeout. Asking the handle first keeps the pointless
+/// case off the critical path, and the loop exits as soon as the worker is
+/// gone for good.
+///
+/// The budget bounds the total wait, so a worker that somehow keeps failing to
+/// take the hint cannot turn "stop" into a hang; `join` afterwards decides
+/// whether that mattered.
+fn wake_tcp(target: &SocketAddr, acceptor: &JoinHandle<()>) {
+    let deadline = Instant::now() + WAKE_BUDGET;
+
+    while Instant::now() < deadline {
+        if acceptor.is_finished() {
+            return;
+        }
+        if TcpStream::connect_timeout(target, WAKE_CONNECT_TIMEOUT).is_ok() {
+            return;
+        }
+        thread::sleep(Duration::from_millis(5));
+    }
 }
 
 /// Whether the front-end is accepting queries, and where.
@@ -172,11 +287,19 @@ where
         .map_err(|e| format!("cannot spawn {name}: {e}"))
 }
 
+/// Put both listeners into blocking mode.
+///
+/// This is the difference between a resolver that costs nothing while idle
+/// and one that keeps the CPU waking up for the whole life of the app: a
+/// short poll interval here would burn tens of wake-ups a second (and the
+/// power state that goes with them) to discover that nothing had arrived.
+/// [`stop`] supplies the wake-up that polling used to provide.
 fn configure(udp: &UdpSocket, tcp: &TcpListener) -> Result<(), String> {
     udp.set_read_timeout(Some(UDP_READ_TIMEOUT))
         .map_err(|e| format!("cannot arm the UDP read timeout: {e}"))?;
-    tcp.set_nonblocking(true)
-        .map_err(|e| format!("cannot switch the TCP listener to non-blocking: {e}"))
+    tcp.set_nonblocking(false)
+        .map_err(|e| format!("cannot switch the TCP listener back to blocking: {e}"))?;
+    Ok(())
 }
 
 fn serve_udp(
@@ -190,13 +313,14 @@ fn serve_udp(
         let (len, peer) = match socket.recv_from(&mut buf) {
             Ok(received) => received,
             Err(e) if is_transient(&e) => continue,
-            Err(_) => {
-                thread::sleep(TCP_POLL_INTERVAL);
-                continue;
-            }
+            Err(_) => break,
         };
 
-        if inflight.load(Ordering::Relaxed) >= MAX_INFLIGHT {
+        if stop.load(Ordering::Relaxed) {
+            break;
+        }
+
+        if len == 0 || inflight.load(Ordering::Relaxed) >= MAX_INFLIGHT {
             continue;
         }
         inflight.fetch_add(1, Ordering::Relaxed);
@@ -223,31 +347,50 @@ fn serve_tcp_listener(
     resolver: Arc<Resolver>,
     stop: Arc<AtomicBool>,
     inflight: Arc<AtomicUsize>,
+    connections: ConnectionRegistry,
 ) {
     while !stop.load(Ordering::Relaxed) {
         match listener.accept() {
             Ok((stream, _)) => {
+                if stop.load(Ordering::Relaxed) {
+                    drop(stream);
+                    break;
+                }
+
                 if inflight.load(Ordering::Relaxed) >= MAX_TCP_CONNECTIONS {
                     drop(stream);
                     continue;
                 }
                 inflight.fetch_add(1, Ordering::Relaxed);
 
+                let id = NEXT_CONNECTION_ID.fetch_add(1, Ordering::Relaxed);
+                if let Ok(handle) = stream.try_clone() {
+                    connections.lock().insert(id, handle);
+                }
+
                 let resolver = resolver.clone();
                 let stop = stop.clone();
                 let counter = inflight.clone();
+                let registry = connections.clone();
                 let spawned = thread::Builder::new()
                     .name("recursive-dns-connection".to_string())
                     .spawn(move || {
                         let _ = serve_connection(stream, resolver, stop);
+                        registry.lock().remove(&id);
                         counter.fetch_sub(1, Ordering::Relaxed);
                     });
                 if spawned.is_err() {
+                    connections.lock().remove(&id);
                     inflight.fetch_sub(1, Ordering::Relaxed);
                 }
             }
-            Err(e) if e.kind() == ErrorKind::WouldBlock => thread::sleep(TCP_POLL_INTERVAL),
-            Err(_) => thread::sleep(TCP_POLL_INTERVAL),
+            Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+            Err(_) => {
+                if stop.load(Ordering::Relaxed) {
+                    break;
+                }
+                thread::sleep(ACCEPT_ERROR_BACKOFF);
+            }
         }
     }
 }
@@ -259,7 +402,7 @@ fn serve_connection(
     resolver: Arc<Resolver>,
     stop: Arc<AtomicBool>,
 ) -> std::io::Result<()> {
-    stream.set_read_timeout(Some(TCP_POLL_INTERVAL))?;
+    stream.set_read_timeout(Some(TCP_IDLE_TIMEOUT))?;
     let client_ip = stream.peer_addr().ok().map(|peer| peer.ip());
 
     loop {
@@ -268,7 +411,7 @@ fn serve_connection(
         }
 
         let mut len_buf = [0u8; 2];
-        if !read_polling(&mut stream, &mut len_buf, &stop)? {
+        if !read_exact(&mut stream, &mut len_buf)? {
             return Ok(());
         }
         let len = u16::from_be_bytes(len_buf) as usize;
@@ -277,12 +420,9 @@ fn serve_connection(
         }
 
         let mut query = vec![0u8; len];
-        if !read_polling(&mut stream, &mut query, &stop)? {
+        if !read_exact(&mut stream, &mut query)? {
             return Ok(());
         }
-
-        // TCP carries complete responses; the 16-bit frame length is the
-        // only limit that applies.
         let response = answer(&resolver, &query, client_ip, Transport::Tcp);
         let mut framed = Vec::with_capacity(response.len() + 2);
         framed.extend_from_slice(&(response.len() as u16).to_be_bytes());
@@ -291,22 +431,23 @@ fn serve_connection(
     }
 }
 
-/// Read `buf` fully, honouring the stop flag. `Ok(false)` means "stop now
-/// or the peer closed", never a fatal condition.
-fn read_polling(
-    stream: &mut TcpStream,
-    buf: &mut [u8],
-    stop: &AtomicBool,
-) -> std::io::Result<bool> {
+/// Read `buf` fully. `Ok(false)` means "the peer went away, or the read was
+/// ended for us", never a fatal condition.
+///
+/// There is deliberately no stop-flag check inside the loop: a thread parked
+/// in a blocking read cannot observe one. The way a live session is ended is
+/// `TcpStream::shutdown` from [`stop`], which makes the read return 0 and
+/// this function report `false`.
+fn read_exact(stream: &mut TcpStream, buf: &mut [u8]) -> std::io::Result<bool> {
     let mut filled = 0;
     while filled < buf.len() {
-        if stop.load(Ordering::Relaxed) {
-            return Ok(false);
-        }
         match stream.read(&mut buf[filled..]) {
             Ok(0) => return Ok(false),
             Ok(n) => filled += n,
-            Err(e) if is_transient(&e) => continue,
+            Err(e) if e.kind() == ErrorKind::Interrupted => continue,
+            Err(e) if e.kind() == ErrorKind::WouldBlock || e.kind() == ErrorKind::TimedOut => {
+                return Ok(false)
+            }
             Err(e)
                 if e.kind() == ErrorKind::ConnectionReset
                     || e.kind() == ErrorKind::ConnectionAborted =>
@@ -380,6 +521,10 @@ fn formerr(query: &[u8]) -> Vec<u8> {
     message.to_bytes().unwrap_or_default()
 }
 
+/// Transient receive errors on the UDP worker. `TimedOut` is in the list
+/// because the socket carries a one-second read timeout purely so the loop
+/// re-reads the stop flag once a second; it is a normal, expected outcome of
+/// an idle resolver, not a failure.
 fn is_transient(error: &std::io::Error) -> bool {
     matches!(
         error.kind(),
@@ -456,6 +601,47 @@ mod tests {
             ErrorKind::ConnectionReset
         )));
         assert!(!is_transient(&std::io::Error::from(ErrorKind::AddrInUse)));
+    }
+
+    /// Guards the blocking-listener design against a regression back to
+    /// polling. The bound is generous — a poll interval healthy for the CPU
+    /// would still sit far below it — but a loop that has to wait out a
+    /// timeout before it notices the stop flag cannot pass.
+    #[test]
+    fn stop_does_not_wait_for_a_query() {
+        let _guard = lock_front_end();
+
+        let _ = stop();
+        let _ = start("127.0.0.1:0").expect("loopback bind succeeds");
+
+        let began = std::time::Instant::now();
+        stop().expect("an idle front-end stops immediately");
+        let elapsed = began.elapsed();
+
+        assert!(
+            elapsed < Duration::from_millis(500),
+            "stop() took {elapsed:?}; an idle front-end must not wait for traffic"
+        );
+        assert!(!status().running);
+    }
+
+    #[test]
+    fn wake_target_avoids_wildcard_addresses() {
+        let specific: SocketAddr = "127.0.0.1:5335".parse().expect("valid address");
+        assert_eq!(wake_target(specific), specific);
+        let v4: SocketAddr = "0.0.0.0:5335".parse().expect("valid address");
+        assert_eq!(
+            wake_target(v4),
+            "127.0.0.1:5335"
+                .parse::<SocketAddr>()
+                .expect("valid address")
+        );
+
+        let v6: SocketAddr = "[::]:5335".parse().expect("valid address");
+        assert_eq!(
+            wake_target(v6),
+            "[::1]:5335".parse::<SocketAddr>().expect("valid address")
+        );
     }
 
     #[test]

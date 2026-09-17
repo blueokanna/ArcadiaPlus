@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:veloguard/src/providers/app_state_provider.dart';
 import 'package:veloguard/src/rust/types.dart';
+import 'package:veloguard/src/utils/app_lifecycle.dart';
 import 'package:veloguard/src/utils/platform_utils.dart';
 import 'package:veloguard/src/utils/responsive_utils.dart';
 import 'package:veloguard/src/utils/animation_utils.dart';
@@ -15,13 +18,86 @@ class ConnectionsScreen extends StatefulWidget {
   State<ConnectionsScreen> createState() => _ConnectionsScreenState();
 }
 
-class _ConnectionsScreenState extends State<ConnectionsScreen> {
+class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
+  /// How often the connection list is re-read while this screen is visible.
+  /// It used to ride the provider's one-second tick, which meant every screen
+  /// in the app paid for a full connection list.
+  static const Duration _listInterval = Duration(seconds: 2);
+
+  Timer? _listTimer;
+  bool _onTop = true;
+  bool _observingLifecycle = false;
+
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      routeObserver.subscribe(this, route);
+      _onTop = route.isCurrent;
+    }
+    if (!_observingLifecycle) {
+      _observingLifecycle = true;
+      AppLifecycle.instance.active.addListener(_syncTimer);
+    }
+    _syncTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AppStateProvider>().refreshStatus();
+      if (mounted) context.read<AppStateProvider>().refreshConnections();
     });
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    if (_observingLifecycle) {
+      AppLifecycle.instance.active.removeListener(_syncTimer);
+      _observingLifecycle = false;
+    }
+    _listTimer?.cancel();
+    super.dispose();
+  }
+
+  void _setOnTop(bool onTop) {
+    if (_onTop == onTop) return;
+    _onTop = onTop;
+    _syncTimer();
+    if (onTop) {
+      context.read<AppStateProvider>().refreshConnections();
+    }
+  }
+
+  @override
+  void didPush() => _setOnTop(true);
+
+  @override
+  void didPopNext() => _setOnTop(true);
+
+  @override
+  void didPushNext() => _setOnTop(false);
+
+  @override
+  void didPop() => _setOnTop(false);
+
+  /// Poll the list only while this screen is the visible one and the app is
+  /// in the foreground.
+  void _syncTimer() {
+    if (_onTop && AppLifecycle.instance.isActive) {
+      _listTimer ??= Timer.periodic(_listInterval, (_) {
+        if (mounted) context.read<AppStateProvider>().refreshConnections();
+      });
+    } else {
+      _listTimer?.cancel();
+      _listTimer = null;
+    }
+  }
+
+  /// Pull the summary figures and the connection list; the list is the part
+  /// this screen is actually about, and it is no longer fetched by the
+  /// provider's own tick.
+  Future<void> _refresh() async {
+    final appState = context.read<AppStateProvider>();
+    await appState.refreshStatus();
+    await appState.refreshConnections();
   }
 
   @override
@@ -57,7 +133,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
           IconButton(
             icon: const Icon(Icons.refresh_outlined),
             tooltip: l10n?.refresh ?? '刷新',
-            onPressed: () => context.read<AppStateProvider>().refreshStatus(),
+            onPressed: _refresh,
           ),
         ],
       ),
@@ -178,9 +254,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> {
     final spacing = ResponsiveUtils.getSpacing(context);
 
     return RefreshIndicator(
-      onRefresh: () async {
-        await context.read<AppStateProvider>().refreshStatus();
-      },
+      onRefresh: _refresh,
       child: CustomScrollView(
         physics: PlatformUtils.getScrollPhysics(context),
         slivers: [

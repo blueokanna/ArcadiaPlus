@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:veloguard/src/rust/api.dart';
@@ -9,6 +10,7 @@ import 'package:veloguard/src/services/config_converter.dart';
 import 'package:veloguard/src/services/platform_proxy_service.dart';
 import 'package:veloguard/src/services/native_core_service.dart';
 import 'package:veloguard/src/services/rule_provider_service.dart';
+import 'package:veloguard/src/utils/app_lifecycle.dart';
 import 'package:veloguard/src/utils/platform_utils.dart';
 
 class AppStateProvider extends ChangeNotifier {
@@ -98,11 +100,12 @@ class AppStateProvider extends ChangeNotifier {
 
   AppStateProvider() {
     RuleProviderService.instance.addListener(_onRuleProviderRefresh);
+    AppLifecycle.instance.active.addListener(_onLifecycleChanged);
     _loadSettings();
     _loadSystemInfo();
     _loadVersionInfo();
     _initializeFromActiveProfile();
-    _startSystemInfoTimer();
+    _syncTimers();
     _initializePlatformProxyService();
   }
 
@@ -126,46 +129,101 @@ class AppStateProvider extends ChangeNotifier {
   @override
   void dispose() {
     RuleProviderService.instance.removeListener(_onRuleProviderRefresh);
+    AppLifecycle.instance.active.removeListener(_onLifecycleChanged);
     _systemInfoTimer?.cancel();
     _statusTimer?.cancel();
     _ruleSetTimer?.cancel();
     super.dispose();
   }
 
-  // Start 5-second timer for system info refresh
-  void _startSystemInfoTimer() {
-    _systemInfoTimer?.cancel();
-    _systemInfoTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _loadSystemInfo();
-    });
+  // ---------------------------------------------------------------------------
+  // Refresh scheduling
+  // ---------------------------------------------------------------------------
+
+  /// How often the live traffic sample is taken. Only runs while a screen is
+  /// actually showing it — see [retainLiveStats].
+  static const Duration _liveStatsInterval = Duration(seconds: 1);
+
+  /// How often the status and lifetime counters are re-read. They feed a
+  /// summary, not a gauge, and each read is a hop across the FFI boundary, so
+  /// they are sampled on a slower beat than the traffic figure.
+  static const int _slowPollEveryTicks = 5;
+
+  /// How often the system information card is refreshed. The values behind it
+  /// move over minutes, and re-reading them is not free on Android; polling
+  /// this every five seconds bought nothing but heat.
+  static const Duration _systemInfoInterval = Duration(seconds: 30);
+
+  /// How often rule sets are re-checked. Only the providers whose declared
+  /// interval has elapsed actually hit the network.
+  static const Duration _ruleSetInterval = Duration(minutes: 15);
+
+  /// Screens that display live traffic hold a claim; the fast refresh runs
+  /// only while at least one is held. Without this the app would poll at 1 Hz
+  /// on the settings screen, where nothing on screen depends on the answer.
+  int _liveStatsClaims = 0;
+
+  /// Called from a screen's `initState`; pair with [releaseLiveStats] in
+  /// `dispose`.
+  void retainLiveStats() {
+    _liveStatsClaims++;
+    _syncTimers();
   }
 
-  // Start 1-second timer for live status/traffic/connection refresh
-  void _startStatusTimer() {
-    // Cancel any existing timer first to prevent duplicates
-    _statusTimer?.cancel();
-    _statusTimer = null;
+  void releaseLiveStats() {
+    if (_liveStatsClaims == 0) return;
+    _liveStatsClaims--;
+    _syncTimers();
+  }
 
-    // Only start timer if service is running
-    if (!_isServiceRunning) {
-      return;
+  void _onLifecycleChanged() => _syncTimers(refreshOnReturn: true);
+
+  /// Bring the set of running timers in line with what is actually being watched
+  void _syncTimers({bool refreshOnReturn = false}) {
+    final isActive = AppLifecycle.instance.isActive;
+
+    final wantsStatus = isActive && _isServiceRunning && _liveStatsClaims > 0;
+    if (wantsStatus) {
+      _statusTimer ??= Timer.periodic(
+        _liveStatsInterval,
+        (_) => _refreshStatus(),
+      );
+    } else {
+      _statusTimer?.cancel();
+      _statusTimer = null;
     }
 
-    _statusTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
-      // Double-check service is still running before refreshing
-      if (_isServiceRunning && !_isLoading) {
-        await _refreshStatus();
-      }
-    });
+    if (isActive) {
+      _systemInfoTimer ??= Timer.periodic(
+        _systemInfoInterval,
+        (_) => _loadSystemInfo(),
+      );
+      _ruleSetTimer ??= Timer.periodic(
+        _ruleSetInterval,
+        (_) => refreshRuleSets(),
+      );
+    } else {
+      _systemInfoTimer?.cancel();
+      _systemInfoTimer = null;
+      _ruleSetTimer?.cancel();
+      _ruleSetTimer = null;
+    }
+
+    if (refreshOnReturn && isActive) {
+      // Whatever is on screen is stale by however long the app was away.
+      if (_isServiceRunning) unawaited(_refreshStatus());
+      unawaited(_loadSystemInfo());
+    }
   }
 
-  void _stopStatusTimer() {
-    _statusTimer?.cancel();
-    _statusTimer = null;
-  }
-
-  // Initialize VeloGuard from active profile on startup
-  Future<void> _initializeFromActiveProfile() async {
+  /// Build the engine from the active profile.
+  ///
+  /// [startResolver] decides whether the local recursive resolver is brought
+  /// up as part of this: it is only needed when the engine is about to run, so
+  /// the startup path leaves it alone.
+  Future<void> _initializeFromActiveProfile({
+    bool startResolver = false,
+  }) async {
     if (!NativeCoreService.instance.isReady) {
       debugPrint('Cannot initialize from profile: RustLib not initialized');
       _isInitialized = false;
@@ -195,9 +253,11 @@ class AppStateProvider extends ChangeNotifier {
       final generalSettings = await StorageService.instance
           .getGeneralSettings();
 
-      // Bring the recursive resolver up before the config is generated so
-      // the DNS section can point corduit at it.
-      await _ensureRecursiveDns();
+      // Bringing the resolver up is only worth anything when the engine that
+      // queries it is about to run.
+      if (startResolver) {
+        await _ensureRecursiveDns();
+      }
 
       final (jsonConfig, report) = await _generateConfig(
         activeProfileId,
@@ -211,7 +271,7 @@ class AppStateProvider extends ChangeNotifier {
       _appliedConfigJson = jsonConfig;
       _ruleSetReport = report;
       _isInitialized = true;
-      _ensureRuleSetTimer();
+      _syncTimers();
       debugPrint('VeloGuard initialized from active profile: $activeProfileId');
       notifyListeners();
     } catch (e, stackTrace) {
@@ -294,16 +354,6 @@ class AppStateProvider extends ChangeNotifier {
       _isRefreshingRuleSets = false;
       notifyListeners();
     }
-  }
-
-  /// Rule sets are checked every 15 minutes; only the providers whose declared
-  /// interval has elapsed actually hit the network, so the monthly cost of a
-  /// daily set is one metadata read per tick.
-  void _ensureRuleSetTimer() {
-    _ruleSetTimer?.cancel();
-    _ruleSetTimer = Timer.periodic(const Duration(minutes: 15), (_) {
-      refreshRuleSets();
-    });
   }
 
   /// Bring the RecurseX front-end up when the DNS settings ask for local
@@ -440,7 +490,9 @@ class AppStateProvider extends ChangeNotifier {
       return;
     }
     try {
-      _systemInfo = await getSystemInfo();
+      final info = await getSystemInfo();
+      if (info == _systemInfo) return;
+      _systemInfo = info;
       notifyListeners();
     } catch (e) {
       debugPrint('Failed to load system info: $e');
@@ -469,7 +521,7 @@ class AppStateProvider extends ChangeNotifier {
       // may have changed (ports, mode, rule sets) since the last run, and
       // `initialize_corduit` is also what releases a previous instance.
       debugPrint('Re-initializing VeloGuard...');
-      await _initializeFromActiveProfile();
+      await _initializeFromActiveProfile(startResolver: true);
 
       if (!_isInitialized) {
         debugPrint('Cannot start service: No profile selected');
@@ -481,6 +533,7 @@ class AppStateProvider extends ChangeNotifier {
 
       // Set running state immediately after successful start
       _isServiceRunning = true;
+      _syncTimers();
       notifyListeners();
 
       // Wait a moment for the proxy to fully start
@@ -499,7 +552,7 @@ class AppStateProvider extends ChangeNotifier {
       }
 
       // Start status timer for periodic updates
-      _startStatusTimer();
+      _syncTimers();
 
       // Windows: Auto enable system proxy if setting is enabled
       if (Platform.isWindows && _autoSystemProxy) {
@@ -558,7 +611,8 @@ class AppStateProvider extends ChangeNotifier {
       debugPrint('Stopping VeloGuard service...');
 
       // Stop status timer first to prevent concurrent refresh during shutdown
-      _stopStatusTimer();
+      _isServiceRunning = false;
+      _syncTimers();
 
       // Android: take the VPN down before the engine stops, so no packet
       // processor is left reading a closed descriptor.
@@ -595,8 +649,8 @@ class AppStateProvider extends ChangeNotifier {
       debugPrint('VeloGuard service stopped');
     } catch (e) {
       debugPrint('Failed to stop service: $e');
-      _stopStatusTimer();
       _isServiceRunning = false;
+      _syncTimers();
       _isInitialized = false;
       _currentUploadSpeed = BigInt.zero;
       _currentDownloadSpeed = BigInt.zero;
@@ -639,6 +693,19 @@ class AppStateProvider extends ChangeNotifier {
   // Flag to prevent concurrent refresh calls
   bool _isRefreshing = false;
 
+  /// Sample the engine's live figures.
+  ///
+  /// Two rules keep this affordable:
+  ///
+  /// * **Sample as little as the screen needs.** The traffic figure feeds a
+  ///   live chart, so it is read on every tick. The status and the lifetime
+  ///   counters feed a summary card, so they ride a slower beat — they used to
+  ///   be read every second, which meant four FFI hops per second, forever, to
+  ///   discover that nothing had changed. The connection list is not read here
+  ///   at all: its screen asks for it through [refreshConnections].
+  /// * **Only speak up when something changed.** An idle proxy produces the
+  ///   same zero speeds every tick; notifying on those rebuilds the home
+  ///   screen once a second for no visible difference.
   Future<void> _refreshStatus() async {
     if (!NativeCoreService.instance.isReady) {
       debugPrint('Skipping status refresh: RustLib not initialized');
@@ -652,66 +719,68 @@ class AppStateProvider extends ChangeNotifier {
     _isRefreshing = true;
 
     try {
-      _proxyStatus = await getCorduitStatus();
-      _trafficStats = await getTrafficStats();
+      var changed = false;
+      _statusTicks++;
+      final sampleSlow = _statusTicks % _slowPollEveryTicks == 0;
 
-      // Only update isServiceRunning from proxyStatus if we got a valid response
-      // and the service was not just started (to avoid race conditions)
-      if (_proxyStatus != null) {
-        // If proxy reports running, update our state
-        // If proxy reports not running but we think it's running, log a warning
-        // but don't immediately change state (could be a temporary issue)
-        if (_proxyStatus!.running) {
-          _isServiceRunning = true;
-        } else if (_isServiceRunning && !_isLoading) {
-          // Proxy reports not running but we think it is
-          // This could be a real stop or a temporary issue
-          debugPrint(
-            'WARNING: Proxy reports not running, but _isServiceRunning is true',
-          );
-          // Only update if we're not in the middle of starting/stopping
-          _isServiceRunning = false;
+      if (sampleSlow) {
+        final status = await getCorduitStatus();
+        if (status != _proxyStatus) {
+          _proxyStatus = status;
+          changed = true;
+        }
+
+        // Only update isServiceRunning from proxyStatus if we got a valid
+        // response and the service was not just started (to avoid races).
+        if (_proxyStatus != null) {
+          if (_proxyStatus!.running) {
+            if (!_isServiceRunning) {
+              _isServiceRunning = true;
+              changed = true;
+              _syncTimers();
+            }
+          } else if (_isServiceRunning && !_isLoading) {
+            // The proxy reports not running but we think it is: either it was
+            // stopped from outside or it died. Stop the poll and say so.
+            debugPrint(
+              'WARNING: Proxy reports not running, but _isServiceRunning is true',
+            );
+            _isServiceRunning = false;
+            changed = true;
+            _syncTimers();
+          }
         }
       }
 
-      // Use speed values directly from Rust tracker
-      if (_trafficStats != null) {
-        _currentUploadSpeed = _trafficStats!.uploadSpeed;
-        _currentDownloadSpeed = _trafficStats!.downloadSpeed;
+      final traffic = await getTrafficStats();
+      if (traffic != _trafficStats) {
+        _trafficStats = traffic;
+        changed = true;
       }
 
-      if (!_isServiceRunning) {
+      // Use speed values directly from Rust tracker.
+      if (_trafficStats != null) {
+        final upload = _trafficStats!.uploadSpeed;
+        final download = _trafficStats!.downloadSpeed;
+        if (upload != _currentUploadSpeed) {
+          _currentUploadSpeed = upload;
+          changed = true;
+        }
+        if (download != _currentDownloadSpeed) {
+          _currentDownloadSpeed = download;
+          changed = true;
+        }
+      }
+
+      if (!_isServiceRunning &&
+          (_currentUploadSpeed != BigInt.zero ||
+              _currentDownloadSpeed != BigInt.zero)) {
         _currentUploadSpeed = BigInt.zero;
         _currentDownloadSpeed = BigInt.zero;
+        changed = true;
       }
 
-      // The connection list is only visible on its own screen and changes
-      // slowly; polling it every third tick keeps the one-second refresh to
-      // two bridge calls in the common case.
-      _statusTicks++;
-      if (_statusTicks % 3 == 0 || _activeConnections.isEmpty) {
-        _activeConnections = await getActiveConnections();
-      }
-
-      // Get connection stats from tracker
-      // Returns (total_count, total_upload, total_download, active_count) - all BigInt
-      final stats = await getConnectionStats();
-      _totalConnections = stats.$1;
-      _totalUploadBytes = stats.$2;
-      _totalDownloadBytes = stats.$3;
-      _activeConnectionCount = stats.$4;
-
-      // Auto-start status timer if service is running and timer not active
-      if (_isServiceRunning && _statusTimer == null) {
-        _startStatusTimer();
-      }
-
-      // Stop timer if service is down
-      if (!_isServiceRunning && _statusTimer != null) {
-        _stopStatusTimer();
-      }
-
-      notifyListeners();
+      if (changed) notifyListeners();
     } catch (e) {
       debugPrint('Failed to refresh status: $e');
     } finally {
@@ -719,8 +788,62 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
+  /// Manual refresh (pull to refresh, the app-bar button, returning to a
+  /// screen). Forces the slower samples as well, so a deliberate refresh
+  /// really does refresh everything instead of waiting for the next slow tick.
   Future<void> refreshStatus() async {
+    _statusTicks = _slowPollEveryTicks - 1;
     await _refreshStatus();
+  }
+
+  // ---- Connection list -------------------------------------------------------
+
+  bool _isRefreshingConnections = false;
+
+  /// Re-read the connection list and the lifetime counters that head it.
+  ///
+  /// Driven by the connections screen while it is on top. A full connection
+  /// list is the most expensive thing the bridge can be asked for, and both
+  /// halves of the answer only exist to fill a screen nobody else can see, so
+  /// neither belongs on a tick that runs everywhere.
+  Future<void> refreshConnections() async {
+    if (!NativeCoreService.instance.isReady || !_isServiceRunning) return;
+    if (_isRefreshingConnections) return;
+    _isRefreshingConnections = true;
+    try {
+      var changed = false;
+
+      final connections = await getActiveConnections();
+      if (!listEquals(connections, _activeConnections)) {
+        _activeConnections = connections;
+        changed = true;
+      }
+
+      // (total_count, total_upload, total_download, active_count)
+      final stats = await getConnectionStats();
+      if (stats.$1 != _totalConnections) {
+        _totalConnections = stats.$1;
+        changed = true;
+      }
+      if (stats.$2 != _totalUploadBytes) {
+        _totalUploadBytes = stats.$2;
+        changed = true;
+      }
+      if (stats.$3 != _totalDownloadBytes) {
+        _totalDownloadBytes = stats.$3;
+        changed = true;
+      }
+      if (stats.$4 != _activeConnectionCount) {
+        _activeConnectionCount = stats.$4;
+        changed = true;
+      }
+
+      if (changed) notifyListeners();
+    } catch (e) {
+      debugPrint('Failed to refresh connections: $e');
+    } finally {
+      _isRefreshingConnections = false;
+    }
   }
 
   // Configuration management

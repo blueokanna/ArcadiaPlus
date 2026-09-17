@@ -90,7 +90,6 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              // Header
               Row(
                 children: [
                   Text(
@@ -191,7 +190,6 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header - 紧贴顶部
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
               child: Row(
@@ -212,7 +210,6 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // 代理组选择�?
             _buildGroupSelector(
               context,
               provider,
@@ -221,7 +218,6 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
               textTheme,
             ),
             const SizedBox(height: 16),
-            // 代理列表
             Expanded(
               child: provider.selectedGroup != null
                   ? _buildProxiesGrid(
@@ -250,7 +246,6 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Row(
@@ -283,7 +278,6 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        // 横向滚动的代理组列表
         SizedBox(
           height: 48,
           child: ScrollConfiguration(
@@ -549,7 +543,6 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
   }
 }
 
-// 代理卡片组件 - 优化显示，名称可滚动
 class _ProxyCard extends StatelessWidget {
   final String name;
   final String type;
@@ -610,7 +603,6 @@ class _ProxyCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 顶部：国�?图标 + 选中标记
               Row(
                 children: [
                   if (flag != null)
@@ -648,7 +640,6 @@ class _ProxyCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-              // 名称 - 单独一行，可滚�?
               Expanded(
                 child: _FittedLabel(
                   text: displayName,
@@ -661,7 +652,6 @@ class _ProxyCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              // 底部：类�?+ 延迟
               Row(
                 children: [
                   _buildTypeBadge(),
@@ -749,11 +739,9 @@ class _ProxyCard extends StatelessWidget {
   }
 
   String? _getCountryFlag(String name) {
-    // 先检查名称中是否已经包含 emoji 国旗
     final emojiPattern = RegExp(r'[\u{1F1E0}-\u{1F1FF}]{2}', unicode: true);
     final existingFlag = emojiPattern.firstMatch(name);
     if (existingFlag != null) {
-      // 名称中已有国旗，不再添加
       return null;
     }
 
@@ -774,7 +762,6 @@ class _ProxyCard extends StatelessWidget {
       '🇳🇱': ['荷兰', 'Netherlands'],
     };
 
-    // 检查名称中是否包含国家/地区关键词（不包括短代码如 HK、JP）
     for (final entry in patterns.entries) {
       for (final pattern in entry.value) {
         if (name.contains(pattern)) {
@@ -791,7 +778,6 @@ class _ProxyCard extends StatelessWidget {
   }
 }
 
-/// 滚动文字组件 - 文字过长时自动滚�?
 class _FittedLabel extends StatelessWidget {
   final String text;
   final TextStyle? style;
@@ -811,7 +797,6 @@ class _FittedLabel extends StatelessWidget {
   }
 }
 
-// 特殊卡片（DIRECT/REJECT�?
 class _SpecialCard extends StatelessWidget {
   final String name;
   final bool isSelected;

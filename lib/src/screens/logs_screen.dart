@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:veloguard/src/rust/api.dart' as rust_api;
+import 'package:veloguard/src/utils/app_lifecycle.dart';
 import 'package:veloguard/src/utils/platform_utils.dart';
 import 'package:veloguard/src/l10n/app_localizations.dart';
 import 'package:veloguard/src/services/native_core_service.dart';
@@ -21,26 +23,47 @@ class _LogsScreenState extends State<LogsScreen> {
   final ScrollController _scrollController = ScrollController();
   String _filterLevel = 'all';
 
+  /// The filtered view is derived, and deriving it costs a pass over every
+  /// line with several `contains` checks each. Caching it keeps that pass out
+  /// of `build`, which otherwise repeated it on every frame of a scroll.
+  List<String>? _filteredCache;
+  String? _filteredCacheLevel;
+
+  /// How often the log buffer is re-read while the screen is visible.
+  static const Duration _refreshInterval = Duration(seconds: 3);
+
   @override
   void initState() {
     super.initState();
     _loadLogs();
-    _startAutoRefresh();
+    AppLifecycle.instance.active.addListener(_syncAutoRefresh);
+    _syncAutoRefresh();
   }
 
   @override
   void dispose() {
+    AppLifecycle.instance.active.removeListener(_syncAutoRefresh);
     _refreshTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
 
-  void _startAutoRefresh() {
-    _refreshTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      if (_autoRefresh && mounted) {
-        _loadLogs(scrollToBottom: false);
-      }
-    });
+  /// The log poll runs only while the log view can actually be seen and the
+  /// user has left auto-refresh on.
+  ///
+  /// It used to be a flat two-second timer, alive for as long as the screen
+  /// existed: two thousand lines pulled across the bridge every tick, and a
+  /// rebuild and re-filter of all of them, to redraw text that had not moved.
+  /// Most of that work disappeared the moment it was made conditional.
+  void _syncAutoRefresh() {
+    if (_autoRefresh && AppLifecycle.instance.isActive) {
+      _refreshTimer ??= Timer.periodic(_refreshInterval, (_) {
+        if (mounted) _loadLogs(scrollToBottom: false);
+      });
+    } else {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+    }
   }
 
   Future<void> _loadLogs({bool scrollToBottom = true}) async {
@@ -58,27 +81,36 @@ class _LogsScreenState extends State<LogsScreen> {
 
       // Request more logs (up to 2000) to show more history
       final logs = await rust_api.getLogs(lines: 2000);
-      if (mounted) {
-        setState(() {
-          _logs = logs;
-          _isLoading = false;
+      if (!mounted) return;
+
+      // Nothing new to show: leave the list alone. This is both the common
+      // case for an idle app and the expensive one — a fresh list means
+      // re-filtering every line and rebuilding the list view.
+      if (listEquals(logs, _logs)) return;
+
+      setState(() {
+        _logs = logs;
+        _filteredCache = null;
+        _filteredCacheLevel = null;
+        _isLoading = false;
+      });
+      if (scrollToBottom && _scrollController.hasClients) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              _scrollController.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
         });
-        if (scrollToBottom && _scrollController.hasClients) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) {
-              _scrollController.animateTo(
-                _scrollController.position.maxScrollExtent,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            }
-          });
-        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _logs = ['Error loading logs: $e'];
+          _filteredCache = null;
+          _filteredCacheLevel = null;
           _isLoading = false;
         });
       }
@@ -86,30 +118,34 @@ class _LogsScreenState extends State<LogsScreen> {
   }
 
   List<String> get _filteredLogs {
-    if (_filterLevel == 'all') return _logs;
-    return _logs.where((log) {
-      final upperLog = log.toUpperCase();
-      switch (_filterLevel) {
-        case 'error':
-          return upperLog.contains('[ERROR]') || upperLog.contains('ERROR');
-        case 'warn':
-          return upperLog.contains('[WARN]') ||
-              upperLog.contains('WARN') ||
-              upperLog.contains('[ERROR]') ||
-              upperLog.contains('ERROR');
-        case 'info':
-          return upperLog.contains('[INFO]') ||
-              upperLog.contains('INFO') ||
-              upperLog.contains('[WARN]') ||
-              upperLog.contains('WARN') ||
-              upperLog.contains('[ERROR]') ||
-              upperLog.contains('ERROR');
-        case 'debug':
-          return true; // Show all for debug
-        default:
-          return true;
-      }
-    }).toList();
+    final cached = _filteredCache;
+    if (cached != null && _filteredCacheLevel == _filterLevel) return cached;
+
+    final filtered = _filterLevel == 'all'
+        ? _logs
+        : _logs.where((log) {
+            // Uppercased once per line rather than once per pattern.
+            final upperLog = log.toUpperCase();
+            final isError = upperLog.contains('ERROR');
+            final isWarning = upperLog.contains('WARN');
+            final isInfo = upperLog.contains('INFO');
+            switch (_filterLevel) {
+              case 'error':
+                return isError;
+              case 'warn':
+                return isError || isWarning;
+              case 'info':
+                return isError || isWarning || isInfo;
+              case 'debug':
+                return true; // Show all for debug
+              default:
+                return true;
+            }
+          }).toList();
+
+    _filteredCache = filtered;
+    _filteredCacheLevel = _filterLevel;
+    return filtered;
   }
 
   Color _getLogColor(String log, ColorScheme colorScheme) {
@@ -206,6 +242,7 @@ class _LogsScreenState extends State<LogsScreen> {
               setState(() {
                 _autoRefresh = !_autoRefresh;
               });
+              _syncAutoRefresh();
             },
           ),
           // Manual refresh

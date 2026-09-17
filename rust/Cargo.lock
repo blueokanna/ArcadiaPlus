@@ -263,9 +263,9 @@ dependencies = [
 
 [[package]]
 name = "corduit"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c81eaf2f87a4c74e68d039fccfb75d1004f2d0ef26de93428443ce110b14c877"
+checksum = "1f7aebe18683bd97f5a1e7e57025fa6da668401b8b9db641d3875fee85c973f2"
 dependencies = [
  "bitflags 2.13.1",
  "bytes",
@@ -790,7 +790,7 @@ checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "lib-veloguard"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "corduit",
  "flutter_rust_bridge",

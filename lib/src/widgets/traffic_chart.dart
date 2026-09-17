@@ -10,6 +10,7 @@ import 'package:veloguard/src/rust/types.dart';
 import 'package:veloguard/src/l10n/app_localizations.dart';
 import 'package:veloguard/src/utils/responsive_utils.dart';
 import 'package:veloguard/src/utils/animation_utils.dart';
+import 'package:veloguard/src/utils/app_lifecycle.dart';
 import 'package:veloguard/src/providers/proxies_provider.dart'
     show proxySelectionChangedController;
 
@@ -85,14 +86,11 @@ class TrafficHistoryManager {
 
 final trafficHistoryManager = TrafficHistoryManager();
 
-/// 流量统计组件 - 包含下载、上传、IP 三列布局
 class TrafficChart extends StatefulWidget {
   final TrafficStats trafficStats;
   final BigInt downloadSpeed;
   final BigInt uploadSpeed;
   final bool isProxyRunning;
-
-  /// 本地混合入站端口（与应用设置保持一致）。
   final int proxyPort;
 
   const TrafficChart({
@@ -108,7 +106,6 @@ class TrafficChart extends StatefulWidget {
   State<TrafficChart> createState() => _TrafficChartState();
 }
 
-/// IP 信息数据类
 class IpInfo {
   final String ip;
   final String? country;
@@ -152,15 +149,12 @@ class _IpInfoCache {
   DateTime? lastFetchTime;
   bool? lastProxyState;
 
-  /// Cache duration - 5 minutes
   static const cacheDuration = Duration(minutes: 5);
 
   bool shouldRefresh(bool isProxyRunning) {
-    // Refresh if proxy state changed
     if (lastProxyState != null && lastProxyState != isProxyRunning) {
       return true;
     }
-    // Refresh if cache expired
     if (lastFetchTime == null) {
       return true;
     }
@@ -196,27 +190,25 @@ class _TrafficChartState extends State<TrafficChart>
   @override
   void initState() {
     super.initState();
-    trafficHistoryManager.addDataPointWithSpeed(
-      widget.downloadSpeed,
-      widget.uploadSpeed,
-    );
+    _recordSample();
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    );
+    // The pulse marks "traffic is moving", so it has to be tied to traffic
+    // rather than to the widget's lifetime.
+    AppLifecycle.instance.active.addListener(_syncPulse);
+    _syncPulse();
 
-    // Use cached data if available
     if (_ipInfoCache.ipv4Info != null || _ipInfoCache.ipv6Info != null) {
       _ipv4Info = _ipInfoCache.ipv4Info;
       _ipv6Info = _ipInfoCache.ipv6Info;
     }
 
-    // Only fetch if cache needs refresh
     if (_ipInfoCache.shouldRefresh(widget.isProxyRunning)) {
       _fetchIpInfo();
     }
 
-    // Listen for proxy selection changes
     _proxySelectionSubscription = proxySelectionChangedController.stream.listen(
       (_) {
         // Clear cache and refresh IP when proxy selection changes
@@ -228,26 +220,65 @@ class _TrafficChartState extends State<TrafficChart>
     );
   }
 
+  DateTime? _lastSampleAt;
+
+  /// Record one traffic sample.
+  ///
+  /// Spaced by time rather than by rebuild: a rebuild caused by something other
+  /// than a fresh sample — a port change, a theme change — would otherwise
+  /// insert a second point for the same instant and compress the timeline.
+  void _recordSample() {
+    final now = DateTime.now();
+    final last = _lastSampleAt;
+    if (last != null &&
+        now.difference(last) < const Duration(milliseconds: 900)) {
+      return;
+    }
+    _lastSampleAt = now;
+    trafficHistoryManager.addDataPointWithSpeed(
+      widget.downloadSpeed,
+      widget.uploadSpeed,
+    );
+  }
+
+  /// Whether the pulse has any reason to run: traffic flowing, proxy up, app
+  /// on screen. Anything else means the animation would be paying for a
+  /// repaint nobody can see a difference in.
+  bool get _pulseWanted =>
+      mounted &&
+      AppLifecycle.instance.isActive &&
+      widget.isProxyRunning &&
+      (widget.downloadSpeed > BigInt.zero || widget.uploadSpeed > BigInt.zero);
+
+  void _syncPulse() {
+    if (!mounted) return;
+    if (_pulseWanted) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    } else if (_pulseController.isAnimating) {
+      _pulseController.stop();
+      _pulseController.value = 0;
+    }
+  }
+
   @override
   void didUpdateWidget(TrafficChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.downloadSpeed != oldWidget.downloadSpeed ||
         widget.uploadSpeed != oldWidget.uploadSpeed) {
-      trafficHistoryManager.addDataPointWithSpeed(
-        widget.downloadSpeed,
-        widget.uploadSpeed,
-      );
+      _recordSample();
     }
-    // 代理状态变化时刷新 IP (only if state actually changed)
     if (widget.isProxyRunning != oldWidget.isProxyRunning) {
-      // Clear cache when proxy state changes
       _ipInfoCache.clear();
       Future.delayed(const Duration(milliseconds: 500), _fetchIpInfo);
     }
+    _syncPulse();
   }
 
   @override
   void dispose() {
+    AppLifecycle.instance.active.removeListener(_syncPulse);
     _pulseController.dispose();
     _proxySelectionSubscription?.cancel();
     super.dispose();
@@ -260,10 +291,8 @@ class _TrafficChartState extends State<TrafficChart>
       _ipError = null;
     });
 
-    // Fetch IPv4 and IPv6 info in parallel
     await Future.wait([_fetchIpv4Info(), _fetchIpv6Info()]);
 
-    // Update cache
     _ipInfoCache.update(
       ipv4: _ipv4Info,
       ipv6: _ipv6Info,
@@ -275,7 +304,6 @@ class _TrafficChartState extends State<TrafficChart>
     }
   }
 
-  /// Create Dio client with optional proxy support
   Dio _createDioClient({bool useProxy = false}) {
     final dio = Dio(
       BaseOptions(
@@ -286,12 +314,10 @@ class _TrafficChartState extends State<TrafficChart>
     );
 
     if (useProxy) {
-      // Route through local proxy to get exit IP
       final port = widget.proxyPort;
       dio.httpClientAdapter = IOHttpClientAdapter(
         createHttpClient: () {
           final client = HttpClient();
-          // Use local HTTP proxy (mixed port)
           client.findProxy = (uri) => 'PROXY 127.0.0.1:$port';
           return client;
         },
@@ -303,10 +329,7 @@ class _TrafficChartState extends State<TrafficChart>
 
   Future<void> _fetchIpv4Info() async {
     try {
-      // Use proxy when proxy is running to get exit IP
       final dio = _createDioClient(useProxy: widget.isProxyRunning);
-
-      // Use ip.sb API for detailed info
       final response = await dio.get('https://api.ip.sb/geoip');
 
       if (response.statusCode == 200) {
@@ -339,7 +362,6 @@ class _TrafficChartState extends State<TrafficChart>
         }
         return;
       }
-      // Fallback to simple IP API
       try {
         final dio = _createDioClient(useProxy: widget.isProxyRunning);
         final response = await dio.get('https://api.ip.sb/ip');
@@ -385,17 +407,13 @@ class _TrafficChartState extends State<TrafficChart>
 
   Future<void> _fetchIpv6Info() async {
     try {
-      // Use proxy when proxy is running to get exit IP
       final dio = _createDioClient(useProxy: widget.isProxyRunning);
-
-      // Try IPv6-only endpoint
       final response = await dio.get('https://api-ipv6.ip.sb/geoip');
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
         final ip = data['ip']?.toString() ?? '';
 
-        // Only set if it's actually IPv6
         if (ip.contains(':') && mounted) {
           setState(() {
             _ipv6Info = IpInfo(
@@ -412,7 +430,6 @@ class _TrafficChartState extends State<TrafficChart>
       }
       dio.close();
     } catch (e) {
-      // IPv6 not available, that's fine
       debugPrint('IPv6 not available: $e');
     }
   }
@@ -434,10 +451,8 @@ class _TrafficChartState extends State<TrafficChart>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 第一行：下载 | 上传
         Row(
           children: [
-            // 下载卡片
             Expanded(
               child: _TrafficStatCard(
                 icon: Icons.arrow_downward_rounded,
@@ -452,7 +467,6 @@ class _TrafficChartState extends State<TrafficChart>
               ),
             ),
             SizedBox(width: spacing),
-            // 上传卡片
             Expanded(
               child: _TrafficStatCard(
                 icon: Icons.arrow_upward_rounded,
@@ -471,7 +485,6 @@ class _TrafficChartState extends State<TrafficChart>
 
         SizedBox(height: spacing),
 
-        // 第二行：IP 信息卡片（全宽）- 显示 IPv4/IPv6 和地理位置
         _IpInfoCard(
           ipv4Info: _ipv4Info,
           ipv6Info: _ipv6Info,
@@ -485,7 +498,6 @@ class _TrafficChartState extends State<TrafficChart>
 
         SizedBox(height: spacing * 2),
 
-        // Traffic Chart Card
         Card(
           elevation: 0,
           color: colorScheme.surfaceContainerLow,
@@ -497,7 +509,6 @@ class _TrafficChartState extends State<TrafficChart>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Chart header
                 Row(
                   children: [
                     Icon(
@@ -525,7 +536,6 @@ class _TrafficChartState extends State<TrafficChart>
 
                 SizedBox(height: spacing * 2),
 
-                // Chart
                 SizedBox(
                   height: chartHeight - 60,
                   child: downloadSpots.isEmpty || uploadSpots.isEmpty
@@ -718,7 +728,6 @@ class _TrafficChartState extends State<TrafficChart>
   }
 }
 
-/// 流量统计卡片
 class _TrafficStatCard extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -759,7 +768,6 @@ class _TrafficStatCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // 图标和标题
             Row(
               children: [
                 AnimatedBuilder(
@@ -802,7 +810,6 @@ class _TrafficStatCard extends StatelessWidget {
 
             SizedBox(height: spacing * 0.5),
 
-            // 总计
             Row(
               children: [
                 Icon(
@@ -857,8 +864,6 @@ class _IpInfoCard extends StatelessWidget {
     final spacing = ResponsiveUtils.getSpacing(context);
     final statusColor = isProxyRunning ? Colors.green : colorScheme.outline;
     final l10n = AppLocalizations.of(context);
-
-    // 主要显示的 IP 信息（优先 IPv4）
     final primaryInfo = ipv4Info ?? ipv6Info;
 
     return Card(
@@ -891,7 +896,6 @@ class _IpInfoCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 顶部：状态和刷新
               Row(
                 children: [
                   // 状态图标
@@ -910,7 +914,6 @@ class _IpInfoCard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(width: spacing),
-                  // 状态文字
                   Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: spacing,
@@ -945,7 +948,6 @@ class _IpInfoCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  // 地理位置和国旗
                   if (primaryInfo != null) ...[
                     Text(
                       primaryInfo.flag,
@@ -979,7 +981,6 @@ class _IpInfoCard extends StatelessWidget {
 
               SizedBox(height: spacing),
 
-              // IPv4 信息
               if (ipv4Info != null)
                 _buildIpRow(
                   context,
@@ -1001,7 +1002,6 @@ class _IpInfoCard extends StatelessWidget {
                 ),
               ],
 
-              // 错误信息显示（支持滚动）
               if (error != null && ipv4Info == null && ipv6Info == null)
                 _AutoScrollText(
                   text: error!,
@@ -1012,7 +1012,6 @@ class _IpInfoCard extends StatelessWidget {
                   isError: true,
                 ),
 
-              // 无 IP 时显示占位
               if (ipv4Info == null && ipv6Info == null && error == null)
                 Text(
                   '--',
@@ -1041,7 +1040,6 @@ class _IpInfoCard extends StatelessWidget {
 
     return Row(
       children: [
-        // IP 版本标签
         Container(
           padding: EdgeInsets.symmetric(
             horizontal: spacing * 0.75,
@@ -1065,7 +1063,6 @@ class _IpInfoCard extends StatelessWidget {
           ),
         ),
         SizedBox(width: spacing),
-        // IP 地址 - IPv6 使用自动滚动
         Expanded(
           child: isIpv6
               ? _AutoScrollText(
@@ -1145,10 +1142,13 @@ class _AutoScrollTextState extends State<_AutoScrollText>
       vsync: this,
       duration: const Duration(seconds: 8),
     );
+    _animationController.addListener(_applyScrollOffset);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkScrollNeeded();
     });
+
+    AppLifecycle.instance.active.addListener(_syncAutoScroll);
   }
 
   void _checkScrollNeeded() {
@@ -1171,29 +1171,42 @@ class _AutoScrollTextState extends State<_AutoScrollText>
 
   void _startAutoScroll() {
     if (!_needsScroll || !mounted) return;
+    _syncAutoScroll();
+  }
 
-    _animationController.addListener(() {
-      if (!mounted || !_scrollController.hasClients) return;
+  /// Park the scroll offset for the current animation phase.
+  ///
+  /// Registered once from `initState`; it used to be added from
+  /// `_startAutoScroll`, which can run more than once, so a rebuild could
+  /// leave several copies racing to jump the same scroll controller.
+  void _applyScrollOffset() {
+    if (!mounted || !_scrollController.hasClients) return;
 
-      // 使用正弦波实现来回滚动效果
-      final progress = _animationController.value;
+    final progress = _animationController.value;
 
-      // 简单的来回滚动
-      if (progress < 0.45) {
-        // 向右滚动
-        _scrollController.jumpTo(_maxScrollExtent * (progress / 0.45));
-      } else if (progress < 0.55) {
-        // 停顿
-        _scrollController.jumpTo(_maxScrollExtent);
-      } else {
-        // 向左滚动
-        _scrollController.jumpTo(
-          _maxScrollExtent * (1 - (progress - 0.55) / 0.45),
-        );
+    if (progress < 0.45) {
+      _scrollController.jumpTo(_maxScrollExtent * (progress / 0.45));
+    } else if (progress < 0.55) {
+      _scrollController.jumpTo(_maxScrollExtent);
+    } else {
+      _scrollController.jumpTo(
+        _maxScrollExtent * (1 - (progress - 0.55) / 0.45),
+      );
+    }
+  }
+
+  /// Run the marquee only while the text actually overflows and the app is on
+  /// screen; otherwise leave the controller parked at rest.
+  void _syncAutoScroll() {
+    if (!mounted) return;
+    final wanted = _needsScroll && AppLifecycle.instance.isActive;
+    if (wanted) {
+      if (!_animationController.isAnimating) {
+        _animationController.repeat();
       }
-    });
-
-    _animationController.repeat();
+    } else if (_animationController.isAnimating) {
+      _animationController.stop();
+    }
   }
 
   @override
@@ -1211,6 +1224,8 @@ class _AutoScrollTextState extends State<_AutoScrollText>
 
   @override
   void dispose() {
+    AppLifecycle.instance.active.removeListener(_syncAutoScroll);
+    _animationController.removeListener(_applyScrollOffset);
     _animationController.dispose();
     _scrollController.dispose();
     super.dispose();

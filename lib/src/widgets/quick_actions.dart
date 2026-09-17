@@ -104,8 +104,6 @@ class _QuickActionsState extends State<QuickActions> {
 
   Future<void> _switchProxyMode(ProxyMode mode) async {
     if (_isUpdating) return;
-
-    // 检查服务是否正在运行
     final appState = context.read<AppStateProvider>();
 
     setState(() {
@@ -171,7 +169,6 @@ class _QuickActionsState extends State<QuickActions> {
 
     return Column(
       children: [
-        // 服务状态显示
         _ServiceStatusCard(
           isRunning: isServiceRunning,
           isTunEnabled: tunEnabled,
@@ -196,7 +193,6 @@ class _QuickActionsState extends State<QuickActions> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // 如果宽度小于 500，使用垂直布局
         if (constraints.maxWidth < 500) {
           return Column(
             children: [
@@ -231,7 +227,6 @@ class _QuickActionsState extends State<QuickActions> {
           );
         }
 
-        // 宽度足够时使用水平布局
         return IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -453,7 +448,6 @@ class _ServiceStatusCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            // 图标
             AnimatedContainer(
               duration: AnimationUtils.stateChangeDuration,
               curve: AnimationUtils.stateChangeCurve,
@@ -535,7 +529,6 @@ class _ServiceStatusCard extends StatelessWidget {
                 ],
               ),
             ),
-            // 状态指示器
             if (isActive)
               Icon(Icons.check_circle_rounded, color: Colors.green, size: 24)
             else if (isRunning)
@@ -554,7 +547,6 @@ class _ServiceStatusCard extends StatelessWidget {
   }
 }
 
-/// 简化的代理模式选择器 - 仅用于切换模式
 class _ProxyModeSelectorSimple extends StatelessWidget {
   final ProxyMode currentMode;
   final bool isEnabled;

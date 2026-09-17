@@ -29,7 +29,6 @@ class PlatformUtils {
     return false;
   }
 
-  /// 异步检测鸿蒙系统（更准确，可以检测基于 Android 的鸿蒙）
   static Future<bool> checkHarmonyOS() async {
     if (_isHarmonyOS != null) return _isHarmonyOS!;
 
@@ -38,7 +37,6 @@ class PlatformUtils {
       return false;
     }
 
-    // 先检查 OHOS 平台
     try {
       final os = Platform.operatingSystem.toLowerCase();
       if (os == 'ohos' || os == 'harmonyos') {
@@ -46,10 +44,9 @@ class PlatformUtils {
         return true;
       }
     } catch (e) {
-      // 忽略错误
+      debugPrint('Failed to detect HarmonyOS: $e');
     }
 
-    // 对于 Android 平台，尝试检测是否为鸿蒙
     if (Platform.isAndroid) {
       try {
         const channel = MethodChannel('com.veloguard/proxy');
@@ -62,13 +59,10 @@ class PlatformUtils {
           final brand = (deviceInfo['brand'] as String?)?.toUpperCase() ?? '';
           final manufacturer =
               (deviceInfo['manufacturer'] as String?)?.toUpperCase() ?? '';
-          // 华为设备可能运行鸿蒙
           if (brand == 'HUAWEI' ||
               brand == 'HONOR' ||
               manufacturer == 'HUAWEI' ||
               manufacturer == 'HONOR') {
-            // 进一步检测系统版本或特征
-            // 注意：这只是一个启发式检测，不是100%准确
             final display =
                 (deviceInfo['display'] as String?)?.toLowerCase() ?? '';
             if (display.contains('harmonyos') || display.contains('hmos')) {
@@ -91,7 +85,6 @@ class PlatformUtils {
         (Platform.isWindows || Platform.isLinux || Platform.isMacOS);
   }
 
-  /// 是否为移动平台（Android/iOS/鸿蒙）
   static bool get isMobile {
     if (kIsWeb) return false;
     return Platform.isAndroid || Platform.isIOS || isHarmonyOS;
@@ -127,14 +120,13 @@ class PlatformUtils {
     }
   }
 
-  // Window management for desktop platforms
   static Future<void> initDesktopWindow() async {
     if (!isDesktop) return;
 
     await windowManager.ensureInitialized();
 
     const windowOptions = WindowOptions(
-      size: Size(800, 800), // 默认窗口大小 800x800
+      size: Size(1200, 800),
       minimumSize: Size(600, 600),
       center: true,
       title: 'VeloGuard',
@@ -147,12 +139,10 @@ class PlatformUtils {
     });
   }
 
-  // Get platform-specific padding - 使用响应式工具
   static EdgeInsets getPlatformPadding(BuildContext context) {
     return ResponsiveUtils.getResponsivePadding(context);
   }
 
-  // Get platform-specific app bar height
   static double getAppBarHeight([BuildContext? context]) {
     if (context != null) {
       return ResponsiveUtils.getAppBarHeight(context);
@@ -164,7 +154,6 @@ class PlatformUtils {
     }
   }
 
-  // Get platform-specific card elevation
   static double getCardElevation() {
     if (isDesktop) {
       return 2;
@@ -173,7 +162,6 @@ class PlatformUtils {
     }
   }
 
-  // Get platform-specific border radius
   static BorderRadius getBorderRadius([BuildContext? context]) {
     if (context != null) {
       return ResponsiveUtils.getCardBorderRadius(context);
@@ -235,7 +223,6 @@ class PlatformUtils {
     }
   }
 
-  // Platform-specific navigation behavior
   static bool shouldUseBottomNavigation([BuildContext? context]) {
     if (context != null) {
       return ResponsiveUtils.shouldShowBottomNav(context);
@@ -262,12 +249,10 @@ class PlatformUtils {
     }
   }
 
-  // Platform-specific dialog width
   static double getDialogWidth(BuildContext context) {
     return ResponsiveUtils.getDialogMaxWidth(context);
   }
 
-  // Platform-specific dialog height
   static double? getDialogHeight(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
     if (isDesktop) {
@@ -277,12 +262,10 @@ class PlatformUtils {
     }
   }
 
-  // Platform-specific grid layout
   static int getGridCrossAxisCount(BuildContext context) {
     return ResponsiveUtils.getGridColumnCount(context);
   }
 
-  // Platform-specific list item height
   static double getListItemHeight([BuildContext? context]) {
     if (context != null) {
       return ResponsiveUtils.getListItemHeight(context);
@@ -294,7 +277,6 @@ class PlatformUtils {
     }
   }
 
-  // Platform-specific FAB size
   static FloatingActionButtonLocation getFabLocation() {
     return FloatingActionButtonLocation.endFloat;
   }

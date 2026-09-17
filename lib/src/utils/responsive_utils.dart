@@ -2,21 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
-/// 璁惧绫诲瀷鏋氫妇
-enum DeviceType {
-  phone, // 鎵嬫満
-  tablet, // 骞虫澘
-  desktop, // 妗岄潰
-}
+enum DeviceType { phone, tablet, desktop }
 
-/// 灞忓箷灏哄绫诲瀷
-enum ScreenSizeType {
-  compact, // 绱у噾鍨?(< 600dp)
-  medium, // 涓瓑鍨?(600-840dp)
-  expanded, // 鎵╁睍鍨?(> 840dp)
-}
+enum ScreenSizeType { compact, medium, expanded }
 
-/// 璁惧淇℃伅绫?- 鍖呭惈鎵€鏈夌洰鏍囪澶囩殑瑙勬牸
 class DeviceSpecs {
   final String name;
   final double width;
@@ -34,9 +23,6 @@ class DeviceSpecs {
     required this.aspectRatio,
   });
 
-  // ============================================
-  // 鍗庝负 Mate 绯诲垪 (Mate 9 - Mate 40 Pro)
-  // ============================================
   static const huaweiMate9 = DeviceSpecs(
     name: 'HUAWEI Mate 9',
     width: 1080,
@@ -166,9 +152,6 @@ class DeviceSpecs {
     aspectRatio: 20.1 / 9,
   );
 
-  // ============================================
-  // 灏忕背绯诲垪 (Xiaomi 10 - Xiaomi 17 Ultra)
-  // ============================================
   static const xiaomi10 = DeviceSpecs(
     name: 'Xiaomi Mi 10',
     width: 1080,
@@ -370,9 +353,6 @@ class DeviceSpecs {
     aspectRatio: 20 / 9,
   );
 
-  // ============================================
-  // OnePlus 绯诲垪 (OnePlus 12 - Ace 6T)
-  // ============================================
   static const onePlus12 = DeviceSpecs(
     name: 'OnePlus 12',
     width: 1440,
@@ -478,9 +458,6 @@ class DeviceSpecs {
     aspectRatio: 19.8 / 9,
   );
 
-  // ============================================
-  // Vivo X 绯诲垪 (X100 - 鏈€鏂?
-  // ============================================
   static const vivoX100 = DeviceSpecs(
     name: 'Vivo X100',
     width: 1260,
@@ -554,9 +531,6 @@ class DeviceSpecs {
     aspectRatio: 20 / 9,
   );
 
-  // ============================================
-  // OPPO Find X 绯诲垪 (Find X7 - 鏈€鏂?
-  // ============================================
   static const oppoFindX7 = DeviceSpecs(
     name: 'OPPO Find X7',
     width: 1264,
@@ -606,9 +580,6 @@ class DeviceSpecs {
     aspectRatio: 21 / 9,
   );
 
-  // ============================================
-  // Samsung Galaxy S 绯诲垪 (S20 - S25)
-  // ============================================
   static const samsungS20 = DeviceSpecs(
     name: 'Samsung Galaxy S20',
     width: 1440,
@@ -794,9 +765,6 @@ class DeviceSpecs {
     aspectRatio: 19.5 / 9,
   );
 
-  // ============================================
-  // Samsung Galaxy Note 绯诲垪 (Note 20 绯诲垪)
-  // ============================================
   static const samsungNote20 = DeviceSpecs(
     name: 'Samsung Galaxy Note 20',
     width: 1080,
@@ -814,9 +782,6 @@ class DeviceSpecs {
     aspectRatio: 19.3 / 9,
   );
 
-  // ============================================
-  // Nothing Phone 绯诲垪 (鍏ㄧ郴鍒?
-  // ============================================
   static const nothingPhone1 = DeviceSpecs(
     name: 'Nothing Phone (1)',
     width: 1080,
@@ -874,9 +839,6 @@ class DeviceSpecs {
     aspectRatio: 20.1 / 9,
   );
 
-  // ============================================
-  // Realme 绯诲垪 (Realme 8 - 鏈€鏂?
-  // ============================================
   static const realme8 = DeviceSpecs(
     name: 'Realme 8',
     width: 1080,
@@ -1118,9 +1080,6 @@ class DeviceSpecs {
     aspectRatio: 19.8 / 9,
   );
 
-  // ============================================
-  // Google Pixel 璁惧 (淇濈暀鍘熸湁)
-  // ============================================
   static const pixel5 = DeviceSpecs(
     name: 'Pixel 5',
     width: 1080,
@@ -1226,66 +1185,166 @@ class DeviceSpecs {
     aspectRatio: 20 / 9,
   );
 
-  /// 鑾峰彇鎵€鏈夎澶囪鏍煎垪琛?
   static List<DeviceSpecs> get allDevices => [
-    // 鍗庝负 Mate 绯诲垪
     huaweiMate9,
     huaweiMate9Pro,
     huaweiMate10,
     huaweiMate10Pro,
     huaweiMate10Lite,
-    huaweiMate20, huaweiMate20Pro, huaweiMate20X, huaweiMate20Lite,
-    huaweiMate30, huaweiMate30Pro, huaweiMate30Pro5G,
-    huaweiMate40, huaweiMate40Pro, huaweiMate40ProPlus, huaweiNova12Pro,
-    // 灏忕背绯诲垪
-    xiaomi10, xiaomi10Pro, xiaomi10Ultra, xiaomi10Lite,
-    xiaomi11, xiaomi11Pro, xiaomi11Ultra, xiaomi11Lite,
-    xiaomi12, xiaomi12Pro, xiaomi12Ultra, xiaomi12Lite,
-    xiaomi13, xiaomi13Pro, xiaomi13Ultra, xiaomi13Lite,
-    xiaomi14, xiaomi14Pro, xiaomi14Ultra,
-    xiaomi15, xiaomi15Pro, xiaomi15Ultra,
-    xiaomi17, xiaomi17Pro, xiaomi17Ultra,
-    // OnePlus 绯诲垪
-    onePlus12, onePlus12R, onePlus13, onePlus13R, onePlus14, onePlus15,
-    onePlusAce3, onePlusAce3Pro, onePlusAce3V,
-    onePlusAce5, onePlusAce5Pro, onePlusAce6, onePlusAce6T,
-    // Vivo X 绯诲垪
-    vivoX100, vivoX100Pro, vivoX100Ultra, vivoX100s, vivoX100sPro,
-    vivoX200, vivoX200Pro, vivoX200ProMini, vivoX200Ultra,
-    // OPPO Find X 绯诲垪
-    oppoFindX7, oppoFindX7Ultra, oppoFindX8, oppoFindX8Pro,
-    oppoFindN3, oppoFindN3Flip,
-    // Samsung Galaxy S 绯诲垪
-    samsungS20, samsungS20Plus, samsungS20Ultra, samsungS20FE,
-    samsungS21, samsungS21Plus, samsungS21Ultra, samsungS21FE,
-    samsungS22, samsungS22Plus, samsungS22Ultra,
-    samsungS23, samsungS23Plus, samsungS23Ultra, samsungS23FE,
-    samsungS24, samsungS24Plus, samsungS24Ultra, samsungS24FE,
-    samsungS25, samsungS25Plus, samsungS25Ultra, samsungS25Edge,
-    // Samsung Galaxy Note 绯诲垪
-    samsungNote20, samsungNote20Ultra,
-    // Nothing Phone 绯诲垪
-    nothingPhone1, nothingPhone2, nothingPhone2a, nothingPhone2aPlus,
-    nothingPhone3, nothingPhone3a, nothingPhone3aPro,
-    // Realme 绯诲垪
-    realme8, realme8Pro, realme85G, realme8i, realme8s5G,
-    realme9, realme9Pro, realme9ProPlus, realme95G, realme9i,
-    realme10, realme10Pro, realme10ProPlus,
-    realme11, realme11Pro, realme11ProPlus, realme11x,
-    realme12, realme12Pro, realme12ProPlus, realme12x, realme125G,
-    realme13, realme13Pro, realme13ProPlus, realme135G,
-    realmeGT5, realmeGT5Pro, realmeGT6, realmeGT6T,
-    // Google Pixel 绯诲垪
-    pixel5, pixel6, pixel6Pro, pixel7, pixel7Pro, pixel8, pixel8Pro,
-    pixel9, pixel9Pro, pixel9ProXL, pixel10, pixel10Pro, pixel10ProXL,
+    huaweiMate20,
+    huaweiMate20Pro,
+    huaweiMate20X,
+    huaweiMate20Lite,
+    huaweiMate30,
+    huaweiMate30Pro,
+    huaweiMate30Pro5G,
+    huaweiMate40,
+    huaweiMate40Pro,
+    huaweiMate40ProPlus,
+    huaweiNova12Pro,
+
+    xiaomi10,
+    xiaomi10Pro,
+    xiaomi10Ultra,
+    xiaomi10Lite,
+    xiaomi11,
+    xiaomi11Pro,
+    xiaomi11Ultra,
+    xiaomi11Lite,
+    xiaomi12,
+    xiaomi12Pro,
+    xiaomi12Ultra,
+    xiaomi12Lite,
+    xiaomi13,
+    xiaomi13Pro,
+    xiaomi13Ultra,
+    xiaomi13Lite,
+    xiaomi14,
+    xiaomi14Pro,
+    xiaomi14Ultra,
+    xiaomi15,
+    xiaomi15Pro,
+    xiaomi15Ultra,
+    xiaomi17,
+    xiaomi17Pro,
+    xiaomi17Ultra,
+
+    onePlus12,
+    onePlus12R,
+    onePlus13,
+    onePlus13R,
+    onePlus14,
+    onePlus15,
+    onePlusAce3,
+    onePlusAce3Pro,
+    onePlusAce3V,
+    onePlusAce5,
+    onePlusAce5Pro,
+    onePlusAce6,
+    onePlusAce6T,
+
+    vivoX100,
+    vivoX100Pro,
+    vivoX100Ultra,
+    vivoX100s,
+    vivoX100sPro,
+    vivoX200,
+    vivoX200Pro,
+    vivoX200ProMini,
+    vivoX200Ultra,
+
+    oppoFindX7,
+    oppoFindX7Ultra,
+    oppoFindX8,
+    oppoFindX8Pro,
+    oppoFindN3,
+    oppoFindN3Flip,
+
+    samsungS20,
+    samsungS20Plus,
+    samsungS20Ultra,
+    samsungS20FE,
+    samsungS21,
+    samsungS21Plus,
+    samsungS21Ultra,
+    samsungS21FE,
+    samsungS22,
+    samsungS22Plus,
+    samsungS22Ultra,
+    samsungS23,
+    samsungS23Plus,
+    samsungS23Ultra,
+    samsungS23FE,
+    samsungS24,
+    samsungS24Plus,
+    samsungS24Ultra,
+    samsungS24FE,
+    samsungS25,
+    samsungS25Plus,
+    samsungS25Ultra,
+    samsungS25Edge,
+
+    samsungNote20,
+    samsungNote20Ultra,
+
+    nothingPhone1,
+    nothingPhone2,
+    nothingPhone2a,
+    nothingPhone2aPlus,
+    nothingPhone3,
+    nothingPhone3a,
+    nothingPhone3aPro,
+
+    realme8,
+    realme8Pro,
+    realme85G,
+    realme8i,
+    realme8s5G,
+    realme9,
+    realme9Pro,
+    realme9ProPlus,
+    realme95G,
+    realme9i,
+    realme10,
+    realme10Pro,
+    realme10ProPlus,
+    realme11,
+    realme11Pro,
+    realme11ProPlus,
+    realme11x,
+    realme12,
+    realme12Pro,
+    realme12ProPlus,
+    realme12x,
+    realme125G,
+    realme13,
+    realme13Pro,
+    realme13ProPlus,
+    realme135G,
+    realmeGT5,
+    realmeGT5Pro,
+    realmeGT6,
+    realmeGT6T,
+
+    pixel5,
+    pixel6,
+    pixel6Pro,
+    pixel7,
+    pixel7Pro,
+    pixel8,
+    pixel8Pro,
+    pixel9,
+    pixel9Pro,
+    pixel9ProXL,
+    pixel10,
+    pixel10Pro,
+    pixel10ProXL,
   ];
 }
 
-/// 鍝嶅簲寮忓伐鍏风被 - 鏍稿績閫傞厤閫昏緫
 class ResponsiveUtils {
   ResponsiveUtils._();
 
-  /// 鑾峰彇璁惧绫诲瀷
   static DeviceType getDeviceType(BuildContext context) {
     final width = MediaQuery.of(context).size.shortestSide;
     if (width < 600) return DeviceType.phone;
@@ -1293,7 +1352,6 @@ class ResponsiveUtils {
     return DeviceType.desktop;
   }
 
-  /// 鑾峰彇灞忓箷灏哄绫诲瀷 (Material 3 鏂偣)
   static ScreenSizeType getScreenSizeType(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     if (width < 600) return ScreenSizeType.compact;
@@ -1301,43 +1359,35 @@ class ResponsiveUtils {
     return ScreenSizeType.expanded;
   }
 
-  /// 鏄惁涓洪珮 DPI 璁惧 (> 400 dpi)
   static bool isHighDpiDevice(BuildContext context) {
     return MediaQuery.of(context).devicePixelRatio > 2.5;
   }
 
-  /// 鏄惁涓鸿秴楂?DPI 璁惧 (> 500 dpi)
   static bool isUltraHighDpiDevice(BuildContext context) {
     return MediaQuery.of(context).devicePixelRatio > 3.0;
   }
 
-  /// 鑾峰彇瀹夊叏鍖哄煙鍐呰竟璺?
   static EdgeInsets getSafeAreaPadding(BuildContext context) {
     return MediaQuery.of(context).padding;
   }
 
-  /// 鑾峰彇瑙嗗浘鍐呰竟璺?(鍖呭惈绯荤粺 UI)
   static EdgeInsets getViewPadding(BuildContext context) {
     return MediaQuery.of(context).viewPadding;
   }
 
-  /// 鑾峰彇灞忓箷瀹介珮姣?
   static double getAspectRatio(BuildContext context) {
     final size = MediaQuery.of(context).size;
     return size.height / size.width;
   }
 
-  /// 鏄惁涓洪暱灞忓箷璁惧 (瀹介珮姣?> 2.0)
   static bool isTallScreen(BuildContext context) {
     return getAspectRatio(context) > 2.0;
   }
 
-  /// 鏄惁涓鸿秴闀垮睆骞曡澶?(瀹介珮姣?> 2.1)
   static bool isExtraTallScreen(BuildContext context) {
     return getAspectRatio(context) > 2.1;
   }
 
-  /// 鑾峰彇鍝嶅簲寮忓唴杈硅窛
   static EdgeInsets getResponsivePadding(BuildContext context) {
     final screenType = getScreenSizeType(context);
     final safeArea = getSafeAreaPadding(context);
@@ -1367,7 +1417,6 @@ class ResponsiveUtils {
     }
   }
 
-  /// 鑾峰彇鍗＄墖鍐呰竟璺?
   static EdgeInsets getCardPadding(BuildContext context) {
     final screenType = getScreenSizeType(context);
     switch (screenType) {
@@ -1380,7 +1429,6 @@ class ResponsiveUtils {
     }
   }
 
-  /// 鑾峰彇鍒楄〃椤归珮搴?
   static double getListItemHeight(BuildContext context) {
     final screenType = getScreenSizeType(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -1398,11 +1446,9 @@ class ResponsiveUtils {
         break;
     }
 
-    // 鏍规嵁鏂囧瓧缂╂斁璋冩暣
     return baseHeight * (textScale > 1.0 ? (1 + (textScale - 1) * 0.5) : 1.0);
   }
 
-  /// 鑾峰彇鍥炬爣澶у皬
   static double getIconSize(BuildContext context, {bool large = false}) {
     final screenType = getScreenSizeType(context);
     final dpr = MediaQuery.of(context).devicePixelRatio;
@@ -1420,7 +1466,6 @@ class ResponsiveUtils {
         break;
     }
 
-    // 楂?DPI 璁惧绋嶅井澧炲ぇ鍥炬爣
     if (dpr > 3.0) {
       baseSize *= 1.05;
     }
@@ -1428,7 +1473,6 @@ class ResponsiveUtils {
     return baseSize;
   }
 
-  /// 鑾峰彇瀛椾綋澶у皬缂╂斁鍥犲瓙
   static double getFontScaleFactor(BuildContext context) {
     final screenType = getScreenSizeType(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -1446,11 +1490,9 @@ class ResponsiveUtils {
         break;
     }
 
-    // 闄愬埗鏈€澶х缉鏀撅紝闃叉甯冨眬婧㈠嚭
     return (baseFactor * textScale).clamp(0.8, 1.5);
   }
 
-  /// 鑾峰彇缃戞牸鍒楁暟
   static int getGridColumnCount(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     if (width < 400) return 1;
@@ -1460,7 +1502,6 @@ class ResponsiveUtils {
     return 5;
   }
 
-  /// 鑾峰彇鍗＄墖缃戞牸鍒楁暟
   static int getCardGridColumnCount(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     if (width < 500) return 1;
@@ -1469,7 +1510,6 @@ class ResponsiveUtils {
     return 4;
   }
 
-  /// 鑾峰彇鍦嗚鍗婂緞
   static double getBorderRadius(BuildContext context) {
     final screenType = getScreenSizeType(context);
     switch (screenType) {
@@ -1482,12 +1522,10 @@ class ResponsiveUtils {
     }
   }
 
-  /// 鑾峰彇鍗＄墖鍦嗚鍗婂緞
   static BorderRadius getCardBorderRadius(BuildContext context) {
     return BorderRadius.circular(getBorderRadius(context));
   }
 
-  /// 鑾峰彇鎸夐挳楂樺害
   static double getButtonHeight(BuildContext context) {
     final screenType = getScreenSizeType(context);
     switch (screenType) {
@@ -1500,7 +1538,6 @@ class ResponsiveUtils {
     }
   }
 
-  /// 鑾峰彇杈撳叆妗嗛珮搴?
   static double getInputHeight(BuildContext context) {
     final screenType = getScreenSizeType(context);
     final textScale = MediaQuery.textScalerOf(context).scale(1.0);
@@ -1521,7 +1558,6 @@ class ResponsiveUtils {
     return baseHeight * (textScale > 1.0 ? (1 + (textScale - 1) * 0.3) : 1.0);
   }
 
-  /// 鑾峰彇搴曢儴瀵艰埅鏍忛珮搴?
   static double getBottomNavHeight(BuildContext context) {
     final safeArea = getSafeAreaPadding(context);
     final screenType = getScreenSizeType(context);
@@ -1542,7 +1578,6 @@ class ResponsiveUtils {
     return baseHeight + safeArea.bottom;
   }
 
-  /// 鑾峰彇 AppBar 楂樺害
   static double getAppBarHeight(BuildContext context) {
     final safeArea = getSafeAreaPadding(context);
     final screenType = getScreenSizeType(context);
@@ -1563,7 +1598,6 @@ class ResponsiveUtils {
     return baseHeight + safeArea.top;
   }
 
-  /// 鑾峰彇瀵硅瘽妗嗘渶澶у搴?
   static double getDialogMaxWidth(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
     final screenType = getScreenSizeType(context);
@@ -1578,18 +1612,15 @@ class ResponsiveUtils {
     }
   }
 
-  /// 鑾峰彇搴曢儴寮圭獥鏈€澶ч珮搴︽瘮渚?
   static double getBottomSheetMaxHeightRatio(BuildContext context) {
     final aspectRatio = getAspectRatio(context);
 
-    // 闀垮睆骞曡澶囧彲浠ヤ娇鐢ㄦ洿澶氶珮搴?
     if (aspectRatio > 2.1) return 0.85;
     if (aspectRatio > 2.0) return 0.80;
     if (aspectRatio > 1.8) return 0.75;
     return 0.70;
   }
 
-  /// 鑾峰彇闂磋窛
   static double getSpacing(BuildContext context, {double multiplier = 1.0}) {
     final screenType = getScreenSizeType(context);
 
@@ -1609,12 +1640,10 @@ class ResponsiveUtils {
     return baseSpacing * multiplier;
   }
 
-  /// 鑾峰彇瑙︽懜鐩爣鏈€灏忓昂瀵?(Material 3 瑙勮寖: 48dp)
   static double getMinTouchTargetSize(BuildContext context) {
     return 48.0;
   }
 
-  /// 鑾峰彇婊氬姩鐗╃悊鏁堟灉
   static ScrollPhysics getScrollPhysics(BuildContext context) {
     if (!kIsWeb && Platform.isAndroid) {
       return const ClampingScrollPhysics();
@@ -1622,31 +1651,26 @@ class ResponsiveUtils {
     return const BouncingScrollPhysics();
   }
 
-  /// 鏄惁搴旇鏄剧ず搴曢儴瀵艰埅
   static bool shouldShowBottomNav(BuildContext context) {
     final screenType = getScreenSizeType(context);
     return screenType == ScreenSizeType.compact;
   }
 
-  /// 鏄惁搴旇鏄剧ず渚ц竟瀵艰埅
   static bool shouldShowSideNav(BuildContext context) {
     final screenType = getScreenSizeType(context);
     return screenType != ScreenSizeType.compact;
   }
 
-  /// 鏄惁搴旇鏄剧ず NavigationRail
   static bool shouldShowNavigationRail(BuildContext context) {
     final screenType = getScreenSizeType(context);
     return screenType == ScreenSizeType.medium;
   }
 
-  /// 鏄惁搴旇鏄剧ず NavigationDrawer
   static bool shouldShowNavigationDrawer(BuildContext context) {
     final screenType = getScreenSizeType(context);
     return screenType == ScreenSizeType.expanded;
   }
 
-  /// 鑾峰彇鐘舵€佸崱鐗囬珮搴?
   static double getStatusCardHeight(BuildContext context) {
     final screenType = getScreenSizeType(context);
     final isTall = isTallScreen(context);
@@ -1667,7 +1691,6 @@ class ResponsiveUtils {
     return baseHeight;
   }
 
-  /// 鑾峰彇娴侀噺鍥捐〃楂樺害
   static double getTrafficChartHeight(BuildContext context) {
     final screenType = getScreenSizeType(context);
     final isTall = isTallScreen(context);
@@ -1689,7 +1712,6 @@ class ResponsiveUtils {
   }
 }
 
-/// 鍝嶅簲寮忔瀯寤哄櫒 Widget
 class ResponsiveBuilder extends StatelessWidget {
   final Widget Function(
     BuildContext context,
@@ -1710,7 +1732,6 @@ class ResponsiveBuilder extends StatelessWidget {
   }
 }
 
-/// 鍝嶅簲寮忓竷灞€ Widget
 class ResponsiveLayout extends StatelessWidget {
   final Widget compact;
   final Widget? medium;
@@ -1738,7 +1759,6 @@ class ResponsiveLayout extends StatelessWidget {
   }
 }
 
-/// 鍝嶅簲寮忛棿璺?Widget
 class ResponsiveSpacing extends StatelessWidget {
   final double multiplier;
   final Axis axis;
@@ -1761,7 +1781,6 @@ class ResponsiveSpacing extends StatelessWidget {
   }
 }
 
-/// 鍝嶅簲寮忓唴杈硅窛 Widget
 class ResponsivePadding extends StatelessWidget {
   final Widget child;
   final double? horizontal;
@@ -1788,7 +1807,6 @@ class ResponsivePadding extends StatelessWidget {
   }
 }
 
-/// 瀹夊叏鍖哄煙鍖呰鍣?
 class SafeAreaWrapper extends StatelessWidget {
   final Widget child;
   final bool top;
@@ -1818,50 +1836,39 @@ class SafeAreaWrapper extends StatelessWidget {
   }
 }
 
-/// 璁惧鐗瑰畾 UI 浼樺寲宸ュ叿
 class DeviceOptimizedUI {
   DeviceOptimizedUI._();
 
-  /// 鏍规嵁璁惧鍝佺墝鑾峰彇浼樺寲鐨勫渾瑙掑崐寰?
   static double getBorderRadiusForBrand(BuildContext context, String brand) {
     final baseBorderRadius = ResponsiveUtils.getBorderRadius(context);
 
     switch (brand.toUpperCase()) {
       case 'SAMSUNG':
-        // Samsung One UI 椋庢牸 - 鏇村ぇ鐨勫渾瑙?
         return baseBorderRadius * 1.25;
       case 'XIAOMI':
       case 'REDMI':
       case 'POCO':
-        // MIUI 椋庢牸
         return baseBorderRadius;
       case 'HUAWEI':
       case 'HONOR':
-        // EMUI/HarmonyOS 椋庢牸 - 绋嶅ぇ鐨勫渾瑙?
         return baseBorderRadius * 1.1;
       case 'ONEPLUS':
-        // OxygenOS 椋庢牸
         return baseBorderRadius;
       case 'VIVO':
       case 'IQOO':
-        // OriginOS 椋庢牸 - 绋嶅皬鐨勫渾瑙?
         return baseBorderRadius * 0.9;
       case 'OPPO':
       case 'REALME':
-        // ColorOS 椋庢牸
         return baseBorderRadius * 0.9;
       case 'NOTHING':
-        // Nothing OS 椋庢牸 - 鏇存柟姝?
         return baseBorderRadius * 0.75;
       case 'GOOGLE':
-        // Material You 椋庢牸
         return baseBorderRadius;
       default:
         return baseBorderRadius;
     }
   }
 
-  /// 鏍规嵁璁惧鍝佺墝鑾峰彇浼樺寲鐨勫崱鐗囬槾褰?
   static List<BoxShadow> getCardShadowForBrand(
     BuildContext context,
     String brand,
@@ -1869,7 +1876,6 @@ class DeviceOptimizedUI {
   ) {
     switch (brand.toUpperCase()) {
       case 'SAMSUNG':
-        // Samsung 椋庢牸 - 鏇存煍鍜岀殑闃村奖
         return [
           BoxShadow(
             color: colorScheme.shadow.withValues(alpha: 0.08),
@@ -1879,7 +1885,6 @@ class DeviceOptimizedUI {
         ];
       case 'XIAOMI':
       case 'REDMI':
-        // MIUI 椋庢牸 - 杈冩槑鏄剧殑闃村奖
         return [
           BoxShadow(
             color: colorScheme.shadow.withValues(alpha: 0.12),
@@ -1888,7 +1893,6 @@ class DeviceOptimizedUI {
           ),
         ];
       case 'NOTHING':
-        // Nothing 椋庢牸 - 鍑犱箮鏃犻槾褰?
         return [
           BoxShadow(
             color: colorScheme.shadow.withValues(alpha: 0.04),
@@ -1907,24 +1911,19 @@ class DeviceOptimizedUI {
     }
   }
 
-  /// 鏍规嵁璁惧鍝佺墝鑾峰彇浼樺寲鐨勫姩鐢绘椂闀?
   static Duration getAnimationDurationForBrand(String brand) {
     switch (brand.toUpperCase()) {
       case 'SAMSUNG':
-        // Samsung 鍔ㄧ敾杈冩參
         return const Duration(milliseconds: 350);
       case 'ONEPLUS':
-        // OnePlus 鍔ㄧ敾杈冨揩
         return const Duration(milliseconds: 250);
       case 'NOTHING':
-        // Nothing 鍔ㄧ敾绠€娲?
         return const Duration(milliseconds: 200);
       default:
         return const Duration(milliseconds: 300);
     }
   }
 
-  /// 鏍规嵁璁惧鍝佺墝鑾峰彇浼樺寲鐨勫浘鏍囧ぇ灏?
   static double getIconSizeForBrand(BuildContext context, String brand) {
     final baseIconSize = ResponsiveUtils.getIconSize(context);
 
@@ -1938,7 +1937,6 @@ class DeviceOptimizedUI {
     }
   }
 
-  /// 鏍规嵁璁惧鍝佺墝鑾峰彇浼樺寲鐨勫瓧浣撴潈閲?
   static FontWeight getTitleFontWeightForBrand(String brand) {
     switch (brand.toUpperCase()) {
       case 'SAMSUNG':

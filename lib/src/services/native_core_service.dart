@@ -30,9 +30,6 @@ class NativeCoreService extends ChangeNotifier {
   bool get isReady => _status == NativeCoreStatus.ready;
   bool get isInitializing => _status == NativeCoreStatus.initializing;
   String? get lastError => _lastError;
-
-  /// Why the `GEOIP` rules are inert, when the bundled database could not be
-  /// installed. `null` once the matcher is loaded.
   String? get geoIpError => _geoIpError;
 
   Future<bool> initialize({int maxAttempts = 3}) {

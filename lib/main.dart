@@ -29,6 +29,7 @@ import 'package:veloguard/src/widgets/update_prompt.dart';
 import 'package:veloguard/src/utils/platform_utils.dart';
 import 'package:veloguard/src/utils/device_info_utils.dart';
 import 'package:veloguard/src/utils/animation_utils.dart';
+import 'package:veloguard/src/utils/app_lifecycle.dart';
 import 'package:veloguard/src/l10n/app_localizations.dart';
 import 'package:veloguard/src/screens/profiles_screen.dart';
 import 'package:go_router/go_router.dart';
@@ -40,6 +41,9 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // Timers and animations consult this before spending CPU, so it has to be
+  // observing before the first screen is built.
+  AppLifecycle.instance.start();
   runApp(const VeloGuardBootstrap());
 }
 
@@ -139,25 +143,45 @@ class _StartupScreenState extends State<_StartupScreen>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
+    );
     _scale = Tween<double>(begin: 0.96, end: 1.04).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic),
     );
+    AppLifecycle.instance.active.addListener(_syncAnimation);
+    _syncAnimation();
   }
+
+  bool _reduceMotion = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.disableAnimationsOf(context)) {
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
+    _syncAnimation();
+  }
+
+  /// The splash is normally on screen for a moment, but a slow first launch
+  /// can leave it there — and an animation that keeps running off screen is
+  /// work nobody asked for.
+  void _syncAnimation() {
+    if (!mounted) return;
+    if (_reduceMotion) {
       _controller.stop();
       _controller.value = 0.5;
-    } else if (!_controller.isAnimating) {
+      return;
+    }
+    if (!AppLifecycle.instance.isActive) {
+      _controller.stop();
+      return;
+    }
+    if (!_controller.isAnimating) {
       _controller.repeat(reverse: true);
     }
   }
 
   @override
   void dispose() {
+    AppLifecycle.instance.active.removeListener(_syncAnimation);
     _controller.dispose();
     super.dispose();
   }
@@ -269,8 +293,8 @@ class _VeloGuardAppState extends State<VeloGuardApp> {
       ],
       child: DynamicColorBuilder(
         builder: (lightColorScheme, darkColorScheme) {
-          return Consumer3<AppStateProvider, ThemeProvider, LocaleProvider>(
-            builder: (context, appState, themeProvider, localeProvider, child) {
+          return Consumer2<ThemeProvider, LocaleProvider>(
+            builder: (context, themeProvider, localeProvider, child) {
               final lightTheme =
                   themeProvider.useDynamicColors && lightColorScheme != null
                   ? AppTheme.createDynamicTheme(
@@ -293,21 +317,29 @@ class _VeloGuardAppState extends State<VeloGuardApp> {
                       Brightness.dark,
                     );
 
-              return MaterialApp.router(
-                title: 'VeloGuard',
-                debugShowCheckedModeBanner: false,
-                theme: lightTheme,
-                darkTheme: darkTheme,
-                themeMode: appState.themeMode,
-                locale: localeProvider.currentLocale,
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: AppLocalizations.supportedLocales,
-                routerConfig: _router,
+              // Only the theme mode is wanted from `AppStateProvider`, and a
+              // `Selector` subscribes to exactly that much of it. Watching the
+              // provider as a whole rebuilt this `MaterialApp` — along with
+              // both `ThemeData` objects and the entire tree below it — once a
+              // second, because the provider notifies on every traffic sample.
+              return Selector<AppStateProvider, ThemeMode>(
+                selector: (_, appState) => appState.themeMode,
+                builder: (context, themeMode, child) => MaterialApp.router(
+                  title: 'VeloGuard',
+                  debugShowCheckedModeBanner: false,
+                  theme: lightTheme,
+                  darkTheme: darkTheme,
+                  themeMode: themeMode,
+                  locale: localeProvider.currentLocale,
+                  localizationsDelegates: const [
+                    AppLocalizations.delegate,
+                    GlobalMaterialLocalizations.delegate,
+                    GlobalWidgetsLocalizations.delegate,
+                    GlobalCupertinoLocalizations.delegate,
+                  ],
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  routerConfig: _router,
+                ),
               );
             },
           );
@@ -319,6 +351,9 @@ class _VeloGuardAppState extends State<VeloGuardApp> {
 
 final GoRouter _router = GoRouter(
   navigatorKey: navigatorKey,
+  // Lets a screen learn when it stops being the visible one, so it can put its
+  // polling down instead of running behind whatever is stacked above it.
+  observers: [routeObserver],
   routes: [
     ShellRoute(
       builder: (context, state, child) {

@@ -252,9 +252,6 @@ class RuleProviderService extends ChangeNotifier {
     final deadline = DateTime.now().add(budget);
     final states = <RuleProviderState>[];
     for (final spec in specs) {
-      // Sequential on purpose: rule sets are large, and saturating the link
-      // with eight parallel megabyte downloads delays the first working
-      // config, which is the only one that matters at start-up.
       if (DateTime.now().isAfter(deadline)) {
         onWarning?.call(
           'Rule provider "${spec.name}" was skipped: refresh budget exhausted.',
