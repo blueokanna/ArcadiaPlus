@@ -9,8 +9,6 @@
   <a href="README.md">中文</a>
 </p>
 
-> Status: pre-release. The repository does not yet meet the bar for production support across all six target platforms and all requested protocols. This document describes only capabilities supported by code and verification evidence.
-
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
