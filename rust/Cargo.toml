@@ -24,3 +24,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 [target.'cfg(target_os = "android")'.dependencies]
 jni = "0.21"
 tracing-android = "0.2"
+
+[profile.dev]
+debug = "line-tables-only"

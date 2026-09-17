@@ -85,8 +85,15 @@ jobs:
       - name: Run Flutter tests
         run: flutter test
 
+      - name: Report the disk space the Android build starts with
+        run: df -h /
+
       - name: Build Android debug APK
         run: flutter build apk --debug
+
+      - name: Report the disk space left when the Android build failed
+        if: failure()
+        run: df -h /
 
       - name: Make the Gradle wrapper executable
         working-directory: android
