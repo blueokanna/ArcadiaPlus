@@ -19,10 +19,30 @@ jobs:
     name: Flutter analyze, test, and Android debug build
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # A four-ABI debug build is the largest thing this job writes. Cargo's dev
+      # profile would keep full debug info for every dependency plus an
+      # incremental cache a one-shot CI build never reuses, which is tens of
+      # gigabytes on this crate. The committed profile stays dev-friendly for
+      # local work; these only tighten the CI run.
+      CARGO_PROFILE_DEV_DEBUG: 'false'
+      CARGO_PROFILE_DEV_INCREMENTAL: 'false'
 
     steps:
       - name: Checkout source
         uses: actions/checkout@v5
+
+      - name: Reclaim disk space this build does not need
+        run: |
+          set -euo pipefail
+          echo "free before: $(df -h / | awk 'NR==2 {print $4}')"
+          # The runner image ships toolchains and payloads this job never
+          # touches. The pinned NDK is installed explicitly further down, so the
+          # preinstalled releases are dead weight on a build that fills the
+          # disk.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL \
+                      /usr/local/lib/android/sdk/ndk
+          echo "free after:  $(df -h / | awk 'NR==2 {print $4}')"
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -85,15 +105,21 @@ jobs:
       - name: Run Flutter tests
         run: flutter test
 
-      - name: Report the disk space the Android build starts with
-        run: df -h /
-
       - name: Build Android debug APK
         run: flutter build apk --debug
 
-      - name: Report the disk space left when the Android build failed
+      - name: Report why the Android build failed
         if: failure()
-        run: df -h /
+        run: |
+          set -euo pipefail
+          echo '--- disk (bytes) ---'; df -h /
+          echo '--- disk (inodes) ---'; df -i /
+          echo '--- memory ---'; free -m
+          echo '--- top-level footprint ---'
+          du -sh .[!.]* * 2>/dev/null | sort -h | tail -n 20 || true
+          echo '--- gradle daemon log (the task failure with its cause) ---'
+          tail -n 150 "$HOME"/.gradle/daemon/*/daemon-*.out.log 2>/dev/null ||
+            echo 'no daemon log found'
 
       - name: Make the Gradle wrapper executable
         working-directory: android

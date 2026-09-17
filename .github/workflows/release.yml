@@ -18,12 +18,28 @@ jobs:
     name: Build and publish Android debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      # See ci.yml: the four-ABI debug build is the largest thing either
+      # workflow writes, and this keeps cargo from keeping debug info and an
+      # incremental cache the build never reuses.
+      CARGO_PROFILE_DEV_DEBUG: 'false'
+      CARGO_PROFILE_DEV_INCREMENTAL: 'false'
 
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+
+      - name: Reclaim disk space this build does not need
+        run: |
+          set -euo pipefail
+          echo "free before: $(df -h / | awk 'NR==2 {print $4}')"
+          # See ci.yml: the pinned NDK is installed explicitly further down, so
+          # the preinstalled releases are dead weight here.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL \
+                      /usr/local/lib/android/sdk/ndk
+          echo "free after:  $(df -h / | awk 'NR==2 {print $4}')"
 
       - name: Resolve and validate stable release
         id: release
@@ -141,6 +157,19 @@ jobs:
 
       - name: Build debug APK
         run: flutter build apk --debug
+
+      - name: Report why the Android build failed
+        if: failure()
+        run: |
+          set -euo pipefail
+          echo '--- disk (bytes) ---'; df -h /
+          echo '--- disk (inodes) ---'; df -i /
+          echo '--- memory ---'; free -m
+          echo '--- top-level footprint ---'
+          du -sh .[!.]* * 2>/dev/null | sort -h | tail -n 20 || true
+          echo '--- gradle daemon log (the task failure with its cause) ---'
+          tail -n 150 "$HOME"/.gradle/daemon/*/daemon-*.out.log 2>/dev/null ||
+            echo 'no daemon log found'
 
       - name: Make the Gradle wrapper executable
         working-directory: android
