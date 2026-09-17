@@ -105,6 +105,19 @@ jobs:
       - name: Run Flutter tests
         run: flutter test
 
+      - name: Give the Android build a CI-sized Gradle heap
+        shell: bash
+        run: |
+          set -euo pipefail
+          # android/gradle.properties caps the daemon at -Xmx1G, which is a
+          # local-machine setting. The four-ABI debug package does not fit in
+          # that heap on a runner this size: the last green CI run (054163a)
+          # used 4G, and every run since the cap was lowered fails in
+          # :app:packageDebug. Raise it for CI only, so the committed cap still
+          # governs local builds.
+          sed -i 's|^org\.gradle\.jvmargs=.*|org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G -XX:ReservedCodeCacheSize=512m|' android/gradle.properties
+          grep '^org.gradle.jvmargs' android/gradle.properties
+
       - name: Build Android debug APK
         run: flutter build apk --debug
 

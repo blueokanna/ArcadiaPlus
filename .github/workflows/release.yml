@@ -155,6 +155,15 @@ jobs:
           cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --all-features --locked -- -D warnings
           cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --all-features --locked
 
+      - name: Give the Android build a CI-sized Gradle heap
+        shell: bash
+        run: |
+          set -euo pipefail
+          # See ci.yml: the committed -Xmx1G cap is a local-machine setting, and
+          # the four-ABI debug package does not fit in it on a runner.
+          sed -i 's|^org\.gradle\.jvmargs=.*|org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G -XX:ReservedCodeCacheSize=512m|' android/gradle.properties
+          grep '^org.gradle.jvmargs' android/gradle.properties
+
       - name: Build debug APK
         run: flutter build apk --debug
 
