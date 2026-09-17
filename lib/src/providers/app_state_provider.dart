@@ -678,8 +678,15 @@ class AppStateProvider extends ChangeNotifier {
   /// Brings the Android VPN up, retrying briefly: the platform needs a moment
   /// to release the VPN slot after a competing tunnel is torn down.
   Future<bool> _enableAndroidVpnWithRetry({int attempts = 3}) async {
+    // Read once per start: the route set is fixed when the tunnel is
+    // established, so a value that changed mid-retry could not apply anyway.
+    final allowLan =
+        (await StorageService.instance.getGeneralSettings()).allowLan;
     for (var attempt = 1; attempt <= attempts; attempt++) {
-      if (await PlatformProxyService.instance.enableTunMode(mode: _proxyMode)) {
+      if (await PlatformProxyService.instance.enableTunMode(
+        mode: _proxyMode,
+        allowLan: allowLan,
+      )) {
         return true;
       }
       if (attempt < attempts) {

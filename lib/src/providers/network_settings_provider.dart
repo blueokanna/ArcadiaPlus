@@ -120,7 +120,11 @@ class NetworkSettingsProvider extends ChangeNotifier {
   Future<void> setTunEnabled(bool value) async {
     final service = PlatformProxyService.instance;
     final applied = value
-        ? await service.enableTunMode(mode: service.currentProxyMode)
+        ? await service.enableTunMode(
+            mode: service.currentProxyMode,
+            allowLan:
+                (await StorageService.instance.getGeneralSettings()).allowLan,
+          )
         : await service.disableTunMode();
     if (!applied) {
       throw StateError(

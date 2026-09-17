@@ -145,13 +145,22 @@ class PlatformProxyService {
     }
   }
 
-  Future<bool> enableTunMode({ProxyMode mode = ProxyMode.rule}) async {
+  /// Starts the tunnel.
+  ///
+  /// [allowLan] decides whether private (LAN) ranges are captured by the
+  /// tunnel. With it off they are left to the system's own routing, so LAN
+  /// traffic never enters the engine; with it on the tunnel captures them and
+  /// the rules decide where they go.
+  Future<bool> enableTunMode({
+    ProxyMode mode = ProxyMode.rule,
+    bool allowLan = true,
+  }) async {
     try {
       if (Platform.isWindows) {
         return await _enableWindowsTun(mode);
       }
       if (Platform.isAndroid) {
-        return await _enableAndroidVpn(mode: mode);
+        return await _enableAndroidVpn(mode: mode, allowLan: allowLan);
       }
       if (PlatformUtils.isOHOS) {
         return await _enableOhosVpn(mode: mode);
@@ -355,7 +364,10 @@ class PlatformProxyService {
     }
   }
 
-  Future<bool> _enableAndroidVpn({ProxyMode mode = ProxyMode.rule}) async {
+  Future<bool> _enableAndroidVpn({
+    ProxyMode mode = ProxyMode.rule,
+    bool allowLan = true,
+  }) async {
     try {
       debugPrint('=== _enableAndroidVpn: Starting with mode=$mode ===');
 
@@ -391,7 +403,10 @@ class PlatformProxyService {
       // Call Android side to start VPN, returns fd synchronously
       final dynamic result;
       try {
-        result = await _channel.invokeMethod('startVpn', {'mode': mode.name});
+        result = await _channel.invokeMethod('startVpn', {
+          'mode': mode.name,
+          'allowLan': allowLan,
+        });
       } on PlatformException catch (e) {
         debugPrint(
           '_enableAndroidVpn: PlatformException during startVpn: ${e.code} - ${e.message}',

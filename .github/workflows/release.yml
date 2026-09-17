@@ -15,14 +15,14 @@ concurrency:
 
 jobs:
   android:
-    name: Build and publish Android release
+    name: Build and publish Android debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      VELOGUARD_KEYSTORE_PATH: ${{ github.workspace }}/android/app/release.jks
-      VELOGUARD_KEYSTORE_PASSWORD: ${{ secrets.VELOGUARD_KEYSTORE_PASSWORD }}
-      VELOGUARD_KEY_ALIAS: ${{ secrets.VELOGUARD_KEY_ALIAS }}
-      VELOGUARD_KEY_PASSWORD: ${{ secrets.VELOGUARD_KEY_PASSWORD }}
+    # This job publishes an unsigned debug APK on purpose, so it declares no
+    # keystore: a debug build is signed with the runner's throwaway debug key
+    # and needs none of the VELOGUARD_KEYSTORE_* secrets. Restore the `env`
+    # block and the signing-key step below when the published asset goes back
+    # to `app-release.apk`.
 
     steps:
       - name: Checkout tagged source
@@ -119,22 +119,6 @@ jobs:
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ndk"
           echo "Installed NDK $ndk"
 
-      - name: Validate release signing key
-        shell: bash
-        env:
-          KEYSTORE_BASE64: ${{ secrets.VELOGUARD_KEYSTORE_BASE64 }}
-        run: |
-          set -euo pipefail
-          : "${KEYSTORE_BASE64:?Missing VELOGUARD_KEYSTORE_BASE64 secret}"
-          : "${VELOGUARD_KEYSTORE_PASSWORD:?Missing VELOGUARD_KEYSTORE_PASSWORD secret}"
-          : "${VELOGUARD_KEY_ALIAS:?Missing VELOGUARD_KEY_ALIAS secret}"
-          : "${VELOGUARD_KEY_PASSWORD:?Missing VELOGUARD_KEY_PASSWORD secret}"
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$VELOGUARD_KEYSTORE_PATH"
-          keytool -list \
-            -keystore "$VELOGUARD_KEYSTORE_PATH" \
-            -storepass "$VELOGUARD_KEYSTORE_PASSWORD" \
-            -alias "$VELOGUARD_KEY_ALIAS" >/dev/null
-
       - name: Use the pub host recorded in pubspec.lock
         shell: bash
         run: |
@@ -160,8 +144,8 @@ jobs:
           cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --all-features --locked -- -D warnings
           cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --all-features --locked
 
-      - name: Build signed release APK
-        run: flutter build apk --release
+      - name: Build debug APK
+        run: flutter build apk --debug
 
       - name: Make the Gradle wrapper executable
         working-directory: android
@@ -184,8 +168,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          asset="VeloGuard-${RELEASE_TAG}-android.apk"
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/$asset"
+          asset="VeloGuard-${RELEASE_TAG}-android-debug.apk"
+          cp build/app/outputs/flutter-apk/app-debug.apk "dist/$asset"
           checksum="$(sha256sum "dist/$asset" | cut -d' ' -f1)"
           published_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
           url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${asset}"
@@ -212,6 +196,6 @@ jobs:
           make_latest: true
           fail_on_unmatched_files: true
           files: |
-            dist/VeloGuard-${{ steps.release.outputs.tag }}-android.apk
+            dist/VeloGuard-${{ steps.release.outputs.tag }}-android-debug.apk
             dist/update-manifest.json
             dist/SHA256SUMS
