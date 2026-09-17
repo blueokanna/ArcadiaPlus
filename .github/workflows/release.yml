@@ -18,11 +18,6 @@ jobs:
     name: Build and publish Android debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # This job publishes an unsigned debug APK on purpose, so it declares no
-    # keystore: a debug build is signed with the runner's throwaway debug key
-    # and needs none of the VELOGUARD_KEYSTORE_* secrets. Restore the `env`
-    # block and the signing-key step below when the published asset goes back
-    # to `app-release.apk`.
 
     steps:
       - name: Checkout tagged source
