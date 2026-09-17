@@ -19,9 +19,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      # See ci.yml: the four-ABI debug build is the largest thing either
-      # workflow writes, and this keeps cargo from keeping debug info and an
-      # incremental cache the build never reuses.
       CARGO_PROFILE_DEV_DEBUG: 'false'
       CARGO_PROFILE_DEV_INCREMENTAL: 'false'
 

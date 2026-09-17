@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:veloguard/src/utils/responsive_utils.dart';
 import 'package:veloguard/src/utils/animation_utils.dart';
 import 'package:veloguard/src/l10n/app_localizations.dart';
+import 'package:veloguard/src/providers/proxies_provider.dart'
+    show proxySelectionChangedController;
 
 /// IP 信息数据模型
 class IpInfo {
@@ -91,6 +93,8 @@ class _IpCheckCardState extends State<IpCheckCard>
   IpInfo? _ipInfo;
   bool _isLoading = false;
   String? _error;
+  bool _refreshQueued = false;
+  StreamSubscription<String>? _proxySelectionSubscription;
   late AnimationController _refreshController;
 
   @override
@@ -106,10 +110,28 @@ class _IpCheckCardState extends State<IpCheckCard>
       _ipInfo = _ipCheckCache.ipInfo;
     }
 
+    // 换节点之后出口 IP 就变了，缓存的地址当场过期。缓存自己不知道这件事
+    // —— 只有选中项变了才知道。不订阅这个信号，卡片就会一直显示上一个
+    // 节点的地址，直到 5 分钟缓存过期。
+    _proxySelectionSubscription = proxySelectionChangedController.stream.listen(
+      (_) => _refreshForNewProxy(),
+    );
+
     // Only fetch if cache needs refresh
     if (_ipCheckCache.shouldRefresh(widget.isProxyRunning)) {
       _checkIp();
     }
+  }
+
+  /// 代理状态或选中节点变了：清掉缓存，然后重新检测。
+  ///
+  /// 新节点上链路要花一点时间建立，稍等再问，否则拿到的可能还是上一个
+  /// 节点（或直连）的答案。
+  void _refreshForNewProxy() {
+    _ipCheckCache.clear();
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _checkIp();
+    });
   }
 
   @override
@@ -117,22 +139,24 @@ class _IpCheckCardState extends State<IpCheckCard>
     super.didUpdateWidget(oldWidget);
     // 代理状态变化时自动刷新
     if (widget.isProxyRunning != oldWidget.isProxyRunning) {
-      // Clear cache when proxy state changes
-      _ipCheckCache.clear();
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted) _checkIp();
-      });
+      _refreshForNewProxy();
     }
   }
 
   @override
   void dispose() {
+    _proxySelectionSubscription?.cancel();
     _refreshController.dispose();
     super.dispose();
   }
 
   Future<void> _checkIp() async {
-    if (_isLoading) return;
+    // 正在检测时又来了请求（比如刚切了节点），不能直接丢掉：丢掉会把卡片
+    // 永远停在上一轮的结果上。记下来，等这一轮结束立刻再跑一次。
+    if (_isLoading) {
+      _refreshQueued = true;
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -172,6 +196,10 @@ class _IpCheckCardState extends State<IpCheckCard>
     } finally {
       _refreshController.stop();
       _refreshController.reset();
+      if (_refreshQueued && mounted) {
+        _refreshQueued = false;
+        await _checkIp();
+      }
     }
   }
 

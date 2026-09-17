@@ -27,13 +27,13 @@ final proxySelectionChangedController = StreamController<String>.broadcast();
 class ProxiesProvider extends ChangeNotifier {
   ParsedClashConfig? _config;
   String? _selectedGroupName;
-  final Map<String, String> _selectedProxies =
-      {}; // groupName -> selected proxy name
-  final Map<String, LatencyResult> _latencyResults =
-      {}; // proxyName -> latency result
+  final Map<String, String> _selectedProxies = {};
+  final Map<String, LatencyResult> _latencyResults = {};
   bool _isLoading = false;
   bool _isTesting = false;
   String? _error;
+  bool _rustSyncPending = false;
+  bool _engineReadyListenerAttached = false;
 
   ParsedClashConfig? get config => _config;
   String? get selectedGroupName => _selectedGroupName;
@@ -132,6 +132,11 @@ class ProxiesProvider extends ChangeNotifier {
           _selectedProxies[group.name] = group.proxies.first;
         }
       }
+
+      // Only after the group table is complete: the engine is told about every
+      // group exactly once, and a group added by the fallback above is part of
+      // that answer.
+      await _syncSelectionsToRustWhenReady();
     } catch (e) {
       debugPrint('Failed to load proxies: $e');
       _error = e.toString();
@@ -160,43 +165,87 @@ class ProxiesProvider extends ChangeNotifier {
           _selectedProxies[group.name] = savedProxy;
         }
       }
-
-      // Apply persisted selections to Rust backend if initialized
-      if (NativeCoreService.instance.isReady) {
-        await _applySelectionsToRust();
-      }
     } catch (e) {
       debugPrint('Failed to load persisted selections: $e');
     }
+  }
+
+  /// Apply the current selections to the engine, and remember that they still
+  /// need applying when it cannot take them yet.
+  Future<void> _syncSelectionsToRustWhenReady() async {
+    _attachEngineReadyListener();
+    await _applySelectionsToRust();
+  }
+
+  /// Re-assert the selections whenever the engine reports itself ready.
+  ///
+  /// Not gated on a pending flag: the engine is (re)created when the VPN
+  /// service starts, and a fresh instance sits on each group's default member
+  /// — the first node of the list — until it is told otherwise. That is
+  /// exactly the "I picked Singapore and got a Hong Kong IP" report.
+  void _attachEngineReadyListener() {
+    if (_engineReadyListenerAttached) return;
+    _engineReadyListenerAttached = true;
+    NativeCoreService.instance.addListener(() {
+      if (!NativeCoreService.instance.isReady) return;
+      // A pending flag here means the engine has not confirmed the selections
+      // yet; re-asserting them is what clears it, so log the reason and the
+      // outcome stay connected.
+      if (_rustSyncPending) {
+        debugPrint('Re-asserting selections the engine has not confirmed');
+      }
+      unawaited(_applySelectionsToRust());
+    });
   }
 
   /// Apply all current selections to Rust backend
   Future<void> _applySelectionsToRust() async {
     if (!NativeCoreService.instance.isReady) {
       debugPrint('Skipping Rust selection sync: RustLib not initialized');
+      _rustSyncPending = _selectedProxies.isNotEmpty;
       return;
     }
 
+    var allApplied = true;
     for (final entry in _selectedProxies.entries) {
+      final group = entry.key;
+      final wanted = entry.value;
       try {
-        await rust_api.selectProxyInGroup(
-          groupName: entry.key,
-          proxyName: entry.value,
+        final applied = await rust_api.selectProxyInGroup(
+          groupName: group,
+          proxyName: wanted,
         );
-        debugPrint(
-          'Applied persisted selection: ${entry.key} -> ${entry.value}',
+        if (!applied) {
+          allApplied = false;
+          debugPrint('Engine refused selection $group -> $wanted');
+          continue;
+        }
+
+        // 接受调用与真的解析到这个节点是两件事，只有后者决定出口 IP。
+        // 不读回就永远不知道选择有没有落地：引擎会安静地留在本组默认值
+        // （成员列表的第一个），而用户只能从出口 IP 上发现。
+        final effective = await rust_api.getSelectedProxyInGroup(
+          groupName: group,
         );
+        if (effective != null && effective != wanted) {
+          allApplied = false;
+          debugPrint(
+            'Selection mismatch for $group: asked "$wanted", engine reports "$effective"',
+          );
+        } else {
+          debugPrint('Applied selection: $group -> $wanted');
+        }
       } catch (e) {
-        debugPrint(
-          'Failed to apply selection ${entry.key} -> ${entry.value}: $e',
-        );
+        allApplied = false;
+        debugPrint('Failed to apply selection $group -> $wanted: $e');
       }
     }
+    _rustSyncPending = !allApplied;
   }
 
   /// Sync selections to Rust backend (call this after service starts)
   Future<void> syncSelectionsToRust() async {
-    await _applySelectionsToRust();
+    await _syncSelectionsToRustWhenReady();
   }
 
   /// Save selections to SharedPreferences
@@ -239,6 +288,8 @@ class ProxiesProvider extends ChangeNotifier {
           _selectedProxies[group.name] = group.proxies.first;
         }
       }
+
+      unawaited(_syncSelectionsToRustWhenReady());
     } catch (e) {
       debugPrint('Failed to parse config: $e');
       _error = e.toString();
@@ -264,6 +315,9 @@ class ProxiesProvider extends ChangeNotifier {
     // Call Rust API to change proxy selection (only if RustLib is initialized)
     if (!NativeCoreService.instance.isReady) {
       debugPrint('Skipping Rust API call: RustLib not initialized');
+
+      _rustSyncPending = true;
+      _attachEngineReadyListener();
       return;
     }
 
@@ -279,8 +333,25 @@ class ProxiesProvider extends ChangeNotifier {
           proxyName: proxyName,
         );
         if (result) {
+          // 接受调用与真的解析到这个节点是两件事：只有后者决定出口 IP。
+          // 名字在引擎成员表里对不上时，调用会返回成功而引擎仍留在默认节点，
+          // 用户只会从出口 IP 上发现——所以必须读回。
+          final effective = await rust_api.getSelectedProxyInGroup(
+            groupName: groupName,
+          );
+          if (effective != null && effective != proxyName) {
+            debugPrint(
+              'Selection mismatch for $groupName: asked "$proxyName", engine reports "$effective" (attempt ${retryCount + 1}/$maxRetries)',
+            );
+            retryCount++;
+            if (retryCount < maxRetries) {
+              await Future.delayed(const Duration(milliseconds: 200));
+            }
+            continue;
+          }
           debugPrint('Proxy selection updated: $groupName -> $proxyName');
           success = true;
+          _rustSyncPending = false;
           // Notify listeners that proxy selection changed - trigger IP refresh
           proxySelectionChangedController.add(proxyName);
         } else {
@@ -424,13 +495,10 @@ class ProxiesProvider extends ChangeNotifier {
         resolvedPort = 443; // Default for most proxy protocols
       }
 
-      // Determine test method based on proxy type
       final proxyType = proxy.type.toLowerCase();
 
       if (proxyType == 'ss' || proxyType == 'shadowsocks') {
-        // Use full Shadowsocks protocol test
         final password = proxy.options['password'] as String? ?? '';
-        // Clash 配置里有的用 cipher，有的用 method；都兜一下
         final cipher =
             (proxy.options['cipher'] as String?) ??
             (proxy.options['method'] as String?) ??
@@ -460,7 +528,6 @@ class ProxiesProvider extends ChangeNotifier {
             error: result.error,
           );
         } catch (e) {
-          // 如果 SS 协议测试失败，回落到 TCP 连通性以避免全红
           final result = await rust_api.testTcpConnectivity(
             server: host,
             port: resolvedPort,
@@ -476,7 +543,6 @@ class ProxiesProvider extends ChangeNotifier {
         }
       }
 
-      // For other proxy types, fallback to TCP connectivity test
       final result = await rust_api.testTcpConnectivity(
         server: host,
         port: resolvedPort,

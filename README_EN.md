@@ -14,7 +14,7 @@
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
-- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.1.8, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
+- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.1.9, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
 - Explicit configuration downgrades: a node whose protocol corduit cannot build is dropped and its references fall back to `DIRECT`, and a rule type corduit has no rule for is skipped — every downgrade is reported through `onWarning`, never silent.
 - Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
 - Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
@@ -24,7 +24,7 @@
 
 ## Protocol Status
 
-The protocol implementations live in corduit 0.1.5. This repository wires them into Flutter and has not run real-server interoperability tests itself.
+The protocol implementations live in corduit 0.1.9. This repository wires them into Flutter and has not run real-server interoperability tests itself.
 
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
@@ -61,6 +61,61 @@ A protocol can move to “supported” only after interoperability tests against
 
 Rule sets refresh at start-up, after a profile update, and on a 15-minute due check. Only providers whose declared interval (one day by default) has elapsed actually make a network request, and those requests carry `If-None-Match` / `If-Modified-Since`; a 304 means the cached copy is current. A refreshed rule set lands on a content-addressed file name, which changes the config, so the running engine loads the new content on the next `reload_corduit`.
 
+### Proxy group semantics
+
+`proxy-groups` in a profile is a nested structure: the members of a `select` group may themselves be nodes or other groups, and the engine walks that chain one level at a time when it dials (depth is capped at 10). Two consequences matter in practice:
+
+- **Only a group that a rule refers to decides the exit.** Changing the selection of a group that no rule points at, and that no other group references, changes nothing about the traffic. A typical airport profile defines a dozen groups (streaming, Steam, Cloudflare, and so on), and most of them only serve specific rules.
+- **A group's default member is the first entry of its list.** Until a selection is made, the engine uses the first member the way Clash does, so “the first connection used the first node in the list” is the documented default rather than a lost selection. The app persists the selection per group and re-sends every group once the engine reports ready, and again after a profile switch.
+
+When an exit does not match expectations, check in this order: which rule matched the traffic → the group that rule names → that group's selected member → whether the member is a node or another group. After every selection the app reads the effective member back from the engine, logs `Selection mismatch`, and retries when the two disagree.
+
+## Idle Cost
+
+A proxy client has nothing to carry most of the time, so the cost of an idle connection sets both power draw and how responsive the whole device feels. The project holds two hard constraints here, and both are enforced in code and covered by tests:
+
+- **A read never re-enters without having received data.** The engine's idle wait is built on the `Notify` latch, and that latch answers only “was a notification observed” — it cannot distinguish a latched wake (which never blocked at all) from a timeout. `read_blocking` therefore uses `wait_latched` and backs off 1 ms only when a latched wake finds the receive buffer still empty; a wake that carried data returns immediately, and the timeout path is untouched.
+- **No data means no wake-up is claimed.** `push_recv_data` returns early when the receive buffer is full or when the payload is empty (a pure ACK, a zero-window probe) and no longer sets the latch; `close` notifies once, on the open→closed transition.
+
+The accompanying constraint is thread ownership: `relay_with` joins both of the direction threads it started on every path out of the function, and releases both sides before joining when one direction panics, so it cannot return while a thread still holds the transports and their sockets.
+
+- **Pick an error kind by its contract, not by its label.** `std::io::Write::write_all` retries `ErrorKind::Interrupted` **without a bound** (its contract is “a signal interrupted the call and the data is fine”). Mapping “the session was cancelled” onto `Interrupted` turns every failed frame write into an infinite “allocate an error string, retry immediately, fail again” loop: nothing in that loop can block, so the thread sits on a full core with an empty `wchan`. Cancellation now maps to `ConnectionAborted`, which is terminal.
+
+The three constraints above, measured on a device with the tunnel up (same handset, same subscription, same measurement window):
+
+| Observable | Before | After |
+| --- | --- | --- |
+| Process `utime` (per 10 s) | 7.00 cores | **0.01 cores** |
+| Process `stime` | 0.05 cores | 0.01 cores |
+| `procs_running` | 118 | **1** |
+| `PSI cpu some avg10` | 78.58% | **5.68%** |
+| `corduit-relay-up` / `-down` threads | 136 / 41 | **8 / 8** |
+| Running threads with an empty `wchan` | 117 | **0** |
+| Proxy still usable | Yes (HK egress) | Yes (HK egress) |
+
+### Verifying on a device
+
+A spin shows up as **high user CPU, almost no system time, and no I/O growth** at the same time. None of the commands below need root:
+
+```bash
+# 1) System-wide CPU stall accounting (Pressure Stall Information). Sustained high values mean something is starving the CPU.
+adb shell cat /proc/pressure/cpu
+
+# 2) Run-queue length. Sustained high values are what the user feels as lag.
+adb shell grep procs_running /proc/stat
+
+# 3) Per-process user/system time, twice, and subtract (units: 100 Hz ticks).
+adb shell 'P=$(pidof com.blueokanna.veloguard); awk "{print \$14, \$15}" /proc/$P/stat; sleep 15; awk "{print \$14, \$15}" /proc/$P/stat'
+
+# 4) I/O growth. Compare with (3): CPU climbing while the byte count does not is a spin.
+adb shell cat /proc/$(pidof com.blueokanna.veloguard)/io
+
+# 5) Per-thread attribution: an empty wchan (shown as 0) means the thread is on the CPU in userspace, blocked in no syscall.
+adb shell 'P=$(pidof com.blueokanna.veloguard); for t in /proc/$P/task/*; do echo "$(cat $t/comm) $(cat $t/wchan)"; done | sort | uniq -c | sort -rn'
+```
+
+The bar: with the tunnel idle, `procs_running` should stay in the single digits, and threads that are accounted as running should show a kernel sleep symbol in `wchan` rather than an empty one.
+
 ## Known Limitations
 
 These are stored today but do not change runtime behaviour; they are listed so they are not mistaken for working features:
@@ -78,7 +133,7 @@ Flutter Rust Bridge (generated bindings)
         |
 lib-veloguard (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
-corduit 0.1.5 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
+corduit 0.1.9 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
         +-- nextjson / rustbinary (config and binary codecs)
 RecurseX 0.1.0 (optional local recursive DNS front-end, lifecycle owned by the bridge)
@@ -127,6 +182,8 @@ flutter build ios --release --no-codesign
 ```
 
 Use the DevEco/hvigor workflow in [ohos/README.md](ohos/README.md) for HarmonyOS NEXT. A successful build validates the toolchain, not the unfinished VPN data path.
+
+The corduit dependency in `rust/Cargo.toml` carries a `path` (a sibling `../Corduit`) during local development. A CI checkout has no such directory, so before pushing, confirm CI resolves the crates.io version: drop the `path`, or have the workflow check that repository out first. Otherwise CI fails while resolving dependencies instead of failing later with a readable compile error.
 
 ## Icons
 

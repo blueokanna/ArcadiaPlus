@@ -14,7 +14,7 @@
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.1.8 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.1.9 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 配置转换采用显式降级：corduit 无法构建的协议节点会被丢弃、引用回落 `DIRECT`，corduit 没有对应类型的规则会被跳过——每次降级都通过 `onWarning` 上报，不静默处理。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
@@ -24,7 +24,7 @@
 
 ## 协议状态
 
-协议实现位于 corduit 0.1.5；本仓库只负责把它们接进 Flutter，并未对真实服务端互操作做验证。
+协议实现位于 corduit 0.1.9；本仓库只负责把它们接进 Flutter，并未对真实服务端互操作做验证。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
@@ -61,6 +61,61 @@
 
 规则集刷新时机：应用启动、profile 更新，以及每 15 分钟一次的到期检查。只有声明间隔（默认一天）已过的规则集才真正发起网络请求，且带 `If-None-Match` / `If-Modified-Since` 条件头，304 视为已是最新；刷新后的文件按内容哈希命名，配置随之变化，运行中的引擎在下一次 `reload_corduit` 会立即装载新内容。
 
+### 策略组语义
+
+profile 里的 `proxy-groups` 是嵌套结构：一个 `select` 组的成员既可以是节点，也可以是另一个组，转发时引擎沿这条链逐层下钻（深度上限 10）。由此有两条必须知道的结论：
+
+- **只有被规则引用的组才会决定出口。** 一个组如果没有任何规则指向它、也没有被别的组引用，改变它的选中项不会影响任何流量。典型机场配置会定义十几个组（流媒体、Steam、Cloudflare 等），其中绝大多数只服务特定规则。
+- **组的默认成员是成员列表的第一个。** 在用户做出选择之前，引擎按 Clash 语义使用首成员，因此“首次连接走到了列表第一个节点”是配置的默认行为，不是选择丢失。应用把每个组的选择持久化，并在引擎就绪后重新下发全部组，切换 profile 时同样重新下发。
+
+排查「出口与预期不符」时按此顺序确认：目标流量被哪条规则匹配 → 该规则的组 → 该组的选中成员 → 该成员是不是节点（也可能是嵌套组）。应用在每次下发选择后都会向引擎读回实际生效的成员，不一致时记录 `Selection mismatch` 并重试。
+
+## 空闲开销
+
+代理客户端绝大多数时间没有数据要传，因此空闲连接的代价直接决定设备功耗与整机响应。本项目对此有两条硬约束，均已落到代码并覆盖测试：
+
+- **读操作不会在没有拿到数据的情况下反复重入。** 引擎的空闲等待建立在 `Notify` 闩锁上，而闩锁语义只回答“是否观察到通知”，无法区分“闩锁唤醒（根本没有阻塞）”与“超时”。`read_blocking` 因此使用 `wait_latched`，仅在“闩锁唤醒且接收缓冲仍为空”时退避 1 ms；携带数据的唤醒立即返回，超时路径不受影响。
+- **没有数据就不占用唤醒。** `push_recv_data` 在接收缓冲已满、或载荷为空（纯 ACK、零窗口探测）时直接返回，不再置位唤醒闩锁；`close` 只在 open→closed 翻转时通知一次。
+
+与之配套的是线程所有权：`relay_with` 在每一条出口路径上 join 自己启动的两个方向线程，且某一方向 panic 时先释放两侧再 join，因此它返回之后不会再留下持有传输与 socket 的活动线程。
+
+- **错误码要按契约选，不能按语意描述选。** `std::io::Write::write_all` 对 `ErrorKind::Interrupted` 是**无限重试**（约定为“被信号打断，内容无问题”）。把“会话已取消”映射成 `Interrupted`，会让每一次帧写入失败都变成“分配一个错误字符串 → 立即重试 → 再失败”的死循环：循环体内没有任何系统调用可以阻塞，因此线程满核运行且 `wchan` 为空。取消现在映射到 `ConnectionAborted`（终态）。
+
+上述三条在真机隧道开启状态下测得的前后对比（同一设备、同一订阅、同一时间窗口口径）：
+
+| 观测量 | 修复前 | 修复后 |
+| --- | --- | --- |
+| 进程 `utime`（每 10 s） | 7.00 核 | **0.01 核** |
+| 进程 `stime` | 0.05 核 | 0.01 核 |
+| `procs_running` | 118 | **1** |
+| `PSI cpu some avg10` | 78.58% | **5.68%** |
+| `corduit-relay-up` / `-down` 线程数 | 136 / 41 | **8 / 8** |
+| 处于运行态且 `wchan` 为空的线程 | 117 | **0** |
+| 代理是否仍可用 | 是（出口 HK） | 是（出口 HK） |
+
+### 在真机上验证
+
+空转的特征是**用户态 CPU 高、系统调用近乎为零、I/O 不增长**三者同时出现。以下命令不需要 root：
+
+```bash
+# 1) 系统级 CPU 停顿（Pressure Stall Information）：持续偏高说明有进程在抢 CPU
+adb shell cat /proc/pressure/cpu
+
+# 2) 就绪队列长度：持续偏高就是用户感受到的“卡”
+adb shell grep procs_running /proc/stat
+
+# 3) 进程用户态/内核态时间，两次采样求差（单位：100 Hz 计时脉冲）
+adb shell 'P=$(pidof com.blueokanna.veloguard); awk "{print \$14, \$15}" /proc/$P/stat; sleep 15; awk "{print \$14, \$15}" /proc/$P/stat'
+
+# 4) I/O 增量：与 3) 对照，若 CPU 增长而字节数不增长，即为空转
+adb shell cat /proc/$(pidof com.blueokanna.veloguard)/io
+
+# 5) 线程级定位：wchan 为空（显示为 0）表示线程停留在用户态，未阻塞在任何系统调用上
+adb shell 'P=$(pidof com.blueokanna.veloguard); for t in /proc/$P/task/*; do echo "$(cat $t/comm) $(cat $t/wchan)"; done | sort | uniq -c | sort -rn'
+```
+
+判据：空闲隧道下 `procs_running` 应为个位数，运行中线程的 `wchan` 应为内核睡眠符号而非空。
+
 ## 已知限制
 
 以下能力目前会被保存但不会改变运行时行为，写入文档以便不被当成已生效：
@@ -78,7 +133,7 @@ Flutter Rust Bridge（生成绑定）
         |
 lib-veloguard（rust/ 下的唯一桥接 crate：异步适配、DTO 映射、平台入口）
         |
-corduit 0.1.5（引擎：配置、路由、出入站、DNS、TUN、全部协议）
+corduit 0.1.9（引擎：配置、路由、出入站、DNS、TUN、全部协议）
         +-- courierust（HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS 栈）
         +-- nextjson / rustbinary（配置与二进制编解码）
 RecurseX 0.1.0（可选：本地递归 DNS 前端，由桥接层托管生命周期）
@@ -127,6 +182,8 @@ flutter build ios --release --no-codesign
 ```
 
 HarmonyOS NEXT 使用 [ohos/README.md](ohos/README.md) 中的 DevEco/hvigor 流程。构建成功只证明工具链可用，不等于 VPN 数据路径已通过验证。
+
+`rust/Cargo.toml` 中的 corduit 依赖在本地开发时带有 `path`（指向同级目录 `../Corduit`）。CI 的 checkout 里没有该目录，因此提交前需要确认 CI 使用的是 crates.io 上的版本：去掉 `path`，或让 workflow 先 checkout 对应仓库。否则 CI 会在解析依赖阶段失败，而不是在编译阶段给出可读的错误。
 
 ## 图标
 

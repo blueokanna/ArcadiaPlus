@@ -20,11 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      # A four-ABI debug build is the largest thing this job writes. Cargo's dev
-      # profile would keep full debug info for every dependency plus an
-      # incremental cache a one-shot CI build never reuses, which is tens of
-      # gigabytes on this crate. The committed profile stays dev-friendly for
-      # local work; these only tighten the CI run.
       CARGO_PROFILE_DEV_DEBUG: 'false'
       CARGO_PROFILE_DEV_INCREMENTAL: 'false'
 
