@@ -9,8 +9,6 @@
   <a href="README_EN.md">English</a>
 </p>
 
-> 状态：预发布。本仓库尚未达到在全部六个目标平台与全部协议上提供生产支持的标准。本文档只描述代码与验证证据支持的能力。
-
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
