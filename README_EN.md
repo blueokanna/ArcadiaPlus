@@ -197,18 +197,29 @@ The script generates and validates Android, iOS, macOS, Windows, Linux, Web, and
 
 ## Automated Verification
 
-Every push and pull request runs Dart formatting, Flutter analysis and tests, an Android debug APK build, Android release lint (`./gradlew :app:lintRelease`, scoped to this app module — an unqualified `lintRelease` also lints plugin sources that live outside this repository), Rust formatting, Clippy with warnings denied, and all workspace tests. The release workflow repeats those checks while creating a signed APK.
+Every push and pull request runs Dart formatting, Flutter analysis and tests, an Android debug APK build, Android release lint (`./gradlew :app:lintRelease`, scoped to this app module — an unqualified `lintRelease` also lints plugin sources that live outside this repository), Rust formatting, Clippy with warnings denied, and all workspace tests. The release workflow runs the same gates first and only publishes when every one of them passes.
 
 An automated build is not evidence of VPN behavior or protocol interoperability. Android VPN traffic, privileged Windows/Linux TUN routing, Apple Network Extension, HarmonyOS VPN FD handling, and real-server protocol compatibility remain subject to the release gates below.
 
 ## GitHub Release Configuration
 
-Create these repository Actions secrets before manually dispatching a release or pushing a release tag:
+Pushing a `vMAJOR.MINOR.PATCH` tag — or dispatching the release workflow from the default branch — runs the full quality gate first, then builds and publishes the stable release without further manual steps. A release carries:
+
+- `VeloGuard-<tag>-android-debug.apk` — four-ABI debug build for diagnosis.
+- `VeloGuard-<tag>-android-release.apk` — four-ABI optimized build for installation.
+- `VeloGuard-<tag>-windows-x64-setup.exe` and `-windows-x64-portable.zip` — Inno Setup installer and a no-installation archive.
+- `VeloGuard-<tag>-macos-universal.dmg` and `-macos-universal.zip` — universal (Apple silicon + Intel) disk image and archive; the app is unsigned, so the first launch is right-click → Open.
+- `VeloGuard-<tag>-linux-x64.deb` and `-linux-x64.tar.gz` — Debian package and relocatable bundle.
+- `update-manifest.json` and `SHA256SUMS` — the checksum-verified metadata the in-app updater reads.
+
+The Android release APK is signed with the project's release key only when these repository Actions secrets are configured (`VELOGUARD_KEYSTORE_BASE64` is the base64 encoding of the keystore file, e.g. `base64 -w0 veloguard.jks`):
 
 - `VELOGUARD_KEYSTORE_BASE64`
 - `VELOGUARD_KEYSTORE_PASSWORD`
 - `VELOGUARD_KEY_ALIAS`
 - `VELOGUARD_KEY_PASSWORD`
+
+Without them the release APK falls back to the debug key: it installs, but it can only upgrade installs that the debug key signed — configure the keystore before the first public stable release.
 
 The `version` in `pubspec.yaml`, the top changelog section, and the `vMAJOR.MINOR.PATCH` tag must match. Manual releases can run only from the default branch. Existing releases are immutable, so the workflow fails instead of silently replacing or accepting existing assets.
 

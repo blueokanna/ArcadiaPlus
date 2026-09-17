@@ -19,6 +19,18 @@ void main() {
       source,
       contains('cargo test --manifest-path rust/Cargo.toml --workspace'),
     );
+    expect(source, contains('flutter build apk --debug'));
+    expect(source, contains('flutter build apk --release'));
+    expect(source, contains('flutter build windows --release'));
+    expect(source, contains('flutter build macos --release'));
+    expect(source, contains('flutter build linux --release'));
+    expect(source, contains('update-manifest.json'));
+    expect(source, contains('SHA256SUMS'));
+    expect(source, contains('VELOGUARD_KEYSTORE_BASE64'));
+    expect(
+      source,
+      contains('needs: [validate, android, windows, macos, linux]'),
+    );
     expect(source, contains('./gradlew :app:lintRelease'));
     expect(source, isNot(contains('run: ./gradlew lintRelease')));
     expect(source, contains(r'tag_name: ${{ steps.release.outputs.tag }}'));

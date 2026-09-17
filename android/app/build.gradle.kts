@@ -55,9 +55,14 @@ android {
 
     buildTypes {
         release {
-            if (hasCompleteReleaseSigningConfig) {
-                signingConfig = signingConfigs.getByName("release")
-            }
+            // A missing keystore must not fail the build: fall back to the
+            // debug key so a release build still yields an installable APK.
+            signingConfig =
+                if (hasCompleteReleaseSigningConfig) {
+                    signingConfigs.getByName("release")
+                } else {
+                    signingConfigs.getByName("debug")
+                }
             isMinifyEnabled = true
             isShrinkResources = true
         }

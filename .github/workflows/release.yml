@@ -14,29 +14,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  android:
-    name: Build and publish Android debug APK
+  validate:
+    name: Validate release identity and notes
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    env:
-      CARGO_PROFILE_DEV_DEBUG: 'false'
-      CARGO_PROFILE_DEV_INCREMENTAL: 'false'
-
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Reclaim disk space this build does not need
-        run: |
-          set -euo pipefail
-          echo "free before: $(df -h / | awk 'NR==2 {print $4}')"
-          # See ci.yml: the pinned NDK is installed explicitly further down, so
-          # the preinstalled releases are dead weight here.
-          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL \
-                      /usr/local/lib/android/sdk/ndk
-          echo "free after:  $(df -h / | awk 'NR==2 {print $4}')"
 
       - name: Resolve and validate stable release
         id: release
@@ -47,7 +36,10 @@ jobs:
         run: |
           set -euo pipefail
           version="$(sed -nE 's/^version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)(\+[0-9]+)?$/\1/p' pubspec.yaml)"
-          test -n "$version"
+          if [[ -z "$version" ]]; then
+            echo "pubspec.yaml does not declare a stable MAJOR.MINOR.PATCH version" >&2
+            exit 1
+          fi
 
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             if [[ "$GITHUB_REF" != "refs/heads/$DEFAULT_BRANCH" ]]; then
@@ -63,7 +55,10 @@ jobs:
             echo "Only stable vMAJOR.MINOR.PATCH tags can be released" >&2
             exit 1
           fi
-          test "$tag" = "v$version"
+          if [[ "$tag" != "v$version" ]]; then
+            echo "Tag '$tag' does not match the pubspec version 'v$version': bump pubspec.yaml, commit it, and re-tag" >&2
+            exit 1
+          fi
 
           if git rev-parse --verify --quiet "refs/tags/$tag" >/dev/null; then
             test "$(git rev-list -n 1 "$tag")" = "$(git rev-parse HEAD)" || {
@@ -78,11 +73,15 @@ jobs:
           fi
 
           awk -v version="$version" '
+            { sub(/\r$/, "") }
             $0 == "## " version { found=1; next }
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md > changelog-section.md
-          grep -qE '^- ' changelog-section.md
+          if ! grep -qE '^- ' changelog-section.md; then
+            echo "CHANGELOG.md has no entries under '## $version'; write the release notes before tagging" >&2
+            exit 1
+          fi
           {
             echo '**Official changelog:**'
             echo
@@ -91,6 +90,82 @@ jobs:
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the release notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+
+  quality:
+    name: Dart, Flutter, and Rust quality gates
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.97.0'
+          components: rustfmt,clippy
+
+      - name: Use the pub host recorded in pubspec.lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `pubspec.lock` records the host that produced it; resolving against a
+          # different host makes `--enforce-lockfile` report every package as
+          # changed. Follow the lockfile instead of hard-coding a mirror.
+          host="$(sed -nE 's|^ *url: *"(https?://[^"]+)"$|\1|p' pubspec.lock | head -n1)"
+          if [[ -n "$host" ]]; then
+            echo "PUB_HOSTED_URL=$host" >> "$GITHUB_ENV"
+            echo "Using the pub host from pubspec.lock: $host"
+          else
+            echo "Using the default pub host (pub.dev)"
+          fi
+
+      - name: Resolve dependencies and test
+        run: |
+          flutter pub get --enforce-lockfile
+          dart format --output=none --set-exit-if-changed lib test
+          flutter analyze
+          flutter test
+          cargo fmt --manifest-path rust/Cargo.toml --all -- --check
+          cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --all-features --locked -- -D warnings
+          cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --all-features --locked
+
+  android:
+    name: Android debug and release APKs
+    needs: [validate, quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CARGO_PROFILE_DEV_DEBUG: 'false'
+      CARGO_PROFILE_DEV_INCREMENTAL: 'false'
+
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v5
+
+      - name: Reclaim disk space this build does not need
+        run: |
+          set -euo pipefail
+          echo "free before: $(df -h / | awk 'NR==2 {print $4}')"
+          # See ci.yml: the pinned NDK is installed explicitly further down, so
+          # the preinstalled releases are dead weight here.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL \
+                      /usr/local/lib/android/sdk/ndk
+          echo "free after:  $(df -h / | awk 'NR==2 {print $4}')"
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -109,7 +184,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: '1.97.0'
-          components: rustfmt,clippy
           targets: armv7-linux-androideabi,aarch64-linux-android,i686-linux-android,x86_64-linux-android
 
       - name: Install the Android NDK recorded in build.gradle.kts
@@ -142,27 +216,44 @@ jobs:
             echo "Using the default pub host (pub.dev)"
           fi
 
-      - name: Resolve dependencies and test
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Decode the Android release keystore
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.VELOGUARD_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.VELOGUARD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.VELOGUARD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.VELOGUARD_KEY_PASSWORD }}
         run: |
-          flutter pub get --enforce-lockfile
-          dart format --output=none --set-exit-if-changed lib test
-          flutter analyze
-          flutter test
-          cargo fmt --manifest-path rust/Cargo.toml --all -- --check
-          cargo clippy --manifest-path rust/Cargo.toml --workspace --all-targets --all-features --locked -- -D warnings
-          cargo test --manifest-path rust/Cargo.toml --workspace --all-targets --all-features --locked
+          set -euo pipefail
+          if [[ -z "$KEYSTORE_BASE64" ]]; then
+            echo "::warning title=Unsigned release APK::VELOGUARD_KEYSTORE_BASE64 is not configured, so the release APK is signed with the debug key and can only upgrade installs that the debug key signed."
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+          {
+            echo "VELOGUARD_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore"
+            echo "VELOGUARD_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "VELOGUARD_KEY_ALIAS=$KEY_ALIAS"
+            echo "VELOGUARD_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
 
       - name: Give the Android build a CI-sized Gradle heap
         shell: bash
         run: |
           set -euo pipefail
           # See ci.yml: the committed -Xmx1G cap is a local-machine setting, and
-          # the four-ABI debug package does not fit in it on a runner.
+          # the four-ABI packages do not fit in it on a runner.
           sed -i 's|^org\.gradle\.jvmargs=.*|org.gradle.jvmargs=-Xmx4G -XX:MaxMetaspaceSize=2G -XX:ReservedCodeCacheSize=512m|' android/gradle.properties
           grep '^org.gradle.jvmargs' android/gradle.properties
 
       - name: Build debug APK
         run: flutter build apk --debug
+
+      - name: Build release APK
+        run: flutter build apk --release
 
       - name: Report why the Android build failed
         if: failure()
@@ -190,31 +281,366 @@ jobs:
           # and those third-party sources are not ours to fix.
           ./gradlew :app:lintRelease
 
-      - name: Create checksum-verified update metadata
+      - name: Stage the APKs
         shell: bash
-        env:
-          RELEASE_TAG: ${{ steps.release.outputs.tag }}
-          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
           set -euo pipefail
+          tag='${{ needs.validate.outputs.tag }}'
           mkdir -p dist
-          asset="VeloGuard-${RELEASE_TAG}-android-debug.apk"
-          cp build/app/outputs/flutter-apk/app-debug.apk "dist/$asset"
-          checksum="$(sha256sum "dist/$asset" | cut -d' ' -f1)"
-          published_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
-          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}/${asset}"
-          jq -e -n \
-            --arg tag "$RELEASE_TAG" \
-            --arg version "$RELEASE_VERSION" \
-            --arg published_at "$published_at" \
-            --arg name "$asset" \
-            --arg url "$url" \
-            --arg sha256 "$checksum" \
-            '{schema:1,tag:$tag,version:$version,published_at:$published_at,assets:[{platform:"android",name:$name,url:$url,sha256:$sha256}]}' \
-            > dist/update-manifest.json
-          (cd dist && sha256sum "$asset" update-manifest.json > SHA256SUMS)
+          cp build/app/outputs/flutter-apk/app-debug.apk "dist/VeloGuard-${tag}-android-debug.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/VeloGuard-${tag}-android-release.apk"
+          ls -lh dist
 
-      - name: Publish stable GitHub Release
+      - name: Upload the Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*
+          if-no-files-found: error
+
+  windows:
+    name: Windows installer and portable archive
+    needs: [validate, quality]
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.97.0'
+
+      - name: Use the pub host recorded in pubspec.lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `pubspec.lock` records the host that produced it; resolving against a
+          # different host makes `--enforce-lockfile` report every package as
+          # changed. Follow the lockfile instead of hard-coding a mirror.
+          host="$(sed -nE 's|^ *url: *"(https?://[^"]+)"$|\1|p' pubspec.lock | head -n1)"
+          if [[ -n "$host" ]]; then
+            echo "PUB_HOSTED_URL=$host" >> "$GITHUB_ENV"
+            echo "Using the pub host from pubspec.lock: $host"
+          else
+            echo "Using the default pub host (pub.dev)"
+          fi
+
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build the Windows release bundle
+        run: flutter build windows --release
+
+      - name: Stage the portable archive
+        shell: pwsh
+        run: |
+          $tag = '${{ needs.validate.outputs.tag }}'
+          New-Item -ItemType Directory -Force dist | Out-Null
+          tar -a -c -f "dist/VeloGuard-$tag-windows-x64-portable.zip" -C 'build\windows\x64\runner\Release' .
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          $tag = '${{ needs.validate.outputs.tag }}'
+          $version = '${{ needs.validate.outputs.version }}'
+          $iss = @"
+          [Setup]
+          AppId={{E4BD9BC7-9DC9-469E-9F38-BA84DB86AC22}
+          AppName=VeloGuard
+          AppVersion=$version
+          AppVerName=VeloGuard $version
+          AppPublisher=blueokanna
+          AppPublisherURL=https://github.com/blueokanna/VeloGuard
+          AppSupportURL=https://github.com/blueokanna/VeloGuard/issues
+          AppUpdatesURL=https://github.com/blueokanna/VeloGuard/releases
+          DefaultDirName={autopf}\VeloGuard
+          DefaultGroupName=VeloGuard
+          DisableProgramGroupPage=yes
+          UninstallDisplayIcon={app}\veloguard.exe
+          OutputDir=$($PWD.Path)\dist
+          OutputBaseFilename=VeloGuard-$tag-windows-x64-setup
+          Compression=lzma2/max
+          SolidCompression=yes
+          WizardStyle=modern
+          ArchitecturesAllowed=x64
+          ArchitecturesInstallIn64BitMode=x64
+          PrivilegesRequired=lowest
+          PrivilegesRequiredOverridesAllowed=dialog
+          [Languages]
+          Name: "english"; MessagesFile: "compiler:Default.isl"
+          [Tasks]
+          Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+          [Files]
+          Source: "$($PWD.Path)\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+          [Icons]
+          Name: "{autoprograms}\VeloGuard"; Filename: "{app}\veloguard.exe"
+          Name: "{autodesktop}\VeloGuard"; Filename: "{app}\veloguard.exe"; Tasks: desktopicon
+          [Run]
+          Filename: "{app}\veloguard.exe"; Description: "{cm:LaunchProgram,VeloGuard}"; Flags: nowait postinstall skipifsilent
+          "@
+          Set-Content -Path "$env:RUNNER_TEMP\veloguard.iss" -Value $iss -Encoding utf8
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "$env:RUNNER_TEMP\veloguard.iss"
+          Get-ChildItem dist
+
+      - name: Upload the Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: dist/*
+          if-no-files-found: error
+
+  macos:
+    name: macOS disk image and archive
+    needs: [validate, quality]
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Set up Rust for both macOS architectures
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.97.0'
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+
+      - name: Use the pub host recorded in pubspec.lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `pubspec.lock` records the host that produced it; resolving against a
+          # different host makes `--enforce-lockfile` report every package as
+          # changed. Follow the lockfile instead of hard-coding a mirror.
+          host="$(sed -nE 's|^ *url: *"(https?://[^"]+)"$|\1|p' pubspec.lock | head -n1)"
+          if [[ -n "$host" ]]; then
+            echo "PUB_HOSTED_URL=$host" >> "$GITHUB_ENV"
+            echo "Using the pub host from pubspec.lock: $host"
+          else
+            echo "Using the default pub host (pub.dev)"
+          fi
+
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build the macOS release bundle
+        run: flutter build macos --release
+
+      - name: Stage the disk image and the archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='${{ needs.validate.outputs.tag }}'
+          version='${{ needs.validate.outputs.version }}'
+          app='build/macos/Build/Products/Release/VeloGuard.app'
+          test -d "$app"
+          mkdir -p dist
+          hdiutil create -volname "VeloGuard $version" -srcfolder "$app" -ov -format UDZO "dist/VeloGuard-${tag}-macos-universal.dmg"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/VeloGuard-${tag}-macos-universal.zip"
+          ls -lh dist
+
+      - name: Upload the macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*
+          if-no-files-found: error
+
+  linux:
+    name: Linux bundle, Debian package, and tarball
+    needs: [validate, quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v5
+
+      - name: Install the Linux desktop build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev g++
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.97.0'
+
+      - name: Use the pub host recorded in pubspec.lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          # `pubspec.lock` records the host that produced it; resolving against a
+          # different host makes `--enforce-lockfile` report every package as
+          # changed. Follow the lockfile instead of hard-coding a mirror.
+          host="$(sed -nE 's|^ *url: *"(https?://[^"]+)"$|\1|p' pubspec.lock | head -n1)"
+          if [[ -n "$host" ]]; then
+            echo "PUB_HOSTED_URL=$host" >> "$GITHUB_ENV"
+            echo "Using the pub host from pubspec.lock: $host"
+          else
+            echo "Using the default pub host (pub.dev)"
+          fi
+
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+
+      - name: Build the Linux release bundle
+        run: flutter build linux --release
+
+      - name: Stage the tarball
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='${{ needs.validate.outputs.tag }}'
+          mkdir -p dist
+          tar -C build/linux/x64/release -czf "dist/VeloGuard-${tag}-linux-x64.tar.gz" bundle
+
+      - name: Build the Debian package
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag='${{ needs.validate.outputs.tag }}'
+          version='${{ needs.validate.outputs.version }}'
+          pkg="$(mktemp -d)/veloguard"
+          install -d "$pkg/DEBIAN" "$pkg/usr/lib/veloguard" "$pkg/usr/bin" \
+                     "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/512x512/apps"
+          cp -a build/linux/x64/release/bundle/. "$pkg/usr/lib/veloguard/"
+          ln -s /usr/lib/veloguard/veloguard "$pkg/usr/bin/veloguard"
+          cp assets/veloguard.png "$pkg/usr/share/icons/hicolor/512x512/apps/veloguard.png"
+          cat > "$pkg/usr/share/applications/veloguard.desktop" <<'DESKTOP'
+          [Desktop Entry]
+          Name=VeloGuard
+          Comment=Cross-platform proxy client built with Flutter and Rust
+          Exec=veloguard
+          Icon=veloguard
+          Terminal=false
+          Type=Application
+          Categories=Network;Utility;
+          DESKTOP
+          cat > "$pkg/DEBIAN/control" <<CONTROL
+          Package: veloguard
+          Version: $version
+          Architecture: amd64
+          Section: net
+          Priority: optional
+          Maintainer: blueokanna <blueokanna@gmail.com>
+          Homepage: https://github.com/blueokanna/VeloGuard
+          Depends: libgtk-3-0
+          Description: Cross-platform proxy client built with Flutter and Rust
+           VeloGuard ships no servers, nodes, or subscriptions; you supply your
+           own configuration and are responsible for lawful use.
+          CONTROL
+          dpkg-deb --build --root-owner-group "$pkg" "dist/VeloGuard-${tag}-linux-x64.deb"
+          dpkg-deb --info "dist/VeloGuard-${tag}-linux-x64.deb"
+
+      - name: Upload the Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: Publish the stable release
+    needs: [validate, android, windows, macos, linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download every staged asset
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Download the release notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+
+      - name: Verify the staged assets
+        id: release
+        shell: bash
+        env:
+          TAG: ${{ needs.validate.outputs.tag }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          expected=(
+            "VeloGuard-${TAG}-android-debug.apk"
+            "VeloGuard-${TAG}-android-release.apk"
+            "VeloGuard-${TAG}-windows-x64-portable.zip"
+            "VeloGuard-${TAG}-windows-x64-setup.exe"
+            "VeloGuard-${TAG}-macos-universal.dmg"
+            "VeloGuard-${TAG}-macos-universal.zip"
+            "VeloGuard-${TAG}-linux-x64.deb"
+            "VeloGuard-${TAG}-linux-x64.tar.gz"
+          )
+          for asset in "${expected[@]}"; do
+            if [[ ! -f "dist/$asset" ]]; then
+              echo "Missing release asset: $asset" >&2
+              exit 1
+            fi
+          done
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create the update manifest and checksums
+        shell: bash
+        env:
+          TAG: ${{ needs.validate.outputs.tag }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          published_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          asset() {
+            local platform="$1" name="$2"
+            jq -e -n \
+              --arg platform "$platform" \
+              --arg name "$name" \
+              --arg url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${name}" \
+              --arg sha256 "$(sha256sum "dist/$name" | cut -d' ' -f1)" \
+              '{platform:$platform,name:$name,url:$url,sha256:$sha256}'
+          }
+          jq -e -n \
+            --arg tag "$TAG" \
+            --arg version "$VERSION" \
+            --arg published_at "$published_at" \
+            --argjson android "$(asset android "VeloGuard-${TAG}-android-release.apk")" \
+            --argjson windows "$(asset windows "VeloGuard-${TAG}-windows-x64-setup.exe")" \
+            --argjson macos "$(asset macos "VeloGuard-${TAG}-macos-universal.dmg")" \
+            --argjson linux "$(asset linux "VeloGuard-${TAG}-linux-x64.deb")" \
+            '{schema:1,tag:$tag,version:$version,published_at:$published_at,assets:[$android,$windows,$macos,$linux]}' \
+            > dist/update-manifest.json
+          (cd dist && sha256sum VeloGuard-* update-manifest.json > SHA256SUMS)
+          cat dist/update-manifest.json
+
+      - name: Publish the stable GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release.outputs.tag }}
@@ -225,7 +651,4 @@ jobs:
           prerelease: false
           make_latest: true
           fail_on_unmatched_files: true
-          files: |
-            dist/VeloGuard-${{ steps.release.outputs.tag }}-android-debug.apk
-            dist/update-manifest.json
-            dist/SHA256SUMS
+          files: dist/*

@@ -197,18 +197,29 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
 
 ## 自动化验证
 
-每次 push 和 pull request 都会执行 Dart 格式检查、Flutter 分析与测试、Android Debug APK 构建、Android Release lint（`./gradlew :app:lintRelease`，只 lint 本应用模块——不带前缀的 `lintRelease` 会连带仓库外的插件源码一起报错）、Rust 格式检查、将警告视为错误的 Clippy，以及 Rust 全工作区测试。发布工作流会在生成签名 APK 时重复这些检查。
+每次 push 和 pull request 都会执行 Dart 格式检查、Flutter 分析与测试、Android Debug APK 构建、Android Release lint（`./gradlew :app:lintRelease`，只 lint 本应用模块——不带前缀的 `lintRelease` 会连带仓库外的插件源码一起报错）、Rust 格式检查、将警告视为错误的 Clippy，以及 Rust 全工作区测试。发布工作流会先运行同一套质量门，全部通过后才发布。
 
 自动构建通过不等于 VPN 行为或协议互操作已经得到证明。Android VPN 真实流量、Windows/Linux 特权 TUN 路由、Apple Network Extension、HarmonyOS VPN FD 处理，以及真实服务端协议兼容性，仍必须满足下方发布门槛。
 
 ## GitHub 发布配置
 
-手动执行发布工作流或推送发布标签前，必须配置以下仓库 Actions Secrets：
+推送 `vMAJOR.MINOR.PATCH` 标签（或从默认分支手动触发发布工作流）后，工作流会先跑完整质量门，全部通过后自动构建并发布正式版本，无需人工确认。每个正式版本包含：
+
+- `VeloGuard-<tag>-android-debug.apk` —— 四 ABI Debug 构建，用于问题诊断。
+- `VeloGuard-<tag>-android-release.apk` —— 四 ABI 优化构建，用于安装使用。
+- `VeloGuard-<tag>-windows-x64-setup.exe` 与 `-windows-x64-portable.zip` —— Inno Setup 安装包与免安装压缩包。
+- `VeloGuard-<tag>-macos-universal.dmg` 与 `-macos-universal.zip` —— 通用架构（Apple 芯片 + Intel）磁盘映像与压缩包；应用未签名，首次启动需右键 → 打开。
+- `VeloGuard-<tag>-linux-x64.deb` 与 `-linux-x64.tar.gz` —— Debian 安装包与可携带压缩包。
+- `update-manifest.json` 与 `SHA256SUMS` —— 应用内更新检查读取的校验和元数据。
+
+只有配置了以下仓库 Actions Secrets 时，Android release APK 才会用发布密钥签名（`VELOGUARD_KEYSTORE_BASE64` 是 keystore 文件的 base64 编码，如 `base64 -w0 veloguard.jks`）：
 
 - `VELOGUARD_KEYSTORE_BASE64`
 - `VELOGUARD_KEYSTORE_PASSWORD`
 - `VELOGUARD_KEY_ALIAS`
 - `VELOGUARD_KEY_PASSWORD`
+
+未配置时 release APK 回退到 debug 密钥签名：可以安装，但只能升级由 debug 密钥签名的安装——首次公开发布前必须配置好 keystore。
 
 `pubspec.yaml` 中的 `version`、变更日志顶部版本和 `vMAJOR.MINOR.PATCH` 标签必须一致。手动发布只能从默认分支执行。已经发布的 Release 及其产物不可变，工作流会明确失败，不会静默覆盖或把既有产物当作本次成功。
 
