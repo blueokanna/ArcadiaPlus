@@ -1,4 +1,4 @@
-package com.blueokanna.veloguard
+package com.blueokanna.arcadia
 
 import android.Manifest
 import android.app.Activity
@@ -22,8 +22,8 @@ import kotlinx.coroutines.*
 
 class MainActivity : FlutterActivity() {
     companion object {
-        private const val TAG = "VeloGuardMainActivity"
-        private const val CHANNEL = "com.veloguard/proxy"
+        private const val TAG = "ArcadiaMainActivity"
+        private const val CHANNEL = "com.arcadia/proxy"
         private const val VPN_REQUEST_CODE = 1001
         private const val NOTIFICATION_PERMISSION_CODE = 1002
     }
@@ -75,37 +75,37 @@ class MainActivity : FlutterActivity() {
                 }
                 "resetVpnState" -> {
                     Log.d(TAG, "Resetting VPN state...")
-                    VeloGuardVpnService.resetAllState()
+                    ArcadiaVpnService.resetAllState()
                     result.success(true)
                 }
                 "isVpnRunning" -> {
-                    result.success(VeloGuardVpnService.isRunning)
+                    result.success(ArcadiaVpnService.isRunning)
                 }
                 "isOtherVpnActive" -> {
                     result.success(isOtherVpnActive())
                 }
                 "getVpnFd" -> {
-                    result.success(VeloGuardVpnService.vpnFd)
+                    result.success(ArcadiaVpnService.vpnFd)
                 }
                 "setProxyMode" -> {
                     val mode = call.argument<String>("mode") ?: "rule"
                     val proxyMode =
                             when (mode.lowercase()) {
-                                "global" -> VeloGuardVpnService.ProxyMode.GLOBAL
-                                "direct" -> VeloGuardVpnService.ProxyMode.DIRECT
-                                else -> VeloGuardVpnService.ProxyMode.RULE
+                                "global" -> ArcadiaVpnService.ProxyMode.GLOBAL
+                                "direct" -> ArcadiaVpnService.ProxyMode.DIRECT
+                                else -> ArcadiaVpnService.ProxyMode.RULE
                             }
-                    VeloGuardVpnService.setProxyMode(proxyMode)
+                    ArcadiaVpnService.setProxyMode(proxyMode)
                     result.success(true)
                 }
                 "getProxyMode" -> {
-                    result.success(VeloGuardVpnService.proxyMode.name.lowercase())
+                    result.success(ArcadiaVpnService.proxyMode.name.lowercase())
                 }
                 "getDeviceInfo" -> {
                     result.success(getDeviceInfo())
                 }
                 "isNativeLibraryLoaded" -> {
-                    result.success(VeloGuardVpnService.isLibraryLoaded)
+                    result.success(ArcadiaVpnService.isLibraryLoaded)
                 }
                 "installApk" -> {
                     val path = call.argument<String>("path")
@@ -116,7 +116,7 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "getNativeLibraryInfo" -> {
-                    result.success(VeloGuardVpnService.getLibraryInfo(this))
+                    result.success(ArcadiaVpnService.getLibraryInfo(this))
                 }
                 else -> {
                     result.notImplemented()
@@ -273,7 +273,7 @@ class MainActivity : FlutterActivity() {
                 Log.d(TAG, "Launching VPN start in IO dispatcher...")
                 val fd =
                         withContext(Dispatchers.IO) {
-                            VeloGuardVpnService.startVpnAndGetFd(
+                            ArcadiaVpnService.startVpnAndGetFd(
                                     this@MainActivity,
                                     mode,
                                     pendingAllowLan
@@ -311,7 +311,7 @@ class MainActivity : FlutterActivity() {
 
     private fun stopVpnService() {
         Log.d(TAG, "Stopping VPN service...")
-        VeloGuardVpnService.stopVpnFromOutside(this)
+        ArcadiaVpnService.stopVpnFromOutside(this)
     }
 
     private fun getDeviceInfo(): Map<String, Any> {
@@ -340,7 +340,7 @@ class MainActivity : FlutterActivity() {
                 val isVpnTransport =
                         capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) ==
                                 true
-                val isOurVpnRunning = VeloGuardVpnService.isRunning
+                val isOurVpnRunning = ArcadiaVpnService.isRunning
 
                 // If VPN transport is active but our VPN is not running, another VPN is active
                 isVpnTransport && !isOurVpnRunning
@@ -401,8 +401,8 @@ class MainActivity : FlutterActivity() {
         methodChannel?.invokeMethod(
                 "vpnStatusChanged",
                 mapOf(
-                        "isRunning" to VeloGuardVpnService.isRunning,
-                        "fd" to VeloGuardVpnService.vpnFd
+                        "isRunning" to ArcadiaVpnService.isRunning,
+                        "fd" to ArcadiaVpnService.vpnFd
                 )
         )
     }

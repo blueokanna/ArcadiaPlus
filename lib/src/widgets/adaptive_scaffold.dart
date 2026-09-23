@@ -1,8 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:veloguard/src/utils/platform_utils.dart';
-import 'package:veloguard/src/utils/responsive_utils.dart';
-import 'package:veloguard/src/widgets/navigation_bar.dart';
+import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia/src/utils/responsive_utils.dart';
+import 'package:arcadia/src/widgets/navigation_bar.dart';
 
 class AdaptiveScaffold extends StatelessWidget {
   final Widget body;

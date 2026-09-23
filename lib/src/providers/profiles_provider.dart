@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:veloguard/src/services/storage_service.dart';
-import 'package:veloguard/src/services/config_converter.dart';
-import 'package:veloguard/src/services/rule_provider_service.dart';
+import 'package:arcadia/src/services/storage_service.dart';
+import 'package:arcadia/src/services/config_converter.dart';
+import 'package:arcadia/src/services/rule_provider_service.dart';
 
 class ProfilesProvider extends ChangeNotifier {
   List<ProfileConfig> _profiles = [];

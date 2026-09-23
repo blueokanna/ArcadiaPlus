@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:veloguard/src/utils/platform_utils.dart';
+import 'package:arcadia/src/utils/platform_utils.dart';
 
 class AdaptiveButton extends StatelessWidget {
   final Widget child;

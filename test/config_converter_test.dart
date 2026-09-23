@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:veloguard/src/services/config_converter.dart';
+import 'package:arcadia/src/services/config_converter.dart';
 
 /// Decodes the converter output into the JSON map corduit will see.
 Map<String, dynamic> convert(

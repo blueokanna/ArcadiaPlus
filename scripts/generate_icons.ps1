@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Source = "assets/veloguard.png"
+    [string]$Source = "assets/arcadia.png"
 )
 
 $ErrorActionPreference = "Stop"
@@ -187,4 +187,4 @@ try {
     $image.Dispose()
 }
 
-Write-Host "Generated VeloGuard icons for Android, iOS, macOS, Windows, Linux, Web, and HarmonyOS."
+Write-Host "Generated Arcadia icons for Android, iOS, macOS, Windows, Linux, Web, and HarmonyOS."

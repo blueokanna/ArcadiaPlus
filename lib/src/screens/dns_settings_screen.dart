@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:veloguard/src/providers/dns_settings_provider.dart';
-import 'package:veloguard/src/widgets/adaptive_list_tile.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/providers/dns_settings_provider.dart';
+import 'package:arcadia/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
 
 /// DNS settings, limited to what the engine can carry.
 ///

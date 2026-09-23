@@ -6,12 +6,12 @@ import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:veloguard/src/rust/types.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
-import 'package:veloguard/src/utils/responsive_utils.dart';
-import 'package:veloguard/src/utils/animation_utils.dart';
-import 'package:veloguard/src/utils/app_lifecycle.dart';
-import 'package:veloguard/src/providers/proxies_provider.dart'
+import 'package:arcadia/src/rust/types.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/utils/responsive_utils.dart';
+import 'package:arcadia/src/utils/animation_utils.dart';
+import 'package:arcadia/src/utils/app_lifecycle.dart';
+import 'package:arcadia/src/providers/proxies_provider.dart'
     show proxySelectionChangedController;
 
 /// Traffic history data point
@@ -309,7 +309,7 @@ class _TrafficChartState extends State<TrafficChart>
       BaseOptions(
         connectTimeout: const Duration(seconds: 8),
         receiveTimeout: const Duration(seconds: 8),
-        headers: {'User-Agent': 'VeloGuard/1.0'},
+        headers: {'User-Agent': 'Arcadia/1.0'},
       ),
     );
 

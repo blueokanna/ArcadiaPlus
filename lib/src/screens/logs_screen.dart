@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
-import 'package:veloguard/src/rust/api.dart' as rust_api;
-import 'package:veloguard/src/utils/app_lifecycle.dart';
-import 'package:veloguard/src/utils/platform_utils.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
-import 'package:veloguard/src/services/native_core_service.dart';
+import 'package:arcadia/src/rust/api.dart' as rust_api;
+import 'package:arcadia/src/utils/app_lifecycle.dart';
+import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/services/native_core_service.dart';
 
 class LogsScreen extends StatefulWidget {
   const LogsScreen({super.key});

@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:veloguard/src/providers/app_state_provider.dart';
-import 'package:veloguard/src/providers/theme_provider.dart';
-import 'package:veloguard/src/providers/locale_provider.dart';
-import 'package:veloguard/src/providers/general_settings_provider.dart';
-import 'package:veloguard/src/providers/update_provider.dart';
-import 'package:veloguard/src/widgets/adaptive_list_tile.dart';
-import 'package:veloguard/src/utils/platform_utils.dart';
-import 'package:veloguard/src/utils/animation_utils.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/providers/app_state_provider.dart';
+import 'package:arcadia/src/providers/theme_provider.dart';
+import 'package:arcadia/src/providers/locale_provider.dart';
+import 'package:arcadia/src/providers/general_settings_provider.dart';
+import 'package:arcadia/src/providers/update_provider.dart';
+import 'package:arcadia/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia/src/utils/animation_utils.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -403,7 +403,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           final subtitle = switch (updater.state) {
                             UpdateState.available =>
                               l10n?.updateAvailable(updateVersion) ??
-                                  'VeloGuard $updateVersion is available',
+                                  'Arcadia $updateVersion is available',
                             UpdateState.downloading =>
                               l10n?.downloadingProgress(
                                     (updater.downloadProgress * 100).round(),
@@ -466,7 +466,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.aboutCatClash ?? '关于 VeloGuard'),
+                        title: Text(l10n?.aboutCatClash ?? '关于 Arcadia'),
                         subtitle: Text(l10n?.aboutCatClashDesc ?? '了解更多关于此应用'),
                         leading: Icon(
                           Icons.flash_on_outlined,
@@ -508,7 +508,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       AdaptiveListTile(
                         title: Text(l10n?.restartService ?? '重启服务'),
                         subtitle: Text(
-                          l10n?.restartServiceDesc ?? '重启 VeloGuard 服务',
+                          l10n?.restartServiceDesc ?? '重启 Arcadia 服务',
                         ),
                         leading: Icon(
                           Icons.restart_alt_outlined,
@@ -588,7 +588,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLicenseDialog(BuildContext context) {
     showLicensePage(
       context: context,
-      applicationName: 'VeloGuard',
+      applicationName: 'Arcadia',
       applicationVersion: _packageInfo?.version ?? '1.0.0',
       applicationLegalese:
           '© 2026 blueokanna and HyphenTeam. PolyForm Perimeter License 1.0.1.',
@@ -622,7 +622,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                l10n?.disclaimerContent ?? 'VeloGuard 是一款网络代理工具，仅供合法用途使用。',
+                l10n?.disclaimerContent ?? 'Arcadia 是一款网络代理工具，仅供合法用途使用。',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -685,7 +685,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('VeloGuard'),
+                const Text('Arcadia'),
                 Text(
                   'v${_packageInfo?.version ?? '1.0.0'}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -703,7 +703,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               Text(
                 l10n?.aboutDescription ??
-                    'VeloGuard 是一款现代化的跨平台代理客户端，使用 Flutter 和 Rust 构建。'
+                    'Arcadia 是一款现代化的跨平台代理客户端，使用 Flutter 和 Rust 构建。'
                         '它提供了精美的 Material You 界面和强大的代理功能。',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
@@ -771,7 +771,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               InkWell(
                 onTap: () async {
                   final uri = Uri.parse(
-                    'https://github.com/blueokanna/VeloGuard',
+                    'https://github.com/blueokanna/Arcadia',
                   );
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -868,7 +868,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n?.restartService ?? '重启服务'),
-        content: const Text('确定要重启 VeloGuard 服务吗？这将暂时断开所有活动连接。'),
+        content: const Text('确定要重启 Arcadia 服务吗？这将暂时断开所有活动连接。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

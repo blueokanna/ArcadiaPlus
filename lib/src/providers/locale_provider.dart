@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:veloguard/src/services/storage_service.dart';
+import 'package:arcadia/src/services/storage_service.dart';
 
 class LocaleProvider extends ChangeNotifier {
   Locale? _locale;

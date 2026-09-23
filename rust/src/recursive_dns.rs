@@ -1,7 +1,7 @@
 //! RecurseX front-end: a stoppable UDP/TCP DNS service backed by
 //! iterative (root-up) resolution.
 //!
-//! corduit's DNS layer forwards to upstream resolvers. When a VeloGuard
+//! corduit's DNS layer forwards to upstream resolvers. When an Arcadia
 //! profile asks for local recursion instead, the resolver running here
 //! answers from the root servers down, with RecurseX's semantic cache and
 //! adaptive transport selection doing the heavy lifting. Point corduit's

@@ -1,10 +1,10 @@
-//! VeloGuard ⇄ [corduit] bridge for Flutter.
+//! Arcadia ⇄ [corduit] bridge for Flutter.
 //!
 //! The proxy engine itself lives in [`corduit`]: everything this crate
 //! does is FFI plumbing — flattening corduit's synchronous API into the
 //! async surface `flutter_rust_bridge` expects, mirroring corduit's DTOs
 //! as bridge-local types, and hosting the pieces that are genuinely
-//! VeloGuard-specific (the Android `VpnService` JNI hooks and the
+//! Arcadia-specific (the Android `VpnService` JNI hooks and the
 //! RecurseX recursive DNS front-end).
 //!
 //! Two rules keep this layer honest:

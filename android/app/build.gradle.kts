@@ -5,19 +5,19 @@ plugins {
 }
 
 val releaseSigningValues = mapOf(
-    "VELOGUARD_KEYSTORE_PATH" to System.getenv("VELOGUARD_KEYSTORE_PATH"),
-    "VELOGUARD_KEYSTORE_PASSWORD" to System.getenv("VELOGUARD_KEYSTORE_PASSWORD"),
-    "VELOGUARD_KEY_ALIAS" to System.getenv("VELOGUARD_KEY_ALIAS"),
-    "VELOGUARD_KEY_PASSWORD" to System.getenv("VELOGUARD_KEY_PASSWORD"),
+    "ARCADIA_KEYSTORE_PATH" to System.getenv("ARCADIA_KEYSTORE_PATH"),
+    "ARCADIA_KEYSTORE_PASSWORD" to System.getenv("ARCADIA_KEYSTORE_PASSWORD"),
+    "ARCADIA_KEY_ALIAS" to System.getenv("ARCADIA_KEY_ALIAS"),
+    "ARCADIA_KEY_PASSWORD" to System.getenv("ARCADIA_KEY_PASSWORD"),
 )
 val hasAnyReleaseSigningValue = releaseSigningValues.values.any { !it.isNullOrBlank() }
 val hasCompleteReleaseSigningConfig = releaseSigningValues.values.all { !it.isNullOrBlank() }
 require(!hasAnyReleaseSigningValue || hasCompleteReleaseSigningConfig) {
-    "Release signing requires all VELOGUARD_KEYSTORE_* environment variables"
+    "Release signing requires all ARCADIA_KEYSTORE_* environment variables"
 }
 
 android {
-    namespace = "com.blueokanna.veloguard"
+    namespace = "com.blueokanna.arcadia"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
@@ -32,7 +32,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.blueokanna.veloguard"
+        applicationId = "com.blueokanna.arcadia"
         minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -45,10 +45,10 @@ android {
     signingConfigs {
         if (hasCompleteReleaseSigningConfig) {
             create("release") {
-                storeFile = file(releaseSigningValues.getValue("VELOGUARD_KEYSTORE_PATH")!!)
-                storePassword = releaseSigningValues.getValue("VELOGUARD_KEYSTORE_PASSWORD")
-                keyAlias = releaseSigningValues.getValue("VELOGUARD_KEY_ALIAS")
-                keyPassword = releaseSigningValues.getValue("VELOGUARD_KEY_PASSWORD")
+                storeFile = file(releaseSigningValues.getValue("ARCADIA_KEYSTORE_PATH")!!)
+                storePassword = releaseSigningValues.getValue("ARCADIA_KEYSTORE_PASSWORD")
+                keyAlias = releaseSigningValues.getValue("ARCADIA_KEY_ALIAS")
+                keyPassword = releaseSigningValues.getValue("ARCADIA_KEY_PASSWORD")
             }
         }
     }

@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:veloguard/src/services/config_converter.dart';
-import 'package:veloguard/src/services/storage_service.dart';
-import 'package:veloguard/src/rust/api.dart' as rust_api;
-import 'package:veloguard/src/services/native_core_service.dart';
+import 'package:arcadia/src/services/config_converter.dart';
+import 'package:arcadia/src/services/storage_service.dart';
+import 'package:arcadia/src/rust/api.dart' as rust_api;
+import 'package:arcadia/src/services/native_core_service.dart';
 
 /// Latency test result
 class LatencyResult {

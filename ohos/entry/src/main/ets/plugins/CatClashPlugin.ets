@@ -14,7 +14,7 @@ export class CatClashPlugin implements FlutterPlugin {
   private channel: MethodChannel | null = null;
 
   onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding): void {
-    this.channel = new MethodChannel(binding.getBinaryMessenger(), 'com.veloguard/ohos_proxy');
+    this.channel = new MethodChannel(binding.getBinaryMessenger(), 'com.arcadia/ohos_proxy');
     
     this.channel.setMethodCallHandler({
       onMethodCall: (call: MethodCall, result: MethodResult) => {

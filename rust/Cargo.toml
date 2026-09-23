@@ -1,14 +1,14 @@
 [package]
-name = "lib-veloguard"
+name = "lib-arcadia"
 edition = "2021"
 license-file = "../LICENSE"
-version = "1.0.3"
+version = "1.0.4"
 authors = ["blueokanna"]
-description = "A cross-platform basic proxy client rust core for VeloGuard"
-homepage = "https://github.com/blueokanna/VeloGuard"
+description = "A cross-platform basic proxy client rust core for Arcadia"
+homepage = "https://github.com/blueokanna/Arcadia"
 
 [lib]
-name = "rust_lib_veloguard"
+name = "rust_lib_arcadia"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]

@@ -55,7 +55,7 @@ pub fn init(filter: LogFilter) -> Result<(), String> {
     #[cfg(target_os = "android")]
     {
         let android_layer =
-            tracing_android::layer("VeloGuard").map_err(|e| format!("logcat layer: {e}"))?;
+            tracing_android::layer("Arcadia").map_err(|e| format!("logcat layer: {e}"))?;
         registry
             .with(android_layer)
             .try_init()
@@ -108,7 +108,7 @@ fn build_filter(filter: LogFilter) -> EnvFilter {
     match filter {
         LogFilter::Off => EnvFilter::new("off"),
         LogFilter::UpTo(level) => {
-            EnvFilter::new(format!("warn,corduit={level},rust_lib_veloguard={level}"))
+            EnvFilter::new(format!("warn,corduit={level},rust_lib_arcadia={level}"))
         }
     }
 }
@@ -190,6 +190,6 @@ mod tests {
         assert!(is_noisy("hyper::proto"));
         assert!(is_noisy("courierust_tls"));
         assert!(!is_noisy("corduit::engine"));
-        assert!(!is_noisy("rust_lib_veloguard"));
+        assert!(!is_noisy("rust_lib_arcadia"));
     }
 }

@@ -2,9 +2,9 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "veloguard-build",
+			"label": "arcadia-build",
 			"type": "shell",
-			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\veloguard-build.cmd"
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-build.cmd"
 		},
 		{
 			"label": "ps-snapshot",
@@ -279,7 +279,7 @@
 		{
 			"label": "apk-list",
 			"type": "shell",
-			"command": "cmd /c dir /b D:\\RustProject\\VeloGuard\\build\\app\\outputs\\flutter-apk"
+			"command": "cmd /c dir /b D:\\RustProject\\Arcadia\\build\\app\\outputs\\flutter-apk"
 		},
 		{
 			"label": "build-progress",
@@ -724,7 +724,7 @@
 		{
 			"label": "dartcheck",
 			"type": "shell",
-			"command": "cmd /c (findstr /s /n /c:\"startProxyFromYaml(\" d:\\RustProject\\VeloGuard\\lib\\src\\*.dart & echo ====& type %TEMP%\\aa-check.cmd) > %TEMP%\\dartcheck.txt 2>&1"
+			"command": "cmd /c (findstr /s /n /c:\"startProxyFromYaml(\" d:\\RustProject\\Arcadia\\lib\\src\\*.dart & echo ====& type %TEMP%\\aa-check.cmd) > %TEMP%\\dartcheck.txt 2>&1"
 		},
 		{
 			"label": "dartcheck2",
@@ -1180,6 +1180,24 @@
 			"label": "lockfix2",
 			"type": "shell",
 			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\lockfix2.cmd"
+		},
+		{
+			"label": "arcadia-stage",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-stage.cmd",
+			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-fix",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-fix.cmd",
+			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-commit",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-commit.cmd",
+			"problemMatcher": []
 		}
 	]
 }

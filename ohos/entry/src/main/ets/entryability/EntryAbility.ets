@@ -2,7 +2,7 @@ import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
 
-const TAG = 'VeloGuard';
+const TAG = 'Arcadia';
 const DOMAIN = 0x0000;
 
 export default class EntryAbility extends UIAbility {

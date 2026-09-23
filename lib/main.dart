@@ -2,36 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:veloguard/src/theme/app_theme.dart';
-import 'package:veloguard/src/providers/app_state_provider.dart';
-import 'package:veloguard/src/providers/theme_provider.dart';
-import 'package:veloguard/src/providers/profiles_provider.dart';
-import 'package:veloguard/src/providers/network_settings_provider.dart';
-import 'package:veloguard/src/providers/locale_provider.dart';
-import 'package:veloguard/src/providers/proxies_provider.dart';
-import 'package:veloguard/src/providers/dns_settings_provider.dart';
-import 'package:veloguard/src/providers/general_settings_provider.dart';
-import 'package:veloguard/src/providers/update_provider.dart';
-import 'package:veloguard/src/services/storage_service.dart';
-import 'package:veloguard/src/services/native_core_service.dart';
-import 'package:veloguard/src/screens/home_screen.dart';
-import 'package:veloguard/src/screens/settings_screen.dart';
-import 'package:veloguard/src/screens/connections_screen.dart';
-import 'package:veloguard/src/screens/logs_screen.dart';
-import 'package:veloguard/src/screens/network_settings_screen.dart';
-import 'package:veloguard/src/screens/dns_settings_screen.dart';
-import 'package:veloguard/src/screens/basic_config_screen.dart';
-import 'package:veloguard/src/screens/advanced_config_screen.dart';
-import 'package:veloguard/src/screens/proxies_screen.dart';
-import 'package:veloguard/src/widgets/adaptive_scaffold.dart';
-import 'package:veloguard/src/widgets/rust_init_error_dialog.dart';
-import 'package:veloguard/src/widgets/update_prompt.dart';
-import 'package:veloguard/src/utils/platform_utils.dart';
-import 'package:veloguard/src/utils/device_info_utils.dart';
-import 'package:veloguard/src/utils/animation_utils.dart';
-import 'package:veloguard/src/utils/app_lifecycle.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
-import 'package:veloguard/src/screens/profiles_screen.dart';
+import 'package:arcadia/src/theme/app_theme.dart';
+import 'package:arcadia/src/providers/app_state_provider.dart';
+import 'package:arcadia/src/providers/theme_provider.dart';
+import 'package:arcadia/src/providers/profiles_provider.dart';
+import 'package:arcadia/src/providers/network_settings_provider.dart';
+import 'package:arcadia/src/providers/locale_provider.dart';
+import 'package:arcadia/src/providers/proxies_provider.dart';
+import 'package:arcadia/src/providers/dns_settings_provider.dart';
+import 'package:arcadia/src/providers/general_settings_provider.dart';
+import 'package:arcadia/src/providers/update_provider.dart';
+import 'package:arcadia/src/services/storage_service.dart';
+import 'package:arcadia/src/services/native_core_service.dart';
+import 'package:arcadia/src/screens/home_screen.dart';
+import 'package:arcadia/src/screens/settings_screen.dart';
+import 'package:arcadia/src/screens/connections_screen.dart';
+import 'package:arcadia/src/screens/logs_screen.dart';
+import 'package:arcadia/src/screens/network_settings_screen.dart';
+import 'package:arcadia/src/screens/dns_settings_screen.dart';
+import 'package:arcadia/src/screens/basic_config_screen.dart';
+import 'package:arcadia/src/screens/advanced_config_screen.dart';
+import 'package:arcadia/src/screens/proxies_screen.dart';
+import 'package:arcadia/src/widgets/adaptive_scaffold.dart';
+import 'package:arcadia/src/widgets/rust_init_error_dialog.dart';
+import 'package:arcadia/src/widgets/update_prompt.dart';
+import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia/src/utils/device_info_utils.dart';
+import 'package:arcadia/src/utils/animation_utils.dart';
+import 'package:arcadia/src/utils/app_lifecycle.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/screens/profiles_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 
@@ -44,17 +44,17 @@ void main() {
   // Timers and animations consult this before spending CPU, so it has to be
   // observing before the first screen is built.
   AppLifecycle.instance.start();
-  runApp(const VeloGuardBootstrap());
+  runApp(const ArcadiaBootstrap());
 }
 
-class VeloGuardBootstrap extends StatefulWidget {
-  const VeloGuardBootstrap({super.key});
+class ArcadiaBootstrap extends StatefulWidget {
+  const ArcadiaBootstrap({super.key});
 
   @override
-  State<VeloGuardBootstrap> createState() => _VeloGuardBootstrapState();
+  State<ArcadiaBootstrap> createState() => _ArcadiaBootstrapState();
 }
 
-class _VeloGuardBootstrapState extends State<VeloGuardBootstrap> {
+class _ArcadiaBootstrapState extends State<ArcadiaBootstrap> {
   bool _ready = false;
 
   @override
@@ -115,7 +115,7 @@ class _VeloGuardBootstrapState extends State<VeloGuardBootstrap> {
   @override
   Widget build(BuildContext context) {
     if (_ready) {
-      return const VeloGuardApp();
+      return const ArcadiaApp();
     }
 
     return const MaterialApp(
@@ -200,7 +200,7 @@ class _StartupScreenState extends State<_StartupScreen>
                 fit: StackFit.expand,
                 children: [
                   Image.asset(
-                    'assets/veloguard.png',
+                    'assets/arcadia.png',
                     filterQuality: FilterQuality.medium,
                   ),
                   AnimatedBuilder(
@@ -223,7 +223,7 @@ class _StartupScreenState extends State<_StartupScreen>
                       );
                     },
                     child: Image.asset(
-                      'assets/veloguard.png',
+                      'assets/arcadia.png',
                       color: Colors.white,
                       filterQuality: FilterQuality.medium,
                     ),
@@ -238,14 +238,14 @@ class _StartupScreenState extends State<_StartupScreen>
   }
 }
 
-class VeloGuardApp extends StatefulWidget {
-  const VeloGuardApp({super.key});
+class ArcadiaApp extends StatefulWidget {
+  const ArcadiaApp({super.key});
 
   @override
-  State<VeloGuardApp> createState() => _VeloGuardAppState();
+  State<ArcadiaApp> createState() => _ArcadiaAppState();
 }
 
-class _VeloGuardAppState extends State<VeloGuardApp> {
+class _ArcadiaAppState extends State<ArcadiaApp> {
   @override
   void initState() {
     super.initState();
@@ -325,7 +325,7 @@ class _VeloGuardAppState extends State<VeloGuardApp> {
               return Selector<AppStateProvider, ThemeMode>(
                 selector: (_, appState) => appState.themeMode,
                 builder: (context, themeMode, child) => MaterialApp.router(
-                  title: 'VeloGuard',
+                  title: 'Arcadia',
                   debugShowCheckedModeBanner: false,
                   theme: lightTheme,
                   darkTheme: darkTheme,

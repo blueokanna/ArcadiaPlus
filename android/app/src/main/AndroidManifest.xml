@@ -15,7 +15,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     
     <application
-        android:label="VeloGuard"
+        android:label="Arcadia"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:networkSecurityConfig="@xml/network_security_config"
@@ -43,7 +43,7 @@
         
         <!-- VPN 服务 -->
         <service
-            android:name=".VeloGuardVpnService"
+            android:name=".ArcadiaVpnService"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:exported="false"
             android:foregroundServiceType="specialUse">
@@ -60,9 +60,9 @@
         
         <!-- Tile 快捷开关 -->
         <service
-            android:name=".VeloGuardTileService"
+            android:name=".ArcadiaTileService"
             android:icon="@mipmap/ic_launcher"
-            android:label="VeloGuard"
+            android:label="Arcadia"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>

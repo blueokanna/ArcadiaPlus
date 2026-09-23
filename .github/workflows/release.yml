@@ -222,22 +222,22 @@ jobs:
       - name: Decode the Android release keystore
         shell: bash
         env:
-          KEYSTORE_BASE64: ${{ secrets.VELOGUARD_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.VELOGUARD_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.VELOGUARD_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.VELOGUARD_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.ARCADIA_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ARCADIA_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ARCADIA_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ARCADIA_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           if [[ -z "$KEYSTORE_BASE64" ]]; then
-            echo "::warning title=Unsigned release APK::VELOGUARD_KEYSTORE_BASE64 is not configured, so the release APK is signed with the debug key and can only upgrade installs that the debug key signed."
+            echo "::warning title=Unsigned release APK::ARCADIA_KEYSTORE_BASE64 is not configured, so the release APK is signed with the debug key and can only upgrade installs that the debug key signed."
             exit 0
           fi
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
           {
-            echo "VELOGUARD_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore"
-            echo "VELOGUARD_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
-            echo "VELOGUARD_KEY_ALIAS=$KEY_ALIAS"
-            echo "VELOGUARD_KEY_PASSWORD=$KEY_PASSWORD"
+            echo "ARCADIA_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore"
+            echo "ARCADIA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "ARCADIA_KEY_ALIAS=$KEY_ALIAS"
+            echo "ARCADIA_KEY_PASSWORD=$KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
       - name: Give the Android build a CI-sized Gradle heap
@@ -287,8 +287,8 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-debug.apk "dist/VeloGuard-${tag}-android-debug.apk"
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/VeloGuard-${tag}-android-release.apk"
+          cp build/app/outputs/flutter-apk/app-debug.apk "dist/Arcadia-${tag}-android-debug.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/Arcadia-${tag}-android-release.apk"
           ls -lh dist
 
       - name: Upload the Android artifacts
@@ -345,7 +345,7 @@ jobs:
         run: |
           $tag = '${{ needs.validate.outputs.tag }}'
           New-Item -ItemType Directory -Force dist | Out-Null
-          tar -a -c -f "dist/VeloGuard-$tag-windows-x64-portable.zip" -C 'build\windows\x64\runner\Release' .
+          tar -a -c -f "dist/Arcadia-$tag-windows-x64-portable.zip" -C 'build\windows\x64\runner\Release' .
 
       - name: Install Inno Setup
         shell: pwsh
@@ -359,19 +359,19 @@ jobs:
           $iss = @"
           [Setup]
           AppId={{E4BD9BC7-9DC9-469E-9F38-BA84DB86AC22}
-          AppName=VeloGuard
+          AppName=Arcadia
           AppVersion=$version
-          AppVerName=VeloGuard $version
+          AppVerName=Arcadia $version
           AppPublisher=blueokanna
-          AppPublisherURL=https://github.com/blueokanna/VeloGuard
-          AppSupportURL=https://github.com/blueokanna/VeloGuard/issues
-          AppUpdatesURL=https://github.com/blueokanna/VeloGuard/releases
-          DefaultDirName={autopf}\VeloGuard
-          DefaultGroupName=VeloGuard
+          AppPublisherURL=https://github.com/blueokanna/Arcadia
+          AppSupportURL=https://github.com/blueokanna/Arcadia/issues
+          AppUpdatesURL=https://github.com/blueokanna/Arcadia/releases
+          DefaultDirName={autopf}\Arcadia
+          DefaultGroupName=Arcadia
           DisableProgramGroupPage=yes
-          UninstallDisplayIcon={app}\veloguard.exe
+          UninstallDisplayIcon={app}\arcadia.exe
           OutputDir=$($PWD.Path)\dist
-          OutputBaseFilename=VeloGuard-$tag-windows-x64-setup
+          OutputBaseFilename=Arcadia-$tag-windows-x64-setup
           Compression=lzma2/max
           SolidCompression=yes
           WizardStyle=modern
@@ -386,13 +386,13 @@ jobs:
           [Files]
           Source: "$($PWD.Path)\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
           [Icons]
-          Name: "{autoprograms}\VeloGuard"; Filename: "{app}\veloguard.exe"
-          Name: "{autodesktop}\VeloGuard"; Filename: "{app}\veloguard.exe"; Tasks: desktopicon
+          Name: "{autoprograms}\Arcadia"; Filename: "{app}\arcadia.exe"
+          Name: "{autodesktop}\Arcadia"; Filename: "{app}\arcadia.exe"; Tasks: desktopicon
           [Run]
-          Filename: "{app}\veloguard.exe"; Description: "{cm:LaunchProgram,VeloGuard}"; Flags: nowait postinstall skipifsilent
+          Filename: "{app}\arcadia.exe"; Description: "{cm:LaunchProgram,Arcadia}"; Flags: nowait postinstall skipifsilent
           "@
-          Set-Content -Path "$env:RUNNER_TEMP\veloguard.iss" -Value $iss -Encoding utf8
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "$env:RUNNER_TEMP\veloguard.iss"
+          Set-Content -Path "$env:RUNNER_TEMP\arcadia.iss" -Value $iss -Encoding utf8
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "$env:RUNNER_TEMP\arcadia.iss"
           Get-ChildItem dist
 
       - name: Upload the Windows artifacts
@@ -451,11 +451,11 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           version='${{ needs.validate.outputs.version }}'
-          app='build/macos/Build/Products/Release/VeloGuard.app'
+          app='build/macos/Build/Products/Release/Arcadia.app'
           test -d "$app"
           mkdir -p dist
-          hdiutil create -volname "VeloGuard $version" -srcfolder "$app" -ov -format UDZO "dist/VeloGuard-${tag}-macos-universal.dmg"
-          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/VeloGuard-${tag}-macos-universal.zip"
+          hdiutil create -volname "Arcadia $version" -srcfolder "$app" -ov -format UDZO "dist/Arcadia-${tag}-macos-universal.dmg"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/Arcadia-${tag}-macos-universal.zip"
           ls -lh dist
 
       - name: Upload the macOS artifacts
@@ -519,7 +519,7 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           mkdir -p dist
-          tar -C build/linux/x64/release -czf "dist/VeloGuard-${tag}-linux-x64.tar.gz" bundle
+          tar -C build/linux/x64/release -czf "dist/Arcadia-${tag}-linux-x64.tar.gz" bundle
 
       - name: Build the Debian package
         shell: bash
@@ -527,37 +527,37 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           version='${{ needs.validate.outputs.version }}'
-          pkg="$(mktemp -d)/veloguard"
-          install -d "$pkg/DEBIAN" "$pkg/usr/lib/veloguard" "$pkg/usr/bin" \
+          pkg="$(mktemp -d)/arcadia"
+          install -d "$pkg/DEBIAN" "$pkg/usr/lib/arcadia" "$pkg/usr/bin" \
                      "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/512x512/apps"
-          cp -a build/linux/x64/release/bundle/. "$pkg/usr/lib/veloguard/"
-          ln -s /usr/lib/veloguard/veloguard "$pkg/usr/bin/veloguard"
-          cp assets/veloguard.png "$pkg/usr/share/icons/hicolor/512x512/apps/veloguard.png"
-          cat > "$pkg/usr/share/applications/veloguard.desktop" <<'DESKTOP'
+          cp -a build/linux/x64/release/bundle/. "$pkg/usr/lib/arcadia/"
+          ln -s /usr/lib/arcadia/arcadia "$pkg/usr/bin/arcadia"
+          cp assets/arcadia.png "$pkg/usr/share/icons/hicolor/512x512/apps/arcadia.png"
+          cat > "$pkg/usr/share/applications/arcadia.desktop" <<'DESKTOP'
           [Desktop Entry]
-          Name=VeloGuard
+          Name=Arcadia
           Comment=Cross-platform proxy client built with Flutter and Rust
-          Exec=veloguard
-          Icon=veloguard
+          Exec=arcadia
+          Icon=arcadia
           Terminal=false
           Type=Application
           Categories=Network;Utility;
           DESKTOP
           cat > "$pkg/DEBIAN/control" <<CONTROL
-          Package: veloguard
+          Package: arcadia
           Version: $version
           Architecture: amd64
           Section: net
           Priority: optional
           Maintainer: blueokanna <blueokanna@gmail.com>
-          Homepage: https://github.com/blueokanna/VeloGuard
+          Homepage: https://github.com/blueokanna/Arcadia
           Depends: libgtk-3-0
           Description: Cross-platform proxy client built with Flutter and Rust
-           VeloGuard ships no servers, nodes, or subscriptions; you supply your
+           Arcadia ships no servers, nodes, or subscriptions; you supply your
            own configuration and are responsible for lawful use.
           CONTROL
-          dpkg-deb --build --root-owner-group "$pkg" "dist/VeloGuard-${tag}-linux-x64.deb"
-          dpkg-deb --info "dist/VeloGuard-${tag}-linux-x64.deb"
+          dpkg-deb --build --root-owner-group "$pkg" "dist/Arcadia-${tag}-linux-x64.deb"
+          dpkg-deb --info "dist/Arcadia-${tag}-linux-x64.deb"
 
       - name: Upload the Linux artifacts
         uses: actions/upload-artifact@v4
@@ -592,14 +592,14 @@ jobs:
         run: |
           set -euo pipefail
           expected=(
-            "VeloGuard-${TAG}-android-debug.apk"
-            "VeloGuard-${TAG}-android-release.apk"
-            "VeloGuard-${TAG}-windows-x64-portable.zip"
-            "VeloGuard-${TAG}-windows-x64-setup.exe"
-            "VeloGuard-${TAG}-macos-universal.dmg"
-            "VeloGuard-${TAG}-macos-universal.zip"
-            "VeloGuard-${TAG}-linux-x64.deb"
-            "VeloGuard-${TAG}-linux-x64.tar.gz"
+            "Arcadia-${TAG}-android-debug.apk"
+            "Arcadia-${TAG}-android-release.apk"
+            "Arcadia-${TAG}-windows-x64-portable.zip"
+            "Arcadia-${TAG}-windows-x64-setup.exe"
+            "Arcadia-${TAG}-macos-universal.dmg"
+            "Arcadia-${TAG}-macos-universal.zip"
+            "Arcadia-${TAG}-linux-x64.deb"
+            "Arcadia-${TAG}-linux-x64.tar.gz"
           )
           for asset in "${expected[@]}"; do
             if [[ ! -f "dist/$asset" ]]; then
@@ -631,13 +631,13 @@ jobs:
             --arg tag "$TAG" \
             --arg version "$VERSION" \
             --arg published_at "$published_at" \
-            --argjson android "$(asset android "VeloGuard-${TAG}-android-release.apk")" \
-            --argjson windows "$(asset windows "VeloGuard-${TAG}-windows-x64-setup.exe")" \
-            --argjson macos "$(asset macos "VeloGuard-${TAG}-macos-universal.dmg")" \
-            --argjson linux "$(asset linux "VeloGuard-${TAG}-linux-x64.deb")" \
+            --argjson android "$(asset android "Arcadia-${TAG}-android-release.apk")" \
+            --argjson windows "$(asset windows "Arcadia-${TAG}-windows-x64-setup.exe")" \
+            --argjson macos "$(asset macos "Arcadia-${TAG}-macos-universal.dmg")" \
+            --argjson linux "$(asset linux "Arcadia-${TAG}-linux-x64.deb")" \
             '{schema:1,tag:$tag,version:$version,published_at:$published_at,assets:[$android,$windows,$macos,$linux]}' \
             > dist/update-manifest.json
-          (cd dist && sha256sum VeloGuard-* update-manifest.json > SHA256SUMS)
+          (cd dist && sha256sum Arcadia-* update-manifest.json > SHA256SUMS)
           cat dist/update-manifest.json
 
       - name: Publish the stable GitHub release
@@ -645,7 +645,7 @@ jobs:
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: VeloGuard ${{ steps.release.outputs.tag }}
+          name: Arcadia ${{ steps.release.outputs.tag }}
           body_path: release-notes.md
           draft: false
           prerelease: false

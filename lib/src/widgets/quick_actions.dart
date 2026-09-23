@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:veloguard/src/services/platform_proxy_service.dart';
-import 'package:veloguard/src/providers/app_state_provider.dart';
-import 'package:veloguard/src/providers/network_settings_provider.dart';
-import 'package:veloguard/src/utils/responsive_utils.dart';
-import 'package:veloguard/src/utils/animation_utils.dart';
-import 'package:veloguard/src/utils/platform_utils.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/services/platform_proxy_service.dart';
+import 'package:arcadia/src/providers/app_state_provider.dart';
+import 'package:arcadia/src/providers/network_settings_provider.dart';
+import 'package:arcadia/src/utils/responsive_utils.dart';
+import 'package:arcadia/src/utils/animation_utils.dart';
+import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
 
 class QuickActions extends StatefulWidget {
   const QuickActions({super.key});

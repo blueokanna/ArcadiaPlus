@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:veloguard/src/utils/responsive_utils.dart';
+import 'package:arcadia/src/utils/responsive_utils.dart';
 
 class PlatformUtils {
   static bool? _isHarmonyOS;
@@ -49,7 +49,7 @@ class PlatformUtils {
 
     if (Platform.isAndroid) {
       try {
-        const channel = MethodChannel('com.veloguard/proxy');
+        const channel = MethodChannel('com.arcadia/proxy');
         final deviceInfo =
             await channel
                     .invokeMethod('getDeviceInfo')
@@ -129,7 +129,7 @@ class PlatformUtils {
       size: Size(1200, 800),
       minimumSize: Size(600, 600),
       center: true,
-      title: 'VeloGuard',
+      title: 'Arcadia',
       titleBarStyle: TitleBarStyle.normal,
     );
 
@@ -200,11 +200,11 @@ class PlatformUtils {
   // Get platform-specific configuration directory
   static String getConfigDirectory() {
     if (isWindows) {
-      return '${Platform.environment['APPDATA']}\\VeloGuard';
+      return '${Platform.environment['APPDATA']}\\Arcadia';
     } else if (isLinux || isMacOS) {
-      return '${Platform.environment['HOME']}/.config/veloguard';
+      return '${Platform.environment['HOME']}/.config/arcadia';
     } else if (isAndroid || isHarmonyOS) {
-      return '/data/data/com.blueokanna.veloguard/files';
+      return '/data/data/com.blueokanna.arcadia/files';
     } else {
       return Directory.current.path;
     }
@@ -213,11 +213,11 @@ class PlatformUtils {
   // Get platform-specific log directory
   static String getLogDirectory() {
     if (isWindows) {
-      return '${Platform.environment['LOCALAPPDATA']}\\VeloGuard\\logs';
+      return '${Platform.environment['LOCALAPPDATA']}\\Arcadia\\logs';
     } else if (isLinux || isMacOS) {
-      return '${Platform.environment['HOME']}/.local/share/veloguard/logs';
+      return '${Platform.environment['HOME']}/.local/share/arcadia/logs';
     } else if (isAndroid || isHarmonyOS) {
-      return '/data/data/com.blueokanna.veloguard/cache/logs';
+      return '/data/data/com.blueokanna.arcadia/cache/logs';
     } else {
       return Directory.current.path;
     }

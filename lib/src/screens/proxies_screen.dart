@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
-import 'package:veloguard/src/providers/proxies_provider.dart';
-import 'package:veloguard/src/services/config_converter.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
-import 'package:veloguard/src/theme/app_shapes.dart';
-import 'package:veloguard/src/utils/animation_utils.dart';
+import 'package:arcadia/src/providers/proxies_provider.dart';
+import 'package:arcadia/src/services/config_converter.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/theme/app_shapes.dart';
+import 'package:arcadia/src/utils/animation_utils.dart';
 
 class ProxiesScreen extends StatefulWidget {
   const ProxiesScreen({super.key});

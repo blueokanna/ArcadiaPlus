@@ -1,7 +1,7 @@
-# VeloGuard
+# Arcadia
 
 <p align="center">
-  <img src="assets/veloguard.png" width="128" height="128" alt="VeloGuard 图标" style="border-radius: 12px;">
+  <img src="assets/arcadia.png" width="128" height="128" alt="Arcadia 图标" style="border-radius: 12px;">
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
 - GeoIP 数据库随安装包分发（`assets/Country.mmdb`），启动时解包到应用支持目录并注册给引擎；解包或注册失败会记录原因，此时 `GEOIP` 规则不会被匹配——不静默降级。
 - Android、Windows、Linux 共用 Rust TUN 数据包处理器，各平台独立管理设备生命周期。
-- Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/veloguard.png` 统一生成。
+- Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/arcadia.png` 统一生成。
 
 ## 协议状态
 
@@ -103,13 +103,13 @@ adb shell cat /proc/pressure/cpu
 adb shell grep procs_running /proc/stat
 
 # 3) 进程用户态/内核态时间，两次采样求差（单位：100 Hz 计时脉冲）
-adb shell 'P=$(pidof com.blueokanna.veloguard); awk "{print \$14, \$15}" /proc/$P/stat; sleep 15; awk "{print \$14, \$15}" /proc/$P/stat'
+adb shell 'P=$(pidof com.blueokanna.arcadia); awk "{print \$14, \$15}" /proc/$P/stat; sleep 15; awk "{print \$14, \$15}" /proc/$P/stat'
 
 # 4) I/O 增量：与 3) 对照，若 CPU 增长而字节数不增长，即为空转
-adb shell cat /proc/$(pidof com.blueokanna.veloguard)/io
+adb shell cat /proc/$(pidof com.blueokanna.arcadia)/io
 
 # 5) 线程级定位：wchan 为空（显示为 0）表示线程停留在用户态，未阻塞在任何系统调用上
-adb shell 'P=$(pidof com.blueokanna.veloguard); for t in /proc/$P/task/*; do echo "$(cat $t/comm) $(cat $t/wchan)"; done | sort | uniq -c | sort -rn'
+adb shell 'P=$(pidof com.blueokanna.arcadia); for t in /proc/$P/task/*; do echo "$(cat $t/comm) $(cat $t/wchan)"; done | sort | uniq -c | sort -rn'
 ```
 
 判据：空闲隧道下 `procs_running` 应为个位数，运行中线程的 `wchan` 应为内核睡眠符号而非空。
@@ -129,7 +129,7 @@ Flutter UI / Provider
         |
 Flutter Rust Bridge（生成绑定）
         |
-lib-veloguard（rust/ 下的唯一桥接 crate：异步适配、DTO 映射、平台入口）
+lib-arcadia（rust/ 下的唯一桥接 crate：异步适配、DTO 映射、平台入口）
         |
 corduit 0.1.9（引擎：配置、路由、出入站、DNS、TUN、全部协议）
         +-- courierust（HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS 栈）
@@ -185,7 +185,7 @@ HarmonyOS NEXT 使用 [ohos/README.md](ohos/README.md) 中的 DevEco/hvigor 流�
 
 ## 图标
 
-唯一源文件为 `assets/veloguard.png`（正方形，至少 1024x1024）。Windows 环境执行：
+唯一源文件为 `assets/arcadia.png`（正方形，至少 1024x1024）。Windows 环境执行：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
@@ -203,19 +203,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
 
 推送 `vMAJOR.MINOR.PATCH` 标签（或从默认分支手动触发发布工作流）后，工作流会先跑完整质量门，全部通过后自动构建并发布正式版本，无需人工确认。每个正式版本包含：
 
-- `VeloGuard-<tag>-android-debug.apk` —— 四 ABI Debug 构建，用于问题诊断。
-- `VeloGuard-<tag>-android-release.apk` —— 四 ABI 优化构建，用于安装使用。
-- `VeloGuard-<tag>-windows-x64-setup.exe` 与 `-windows-x64-portable.zip` —— Inno Setup 安装包与免安装压缩包。
-- `VeloGuard-<tag>-macos-universal.dmg` 与 `-macos-universal.zip` —— 通用架构（Apple 芯片 + Intel）磁盘映像与压缩包；应用未签名，首次启动需右键 → 打开。
-- `VeloGuard-<tag>-linux-x64.deb` 与 `-linux-x64.tar.gz` —— Debian 安装包与可携带压缩包。
+- `Arcadia-<tag>-android-debug.apk` —— 四 ABI Debug 构建，用于问题诊断。
+- `Arcadia-<tag>-android-release.apk` —— 四 ABI 优化构建，用于安装使用。
+- `Arcadia-<tag>-windows-x64-setup.exe` 与 `-windows-x64-portable.zip` —— Inno Setup 安装包与免安装压缩包。
+- `Arcadia-<tag>-macos-universal.dmg` 与 `-macos-universal.zip` —— 通用架构（Apple 芯片 + Intel）磁盘映像与压缩包；应用未签名，首次启动需右键 → 打开。
+- `Arcadia-<tag>-linux-x64.deb` 与 `-linux-x64.tar.gz` —— Debian 安装包与可携带压缩包。
 - `update-manifest.json` 与 `SHA256SUMS` —— 应用内更新检查读取的校验和元数据。
 
-只有配置了以下仓库 Actions Secrets 时，Android release APK 才会用发布密钥签名（`VELOGUARD_KEYSTORE_BASE64` 是 keystore 文件的 base64 编码，如 `base64 -w0 veloguard.jks`）：
+只有配置了以下仓库 Actions Secrets 时，Android release APK 才会用发布密钥签名（`ARCADIA_KEYSTORE_BASE64` 是 keystore 文件的 base64 编码，如 `base64 -w0 arcadia.jks`）：
 
-- `VELOGUARD_KEYSTORE_BASE64`
-- `VELOGUARD_KEYSTORE_PASSWORD`
-- `VELOGUARD_KEY_ALIAS`
-- `VELOGUARD_KEY_PASSWORD`
+- `ARCADIA_KEYSTORE_BASE64`
+- `ARCADIA_KEYSTORE_PASSWORD`
+- `ARCADIA_KEY_ALIAS`
+- `ARCADIA_KEY_PASSWORD`
 
 未配置时 release APK 回退到 debug 密钥签名：可以安装，但只能升级由 debug 密钥签名的安装——首次公开发布前必须配置好 keystore。
 
@@ -232,7 +232,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
 
 ## 免责声明
 
-- **合法使用是唯一被授权的用途。** VeloGuard 是网络工具，本身不提供代理服务器、节点或订阅；你需要自行准备配置，并对其合法性负责。
+- **合法使用是唯一被授权的用途。** Arcadia 是网络工具，本身不提供代理服务器、节点或订阅；你需要自行准备配置，并对其合法性负责。
 - **合规责任在你自己。** 你需要确保使用行为符合所在司法管辖区的法律、所接入网络的条款，以及适用的出口管制与制裁规定。将本软件或其改动、衍生作品用于违法用途，不在许可范围内，并构成对[许可条款](LICENSE)的违反。
 - **作者与贡献者不承担责任。** 在法律允许的最大范围内，作者与贡献者对因使用或无法使用本软件产生的任何直接或间接损失不负责，也不对任何人（无论是否经你授权）使用本软件从事违法行为引发的后果负责。
 - **不构成法律意见。** 本文档与应用内提示只是风险说明，不是法律建议；需要时请咨询执业律师。

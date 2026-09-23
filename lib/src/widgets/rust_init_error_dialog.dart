@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:veloguard/src/widgets/adaptive_dialog.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/widgets/adaptive_dialog.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
 
 /// Dialog shown when the Rust library fails to initialize.
 /// The application cannot continue until the native core is available.

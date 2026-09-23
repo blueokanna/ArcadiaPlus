@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:veloguard/src/providers/general_settings_provider.dart';
-import 'package:veloguard/src/providers/app_state_provider.dart';
-import 'package:veloguard/src/services/platform_proxy_service.dart';
-import 'package:veloguard/src/widgets/adaptive_list_tile.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/providers/general_settings_provider.dart';
+import 'package:arcadia/src/providers/app_state_provider.dart';
+import 'package:arcadia/src/services/platform_proxy_service.dart';
+import 'package:arcadia/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
 
 class BasicConfigScreen extends StatefulWidget {
   const BasicConfigScreen({super.key});

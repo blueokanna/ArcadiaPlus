@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
-import 'package:veloguard/src/providers/locale_provider.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/providers/locale_provider.dart';
 
 void main() {
   test(

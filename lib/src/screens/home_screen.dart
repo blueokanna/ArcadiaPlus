@@ -1,20 +1,20 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:veloguard/src/providers/app_state_provider.dart';
-import 'package:veloguard/src/providers/general_settings_provider.dart';
-import 'package:veloguard/src/providers/theme_provider.dart';
-import 'package:veloguard/src/widgets/traffic_chart.dart';
-import 'package:veloguard/src/widgets/status_card.dart';
-import 'package:veloguard/src/widgets/quick_actions.dart';
-import 'package:veloguard/src/widgets/adaptive_list_tile.dart';
-import 'package:veloguard/src/utils/platform_utils.dart';
-import 'package:veloguard/src/utils/responsive_utils.dart';
-import 'package:veloguard/src/utils/device_info_utils.dart';
-import 'package:veloguard/src/utils/animation_utils.dart';
-import 'package:veloguard/src/utils/app_lifecycle.dart';
-import 'package:veloguard/src/l10n/app_localizations.dart';
-import 'package:veloguard/src/rust/types.dart';
+import 'package:arcadia/src/providers/app_state_provider.dart';
+import 'package:arcadia/src/providers/general_settings_provider.dart';
+import 'package:arcadia/src/providers/theme_provider.dart';
+import 'package:arcadia/src/widgets/traffic_chart.dart';
+import 'package:arcadia/src/widgets/status_card.dart';
+import 'package:arcadia/src/widgets/quick_actions.dart';
+import 'package:arcadia/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia/src/utils/responsive_utils.dart';
+import 'package:arcadia/src/utils/device_info_utils.dart';
+import 'package:arcadia/src/utils/animation_utils.dart';
+import 'package:arcadia/src/utils/app_lifecycle.dart';
+import 'package:arcadia/src/l10n/app_localizations.dart';
+import 'package:arcadia/src/rust/types.dart';
 
 // Default traffic stats when service is not running
 final _defaultTrafficStats = TrafficStats(
@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'VeloGuard',
+          'Arcadia',
           style: textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w700,
           ),

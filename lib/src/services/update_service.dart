@@ -43,10 +43,10 @@ class UpdateService {
     : _client = client ?? http.Client(),
       _dio = dio ?? Dio();
 
-  static const _repository = 'blueokanna/VeloGuard';
+  static const _repository = 'blueokanna/Arcadia';
   static const _latestReleaseApi =
       'https://api.github.com/repos/$_repository/releases/latest';
-  static const MethodChannel _installer = MethodChannel('com.veloguard/proxy');
+  static const MethodChannel _installer = MethodChannel('com.arcadia/proxy');
 
   final http.Client _client;
   final Dio _dio;
@@ -60,7 +60,7 @@ class UpdateService {
           headers: const {
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28',
-            'User-Agent': 'VeloGuard-Updater',
+            'User-Agent': 'Arcadia-Updater',
           },
         )
         .timeout(const Duration(seconds: 15));
@@ -100,7 +100,7 @@ class UpdateService {
       manifestReleaseAsset['browser_download_url'] as String,
     );
     final manifestResponse = await _client
-        .get(manifestUri, headers: const {'User-Agent': 'VeloGuard-Updater'})
+        .get(manifestUri, headers: const {'User-Agent': 'Arcadia-Updater'})
         .timeout(const Duration(seconds: 15));
     if (manifestResponse.statusCode != 200) {
       throw HttpException(
@@ -191,7 +191,7 @@ class UpdateService {
       options: Options(
         followRedirects: true,
         receiveTimeout: const Duration(minutes: 5),
-        headers: const {'User-Agent': 'VeloGuard-Updater'},
+        headers: const {'User-Agent': 'Arcadia-Updater'},
       ),
       onReceiveProgress: (received, total) {
         if (total > 0) onProgress?.call(received / total);
@@ -219,7 +219,7 @@ class UpdateService {
     });
     if (result is Map && result['requiresPermission'] == true) {
       throw StateError(
-        'Allow installs from VeloGuard, then tap Check for updates again',
+        'Allow installs from Arcadia, then tap Check for updates again',
       );
     }
     return result == true || (result is Map && result['launched'] == true);

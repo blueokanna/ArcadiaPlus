@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:yaml/yaml.dart';
-import 'package:veloguard/src/services/storage_service.dart';
+import 'package:arcadia/src/services/storage_service.dart';
 
 /// Parsed proxy information for UI display
 class ParsedProxy {
@@ -101,7 +101,7 @@ class ParsedClashConfig {
   });
 }
 
-/// Converts Clash YAML configuration to VeloGuard JSON format
+/// Converts Clash YAML configuration to Arcadia JSON format
 class ConfigConverter {
   /// Parse Clash YAML config for UI display
   static ParsedClashConfig parseClashConfig(String yamlContent) {
@@ -194,7 +194,7 @@ class ConfigConverter {
     }
   }
 
-  /// Convert Clash YAML config to VeloGuard JSON config
+  /// Convert Clash YAML config to Arcadia JSON config
   /// If generalSettings is provided, it will override the port settings from YAML
   ///
   /// [ruleProviderPaths] maps a `rule-providers` name onto the local file the
@@ -217,7 +217,7 @@ class ConfigConverter {
       }
 
       final config = _convertToMap(yamlMap);
-      final veloguardConfig = _convertClashToVeloGuard(
+      final arcadiaConfig = _convertClashToArcadia(
         config,
         generalSettings: generalSettings,
         dnsSettings: dnsSettings,
@@ -226,7 +226,7 @@ class ConfigConverter {
         onWarning: onWarning,
       );
 
-      return jsonEncode(veloguardConfig);
+      return jsonEncode(arcadiaConfig);
     } catch (e) {
       throw Exception('Failed to convert config: $e');
     }
@@ -253,8 +253,8 @@ class ConfigConverter {
     return value;
   }
 
-  /// Convert Clash config format to VeloGuard config format
-  static Map<String, dynamic> _convertClashToVeloGuard(
+  /// Convert Clash config format to Arcadia config format
+  static Map<String, dynamic> _convertClashToArcadia(
     Map<String, dynamic> clash, {
     GeneralSettings? generalSettings,
     DnsSettings? dnsSettings,

@@ -4,8 +4,8 @@ import 'dart:io' show Platform, Directory, File, FileSystemException;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:veloguard/src/rust/api.dart' show setGeoipDatabasePath;
-import 'package:veloguard/src/rust/frb_generated.dart';
+import 'package:arcadia/src/rust/api.dart' show setGeoipDatabasePath;
+import 'package:arcadia/src/rust/frb_generated.dart';
 
 enum NativeCoreStatus { idle, initializing, ready, failed }
 
@@ -16,7 +16,7 @@ class NativeCoreService extends ChangeNotifier {
   static final NativeCoreService instance = NativeCoreService._();
 
   static const MethodChannel _androidChannel = MethodChannel(
-    'com.veloguard/proxy',
+    'com.arcadia/proxy',
   );
 
   static const String _geoIpAsset = 'assets/Country.mmdb';
@@ -58,7 +58,7 @@ class NativeCoreService extends ChangeNotifier {
 
     if (Platform.isAndroid) {
       try {
-        ffi.DynamicLibrary.open('librust_lib_veloguard.so');
+        ffi.DynamicLibrary.open('librust_lib_arcadia.so');
         debugPrint('Native core dynamic library is loadable.');
       } catch (error) {
         _lastError = 'Dynamic library load failed: $error';

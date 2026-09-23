@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:veloguard/src/services/platform_proxy_service.dart';
-import 'package:veloguard/src/services/storage_service.dart';
-import 'package:veloguard/src/utils/platform_utils.dart';
+import 'package:arcadia/src/services/platform_proxy_service.dart';
+import 'package:arcadia/src/services/storage_service.dart';
+import 'package:arcadia/src/utils/platform_utils.dart';
 
 /// Owns the network-related switches and applies them to the platform.
 ///

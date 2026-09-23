@@ -1,4 +1,4 @@
-package com.blueokanna.veloguard
+package com.blueokanna.arcadia
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
@@ -7,7 +7,7 @@ import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 
-class VeloGuardTileService : TileService() {
+class ArcadiaTileService : TileService() {
     
     override fun onStartListening() {
         super.onStartListening()
@@ -17,9 +17,9 @@ class VeloGuardTileService : TileService() {
     override fun onClick() {
         super.onClick()
         
-        if (VeloGuardVpnService.isRunning) {
-            val intent = Intent(this, VeloGuardVpnService::class.java).apply {
-                action = VeloGuardVpnService.ACTION_STOP
+        if (ArcadiaVpnService.isRunning) {
+            val intent = Intent(this, ArcadiaVpnService::class.java).apply {
+                action = ArcadiaVpnService.ACTION_STOP
             }
             startService(intent)
         } else {
@@ -54,13 +54,13 @@ class VeloGuardTileService : TileService() {
     private fun updateTile() {
         val tile = qsTile ?: return
         
-        if (VeloGuardVpnService.isRunning) {
+        if (ArcadiaVpnService.isRunning) {
             tile.state = Tile.STATE_ACTIVE
-            tile.label = "VeloGuard"
+            tile.label = "Arcadia"
             tile.contentDescription = "VPN 已连接"
         } else {
             tile.state = Tile.STATE_INACTIVE
-            tile.label = "VeloGuard"
+            tile.label = "Arcadia"
             tile.contentDescription = "VPN 已断开"
         }
         
