@@ -5,7 +5,7 @@ license-file = "../LICENSE"
 version = "1.0.4"
 authors = ["blueokanna"]
 description = "A cross-platform basic proxy client rust core for Arcadia"
-homepage = "https://github.com/blueokanna/Arcadia"
+homepage = "https://github.com/blueokanna/ArcadiaPlus"
 
 [lib]
 name = "rust_lib_arcadia"

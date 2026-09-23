@@ -1198,6 +1198,12 @@
 			"type": "shell",
 			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-commit.cmd",
 			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-commit2",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-commit2.cmd",
+			"problemMatcher": []
 		}
 	]
 }

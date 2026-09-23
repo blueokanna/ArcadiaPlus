@@ -363,9 +363,9 @@ jobs:
           AppVersion=$version
           AppVerName=Arcadia $version
           AppPublisher=blueokanna
-          AppPublisherURL=https://github.com/blueokanna/Arcadia
-          AppSupportURL=https://github.com/blueokanna/Arcadia/issues
-          AppUpdatesURL=https://github.com/blueokanna/Arcadia/releases
+          AppPublisherURL=https://github.com/blueokanna/ArcadiaPlus
+          AppSupportURL=https://github.com/blueokanna/ArcadiaPlus/issues
+          AppUpdatesURL=https://github.com/blueokanna/ArcadiaPlus/releases
           DefaultDirName={autopf}\Arcadia
           DefaultGroupName=Arcadia
           DisableProgramGroupPage=yes
@@ -550,7 +550,7 @@ jobs:
           Section: net
           Priority: optional
           Maintainer: blueokanna <blueokanna@gmail.com>
-          Homepage: https://github.com/blueokanna/Arcadia
+          Homepage: https://github.com/blueokanna/ArcadiaPlus
           Depends: libgtk-3-0
           Description: Cross-platform proxy client built with Flutter and Rust
            Arcadia ships no servers, nodes, or subscriptions; you supply your

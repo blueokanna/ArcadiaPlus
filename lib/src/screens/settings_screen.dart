@@ -771,7 +771,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               InkWell(
                 onTap: () async {
                   final uri = Uri.parse(
-                    'https://github.com/blueokanna/Arcadia',
+                    'https://github.com/blueokanna/ArcadiaPlus',
                   );
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);

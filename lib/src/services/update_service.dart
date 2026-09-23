@@ -43,7 +43,7 @@ class UpdateService {
     : _client = client ?? http.Client(),
       _dio = dio ?? Dio();
 
-  static const _repository = 'blueokanna/Arcadia';
+  static const _repository = 'blueokanna/ArcadiaPlus';
   static const _latestReleaseApi =
       'https://api.github.com/repos/$_repository/releases/latest';
   static const MethodChannel _installer = MethodChannel('com.arcadia/proxy');
