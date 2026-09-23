@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:arcadia/src/theme/app_theme.dart';
+import 'package:arcadia_plus/src/theme/app_theme.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'selected_theme';

@@ -1,4 +1,4 @@
-package com.blueokanna.arcadia
+package com.blueokanna.arcadiaplus
 
 import android.Manifest
 import android.app.Activity
@@ -22,8 +22,8 @@ import kotlinx.coroutines.*
 
 class MainActivity : FlutterActivity() {
     companion object {
-        private const val TAG = "ArcadiaMainActivity"
-        private const val CHANNEL = "com.arcadia/proxy"
+        private const val TAG = "ArcadiaPlusMainActivity"
+        private const val CHANNEL = "com.arcadiaplus/proxy"
         private const val VPN_REQUEST_CODE = 1001
         private const val NOTIFICATION_PERMISSION_CODE = 1002
     }
@@ -75,37 +75,37 @@ class MainActivity : FlutterActivity() {
                 }
                 "resetVpnState" -> {
                     Log.d(TAG, "Resetting VPN state...")
-                    ArcadiaVpnService.resetAllState()
+                    ArcadiaPlusVpnService.resetAllState()
                     result.success(true)
                 }
                 "isVpnRunning" -> {
-                    result.success(ArcadiaVpnService.isRunning)
+                    result.success(ArcadiaPlusVpnService.isRunning)
                 }
                 "isOtherVpnActive" -> {
                     result.success(isOtherVpnActive())
                 }
                 "getVpnFd" -> {
-                    result.success(ArcadiaVpnService.vpnFd)
+                    result.success(ArcadiaPlusVpnService.vpnFd)
                 }
                 "setProxyMode" -> {
                     val mode = call.argument<String>("mode") ?: "rule"
                     val proxyMode =
                             when (mode.lowercase()) {
-                                "global" -> ArcadiaVpnService.ProxyMode.GLOBAL
-                                "direct" -> ArcadiaVpnService.ProxyMode.DIRECT
-                                else -> ArcadiaVpnService.ProxyMode.RULE
+                                "global" -> ArcadiaPlusVpnService.ProxyMode.GLOBAL
+                                "direct" -> ArcadiaPlusVpnService.ProxyMode.DIRECT
+                                else -> ArcadiaPlusVpnService.ProxyMode.RULE
                             }
-                    ArcadiaVpnService.setProxyMode(proxyMode)
+                    ArcadiaPlusVpnService.setProxyMode(proxyMode)
                     result.success(true)
                 }
                 "getProxyMode" -> {
-                    result.success(ArcadiaVpnService.proxyMode.name.lowercase())
+                    result.success(ArcadiaPlusVpnService.proxyMode.name.lowercase())
                 }
                 "getDeviceInfo" -> {
                     result.success(getDeviceInfo())
                 }
                 "isNativeLibraryLoaded" -> {
-                    result.success(ArcadiaVpnService.isLibraryLoaded)
+                    result.success(ArcadiaPlusVpnService.isLibraryLoaded)
                 }
                 "installApk" -> {
                     val path = call.argument<String>("path")
@@ -116,7 +116,7 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "getNativeLibraryInfo" -> {
-                    result.success(ArcadiaVpnService.getLibraryInfo(this))
+                    result.success(ArcadiaPlusVpnService.getLibraryInfo(this))
                 }
                 else -> {
                     result.notImplemented()
@@ -273,7 +273,7 @@ class MainActivity : FlutterActivity() {
                 Log.d(TAG, "Launching VPN start in IO dispatcher...")
                 val fd =
                         withContext(Dispatchers.IO) {
-                            ArcadiaVpnService.startVpnAndGetFd(
+                            ArcadiaPlusVpnService.startVpnAndGetFd(
                                     this@MainActivity,
                                     mode,
                                     pendingAllowLan
@@ -311,7 +311,7 @@ class MainActivity : FlutterActivity() {
 
     private fun stopVpnService() {
         Log.d(TAG, "Stopping VPN service...")
-        ArcadiaVpnService.stopVpnFromOutside(this)
+        ArcadiaPlusVpnService.stopVpnFromOutside(this)
     }
 
     private fun getDeviceInfo(): Map<String, Any> {
@@ -340,7 +340,7 @@ class MainActivity : FlutterActivity() {
                 val isVpnTransport =
                         capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) ==
                                 true
-                val isOurVpnRunning = ArcadiaVpnService.isRunning
+                val isOurVpnRunning = ArcadiaPlusVpnService.isRunning
 
                 // If VPN transport is active but our VPN is not running, another VPN is active
                 isVpnTransport && !isOurVpnRunning
@@ -401,8 +401,8 @@ class MainActivity : FlutterActivity() {
         methodChannel?.invokeMethod(
                 "vpnStatusChanged",
                 mapOf(
-                        "isRunning" to ArcadiaVpnService.isRunning,
-                        "fd" to ArcadiaVpnService.vpnFd
+                        "isRunning" to ArcadiaPlusVpnService.isRunning,
+                        "fd" to ArcadiaPlusVpnService.vpnFd
                 )
         )
     }

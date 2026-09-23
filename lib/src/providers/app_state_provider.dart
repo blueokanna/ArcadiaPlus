@@ -3,15 +3,15 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:arcadia/src/rust/api.dart';
-import 'package:arcadia/src/rust/types.dart';
-import 'package:arcadia/src/services/storage_service.dart';
-import 'package:arcadia/src/services/config_converter.dart';
-import 'package:arcadia/src/services/platform_proxy_service.dart';
-import 'package:arcadia/src/services/native_core_service.dart';
-import 'package:arcadia/src/services/rule_provider_service.dart';
-import 'package:arcadia/src/utils/app_lifecycle.dart';
-import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia_plus/src/rust/api.dart';
+import 'package:arcadia_plus/src/rust/types.dart';
+import 'package:arcadia_plus/src/services/storage_service.dart';
+import 'package:arcadia_plus/src/services/config_converter.dart';
+import 'package:arcadia_plus/src/services/platform_proxy_service.dart';
+import 'package:arcadia_plus/src/services/native_core_service.dart';
+import 'package:arcadia_plus/src/services/rule_provider_service.dart';
+import 'package:arcadia_plus/src/utils/app_lifecycle.dart';
+import 'package:arcadia_plus/src/utils/platform_utils.dart';
 
 class AppStateProvider extends ChangeNotifier {
   // App state
@@ -272,7 +272,9 @@ class AppStateProvider extends ChangeNotifier {
       _ruleSetReport = report;
       _isInitialized = true;
       _syncTimers();
-      debugPrint('Arcadia initialized from active profile: $activeProfileId');
+      debugPrint(
+        'ArcadiaPlus initialized from active profile: $activeProfileId',
+      );
       notifyListeners();
     } catch (e, stackTrace) {
       debugPrint('Failed to initialize from active profile: $e');
@@ -520,7 +522,7 @@ class AppStateProvider extends ChangeNotifier {
       // Every start rebuilds the engine from the profile on disk: the config
       // may have changed (ports, mode, rule sets) since the last run, and
       // `initialize_corduit` is also what releases a previous instance.
-      debugPrint('Re-initializing Arcadia...');
+      debugPrint('Re-initializing ArcadiaPlus...');
       await _initializeFromActiveProfile(startResolver: true);
 
       if (!_isInitialized) {
@@ -528,7 +530,7 @@ class AppStateProvider extends ChangeNotifier {
         return false;
       }
 
-      debugPrint('Starting Arcadia proxy...');
+      debugPrint('Starting ArcadiaPlus proxy...');
       await startCorduit();
 
       // Set running state immediately after successful start
@@ -589,7 +591,7 @@ class AppStateProvider extends ChangeNotifier {
         }
       }
 
-      debugPrint('Arcadia proxy started successfully');
+      debugPrint('ArcadiaPlus proxy started successfully');
       return true;
     } catch (e, stackTrace) {
       debugPrint('Failed to start service: $e');
@@ -608,7 +610,7 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      debugPrint('Stopping Arcadia service...');
+      debugPrint('Stopping ArcadiaPlus service...');
 
       // Stop status timer first to prevent concurrent refresh during shutdown
       _isServiceRunning = false;
@@ -646,7 +648,7 @@ class AppStateProvider extends ChangeNotifier {
       _totalDownloadBytes = BigInt.zero;
       _currentUploadSpeed = BigInt.zero;
       _currentDownloadSpeed = BigInt.zero;
-      debugPrint('Arcadia service stopped');
+      debugPrint('ArcadiaPlus service stopped');
     } catch (e) {
       debugPrint('Failed to stop service: $e');
       _isServiceRunning = false;
@@ -664,7 +666,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> restartService() async {
-    debugPrint('Restarting Arcadia service...');
+    debugPrint('Restarting ArcadiaPlus service...');
 
     // Stop the service completely
     await stopService();

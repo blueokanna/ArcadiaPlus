@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:arcadia/src/services/update_service.dart';
+import 'package:arcadia_plus/src/services/update_service.dart';
 
 enum UpdateState {
   idle,

@@ -1,4 +1,4 @@
-name: arcadia
+name: arcadia_plus
 description: "A modern cross-platform proxy client built with Flutter and Rust."
 publish_to: 'none'
 
@@ -14,7 +14,7 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
-  rust_lib_arcadia:
+  rust_lib_arcadia_plus:
     path: rust_builder
   flutter_rust_bridge: 2.13.0
 
@@ -79,19 +79,19 @@ flutter_launcher_icons:
   linux: true
   web:
     generate: true
-    image_path: "assets/arcadia.png"
+    image_path: "assets/arcadia_plus.png"
     background_color: "#00143D"
     theme_color: "#0057D9"
-  image_path: "assets/arcadia.png"
+  image_path: "assets/arcadia_plus.png"
   adaptive_icon_background: "#00143D"
-  adaptive_icon_foreground: "assets/arcadia.png"
+  adaptive_icon_foreground: "assets/arcadia_plus.png"
   min_sdk_android: 21
 
 flutter:
   uses-material-design: true
   
   assets:
-    - assets/arcadia.png
+    - assets/arcadia_plus.png
     # GeoIP country database for `GEOIP` routing rules; installed into the
     # app's support directory and registered with the engine at start-up.
     - assets/Country.mmdb

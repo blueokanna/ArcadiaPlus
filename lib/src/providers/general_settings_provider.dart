@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:arcadia/src/services/storage_service.dart';
+import 'package:arcadia_plus/src/services/storage_service.dart';
 
 class GeneralSettingsProvider extends ChangeNotifier {
   GeneralSettings _settings = GeneralSettings();

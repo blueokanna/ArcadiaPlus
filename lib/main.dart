@@ -2,36 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:arcadia/src/theme/app_theme.dart';
-import 'package:arcadia/src/providers/app_state_provider.dart';
-import 'package:arcadia/src/providers/theme_provider.dart';
-import 'package:arcadia/src/providers/profiles_provider.dart';
-import 'package:arcadia/src/providers/network_settings_provider.dart';
-import 'package:arcadia/src/providers/locale_provider.dart';
-import 'package:arcadia/src/providers/proxies_provider.dart';
-import 'package:arcadia/src/providers/dns_settings_provider.dart';
-import 'package:arcadia/src/providers/general_settings_provider.dart';
-import 'package:arcadia/src/providers/update_provider.dart';
-import 'package:arcadia/src/services/storage_service.dart';
-import 'package:arcadia/src/services/native_core_service.dart';
-import 'package:arcadia/src/screens/home_screen.dart';
-import 'package:arcadia/src/screens/settings_screen.dart';
-import 'package:arcadia/src/screens/connections_screen.dart';
-import 'package:arcadia/src/screens/logs_screen.dart';
-import 'package:arcadia/src/screens/network_settings_screen.dart';
-import 'package:arcadia/src/screens/dns_settings_screen.dart';
-import 'package:arcadia/src/screens/basic_config_screen.dart';
-import 'package:arcadia/src/screens/advanced_config_screen.dart';
-import 'package:arcadia/src/screens/proxies_screen.dart';
-import 'package:arcadia/src/widgets/adaptive_scaffold.dart';
-import 'package:arcadia/src/widgets/rust_init_error_dialog.dart';
-import 'package:arcadia/src/widgets/update_prompt.dart';
-import 'package:arcadia/src/utils/platform_utils.dart';
-import 'package:arcadia/src/utils/device_info_utils.dart';
-import 'package:arcadia/src/utils/animation_utils.dart';
-import 'package:arcadia/src/utils/app_lifecycle.dart';
-import 'package:arcadia/src/l10n/app_localizations.dart';
-import 'package:arcadia/src/screens/profiles_screen.dart';
+import 'package:arcadia_plus/src/theme/app_theme.dart';
+import 'package:arcadia_plus/src/providers/app_state_provider.dart';
+import 'package:arcadia_plus/src/providers/theme_provider.dart';
+import 'package:arcadia_plus/src/providers/profiles_provider.dart';
+import 'package:arcadia_plus/src/providers/network_settings_provider.dart';
+import 'package:arcadia_plus/src/providers/locale_provider.dart';
+import 'package:arcadia_plus/src/providers/proxies_provider.dart';
+import 'package:arcadia_plus/src/providers/dns_settings_provider.dart';
+import 'package:arcadia_plus/src/providers/general_settings_provider.dart';
+import 'package:arcadia_plus/src/providers/update_provider.dart';
+import 'package:arcadia_plus/src/services/storage_service.dart';
+import 'package:arcadia_plus/src/services/native_core_service.dart';
+import 'package:arcadia_plus/src/screens/home_screen.dart';
+import 'package:arcadia_plus/src/screens/settings_screen.dart';
+import 'package:arcadia_plus/src/screens/connections_screen.dart';
+import 'package:arcadia_plus/src/screens/logs_screen.dart';
+import 'package:arcadia_plus/src/screens/network_settings_screen.dart';
+import 'package:arcadia_plus/src/screens/dns_settings_screen.dart';
+import 'package:arcadia_plus/src/screens/basic_config_screen.dart';
+import 'package:arcadia_plus/src/screens/advanced_config_screen.dart';
+import 'package:arcadia_plus/src/screens/proxies_screen.dart';
+import 'package:arcadia_plus/src/widgets/adaptive_scaffold.dart';
+import 'package:arcadia_plus/src/widgets/rust_init_error_dialog.dart';
+import 'package:arcadia_plus/src/widgets/update_prompt.dart';
+import 'package:arcadia_plus/src/utils/platform_utils.dart';
+import 'package:arcadia_plus/src/utils/device_info_utils.dart';
+import 'package:arcadia_plus/src/utils/animation_utils.dart';
+import 'package:arcadia_plus/src/utils/app_lifecycle.dart';
+import 'package:arcadia_plus/src/l10n/app_localizations.dart';
+import 'package:arcadia_plus/src/screens/profiles_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 
@@ -44,17 +44,17 @@ void main() {
   // Timers and animations consult this before spending CPU, so it has to be
   // observing before the first screen is built.
   AppLifecycle.instance.start();
-  runApp(const ArcadiaBootstrap());
+  runApp(const ArcadiaPlusBootstrap());
 }
 
-class ArcadiaBootstrap extends StatefulWidget {
-  const ArcadiaBootstrap({super.key});
+class ArcadiaPlusBootstrap extends StatefulWidget {
+  const ArcadiaPlusBootstrap({super.key});
 
   @override
-  State<ArcadiaBootstrap> createState() => _ArcadiaBootstrapState();
+  State<ArcadiaPlusBootstrap> createState() => _ArcadiaPlusBootstrapState();
 }
 
-class _ArcadiaBootstrapState extends State<ArcadiaBootstrap> {
+class _ArcadiaPlusBootstrapState extends State<ArcadiaPlusBootstrap> {
   bool _ready = false;
 
   @override
@@ -115,7 +115,7 @@ class _ArcadiaBootstrapState extends State<ArcadiaBootstrap> {
   @override
   Widget build(BuildContext context) {
     if (_ready) {
-      return const ArcadiaApp();
+      return const ArcadiaPlusApp();
     }
 
     return const MaterialApp(
@@ -200,7 +200,7 @@ class _StartupScreenState extends State<_StartupScreen>
                 fit: StackFit.expand,
                 children: [
                   Image.asset(
-                    'assets/arcadia.png',
+                    'assets/arcadia_plus.png',
                     filterQuality: FilterQuality.medium,
                   ),
                   AnimatedBuilder(
@@ -223,7 +223,7 @@ class _StartupScreenState extends State<_StartupScreen>
                       );
                     },
                     child: Image.asset(
-                      'assets/arcadia.png',
+                      'assets/arcadia_plus.png',
                       color: Colors.white,
                       filterQuality: FilterQuality.medium,
                     ),
@@ -238,14 +238,14 @@ class _StartupScreenState extends State<_StartupScreen>
   }
 }
 
-class ArcadiaApp extends StatefulWidget {
-  const ArcadiaApp({super.key});
+class ArcadiaPlusApp extends StatefulWidget {
+  const ArcadiaPlusApp({super.key});
 
   @override
-  State<ArcadiaApp> createState() => _ArcadiaAppState();
+  State<ArcadiaPlusApp> createState() => _ArcadiaPlusAppState();
 }
 
-class _ArcadiaAppState extends State<ArcadiaApp> {
+class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
   @override
   void initState() {
     super.initState();
@@ -325,7 +325,7 @@ class _ArcadiaAppState extends State<ArcadiaApp> {
               return Selector<AppStateProvider, ThemeMode>(
                 selector: (_, appState) => appState.themeMode,
                 builder: (context, themeMode, child) => MaterialApp.router(
-                  title: 'Arcadia',
+                  title: 'ArcadiaPlus',
                   debugShowCheckedModeBanner: false,
                   theme: lightTheme,
                   darkTheme: darkTheme,

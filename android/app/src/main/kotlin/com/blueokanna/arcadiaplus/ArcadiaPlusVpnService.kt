@@ -1,4 +1,4 @@
-package com.blueokanna.arcadia
+package com.blueokanna.arcadiaplus
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -21,17 +21,17 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
-class ArcadiaVpnService : VpnService() {
+class ArcadiaPlusVpnService : VpnService() {
 
     // JNI methods for Rust bridge
     private external fun nativeInitRustBridge()
     private external fun nativeClearRustBridge()
 
     companion object {
-        private const val TAG = "ArcadiaVpnService"
-        const val ACTION_START = "com.blueokanna.arcadia.START_VPN"
-        const val ACTION_STOP = "com.blueokanna.arcadia.STOP_VPN"
-        const val NOTIFICATION_CHANNEL_ID = "arcadia_vpn"
+        private const val TAG = "ArcadiaPlusVpnService"
+        const val ACTION_START = "com.blueokanna.arcadiaplus.START_VPN"
+        const val ACTION_STOP = "com.blueokanna.arcadiaplus.STOP_VPN"
+        const val NOTIFICATION_CHANNEL_ID = "arcadia_plus_vpn"
         const val NOTIFICATION_ID = 1
 
         private val _isRunning = AtomicBoolean(false)
@@ -78,7 +78,7 @@ class ArcadiaVpnService : VpnService() {
 
         @Volatile private var startLatch: CountDownLatch? = null
 
-        @Volatile private var instance: ArcadiaVpnService? = null
+        @Volatile private var instance: ArcadiaPlusVpnService? = null
 
         private val _isStarting = AtomicBoolean(false)
 
@@ -88,7 +88,7 @@ class ArcadiaVpnService : VpnService() {
             Log.d(TAG, "Primary ABI: ${Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"}")
 
             try {
-                System.loadLibrary("rust_lib_arcadia")
+                System.loadLibrary("rust_lib_arcadia_plus")
                 _libraryLoaded.set(true)
                 _libraryLoadError = null
                 Log.d(TAG, "=== Native library loaded successfully ===")
@@ -110,7 +110,7 @@ class ArcadiaVpnService : VpnService() {
         /** Get detailed library loading information for diagnostics */
         fun getLibraryInfo(context: Context): Map<String, Any> {
             val nativeLibDir = context.applicationInfo.nativeLibraryDir
-            val libFile = java.io.File(nativeLibDir, "librust_lib_arcadia.so")
+            val libFile = java.io.File(nativeLibDir, "librust_lib_arcadia_plus.so")
 
             Log.d(TAG, "=== Library Info ===")
             Log.d(TAG, "Native lib dir: $nativeLibDir")
@@ -208,7 +208,7 @@ class ArcadiaVpnService : VpnService() {
             Log.d(TAG, "Starting VPN service via Intent...")
 
             val intent =
-                    Intent(context, ArcadiaVpnService::class.java).apply {
+                    Intent(context, ArcadiaPlusVpnService::class.java).apply {
                         action = ACTION_START
                         putExtra("mode", mode)
                         putExtra("allowLan", allowLan)
@@ -265,7 +265,7 @@ class ArcadiaVpnService : VpnService() {
             // Also send stop intent to ensure service stops
             try {
                 val intent =
-                        Intent(context, ArcadiaVpnService::class.java).apply {
+                        Intent(context, ArcadiaPlusVpnService::class.java).apply {
                             action = ACTION_STOP
                         }
                 context.startService(intent)
@@ -459,7 +459,7 @@ class ArcadiaVpnService : VpnService() {
                 // must stay free to answer the system's callbacks.
                 Thread(
                                 { startVpn() },
-                                "arcadia-vpn-start",
+                                "arcadia_plus-vpn-start",
                         )
                         .start()
             }
@@ -511,7 +511,7 @@ class ArcadiaVpnService : VpnService() {
             Log.d(TAG, "Building VPN interface...")
             val builder =
                     Builder()
-                            .setSession("Arcadia")
+                            .setSession("ArcadiaPlus")
                             .setMtu(1500)
                             .addAddress("198.18.0.1", 16)
                             // Every DNS query that enters the tunnel is answered by the
@@ -691,7 +691,7 @@ class ArcadiaVpnService : VpnService() {
             val channel =
                     NotificationChannel(
                                     NOTIFICATION_CHANNEL_ID,
-                                    "Arcadia VPN",
+                                    "ArcadiaPlus VPN",
                                     NotificationManager.IMPORTANCE_LOW
                             )
                             .apply {
@@ -726,7 +726,7 @@ class ArcadiaVpnService : VpnService() {
                 )
 
         val stopIntent =
-                Intent(this, ArcadiaVpnService::class.java).apply { action = ACTION_STOP }
+                Intent(this, ArcadiaPlusVpnService::class.java).apply { action = ACTION_STOP }
         val stopPendingIntent =
                 PendingIntent.getService(
                         this,
@@ -743,7 +743,7 @@ class ArcadiaVpnService : VpnService() {
                 }
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
-                .setContentTitle("Arcadia")
+                .setContentTitle("ArcadiaPlus")
                 .setContentText("VPN 正在运行 - $modeText")
                 .setSmallIcon(android.R.drawable.ic_lock_lock)
                 .setContentIntent(pendingIntent)

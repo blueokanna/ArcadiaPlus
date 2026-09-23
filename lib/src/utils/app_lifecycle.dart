@@ -7,7 +7,7 @@ import 'package:flutter/widgets.dart';
 ///
 /// Every timer in the app used to start when its widget or provider was
 /// constructed and keep running until it was disposed. On Android that means a
-/// backgrounded Arcadia still woke the CPU once a second to poll a proxy the
+/// backgrounded ArcadiaPlus still woke the CPU once a second to poll a proxy the
 /// user cannot see, refreshed the system information every five seconds, and
 /// kept the resolver alive — the phone gets warm while nothing is happening.
 /// Anything that repeats on a timer should consult [active] (or follow [when])

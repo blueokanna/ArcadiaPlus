@@ -1,7 +1,7 @@
 import { FlutterPage, FlutterEntry } from '@aspect/flutter_ohos';
 
 /**
- * Main entry page for Arcadia on HarmonyOS NEXT
+ * Main entry page for ArcadiaPlus on HarmonyOS NEXT
  * 
  * This page hosts the Flutter application.
  */

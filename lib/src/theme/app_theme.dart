@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:arcadia/src/theme/app_shapes.dart';
+import 'package:arcadia_plus/src/theme/app_shapes.dart';
 
 class AppTheme {
   static const String _fontFamily = 'Roboto';

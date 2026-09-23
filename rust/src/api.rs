@@ -342,7 +342,7 @@ pub async fn get_dns_config() -> std::result::Result<DnsConfigDto, String> {
     run(|| engine::api::get_dns_config().map(DnsConfigDto::from)).await
 }
 
-/// Start Arcadia's recursive resolver front-end (RecurseX).
+/// Start ArcadiaPlus's recursive resolver front-end (RecurseX).
 ///
 /// `listen` is a `host:port` pair; port `0` asks the OS for a free port
 /// and the bound address is returned. Queries are answered by iterative

@@ -210,7 +210,7 @@ Future<List<RuleDto>> getRules() => RustLib.instance.api.crateApiGetRules();
 Future<DnsConfigDto> getDnsConfig() =>
     RustLib.instance.api.crateApiGetDnsConfig();
 
-/// Start Arcadia's recursive resolver front-end (RecurseX).
+/// Start ArcadiaPlus's recursive resolver front-end (RecurseX).
 ///
 /// `listen` is a `host:port` pair; port `0` asks the OS for a free port
 /// and the bound address is returned. Queries are answered by iterative

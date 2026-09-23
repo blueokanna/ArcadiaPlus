@@ -430,7 +430,7 @@ class RuleProviderService extends ChangeNotifier {
     }
 
     final headers = <String, String>{
-      'User-Agent': 'Arcadia rule-provider',
+      'User-Agent': 'ArcadiaPlus rule-provider',
       'Accept': 'text/plain, application/yaml, text/yaml, */*',
       if (etag != null && etag.isNotEmpty) 'If-None-Match': etag,
       if (lastModified != null && lastModified.isNotEmpty)

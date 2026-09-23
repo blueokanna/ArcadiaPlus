@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:arcadia/src/providers/app_state_provider.dart';
-import 'package:arcadia/src/rust/types.dart';
-import 'package:arcadia/src/utils/app_lifecycle.dart';
-import 'package:arcadia/src/utils/platform_utils.dart';
-import 'package:arcadia/src/utils/responsive_utils.dart';
-import 'package:arcadia/src/utils/animation_utils.dart';
-import 'package:arcadia/src/l10n/app_localizations.dart';
+import 'package:arcadia_plus/src/providers/app_state_provider.dart';
+import 'package:arcadia_plus/src/rust/types.dart';
+import 'package:arcadia_plus/src/utils/app_lifecycle.dart';
+import 'package:arcadia_plus/src/utils/platform_utils.dart';
+import 'package:arcadia_plus/src/utils/responsive_utils.dart';
+import 'package:arcadia_plus/src/utils/animation_utils.dart';
+import 'package:arcadia_plus/src/l10n/app_localizations.dart';
 
 class ConnectionsScreen extends StatefulWidget {
   const ConnectionsScreen({super.key});
@@ -187,7 +187,8 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
             ),
             SizedBox(height: spacing),
             Text(
-              l10n?.startServiceToViewConnections2 ?? '启动 Arcadia 服务以查看活动连接',
+              l10n?.startServiceToViewConnections2 ??
+                  '启动 ArcadiaPlus 服务以查看活动连接',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),

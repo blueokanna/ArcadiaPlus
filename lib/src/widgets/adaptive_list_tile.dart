@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia_plus/src/utils/platform_utils.dart';
 
 class AdaptiveListTile extends StatelessWidget {
   final Widget? leading;

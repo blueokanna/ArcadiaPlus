@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:arcadia/src/utils/responsive_utils.dart';
+import 'package:arcadia_plus/src/utils/responsive_utils.dart';
 
 class PlatformUtils {
   static bool? _isHarmonyOS;
@@ -49,7 +49,7 @@ class PlatformUtils {
 
     if (Platform.isAndroid) {
       try {
-        const channel = MethodChannel('com.arcadia/proxy');
+        const channel = MethodChannel('com.arcadiaplus/proxy');
         final deviceInfo =
             await channel
                     .invokeMethod('getDeviceInfo')
@@ -129,7 +129,7 @@ class PlatformUtils {
       size: Size(1200, 800),
       minimumSize: Size(600, 600),
       center: true,
-      title: 'Arcadia',
+      title: 'ArcadiaPlus',
       titleBarStyle: TitleBarStyle.normal,
     );
 
@@ -200,11 +200,11 @@ class PlatformUtils {
   // Get platform-specific configuration directory
   static String getConfigDirectory() {
     if (isWindows) {
-      return '${Platform.environment['APPDATA']}\\Arcadia';
+      return '${Platform.environment['APPDATA']}\\ArcadiaPlus';
     } else if (isLinux || isMacOS) {
-      return '${Platform.environment['HOME']}/.config/arcadia';
+      return '${Platform.environment['HOME']}/.config/arcadia_plus';
     } else if (isAndroid || isHarmonyOS) {
-      return '/data/data/com.blueokanna.arcadia/files';
+      return '/data/data/com.blueokanna.arcadiaplus/files';
     } else {
       return Directory.current.path;
     }
@@ -213,11 +213,11 @@ class PlatformUtils {
   // Get platform-specific log directory
   static String getLogDirectory() {
     if (isWindows) {
-      return '${Platform.environment['LOCALAPPDATA']}\\Arcadia\\logs';
+      return '${Platform.environment['LOCALAPPDATA']}\\ArcadiaPlus\\logs';
     } else if (isLinux || isMacOS) {
-      return '${Platform.environment['HOME']}/.local/share/arcadia/logs';
+      return '${Platform.environment['HOME']}/.local/share/arcadia_plus/logs';
     } else if (isAndroid || isHarmonyOS) {
-      return '/data/data/com.blueokanna.arcadia/cache/logs';
+      return '/data/data/com.blueokanna.arcadiaplus/cache/logs';
     } else {
       return Directory.current.path;
     }

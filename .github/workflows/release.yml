@@ -222,22 +222,22 @@ jobs:
       - name: Decode the Android release keystore
         shell: bash
         env:
-          KEYSTORE_BASE64: ${{ secrets.ARCADIA_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ARCADIA_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ARCADIA_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ARCADIA_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.ARCADIAPLUS_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ARCADIAPLUS_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ARCADIAPLUS_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ARCADIAPLUS_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           if [[ -z "$KEYSTORE_BASE64" ]]; then
-            echo "::warning title=Unsigned release APK::ARCADIA_KEYSTORE_BASE64 is not configured, so the release APK is signed with the debug key and can only upgrade installs that the debug key signed."
+            echo "::warning title=Unsigned release APK::ARCADIAPLUS_KEYSTORE_BASE64 is not configured, so the release APK is signed with the debug key and can only upgrade installs that the debug key signed."
             exit 0
           fi
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
           {
-            echo "ARCADIA_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore"
-            echo "ARCADIA_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
-            echo "ARCADIA_KEY_ALIAS=$KEY_ALIAS"
-            echo "ARCADIA_KEY_PASSWORD=$KEY_PASSWORD"
+            echo "ARCADIAPLUS_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore"
+            echo "ARCADIAPLUS_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+            echo "ARCADIAPLUS_KEY_ALIAS=$KEY_ALIAS"
+            echo "ARCADIAPLUS_KEY_PASSWORD=$KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
       - name: Give the Android build a CI-sized Gradle heap
@@ -287,8 +287,8 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-debug.apk "dist/Arcadia-${tag}-android-debug.apk"
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/Arcadia-${tag}-android-release.apk"
+          cp build/app/outputs/flutter-apk/app-debug.apk "dist/ArcadiaPlus-${tag}-android-debug.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/ArcadiaPlus-${tag}-android-release.apk"
           ls -lh dist
 
       - name: Upload the Android artifacts
@@ -345,7 +345,7 @@ jobs:
         run: |
           $tag = '${{ needs.validate.outputs.tag }}'
           New-Item -ItemType Directory -Force dist | Out-Null
-          tar -a -c -f "dist/Arcadia-$tag-windows-x64-portable.zip" -C 'build\windows\x64\runner\Release' .
+          tar -a -c -f "dist/ArcadiaPlus-$tag-windows-x64-portable.zip" -C 'build\windows\x64\runner\Release' .
 
       - name: Install Inno Setup
         shell: pwsh
@@ -359,19 +359,19 @@ jobs:
           $iss = @"
           [Setup]
           AppId={{E4BD9BC7-9DC9-469E-9F38-BA84DB86AC22}
-          AppName=Arcadia
+          AppName=ArcadiaPlus
           AppVersion=$version
-          AppVerName=Arcadia $version
+          AppVerName=ArcadiaPlus $version
           AppPublisher=blueokanna
           AppPublisherURL=https://github.com/blueokanna/ArcadiaPlus
           AppSupportURL=https://github.com/blueokanna/ArcadiaPlus/issues
           AppUpdatesURL=https://github.com/blueokanna/ArcadiaPlus/releases
-          DefaultDirName={autopf}\Arcadia
-          DefaultGroupName=Arcadia
+          DefaultDirName={autopf}\ArcadiaPlus
+          DefaultGroupName=ArcadiaPlus
           DisableProgramGroupPage=yes
-          UninstallDisplayIcon={app}\arcadia.exe
+          UninstallDisplayIcon={app}\arcadia_plus.exe
           OutputDir=$($PWD.Path)\dist
-          OutputBaseFilename=Arcadia-$tag-windows-x64-setup
+          OutputBaseFilename=ArcadiaPlus-$tag-windows-x64-setup
           Compression=lzma2/max
           SolidCompression=yes
           WizardStyle=modern
@@ -386,13 +386,13 @@ jobs:
           [Files]
           Source: "$($PWD.Path)\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
           [Icons]
-          Name: "{autoprograms}\Arcadia"; Filename: "{app}\arcadia.exe"
-          Name: "{autodesktop}\Arcadia"; Filename: "{app}\arcadia.exe"; Tasks: desktopicon
+          Name: "{autoprograms}\ArcadiaPlus"; Filename: "{app}\arcadia_plus.exe"
+          Name: "{autodesktop}\ArcadiaPlus"; Filename: "{app}\arcadia_plus.exe"; Tasks: desktopicon
           [Run]
-          Filename: "{app}\arcadia.exe"; Description: "{cm:LaunchProgram,Arcadia}"; Flags: nowait postinstall skipifsilent
+          Filename: "{app}\arcadia_plus.exe"; Description: "{cm:LaunchProgram,ArcadiaPlus}"; Flags: nowait postinstall skipifsilent
           "@
-          Set-Content -Path "$env:RUNNER_TEMP\arcadia.iss" -Value $iss -Encoding utf8
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "$env:RUNNER_TEMP\arcadia.iss"
+          Set-Content -Path "$env:RUNNER_TEMP\arcadia_plus.iss" -Value $iss -Encoding utf8
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "$env:RUNNER_TEMP\arcadia_plus.iss"
           Get-ChildItem dist
 
       - name: Upload the Windows artifacts
@@ -451,11 +451,11 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           version='${{ needs.validate.outputs.version }}'
-          app='build/macos/Build/Products/Release/Arcadia.app'
+          app='build/macos/Build/Products/Release/ArcadiaPlus.app'
           test -d "$app"
           mkdir -p dist
-          hdiutil create -volname "Arcadia $version" -srcfolder "$app" -ov -format UDZO "dist/Arcadia-${tag}-macos-universal.dmg"
-          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/Arcadia-${tag}-macos-universal.zip"
+          hdiutil create -volname "ArcadiaPlus $version" -srcfolder "$app" -ov -format UDZO "dist/ArcadiaPlus-${tag}-macos-universal.dmg"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "dist/ArcadiaPlus-${tag}-macos-universal.zip"
           ls -lh dist
 
       - name: Upload the macOS artifacts
@@ -519,7 +519,7 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           mkdir -p dist
-          tar -C build/linux/x64/release -czf "dist/Arcadia-${tag}-linux-x64.tar.gz" bundle
+          tar -C build/linux/x64/release -czf "dist/ArcadiaPlus-${tag}-linux-x64.tar.gz" bundle
 
       - name: Build the Debian package
         shell: bash
@@ -527,24 +527,24 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           version='${{ needs.validate.outputs.version }}'
-          pkg="$(mktemp -d)/arcadia"
-          install -d "$pkg/DEBIAN" "$pkg/usr/lib/arcadia" "$pkg/usr/bin" \
+          pkg="$(mktemp -d)/arcadia_plus"
+          install -d "$pkg/DEBIAN" "$pkg/usr/lib/arcadia_plus" "$pkg/usr/bin" \
                      "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/512x512/apps"
-          cp -a build/linux/x64/release/bundle/. "$pkg/usr/lib/arcadia/"
-          ln -s /usr/lib/arcadia/arcadia "$pkg/usr/bin/arcadia"
-          cp assets/arcadia.png "$pkg/usr/share/icons/hicolor/512x512/apps/arcadia.png"
-          cat > "$pkg/usr/share/applications/arcadia.desktop" <<'DESKTOP'
+          cp -a build/linux/x64/release/bundle/. "$pkg/usr/lib/arcadia_plus/"
+          ln -s /usr/lib/arcadia_plus/arcadia_plus "$pkg/usr/bin/arcadia_plus"
+          cp assets/arcadia_plus.png "$pkg/usr/share/icons/hicolor/512x512/apps/arcadia_plus.png"
+          cat > "$pkg/usr/share/applications/arcadia_plus.desktop" <<'DESKTOP'
           [Desktop Entry]
-          Name=Arcadia
+          Name=ArcadiaPlus
           Comment=Cross-platform proxy client built with Flutter and Rust
-          Exec=arcadia
-          Icon=arcadia
+          Exec=arcadia_plus
+          Icon=arcadia_plus
           Terminal=false
           Type=Application
           Categories=Network;Utility;
           DESKTOP
           cat > "$pkg/DEBIAN/control" <<CONTROL
-          Package: arcadia
+          Package: arcadia_plus
           Version: $version
           Architecture: amd64
           Section: net
@@ -553,11 +553,11 @@ jobs:
           Homepage: https://github.com/blueokanna/ArcadiaPlus
           Depends: libgtk-3-0
           Description: Cross-platform proxy client built with Flutter and Rust
-           Arcadia ships no servers, nodes, or subscriptions; you supply your
+           ArcadiaPlus ships no servers, nodes, or subscriptions; you supply your
            own configuration and are responsible for lawful use.
           CONTROL
-          dpkg-deb --build --root-owner-group "$pkg" "dist/Arcadia-${tag}-linux-x64.deb"
-          dpkg-deb --info "dist/Arcadia-${tag}-linux-x64.deb"
+          dpkg-deb --build --root-owner-group "$pkg" "dist/ArcadiaPlus-${tag}-linux-x64.deb"
+          dpkg-deb --info "dist/ArcadiaPlus-${tag}-linux-x64.deb"
 
       - name: Upload the Linux artifacts
         uses: actions/upload-artifact@v4
@@ -592,14 +592,14 @@ jobs:
         run: |
           set -euo pipefail
           expected=(
-            "Arcadia-${TAG}-android-debug.apk"
-            "Arcadia-${TAG}-android-release.apk"
-            "Arcadia-${TAG}-windows-x64-portable.zip"
-            "Arcadia-${TAG}-windows-x64-setup.exe"
-            "Arcadia-${TAG}-macos-universal.dmg"
-            "Arcadia-${TAG}-macos-universal.zip"
-            "Arcadia-${TAG}-linux-x64.deb"
-            "Arcadia-${TAG}-linux-x64.tar.gz"
+            "ArcadiaPlus-${TAG}-android-debug.apk"
+            "ArcadiaPlus-${TAG}-android-release.apk"
+            "ArcadiaPlus-${TAG}-windows-x64-portable.zip"
+            "ArcadiaPlus-${TAG}-windows-x64-setup.exe"
+            "ArcadiaPlus-${TAG}-macos-universal.dmg"
+            "ArcadiaPlus-${TAG}-macos-universal.zip"
+            "ArcadiaPlus-${TAG}-linux-x64.deb"
+            "ArcadiaPlus-${TAG}-linux-x64.tar.gz"
           )
           for asset in "${expected[@]}"; do
             if [[ ! -f "dist/$asset" ]]; then
@@ -631,13 +631,13 @@ jobs:
             --arg tag "$TAG" \
             --arg version "$VERSION" \
             --arg published_at "$published_at" \
-            --argjson android "$(asset android "Arcadia-${TAG}-android-release.apk")" \
-            --argjson windows "$(asset windows "Arcadia-${TAG}-windows-x64-setup.exe")" \
-            --argjson macos "$(asset macos "Arcadia-${TAG}-macos-universal.dmg")" \
-            --argjson linux "$(asset linux "Arcadia-${TAG}-linux-x64.deb")" \
+            --argjson android "$(asset android "ArcadiaPlus-${TAG}-android-release.apk")" \
+            --argjson windows "$(asset windows "ArcadiaPlus-${TAG}-windows-x64-setup.exe")" \
+            --argjson macos "$(asset macos "ArcadiaPlus-${TAG}-macos-universal.dmg")" \
+            --argjson linux "$(asset linux "ArcadiaPlus-${TAG}-linux-x64.deb")" \
             '{schema:1,tag:$tag,version:$version,published_at:$published_at,assets:[$android,$windows,$macos,$linux]}' \
             > dist/update-manifest.json
-          (cd dist && sha256sum Arcadia-* update-manifest.json > SHA256SUMS)
+          (cd dist && sha256sum ArcadiaPlus-* update-manifest.json > SHA256SUMS)
           cat dist/update-manifest.json
 
       - name: Publish the stable GitHub release
@@ -645,7 +645,7 @@ jobs:
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: Arcadia ${{ steps.release.outputs.tag }}
+          name: ArcadiaPlus ${{ steps.release.outputs.tag }}
           body_path: release-notes.md
           draft: false
           prerelease: false

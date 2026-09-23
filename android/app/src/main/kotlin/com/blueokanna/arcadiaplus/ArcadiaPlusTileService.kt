@@ -1,4 +1,4 @@
-package com.blueokanna.arcadia
+package com.blueokanna.arcadiaplus
 
 import android.annotation.SuppressLint
 import android.app.PendingIntent
@@ -7,7 +7,7 @@ import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 
-class ArcadiaTileService : TileService() {
+class ArcadiaPlusTileService : TileService() {
     
     override fun onStartListening() {
         super.onStartListening()
@@ -17,9 +17,9 @@ class ArcadiaTileService : TileService() {
     override fun onClick() {
         super.onClick()
         
-        if (ArcadiaVpnService.isRunning) {
-            val intent = Intent(this, ArcadiaVpnService::class.java).apply {
-                action = ArcadiaVpnService.ACTION_STOP
+        if (ArcadiaPlusVpnService.isRunning) {
+            val intent = Intent(this, ArcadiaPlusVpnService::class.java).apply {
+                action = ArcadiaPlusVpnService.ACTION_STOP
             }
             startService(intent)
         } else {
@@ -54,13 +54,13 @@ class ArcadiaTileService : TileService() {
     private fun updateTile() {
         val tile = qsTile ?: return
         
-        if (ArcadiaVpnService.isRunning) {
+        if (ArcadiaPlusVpnService.isRunning) {
             tile.state = Tile.STATE_ACTIVE
-            tile.label = "Arcadia"
+            tile.label = "ArcadiaPlus"
             tile.contentDescription = "VPN 已连接"
         } else {
             tile.state = Tile.STATE_INACTIVE
-            tile.label = "Arcadia"
+            tile.label = "ArcadiaPlus"
             tile.contentDescription = "VPN 已断开"
         }
         

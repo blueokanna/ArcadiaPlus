@@ -1,7 +1,7 @@
 //! Android `VpnService` JNI entry points.
 //!
-//! Kotlin loads `librust_lib_arcadia.so` and calls
-//! `ArcadiaVpnService.nativeInitRustBridge()` / `nativeClearRustBridge()`;
+//! Kotlin loads `librust_lib_arcadia_plus.so` and calls
+//! `ArcadiaPlusVpnService.nativeInitRustBridge()` / `nativeClearRustBridge()`;
 //! both symbols are bound to that class name and library stem, so they stay
 //! here.
 //!
@@ -16,9 +16,9 @@
 use jni::objects::JObject;
 use jni::JNIEnv;
 
-/// Called by `ArcadiaVpnService` when the service starts.
+/// Called by `ArcadiaPlusVpnService` when the service starts.
 #[no_mangle]
-pub extern "system" fn Java_com_blueokanna_arcadia_ArcadiaVpnService_nativeInitRustBridge<
+pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeInitRustBridge<
     'local,
 >(
     env: JNIEnv<'local>,
@@ -30,9 +30,9 @@ pub extern "system" fn Java_com_blueokanna_arcadia_ArcadiaVpnService_nativeInitR
     );
 }
 
-/// Called by `ArcadiaVpnService` when the service stops.
+/// Called by `ArcadiaPlusVpnService` when the service stops.
 #[no_mangle]
-pub extern "system" fn Java_com_blueokanna_arcadia_ArcadiaVpnService_nativeClearRustBridge<
+pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeClearRustBridge<
     'local,
 >(
     env: JNIEnv<'local>,

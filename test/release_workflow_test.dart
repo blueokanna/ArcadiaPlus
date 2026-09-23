@@ -26,7 +26,7 @@ void main() {
     expect(source, contains('flutter build linux --release'));
     expect(source, contains('update-manifest.json'));
     expect(source, contains('SHA256SUMS'));
-    expect(source, contains('ARCADIA_KEYSTORE_BASE64'));
+    expect(source, contains('ARCADIAPLUS_KEYSTORE_BASE64'));
     expect(
       source,
       contains('needs: [validate, android, windows, macos, linux]'),

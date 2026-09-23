@@ -1,14 +1,14 @@
 [package]
-name = "lib-arcadia"
+name = "lib-arcadia-plus"
 edition = "2021"
 license-file = "../LICENSE"
 version = "1.0.4"
 authors = ["blueokanna"]
-description = "A cross-platform basic proxy client rust core for Arcadia"
+description = "A cross-platform basic proxy client rust core for ArcadiaPlus"
 homepage = "https://github.com/blueokanna/ArcadiaPlus"
 
 [lib]
-name = "rust_lib_arcadia"
+name = "rust_lib_arcadia_plus"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]

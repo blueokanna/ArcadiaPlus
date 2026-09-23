@@ -1,7 +1,7 @@
-# Arcadia
+# ArcadiaPlus
 
 <p align="center">
-  <img src="assets/arcadia.png" width="128" height="128" alt="Arcadia Logo" style="border-radius: 12px;">
+  <img src="assets/arcadia_plus.png" width="128" height="128" alt="ArcadiaPlus Logo" style="border-radius: 12px;">
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 - Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
 - The GeoIP database ships with the installer (`assets/Country.mmdb`), is unpacked into the app support directory at start-up, and is registered with the engine; a failure to unpack or register is recorded, and `GEOIP` rules simply do not match while it is missing — never a silent downgrade.
 - Shared Rust TUN packet processing for Android, Windows, and Linux, with platform-owned device lifecycles.
-- Generated app icons for Windows, macOS, Linux, Android, iOS, and HarmonyOS NEXT from `assets/arcadia.png`.
+- Generated app icons for Windows, macOS, Linux, Android, iOS, and HarmonyOS NEXT from `assets/arcadia_plus.png`.
 
 ## Protocol Status
 
@@ -103,13 +103,13 @@ adb shell cat /proc/pressure/cpu
 adb shell grep procs_running /proc/stat
 
 # 3) Per-process user/system time, twice, and subtract (units: 100 Hz ticks).
-adb shell 'P=$(pidof com.blueokanna.arcadia); awk "{print \$14, \$15}" /proc/$P/stat; sleep 15; awk "{print \$14, \$15}" /proc/$P/stat'
+adb shell 'P=$(pidof com.blueokanna.arcadiaplus); awk "{print \$14, \$15}" /proc/$P/stat; sleep 15; awk "{print \$14, \$15}" /proc/$P/stat'
 
 # 4) I/O growth. Compare with (3): CPU climbing while the byte count does not is a spin.
-adb shell cat /proc/$(pidof com.blueokanna.arcadia)/io
+adb shell cat /proc/$(pidof com.blueokanna.arcadiaplus)/io
 
 # 5) Per-thread attribution: an empty wchan (shown as 0) means the thread is on the CPU in userspace, blocked in no syscall.
-adb shell 'P=$(pidof com.blueokanna.arcadia); for t in /proc/$P/task/*; do echo "$(cat $t/comm) $(cat $t/wchan)"; done | sort | uniq -c | sort -rn'
+adb shell 'P=$(pidof com.blueokanna.arcadiaplus); for t in /proc/$P/task/*; do echo "$(cat $t/comm) $(cat $t/wchan)"; done | sort | uniq -c | sort -rn'
 ```
 
 The bar: with the tunnel idle, `procs_running` should stay in the single digits, and threads that are accounted as running should show a kernel sleep symbol in `wchan` rather than an empty one.
@@ -129,7 +129,7 @@ Flutter UI / Provider
         |
 Flutter Rust Bridge (generated bindings)
         |
-lib-arcadia (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
+lib-arcadia-plus (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
 corduit 0.1.9 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
@@ -185,7 +185,7 @@ The corduit dependency in `rust/Cargo.toml` carries a `path` (a sibling `../Cord
 
 ## Icons
 
-The single source is `assets/arcadia.png` and must be square and at least 1024x1024. On Windows run:
+The single source is `assets/arcadia_plus.png` and must be square and at least 1024x1024. On Windows run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
@@ -203,19 +203,19 @@ An automated build is not evidence of VPN behavior or protocol interoperability.
 
 Pushing a `vMAJOR.MINOR.PATCH` tag — or dispatching the release workflow from the default branch — runs the full quality gate first, then builds and publishes the stable release without further manual steps. A release carries:
 
-- `Arcadia-<tag>-android-debug.apk` — four-ABI debug build for diagnosis.
-- `Arcadia-<tag>-android-release.apk` — four-ABI optimized build for installation.
-- `Arcadia-<tag>-windows-x64-setup.exe` and `-windows-x64-portable.zip` — Inno Setup installer and a no-installation archive.
-- `Arcadia-<tag>-macos-universal.dmg` and `-macos-universal.zip` — universal (Apple silicon + Intel) disk image and archive; the app is unsigned, so the first launch is right-click → Open.
-- `Arcadia-<tag>-linux-x64.deb` and `-linux-x64.tar.gz` — Debian package and relocatable bundle.
+- `ArcadiaPlus-<tag>-android-debug.apk` — four-ABI debug build for diagnosis.
+- `ArcadiaPlus-<tag>-android-release.apk` — four-ABI optimized build for installation.
+- `ArcadiaPlus-<tag>-windows-x64-setup.exe` and `-windows-x64-portable.zip` — Inno Setup installer and a no-installation archive.
+- `ArcadiaPlus-<tag>-macos-universal.dmg` and `-macos-universal.zip` — universal (Apple silicon + Intel) disk image and archive; the app is unsigned, so the first launch is right-click → Open.
+- `ArcadiaPlus-<tag>-linux-x64.deb` and `-linux-x64.tar.gz` — Debian package and relocatable bundle.
 - `update-manifest.json` and `SHA256SUMS` — the checksum-verified metadata the in-app updater reads.
 
-The Android release APK is signed with the project's release key only when these repository Actions secrets are configured (`ARCADIA_KEYSTORE_BASE64` is the base64 encoding of the keystore file, e.g. `base64 -w0 arcadia.jks`):
+The Android release APK is signed with the project's release key only when these repository Actions secrets are configured (`ARCADIAPLUS_KEYSTORE_BASE64` is the base64 encoding of the keystore file, e.g. `base64 -w0 arcadia_plus.jks`):
 
-- `ARCADIA_KEYSTORE_BASE64`
-- `ARCADIA_KEYSTORE_PASSWORD`
-- `ARCADIA_KEY_ALIAS`
-- `ARCADIA_KEY_PASSWORD`
+- `ARCADIAPLUS_KEYSTORE_BASE64`
+- `ARCADIAPLUS_KEYSTORE_PASSWORD`
+- `ARCADIAPLUS_KEY_ALIAS`
+- `ARCADIAPLUS_KEY_PASSWORD`
 
 Without them the release APK falls back to the debug key: it installs, but it can only upgrade installs that the debug key signed — configure the keystore before the first public stable release.
 
@@ -230,7 +230,7 @@ The `version` in `pubspec.yaml`, the top changelog section, and the `vMAJOR.MINO
 
 ## Disclaimer
 
-- **Lawful use is the only permitted purpose.** Arcadia is a network tool. It ships no proxy servers, nodes, or subscriptions; you supply your own configuration and are responsible for it.
+- **Lawful use is the only permitted purpose.** ArcadiaPlus is a network tool. It ships no proxy servers, nodes, or subscriptions; you supply your own configuration and are responsible for it.
 - **The compliance burden is yours.** Keep your use within the law of every jurisdiction that applies to you, the terms of the networks you rely on, and applicable export-control and sanctions rules. Using this software, or a change or new work based on it, to break the law is not a permitted purpose and violates the [license terms](LICENSE).
 - **The authors and contributors accept no liability.** As far as the law allows, they are not liable for any direct or indirect loss arising from use or inability to use this software, nor for any consequence of anyone using it unlawfully, whether or not you authorized that use.
 - **This is not legal advice.** The warnings here and in the app describe risk only; they are not a legal opinion. Consult a qualified lawyer when you need one.

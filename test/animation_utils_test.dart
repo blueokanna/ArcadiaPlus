@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:arcadia/src/utils/animation_utils.dart';
+import 'package:arcadia_plus/src/utils/animation_utils.dart';
 
 void main() {
   test('state change curve never overshoots decoration tween bounds', () {

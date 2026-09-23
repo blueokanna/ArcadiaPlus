@@ -46,7 +46,9 @@ class UpdateService {
   static const _repository = 'blueokanna/ArcadiaPlus';
   static const _latestReleaseApi =
       'https://api.github.com/repos/$_repository/releases/latest';
-  static const MethodChannel _installer = MethodChannel('com.arcadia/proxy');
+  static const MethodChannel _installer = MethodChannel(
+    'com.arcadiaplus/proxy',
+  );
 
   final http.Client _client;
   final Dio _dio;
@@ -60,7 +62,7 @@ class UpdateService {
           headers: const {
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28',
-            'User-Agent': 'Arcadia-Updater',
+            'User-Agent': 'ArcadiaPlus-Updater',
           },
         )
         .timeout(const Duration(seconds: 15));
@@ -100,7 +102,7 @@ class UpdateService {
       manifestReleaseAsset['browser_download_url'] as String,
     );
     final manifestResponse = await _client
-        .get(manifestUri, headers: const {'User-Agent': 'Arcadia-Updater'})
+        .get(manifestUri, headers: const {'User-Agent': 'ArcadiaPlus-Updater'})
         .timeout(const Duration(seconds: 15));
     if (manifestResponse.statusCode != 200) {
       throw HttpException(
@@ -191,7 +193,7 @@ class UpdateService {
       options: Options(
         followRedirects: true,
         receiveTimeout: const Duration(minutes: 5),
-        headers: const {'User-Agent': 'Arcadia-Updater'},
+        headers: const {'User-Agent': 'ArcadiaPlus-Updater'},
       ),
       onReceiveProgress: (received, total) {
         if (total > 0) onProgress?.call(received / total);
@@ -219,7 +221,7 @@ class UpdateService {
     });
     if (result is Map && result['requiresPermission'] == true) {
       throw StateError(
-        'Allow installs from Arcadia, then tap Check for updates again',
+        'Allow installs from ArcadiaPlus, then tap Check for updates again',
       );
     }
     return result == true || (result is Map && result['launched'] == true);

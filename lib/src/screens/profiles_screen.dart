@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:arcadia/src/l10n/app_localizations.dart';
-import 'package:arcadia/src/providers/profiles_provider.dart';
-import 'package:arcadia/src/services/storage_service.dart';
+import 'package:arcadia_plus/src/l10n/app_localizations.dart';
+import 'package:arcadia_plus/src/providers/profiles_provider.dart';
+import 'package:arcadia_plus/src/services/storage_service.dart';
 
 class ProfilesScreen extends StatefulWidget {
   const ProfilesScreen({super.key});

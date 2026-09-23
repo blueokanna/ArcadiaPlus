@@ -4,10 +4,10 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:arcadia/src/utils/responsive_utils.dart';
-import 'package:arcadia/src/utils/animation_utils.dart';
-import 'package:arcadia/src/l10n/app_localizations.dart';
-import 'package:arcadia/src/providers/proxies_provider.dart'
+import 'package:arcadia_plus/src/utils/responsive_utils.dart';
+import 'package:arcadia_plus/src/utils/animation_utils.dart';
+import 'package:arcadia_plus/src/l10n/app_localizations.dart';
+import 'package:arcadia_plus/src/providers/proxies_provider.dart'
     show proxySelectionChangedController;
 
 /// IP 信息数据模型
@@ -212,7 +212,7 @@ class _IpCheckCardState extends State<IpCheckCard>
       BaseOptions(
         connectTimeout: const Duration(seconds: 8),
         receiveTimeout: const Duration(seconds: 8),
-        headers: const {'User-Agent': 'Arcadia/1.0'},
+        headers: const {'User-Agent': 'ArcadiaPlus/1.0'},
       ),
     );
 

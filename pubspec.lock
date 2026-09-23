@@ -693,7 +693,7 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "0.6.0"
-  rust_lib_arcadia:
+  rust_lib_arcadia_plus:
     dependency: "direct main"
     description:
       path: rust_builder

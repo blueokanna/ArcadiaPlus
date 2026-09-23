@@ -282,7 +282,7 @@ class AppLocalizations {
 
   // Status
   String get startingService => _getLocalizedString('startingService');
-  String get arcadiaRunning => _getLocalizedString('arcadiaRunning');
+  String get arcadiaPlusRunning => _getLocalizedString('arcadiaPlusRunning');
   String get uptime => _getLocalizedString('uptime');
 
   // Traffic
@@ -489,7 +489,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'de': {
     'checkForUpdates': 'Nach Updates suchen',
     'stableReleaseCheckDescription': 'Stabile GitHub-Releases prüfen',
-    'updateAvailable': 'Arcadia {version} ist verfügbar',
+    'updateAvailable': 'ArcadiaPlus {version} ist verfügbar',
     'downloadingProgress': 'Download läuft: {progress} %',
     'openingInstaller': 'Installationsprogramm wird geöffnet',
     'updateFailed': 'Update fehlgeschlagen: {error}',
@@ -498,7 +498,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'en': {
     'checkForUpdates': 'Check for updates',
     'stableReleaseCheckDescription': 'Check stable GitHub Releases',
-    'updateAvailable': 'Arcadia {version} is available',
+    'updateAvailable': 'ArcadiaPlus {version} is available',
     'downloadingProgress': 'Downloading {progress}%',
     'openingInstaller': 'Opening installer',
     'updateFailed': 'Update failed: {error}',
@@ -507,7 +507,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'es': {
     'checkForUpdates': 'Buscar actualizaciones',
     'stableReleaseCheckDescription': 'Buscar versiones estables en GitHub',
-    'updateAvailable': 'Arcadia {version} está disponible',
+    'updateAvailable': 'ArcadiaPlus {version} está disponible',
     'downloadingProgress': 'Descargando {progress} %',
     'openingInstaller': 'Abriendo el instalador',
     'updateFailed': 'Error de actualización: {error}',
@@ -516,7 +516,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'fr': {
     'checkForUpdates': 'Rechercher des mises à jour',
     'stableReleaseCheckDescription': 'Vérifier les versions stables GitHub',
-    'updateAvailable': 'Arcadia {version} est disponible',
+    'updateAvailable': 'ArcadiaPlus {version} est disponible',
     'downloadingProgress': 'Téléchargement : {progress} %',
     'openingInstaller': 'Ouverture du programme d’installation',
     'updateFailed': 'Échec de la mise à jour : {error}',
@@ -525,7 +525,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'it': {
     'checkForUpdates': 'Controlla aggiornamenti',
     'stableReleaseCheckDescription': 'Controlla le versioni stabili GitHub',
-    'updateAvailable': 'Arcadia {version} è disponibile',
+    'updateAvailable': 'ArcadiaPlus {version} è disponibile',
     'downloadingProgress': 'Download {progress}%',
     'openingInstaller': 'Apertura del programma di installazione',
     'updateFailed': 'Aggiornamento non riuscito: {error}',
@@ -534,7 +534,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'ja': {
     'checkForUpdates': 'アップデートを確認',
     'stableReleaseCheckDescription': 'GitHub の安定版を確認します',
-    'updateAvailable': 'Arcadia {version} を利用できます',
+    'updateAvailable': 'ArcadiaPlus {version} を利用できます',
     'downloadingProgress': 'ダウンロード中 {progress}%',
     'openingInstaller': 'インストーラーを開いています',
     'updateFailed': 'アップデートに失敗しました: {error}',
@@ -543,7 +543,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'ko': {
     'checkForUpdates': '업데이트 확인',
     'stableReleaseCheckDescription': 'GitHub 안정 버전 확인',
-    'updateAvailable': 'Arcadia {version} 사용 가능',
+    'updateAvailable': 'ArcadiaPlus {version} 사용 가능',
     'downloadingProgress': '다운로드 중 {progress}%',
     'openingInstaller': '설치 프로그램 여는 중',
     'updateFailed': '업데이트 실패: {error}',
@@ -552,7 +552,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'pt': {
     'checkForUpdates': 'Procurar atualizações',
     'stableReleaseCheckDescription': 'Verificar versões estáveis no GitHub',
-    'updateAvailable': 'Arcadia {version} está disponível',
+    'updateAvailable': 'ArcadiaPlus {version} está disponível',
     'downloadingProgress': 'Baixando {progress}%',
     'openingInstaller': 'Abrindo o instalador',
     'updateFailed': 'Falha na atualização: {error}',
@@ -561,7 +561,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'ru': {
     'checkForUpdates': 'Проверить обновления',
     'stableReleaseCheckDescription': 'Проверить стабильные выпуски GitHub',
-    'updateAvailable': 'Доступна Arcadia {version}',
+    'updateAvailable': 'Доступна ArcadiaPlus {version}',
     'downloadingProgress': 'Загрузка: {progress} %',
     'openingInstaller': 'Открытие установщика',
     'updateFailed': 'Ошибка обновления: {error}',
@@ -570,7 +570,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'zh_CN': {
     'checkForUpdates': '检查更新',
     'stableReleaseCheckDescription': '检查 GitHub 正式版本',
-    'updateAvailable': 'Arcadia {version} 已发布',
+    'updateAvailable': 'ArcadiaPlus {version} 已发布',
     'downloadingProgress': '正在下载 {progress}%',
     'openingInstaller': '正在打开安装程序',
     'updateFailed': '更新失败：{error}',
@@ -579,7 +579,7 @@ const Map<String, Map<String, String>> _updateStrings = {
   'zh_TW': {
     'checkForUpdates': '檢查更新',
     'stableReleaseCheckDescription': '檢查 GitHub 正式版本',
-    'updateAvailable': 'Arcadia {version} 已發佈',
+    'updateAvailable': 'ArcadiaPlus {version} 已發佈',
     'downloadingProgress': '正在下載 {progress}%',
     'openingInstaller': '正在開啟安裝程式',
     'updateFailed': '更新失敗：{error}',
@@ -591,7 +591,7 @@ const Map<String, Map<String, String>> _updateStrings = {
 // German (Deutsch) - de
 // =============================================================================
 const Map<String, String> _deStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': 'Einstellungen',
   'home': 'Startseite',
   'connections': 'Verbindungen',
@@ -610,7 +610,7 @@ const Map<String, String> _deStrings = {
   'startService': 'Dienst starten',
   'stopService': 'Dienst stoppen',
   'restartService': 'Dienst neu starten',
-  'serviceNotRunning': 'Arcadia-Dienst läuft nicht',
+  'serviceNotRunning': 'ArcadiaPlus-Dienst läuft nicht',
   'trafficStatistics': 'Datenverkehr-Statistik',
   'download': 'Download',
   'upload': 'Upload',
@@ -687,7 +687,7 @@ const Map<String, String> _deStrings = {
   'noConnections': 'Keine aktiven Verbindungen',
   'serviceNotRunningTitle': 'Dienst nicht aktiv',
   'startServiceToViewConnections2':
-      'Starten Sie den Arcadia-Dienst, um aktive Verbindungen anzuzeigen',
+      'Starten Sie den ArcadiaPlus-Dienst, um aktive Verbindungen anzuzeigen',
   'noActiveConnectionsTitle': 'Keine aktiven Verbindungen',
   'connectionsWillAppear2':
       'Aktive Verbindungen werden hier angezeigt, wenn Daten durch den Proxy fließen',
@@ -704,14 +704,14 @@ const Map<String, String> _deStrings = {
   'close': 'Schließen',
   'back': 'Zurück',
   'actions': 'Aktionen',
-  'restartServiceDesc': 'Arcadia-Dienst neu starten',
+  'restartServiceDesc': 'ArcadiaPlus-Dienst neu starten',
   'resetSettings': 'Einstellungen zurücksetzen',
   'resetSettingsDesc': 'Alle Einstellungen auf Standard zurücksetzen',
   'disclaimer': 'Haftungsausschluss',
   'disclaimerDesc': 'Nutzungsbedingungen und rechtliche Hinweise',
   'disclaimerTitle': 'Nutzungsbedingungen',
   'disclaimerContent':
-      'Arcadia ist ein Netzwerk-Proxy-Client und darf nur im Rahmen '
+      'ArcadiaPlus ist ein Netzwerk-Proxy-Client und darf nur im Rahmen '
       'des für Sie geltenden Rechts eingesetzt werden. Sie sind selbst '
       'dafür verantwortlich, dass Ihre Nutzung lokales Recht, die '
       'Bedingungen genutzter Netzwerke sowie Export- und '
@@ -724,10 +724,10 @@ const Map<String, String> _deStrings = {
       'Die rechtswidrige Nutzung dieser Software verstößt gegen die '
       'Lizenz und kann rechtliche Folgen haben.',
   'understood': 'Verstanden',
-  'aboutCatClash': 'Über Arcadia',
+  'aboutCatClash': 'Über ArcadiaPlus',
   'aboutCatClashDesc': 'Erfahren Sie mehr über diese App',
   'aboutDescription':
-      'Arcadia ist ein moderner plattformübergreifender Proxy-Client, der mit Flutter und Rust entwickelt wurde.',
+      'ArcadiaPlus ist ein moderner plattformübergreifender Proxy-Client, der mit Flutter und Rust entwickelt wurde.',
   'features': 'Funktionen',
   'featureSpeed': 'Hochleistungs-Rust-Kern',
   'featureTheme': 'Material You dynamische Farben',
@@ -756,7 +756,7 @@ const Map<String, String> _deStrings = {
   'direct': 'Direkt',
   // Status
   'startingService': 'Dienst wird gestartet...',
-  'arcadiaRunning': 'Arcadia läuft',
+  'arcadiaPlusRunning': 'ArcadiaPlus läuft',
   'uptime': 'Laufzeit',
   // Traffic
   'realTimeTraffic': 'Echtzeit-Datenverkehr',
@@ -856,7 +856,7 @@ const Map<String, String> _deStrings = {
   'recommended': 'Empfohlen',
   'rustInitErrorTitle': 'Initialisierungsfehler',
   'rustInitErrorMessage':
-      'Die native Kernbibliothek konnte nicht geladen werden. Arcadia kann ohne sie nicht gestartet werden.',
+      'Die native Kernbibliothek konnte nicht geladen werden. ArcadiaPlus kann ohne sie nicht gestartet werden.',
   'rustInitErrorDetails': 'Fehlerdetails',
   'rustInitErrorAffectedFeatures': 'Betroffene Funktionen',
   'rustInitErrorFeatureVpn': '• VPN-Verbindung',
@@ -874,7 +874,7 @@ const Map<String, String> _deStrings = {
 // English - en
 // =============================================================================
 const Map<String, String> _enStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': 'Settings',
   'home': 'Home',
   'connections': 'Connections',
@@ -893,7 +893,7 @@ const Map<String, String> _enStrings = {
   'startService': 'Start Service',
   'stopService': 'Stop Service',
   'restartService': 'Restart Service',
-  'serviceNotRunning': 'Arcadia service is not running',
+  'serviceNotRunning': 'ArcadiaPlus service is not running',
   'trafficStatistics': 'Traffic Statistics',
   'download': 'Download',
   'upload': 'Upload',
@@ -970,7 +970,7 @@ const Map<String, String> _enStrings = {
   'noConnections': 'No active connections',
   'serviceNotRunningTitle': 'Service Not Running',
   'startServiceToViewConnections2':
-      'Start Arcadia service to view active connections',
+      'Start ArcadiaPlus service to view active connections',
   'noActiveConnectionsTitle': 'No Active Connections',
   'connectionsWillAppear2':
       'Active connections will appear here when data flows through the proxy',
@@ -987,14 +987,14 @@ const Map<String, String> _enStrings = {
   'close': 'Close',
   'back': 'Back',
   'actions': 'Actions',
-  'restartServiceDesc': 'Restart Arcadia service',
+  'restartServiceDesc': 'Restart ArcadiaPlus service',
   'resetSettings': 'Reset Settings',
   'resetSettingsDesc': 'Reset all settings to default',
   'disclaimer': 'Disclaimer',
   'disclaimerDesc': 'Terms of use and legal notices',
   'disclaimerTitle': 'Terms of Use',
   'disclaimerContent':
-      'Arcadia is a network proxy client that may be used only where '
+      'ArcadiaPlus is a network proxy client that may be used only where '
       'the law allows. You are responsible for keeping your use '
       'compliant with local law, the terms of the networks you rely '
       'on, and applicable export-control and sanctions rules. Unlawful '
@@ -1006,10 +1006,10 @@ const Map<String, String> _enStrings = {
       'Using this software to break the law violates the license and '
       'can carry legal consequences.',
   'understood': 'Understood',
-  'aboutCatClash': 'About Arcadia',
+  'aboutCatClash': 'About ArcadiaPlus',
   'aboutCatClashDesc': 'Learn more about this app',
   'aboutDescription':
-      'Arcadia is a modern cross-platform proxy client built with Flutter and Rust. It provides a beautiful Material You interface and powerful proxy features.',
+      'ArcadiaPlus is a modern cross-platform proxy client built with Flutter and Rust. It provides a beautiful Material You interface and powerful proxy features.',
   'features': 'Features',
   'featureSpeed': 'High-performance Rust core',
   'featureTheme': 'Material You dynamic colors',
@@ -1038,7 +1038,7 @@ const Map<String, String> _enStrings = {
   'direct': 'Direct',
   // Status
   'startingService': 'Starting service...',
-  'arcadiaRunning': 'Arcadia is running',
+  'arcadiaPlusRunning': 'ArcadiaPlus is running',
   'uptime': 'Uptime',
   // Traffic
   'realTimeTraffic': 'Real-time Traffic',
@@ -1174,7 +1174,7 @@ const Map<String, String> _enStrings = {
   // Rust Init Error Dialog
   'rustInitErrorTitle': 'Initialization Error',
   'rustInitErrorMessage':
-      'The native core failed to load. Arcadia cannot start without it.',
+      'The native core failed to load. ArcadiaPlus cannot start without it.',
   'rustInitErrorDetails': 'Error details',
   'rustInitErrorAffectedFeatures': 'Affected Features',
   'rustInitErrorFeatureVpn': '• VPN connection',
@@ -1192,7 +1192,7 @@ const Map<String, String> _enStrings = {
 // Spanish (Español) - es
 // =============================================================================
 const Map<String, String> _esStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': 'Configuración',
   'home': 'Inicio',
   'connections': 'Conexiones',
@@ -1211,7 +1211,7 @@ const Map<String, String> _esStrings = {
   'startService': 'Iniciar servicio',
   'stopService': 'Detener servicio',
   'restartService': 'Reiniciar servicio',
-  'serviceNotRunning': 'El servicio Arcadia no está ejecutándose',
+  'serviceNotRunning': 'El servicio ArcadiaPlus no está ejecutándose',
   'trafficStatistics': 'Estadísticas de tráfico',
   'download': 'Descarga',
   'upload': 'Subida',
@@ -1290,7 +1290,7 @@ const Map<String, String> _esStrings = {
   'noConnections': 'Sin conexiones activas',
   'serviceNotRunningTitle': 'Servicio no ejecutándose',
   'startServiceToViewConnections2':
-      'Inicie el servicio Arcadia para ver las conexiones activas',
+      'Inicie el servicio ArcadiaPlus para ver las conexiones activas',
   'noActiveConnectionsTitle': 'Sin conexiones activas',
   'connectionsWillAppear2':
       'Las conexiones activas aparecerán aquí cuando los datos fluyan a través del proxy',
@@ -1307,7 +1307,7 @@ const Map<String, String> _esStrings = {
   'close': 'Cerrar',
   'back': 'Atrás',
   'actions': 'Acciones',
-  'restartServiceDesc': 'Reiniciar servicio Arcadia',
+  'restartServiceDesc': 'Reiniciar servicio ArcadiaPlus',
   'resetSettings': 'Restablecer configuración',
   'resetSettingsDesc':
       'Restablecer toda la configuración a los valores predeterminados',
@@ -1315,7 +1315,7 @@ const Map<String, String> _esStrings = {
   'disclaimerDesc': 'Términos de uso y avisos legales',
   'disclaimerTitle': 'Términos de uso',
   'disclaimerContent':
-      'Arcadia es un cliente proxy de red que solo puede usarse donde '
+      'ArcadiaPlus es un cliente proxy de red que solo puede usarse donde '
       'la ley lo permita. Eres responsable de que tu uso cumpla la '
       'legislación local, las condiciones de las redes que utilices y '
       'las normas aplicables de control de exportaciones y sanciones. '
@@ -1328,10 +1328,10 @@ const Map<String, String> _esStrings = {
       'Usar este software para infringir la ley incumple la licencia y '
       'puede acarrear consecuencias legales.',
   'understood': 'Entendido',
-  'aboutCatClash': 'Acerca de Arcadia',
+  'aboutCatClash': 'Acerca de ArcadiaPlus',
   'aboutCatClashDesc': 'Más información sobre esta aplicación',
   'aboutDescription':
-      'Arcadia es un cliente proxy multiplataforma moderno construido con Flutter y Rust.',
+      'ArcadiaPlus es un cliente proxy multiplataforma moderno construido con Flutter y Rust.',
   'features': 'Características',
   'featureSpeed': 'Núcleo Rust de alto rendimiento',
   'featureTheme': 'Colores dinámicos Material You',
@@ -1360,7 +1360,7 @@ const Map<String, String> _esStrings = {
   'direct': 'Directo',
   // Status
   'startingService': 'Iniciando servicio...',
-  'arcadiaRunning': 'Arcadia está ejecutándose',
+  'arcadiaPlusRunning': 'ArcadiaPlus está ejecutándose',
   'uptime': 'Tiempo de actividad',
   // Traffic
   'realTimeTraffic': 'Tráfico en tiempo real',
@@ -1461,7 +1461,7 @@ const Map<String, String> _esStrings = {
   'recommended': 'Recomendado',
   'rustInitErrorTitle': 'Error de inicialización',
   'rustInitErrorMessage':
-      'No se pudo cargar el núcleo nativo. Arcadia no puede iniciarse sin él.',
+      'No se pudo cargar el núcleo nativo. ArcadiaPlus no puede iniciarse sin él.',
   'rustInitErrorDetails': 'Detalles del error',
   'rustInitErrorAffectedFeatures': 'Funciones afectadas',
   'rustInitErrorFeatureVpn': '• Conexión VPN',
@@ -1479,7 +1479,7 @@ const Map<String, String> _esStrings = {
 // French (Français) - fr
 // =============================================================================
 const Map<String, String> _frStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': 'Paramètres',
   'home': 'Accueil',
   'connections': 'Connexions',
@@ -1498,7 +1498,7 @@ const Map<String, String> _frStrings = {
   'startService': 'Démarrer le service',
   'stopService': 'Arrêter le service',
   'restartService': 'Redémarrer le service',
-  'serviceNotRunning': 'Le service Arcadia ne fonctionne pas',
+  'serviceNotRunning': 'Le service ArcadiaPlus ne fonctionne pas',
   'trafficStatistics': 'Statistiques de trafic',
   'download': 'Téléchargement',
   'upload': 'Envoi',
@@ -1578,7 +1578,7 @@ const Map<String, String> _frStrings = {
   'noConnections': 'Aucune connexion active',
   'serviceNotRunningTitle': 'Service non actif',
   'startServiceToViewConnections2':
-      'Démarrez le service Arcadia pour voir les connexions actives',
+      'Démarrez le service ArcadiaPlus pour voir les connexions actives',
   'noActiveConnectionsTitle': 'Aucune connexion active',
   'connectionsWillAppear2':
       'Les connexions actives apparaîtront ici lorsque les données passeront par le proxy',
@@ -1595,14 +1595,14 @@ const Map<String, String> _frStrings = {
   'close': 'Fermer',
   'back': 'Retour',
   'actions': 'Actions',
-  'restartServiceDesc': 'Redémarrer le service Arcadia',
+  'restartServiceDesc': 'Redémarrer le service ArcadiaPlus',
   'resetSettings': 'Réinitialiser les paramètres',
   'resetSettingsDesc': 'Réinitialiser tous les paramètres par défaut',
   'disclaimer': 'Avertissement',
   'disclaimerDesc': 'Conditions d\'utilisation et mentions légales',
   'disclaimerTitle': 'Conditions d\'utilisation',
   'disclaimerContent':
-      'Arcadia est un client proxy réseau qui ne peut être utilisé '
+      'ArcadiaPlus est un client proxy réseau qui ne peut être utilisé '
       'que là où la loi le permet. Il vous appartient de veiller à ce '
       'que votre usage respecte la législation locale, les conditions '
       'des réseaux que vous utilisez ainsi que les règles applicables '
@@ -1616,10 +1616,10 @@ const Map<String, String> _frStrings = {
       'Utiliser ce logiciel pour enfreindre la loi viole la licence et '
       'peut entraîner des conséquences juridiques.',
   'understood': 'Compris',
-  'aboutCatClash': 'À propos d\'Arcadia',
+  'aboutCatClash': 'À propos d\'ArcadiaPlus',
   'aboutCatClashDesc': 'En savoir plus sur cette application',
   'aboutDescription':
-      'Arcadia est un client proxy multiplateforme moderne construit avec Flutter et Rust.',
+      'ArcadiaPlus est un client proxy multiplateforme moderne construit avec Flutter et Rust.',
   'features': 'Fonctionnalités',
   'featureSpeed': 'Noyau Rust haute performance',
   'featureTheme': 'Couleurs dynamiques Material You',
@@ -1648,7 +1648,7 @@ const Map<String, String> _frStrings = {
   'direct': 'Direct',
   // Status
   'startingService': 'Démarrage du service...',
-  'arcadiaRunning': 'Arcadia est en cours d\'exécution',
+  'arcadiaPlusRunning': 'ArcadiaPlus est en cours d\'exécution',
   'uptime': 'Temps de fonctionnement',
   // Traffic
   'realTimeTraffic': 'Trafic en temps réel',
@@ -1749,7 +1749,7 @@ const Map<String, String> _frStrings = {
   'recommended': 'Recommandé',
   'rustInitErrorTitle': "Erreur d'initialisation",
   'rustInitErrorMessage':
-      'Le cœur natif n’a pas pu être chargé. Arcadia ne peut pas démarrer sans lui.',
+      'Le cœur natif n’a pas pu être chargé. ArcadiaPlus ne peut pas démarrer sans lui.',
   'rustInitErrorDetails': "Détails de l'erreur",
   'rustInitErrorAffectedFeatures': 'Fonctions affectées',
   'rustInitErrorFeatureVpn': '• Connexion VPN',
@@ -1767,7 +1767,7 @@ const Map<String, String> _frStrings = {
 // Italian (Italiano) - it
 // =============================================================================
 const Map<String, String> _itStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': 'Impostazioni',
   'home': 'Home',
   'connections': 'Connessioni',
@@ -1786,7 +1786,7 @@ const Map<String, String> _itStrings = {
   'startService': 'Avvia servizio',
   'stopService': 'Ferma servizio',
   'restartService': 'Riavvia servizio',
-  'serviceNotRunning': 'Il servizio Arcadia non è in esecuzione',
+  'serviceNotRunning': 'Il servizio ArcadiaPlus non è in esecuzione',
   'trafficStatistics': 'Statistiche traffico',
   'download': 'Download',
   'upload': 'Upload',
@@ -1863,7 +1863,7 @@ const Map<String, String> _itStrings = {
   'noConnections': 'Nessuna connessione attiva',
   'serviceNotRunningTitle': 'Servizio non attivo',
   'startServiceToViewConnections2':
-      'Avvia il servizio Arcadia per visualizzare le connessioni attive',
+      'Avvia il servizio ArcadiaPlus per visualizzare le connessioni attive',
   'noActiveConnectionsTitle': 'Nessuna connessione attiva',
   'connectionsWillAppear2':
       'Le connessioni attive appariranno qui quando i dati passeranno attraverso il proxy',
@@ -1880,14 +1880,14 @@ const Map<String, String> _itStrings = {
   'close': 'Chiudi',
   'back': 'Indietro',
   'actions': 'Azioni',
-  'restartServiceDesc': 'Riavvia il servizio Arcadia',
+  'restartServiceDesc': 'Riavvia il servizio ArcadiaPlus',
   'resetSettings': 'Ripristina impostazioni',
   'resetSettingsDesc': 'Ripristina tutte le impostazioni ai valori predefiniti',
   'disclaimer': 'Disclaimer',
   'disclaimerDesc': 'Termini di utilizzo e avvisi legali',
   'disclaimerTitle': 'Termini di utilizzo',
   'disclaimerContent':
-      'Arcadia è un client proxy di rete che può essere usato solo '
+      'ArcadiaPlus è un client proxy di rete che può essere usato solo '
       'dove la legge lo consente. Sei responsabile della conformità '
       'del tuo uso alla legislazione locale, ai termini delle reti che '
       'utilizzi e alle norme applicabili in materia di controllo delle '
@@ -1900,10 +1900,10 @@ const Map<String, String> _itStrings = {
       'Usare questo software per violare la legge infrange la licenza '
       'e può comportare conseguenze legali.',
   'understood': 'Capito',
-  'aboutCatClash': 'Info su Arcadia',
+  'aboutCatClash': 'Info su ArcadiaPlus',
   'aboutCatClashDesc': 'Scopri di più su questa app',
   'aboutDescription':
-      'Arcadia è un client proxy multipiattaforma moderno costruito con Flutter e Rust.',
+      'ArcadiaPlus è un client proxy multipiattaforma moderno costruito con Flutter e Rust.',
   'features': 'Funzionalità',
   'featureSpeed': 'Core Rust ad alte prestazioni',
   'featureTheme': 'Colori dinamici Material You',
@@ -1932,7 +1932,7 @@ const Map<String, String> _itStrings = {
   'direct': 'Diretto',
   // Status
   'startingService': 'Avvio del servizio...',
-  'arcadiaRunning': 'Arcadia è in esecuzione',
+  'arcadiaPlusRunning': 'ArcadiaPlus è in esecuzione',
   'uptime': 'Tempo di attività',
   // Traffic
   'realTimeTraffic': 'Traffico in tempo reale',
@@ -2033,7 +2033,7 @@ const Map<String, String> _itStrings = {
   'recommended': 'Consigliato',
   'rustInitErrorTitle': 'Errore di inizializzazione',
   'rustInitErrorMessage':
-      'Impossibile caricare il core nativo. Arcadia non può avviarsi senza di esso.',
+      'Impossibile caricare il core nativo. ArcadiaPlus non può avviarsi senza di esso.',
   'rustInitErrorDetails': "Dettagli dell'errore",
   'rustInitErrorAffectedFeatures': 'Funzioni interessate',
   'rustInitErrorFeatureVpn': '• Connessione VPN',
@@ -2051,7 +2051,7 @@ const Map<String, String> _itStrings = {
 // Japanese (日本語) - ja
 // =============================================================================
 const Map<String, String> _jaStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': '設定',
   'home': 'ホーム',
   'connections': '接続',
@@ -2070,7 +2070,7 @@ const Map<String, String> _jaStrings = {
   'startService': 'サービス開始',
   'stopService': 'サービス停止',
   'restartService': 'サービス再起動',
-  'serviceNotRunning': 'Arcadiaサービスは実行されていません',
+  'serviceNotRunning': 'ArcadiaPlusサービスは実行されていません',
   'trafficStatistics': 'トラフィック統計',
   'download': 'ダウンロード',
   'upload': 'アップロード',
@@ -2144,7 +2144,7 @@ const Map<String, String> _jaStrings = {
   'closeConnection': '接続を閉じる',
   'noConnections': 'アクティブな接続はありません',
   'serviceNotRunningTitle': 'サービス未実行',
-  'startServiceToViewConnections2': 'Arcadiaサービスを開始してアクティブな接続を表示',
+  'startServiceToViewConnections2': 'ArcadiaPlusサービスを開始してアクティブな接続を表示',
   'noActiveConnectionsTitle': 'アクティブな接続なし',
   'connectionsWillAppear2': 'データがプロキシを通過するとアクティブな接続がここに表示されます',
   'totalUploadShort': '総アップロード',
@@ -2160,22 +2160,23 @@ const Map<String, String> _jaStrings = {
   'close': '閉じる',
   'back': '戻る',
   'actions': 'アクション',
-  'restartServiceDesc': 'Arcadiaサービスを再起動',
+  'restartServiceDesc': 'ArcadiaPlusサービスを再起動',
   'resetSettings': '設定をリセット',
   'resetSettingsDesc': 'すべての設定をデフォルトにリセット',
   'disclaimer': '免責事項',
   'disclaimerDesc': '利用規約と法的通知',
   'disclaimerTitle': '利用規約',
   'disclaimerContent':
-      'Arcadia はネットワークプロキシクライアントであり、お使いの地域の法令が認める範囲でのみ利用できます。'
+      'ArcadiaPlus はネットワークプロキシクライアントであり、お使いの地域の法令が認める範囲でのみ利用できます。'
       '利用にあたっては、現地の法令、接続するネットワークの利用条件、および適用される輸出管理・制裁関連の規制を遵守する責任が利用者にあります。'
       '違法な用途は許容された目的に該当せず、ライセンス違反となります。'
       '法律で認められる範囲において、本ソフトウェアまたはその派生作品が第三者による違法行為に使用されたことによる結果について、作者および貢献者は責任を負いません。',
   'disclaimerWarning': '本ソフトウェアを違法行為に使用することはライセンス違反であり、法的な結果を招く可能性があります。',
   'understood': '了解',
-  'aboutCatClash': 'Arcadiaについて',
+  'aboutCatClash': 'ArcadiaPlusについて',
   'aboutCatClashDesc': 'このアプリについて詳しく',
-  'aboutDescription': 'ArcadiaはFlutterとRustで構築された最新のクロスプラットフォームプロキシクライアントです。',
+  'aboutDescription':
+      'ArcadiaPlusはFlutterとRustで構築された最新のクロスプラットフォームプロキシクライアントです。',
   'features': '機能',
   'featureSpeed': '高性能Rustコア',
   'featureTheme': 'Material Youダイナミックカラー',
@@ -2204,7 +2205,7 @@ const Map<String, String> _jaStrings = {
   'direct': '直接',
   // Status
   'startingService': 'サービスを開始しています...',
-  'arcadiaRunning': 'Arcadiaは実行中です',
+  'arcadiaPlusRunning': 'ArcadiaPlusは実行中です',
   'uptime': '稼働時間',
   // Traffic
   'realTimeTraffic': 'リアルタイムトラフィック',
@@ -2303,7 +2304,7 @@ const Map<String, String> _jaStrings = {
   'allProxy': 'すべてプロキシ',
   'recommended': '推奨',
   'rustInitErrorTitle': '初期化エラー',
-  'rustInitErrorMessage': 'ネイティブコアを読み込めませんでした。Arcadia はコアなしでは起動できません。',
+  'rustInitErrorMessage': 'ネイティブコアを読み込めませんでした。ArcadiaPlus はコアなしでは起動できません。',
   'rustInitErrorDetails': 'エラーの詳細',
   'rustInitErrorAffectedFeatures': '影響を受ける機能',
   'rustInitErrorFeatureVpn': '• VPN 接続',
@@ -2321,7 +2322,7 @@ const Map<String, String> _jaStrings = {
 // Korean (한국어) - ko
 // =============================================================================
 const Map<String, String> _koStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': '설정',
   'home': '홈',
   'connections': '연결',
@@ -2340,7 +2341,7 @@ const Map<String, String> _koStrings = {
   'startService': '서비스 시작',
   'stopService': '서비스 중지',
   'restartService': '서비스 재시작',
-  'serviceNotRunning': 'Arcadia 서비스가 실행되지 않습니다',
+  'serviceNotRunning': 'ArcadiaPlus 서비스가 실행되지 않습니다',
   'trafficStatistics': '트래픽 통계',
   'download': '다운로드',
   'upload': '업로드',
@@ -2414,7 +2415,7 @@ const Map<String, String> _koStrings = {
   'closeConnection': '연결 닫기',
   'noConnections': '활성 연결 없음',
   'serviceNotRunningTitle': '서비스 미실행',
-  'startServiceToViewConnections2': 'Arcadia 서비스를 시작하여 활성 연결 보기',
+  'startServiceToViewConnections2': 'ArcadiaPlus 서비스를 시작하여 활성 연결 보기',
   'noActiveConnectionsTitle': '활성 연결 없음',
   'connectionsWillAppear2': '데이터가 프록시를 통과하면 활성 연결이 여기에 표시됩니다',
   'totalUploadShort': '총 업로드',
@@ -2430,22 +2431,23 @@ const Map<String, String> _koStrings = {
   'close': '닫기',
   'back': '뒤로',
   'actions': '작업',
-  'restartServiceDesc': 'Arcadia 서비스 재시작',
+  'restartServiceDesc': 'ArcadiaPlus 서비스 재시작',
   'resetSettings': '설정 초기화',
   'resetSettingsDesc': '모든 설정을 기본값으로 초기화',
   'disclaimer': '면책 조항',
   'disclaimerDesc': '이용 약관 및 법적 고지',
   'disclaimerTitle': '이용 약관',
   'disclaimerContent':
-      'Arcadia는 네트워크 프록시 클라이언트이며, 해당 지역 법률이 허용하는 범위에서만 사용할 수 있습니다. '
+      'ArcadiaPlus는 네트워크 프록시 클라이언트이며, 해당 지역 법률이 허용하는 범위에서만 사용할 수 있습니다. '
       '현지 법률, 이용하는 네트워크의 이용 조건, 적용되는 수출 통제 및 제재 규정을 준수할 책임은 사용자에게 있습니다. '
       '위법한 사용은 허용된 목적에 해당하지 않으며 라이선스 위반입니다. '
       '법률이 허용하는 범위에서, 제3자가 이 소프트웨어 또는 이를 기반으로 한 파생 저작물을 위법하게 사용함으로써 발생하는 결과에 대해 저자와 기여자는 책임을 지지 않습니다.',
   'disclaimerWarning': '이 소프트웨어를 위법하게 사용하는 것은 라이선스 위반이며 법적 결과를 초래할 수 있습니다.',
   'understood': '이해했습니다',
-  'aboutCatClash': 'Arcadia 정보',
+  'aboutCatClash': 'ArcadiaPlus 정보',
   'aboutCatClashDesc': '이 앱에 대해 자세히 알아보기',
-  'aboutDescription': 'Arcadia는 Flutter와 Rust로 구축된 현대적인 크로스 플랫폼 프록시 클라이언트입니다.',
+  'aboutDescription':
+      'ArcadiaPlus는 Flutter와 Rust로 구축된 현대적인 크로스 플랫폼 프록시 클라이언트입니다.',
   'features': '기능',
   'featureSpeed': '고성능 Rust 코어',
   'featureTheme': 'Material You 동적 색상',
@@ -2474,7 +2476,7 @@ const Map<String, String> _koStrings = {
   'direct': '직접',
   // Status
   'startingService': '서비스 시작 중...',
-  'arcadiaRunning': 'Arcadia가 실행 중입니다',
+  'arcadiaPlusRunning': 'ArcadiaPlus가 실행 중입니다',
   'uptime': '가동 시간',
   // Traffic
   'realTimeTraffic': '실시간 트래픽',
@@ -2573,7 +2575,7 @@ const Map<String, String> _koStrings = {
   'allProxy': '모두 프록시',
   'recommended': '권장',
   'rustInitErrorTitle': '초기화 오류',
-  'rustInitErrorMessage': '네이티브 코어를 불러오지 못했습니다. Arcadia는 코어 없이 시작할 수 없습니다.',
+  'rustInitErrorMessage': '네이티브 코어를 불러오지 못했습니다. ArcadiaPlus는 코어 없이 시작할 수 없습니다.',
   'rustInitErrorDetails': '오류 세부 정보',
   'rustInitErrorAffectedFeatures': '영향받는 기능',
   'rustInitErrorFeatureVpn': '• VPN 연결',
@@ -2591,7 +2593,7 @@ const Map<String, String> _koStrings = {
 // Portuguese (Português) - pt
 // =============================================================================
 const Map<String, String> _ptStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': 'Configurações',
   'home': 'Início',
   'connections': 'Conexões',
@@ -2610,7 +2612,7 @@ const Map<String, String> _ptStrings = {
   'startService': 'Iniciar serviço',
   'stopService': 'Parar serviço',
   'restartService': 'Reiniciar serviço',
-  'serviceNotRunning': 'O serviço Arcadia não está em execução',
+  'serviceNotRunning': 'O serviço ArcadiaPlus não está em execução',
   'trafficStatistics': 'Estatísticas de tráfego',
   'download': 'Download',
   'upload': 'Upload',
@@ -2688,7 +2690,7 @@ const Map<String, String> _ptStrings = {
   'noConnections': 'Sem conexões ativas',
   'serviceNotRunningTitle': 'Serviço não executando',
   'startServiceToViewConnections2':
-      'Inicie o serviço Arcadia para ver conexões ativas',
+      'Inicie o serviço ArcadiaPlus para ver conexões ativas',
   'noActiveConnectionsTitle': 'Sem conexões ativas',
   'connectionsWillAppear2':
       'Conexões ativas aparecerão aqui quando dados passarem pelo proxy',
@@ -2705,14 +2707,14 @@ const Map<String, String> _ptStrings = {
   'close': 'Fechar',
   'back': 'Voltar',
   'actions': 'Ações',
-  'restartServiceDesc': 'Reiniciar serviço Arcadia',
+  'restartServiceDesc': 'Reiniciar serviço ArcadiaPlus',
   'resetSettings': 'Redefinir configurações',
   'resetSettingsDesc': 'Redefinir todas as configurações para o padrão',
   'disclaimer': 'Aviso legal',
   'disclaimerDesc': 'Termos de uso e avisos legais',
   'disclaimerTitle': 'Termos de uso',
   'disclaimerContent':
-      'O Arcadia é um cliente proxy de rede que só pode ser usado '
+      'O ArcadiaPlus é um cliente proxy de rede que só pode ser usado '
       'onde a lei permitir. Você é responsável por manter o seu uso em '
       'conformidade com a legislação local, com os termos das redes que '
       'utilizar e com as normas aplicáveis de controle de exportação e '
@@ -2725,10 +2727,10 @@ const Map<String, String> _ptStrings = {
       'Usar este software para infringir a lei viola a licença e pode '
       'acarretar consequências legais.',
   'understood': 'Entendido',
-  'aboutCatClash': 'Sobre Arcadia',
+  'aboutCatClash': 'Sobre ArcadiaPlus',
   'aboutCatClashDesc': 'Saiba mais sobre este app',
   'aboutDescription':
-      'Arcadia é um cliente proxy multiplataforma moderno construído com Flutter e Rust.',
+      'ArcadiaPlus é um cliente proxy multiplataforma moderno construído com Flutter e Rust.',
   'features': 'Recursos',
   'featureSpeed': 'Núcleo Rust de alto desempenho',
   'featureTheme': 'Cores dinâmicas Material You',
@@ -2757,7 +2759,7 @@ const Map<String, String> _ptStrings = {
   'direct': 'Direto',
   // Status
   'startingService': 'Iniciando serviço...',
-  'arcadiaRunning': 'Arcadia está em execução',
+  'arcadiaPlusRunning': 'ArcadiaPlus está em execução',
   'uptime': 'Tempo de atividade',
   // Traffic
   'realTimeTraffic': 'Tráfego em tempo real',
@@ -2858,7 +2860,7 @@ const Map<String, String> _ptStrings = {
   'recommended': 'Recomendado',
   'rustInitErrorTitle': 'Erro de inicialização',
   'rustInitErrorMessage':
-      'Não foi possível carregar o núcleo nativo. O Arcadia não pode iniciar sem ele.',
+      'Não foi possível carregar o núcleo nativo. O ArcadiaPlus não pode iniciar sem ele.',
   'rustInitErrorDetails': 'Detalhes do erro',
   'rustInitErrorAffectedFeatures': 'Funções afetadas',
   'rustInitErrorFeatureVpn': '• Conexão VPN',
@@ -2876,7 +2878,7 @@ const Map<String, String> _ptStrings = {
 // Russian (Русский) - ru
 // =============================================================================
 const Map<String, String> _ruStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': 'Настройки',
   'home': 'Главная',
   'connections': 'Подключения',
@@ -2895,7 +2897,7 @@ const Map<String, String> _ruStrings = {
   'startService': 'Запустить сервис',
   'stopService': 'Остановить сервис',
   'restartService': 'Перезапустить сервис',
-  'serviceNotRunning': 'Сервис Arcadia не запущен',
+  'serviceNotRunning': 'Сервис ArcadiaPlus не запущен',
   'trafficStatistics': 'Статистика трафика',
   'download': 'Загрузка',
   'upload': 'Отправка',
@@ -2972,7 +2974,7 @@ const Map<String, String> _ruStrings = {
   'noConnections': 'Нет активных подключений',
   'serviceNotRunningTitle': 'Сервис не запущен',
   'startServiceToViewConnections2':
-      'Запустите сервис Arcadia для просмотра активных подключений',
+      'Запустите сервис ArcadiaPlus для просмотра активных подключений',
   'noActiveConnectionsTitle': 'Нет активных подключений',
   'connectionsWillAppear2':
       'Активные подключения появятся здесь, когда данные пройдут через прокси',
@@ -2989,14 +2991,14 @@ const Map<String, String> _ruStrings = {
   'close': 'Закрыть',
   'back': 'Назад',
   'actions': 'Действия',
-  'restartServiceDesc': 'Перезапустить сервис Arcadia',
+  'restartServiceDesc': 'Перезапустить сервис ArcadiaPlus',
   'resetSettings': 'Сбросить настройки',
   'resetSettingsDesc': 'Сбросить все настройки по умолчанию',
   'disclaimer': 'Отказ от ответственности',
   'disclaimerDesc': 'Условия использования и юридические уведомления',
   'disclaimerTitle': 'Условия использования',
   'disclaimerContent':
-      'Arcadia — это клиент сетевого прокси, и использовать его '
+      'ArcadiaPlus — это клиент сетевого прокси, и использовать его '
       'можно только там, где это допускает закон. Вы сами отвечаете '
       'за соблюдение местного законодательства, условий используемых '
       'сетей, а также применимых правил экспортного контроля и '
@@ -3009,10 +3011,10 @@ const Map<String, String> _ruStrings = {
       'Использование этого ПО в нарушение закона нарушает лицензию и '
       'может повлечь юридические последствия.',
   'understood': 'Понятно',
-  'aboutCatClash': 'О Arcadia',
+  'aboutCatClash': 'О ArcadiaPlus',
   'aboutCatClashDesc': 'Узнать больше об этом приложении',
   'aboutDescription':
-      'Arcadia - современный кроссплатформенный прокси-клиент, созданный на Flutter и Rust.',
+      'ArcadiaPlus - современный кроссплатформенный прокси-клиент, созданный на Flutter и Rust.',
   'features': 'Функции',
   'featureSpeed': 'Высокопроизводительное ядро Rust',
   'featureTheme': 'Динамические цвета Material You',
@@ -3041,7 +3043,7 @@ const Map<String, String> _ruStrings = {
   'direct': 'Прямой',
   // Status
   'startingService': 'Запуск сервиса...',
-  'arcadiaRunning': 'Arcadia работает',
+  'arcadiaPlusRunning': 'ArcadiaPlus работает',
   'uptime': 'Время работы',
   // Traffic
   'realTimeTraffic': 'Трафик в реальном времени',
@@ -3141,7 +3143,7 @@ const Map<String, String> _ruStrings = {
   'recommended': 'Рекомендуется',
   'rustInitErrorTitle': 'Ошибка инициализации',
   'rustInitErrorMessage':
-      'Не удалось загрузить нативное ядро. Без него Arcadia не может запуститься.',
+      'Не удалось загрузить нативное ядро. Без него ArcadiaPlus не может запуститься.',
   'rustInitErrorDetails': 'Сведения об ошибке',
   'rustInitErrorAffectedFeatures': 'Затронутые функции',
   'rustInitErrorFeatureVpn': '• VPN-подключение',
@@ -3159,7 +3161,7 @@ const Map<String, String> _ruStrings = {
 // Simplified Chinese (简体中文) - zh_CN
 // =============================================================================
 const Map<String, String> _zhCNStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': '设置',
   'home': '首页',
   'connections': '连接',
@@ -3178,7 +3180,7 @@ const Map<String, String> _zhCNStrings = {
   'startService': '启动服务',
   'stopService': '停止服务',
   'restartService': '重启服务',
-  'serviceNotRunning': 'Arcadia 服务未运行',
+  'serviceNotRunning': 'ArcadiaPlus 服务未运行',
   'trafficStatistics': '流量统计',
   'download': '下载',
   'upload': '上传',
@@ -3253,7 +3255,7 @@ const Map<String, String> _zhCNStrings = {
   'closeConnection': '关闭连接',
   'noConnections': '无活动连接',
   'serviceNotRunningTitle': '服务未运行',
-  'startServiceToViewConnections2': '启动 Arcadia 服务以查看活动连接',
+  'startServiceToViewConnections2': '启动 ArcadiaPlus 服务以查看活动连接',
   'noActiveConnectionsTitle': '无活动连接',
   'connectionsWillAppear2': '当数据流经代理时，活动连接将显示在此处',
   'totalUploadShort': '总上传',
@@ -3269,23 +3271,23 @@ const Map<String, String> _zhCNStrings = {
   'close': '关闭',
   'back': '返回',
   'actions': '操作',
-  'restartServiceDesc': '重启 Arcadia 服务',
+  'restartServiceDesc': '重启 ArcadiaPlus 服务',
   'resetSettings': '重置设置',
   'resetSettingsDesc': '重置所有设置为默认值',
   'disclaimer': '免责声明',
   'disclaimerDesc': '使用条款和法律声明',
   'disclaimerTitle': '使用条款',
   'disclaimerContent':
-      'Arcadia 是网络代理客户端，只可在你所在司法辖区法律允许的范围内使用。'
+      'ArcadiaPlus 是网络代理客户端，只可在你所在司法辖区法律允许的范围内使用。'
       '你需要自行确保使用行为符合当地法律、所接入网络的条款以及适用的出口管制与制裁规定。'
       '违法用途不属于授权目的，并构成对许可条款的违反。'
       '在法律允许的范围内，任何人使用本软件或其衍生作品从事违法行为所产生的后果，作者与贡献者均不承担责任。',
   'disclaimerWarning': '将本软件用于违法用途会违反许可条款，并可能带来法律后果。',
   'understood': '我已了解',
-  'aboutCatClash': '关于 Arcadia',
+  'aboutCatClash': '关于 ArcadiaPlus',
   'aboutCatClashDesc': '了解更多关于此应用',
   'aboutDescription':
-      'Arcadia 是一款现代化的跨平台代理客户端，使用 Flutter 和 Rust 构建。它提供了精美的 Material You 界面和强大的代理功能。',
+      'ArcadiaPlus 是一款现代化的跨平台代理客户端，使用 Flutter 和 Rust 构建。它提供了精美的 Material You 界面和强大的代理功能。',
   'features': '功能特性',
   'featureSpeed': '高性能 Rust 核心',
   'featureTheme': 'Material You 动态颜色',
@@ -3314,7 +3316,7 @@ const Map<String, String> _zhCNStrings = {
   'direct': '直连',
   // Status
   'startingService': '正在启动服务...',
-  'arcadiaRunning': 'Arcadia 正在运行',
+  'arcadiaPlusRunning': 'ArcadiaPlus 正在运行',
   'uptime': '运行时间',
   // Traffic
   'realTimeTraffic': '实时流量',
@@ -3447,7 +3449,7 @@ const Map<String, String> _zhCNStrings = {
   'addNewItem': '添加新项...',
   'noDataYet': '暂无数据',
   'rustInitErrorTitle': '初始化失败',
-  'rustInitErrorMessage': '原生核心加载失败。缺少原生核心时 Arcadia 无法启动。',
+  'rustInitErrorMessage': '原生核心加载失败。缺少原生核心时 ArcadiaPlus 无法启动。',
   'rustInitErrorDetails': '错误详情',
   'rustInitErrorAffectedFeatures': '受影响的功能',
   'rustInitErrorFeatureVpn': '• VPN 连接',
@@ -3465,7 +3467,7 @@ const Map<String, String> _zhCNStrings = {
 // Traditional Chinese (繁體中文) - zh_TW
 // =============================================================================
 const Map<String, String> _zhTWStrings = {
-  'appName': 'Arcadia',
+  'appName': 'ArcadiaPlus',
   'settings': '設定',
   'home': '首頁',
   'connections': '連線',
@@ -3484,7 +3486,7 @@ const Map<String, String> _zhTWStrings = {
   'startService': '啟動服務',
   'stopService': '停止服務',
   'restartService': '重新啟動服務',
-  'serviceNotRunning': 'Arcadia 服務未執行',
+  'serviceNotRunning': 'ArcadiaPlus 服務未執行',
   'trafficStatistics': '流量統計',
   'download': '下載',
   'upload': '上傳',
@@ -3559,7 +3561,7 @@ const Map<String, String> _zhTWStrings = {
   'closeConnection': '關閉連線',
   'noConnections': '無活動連線',
   'serviceNotRunningTitle': '服務未執行',
-  'startServiceToViewConnections2': '啟動 Arcadia 服務以檢視活動連線',
+  'startServiceToViewConnections2': '啟動 ArcadiaPlus 服務以檢視活動連線',
   'noActiveConnectionsTitle': '無活動連線',
   'connectionsWillAppear2': '當資料流經代理時，活動連線將顯示在此處',
   'totalUploadShort': '總上傳',
@@ -3575,23 +3577,23 @@ const Map<String, String> _zhTWStrings = {
   'close': '關閉',
   'back': '返回',
   'actions': '操作',
-  'restartServiceDesc': '重新啟動 Arcadia 服務',
+  'restartServiceDesc': '重新啟動 ArcadiaPlus 服務',
   'resetSettings': '重設設定',
   'resetSettingsDesc': '將所有設定重設為預設值',
   'disclaimer': '免責聲明',
   'disclaimerDesc': '使用條款和法律聲明',
   'disclaimerTitle': '使用條款',
   'disclaimerContent':
-      'Arcadia 是網路代理客戶端，僅可在你所在司法管轄區法律允許的範圍內使用。'
+      'ArcadiaPlus 是網路代理客戶端，僅可在你所在司法管轄區法律允許的範圍內使用。'
       '你需要自行確保使用行為符合當地法律、所連接網路的條款以及適用的出口管制與制裁規定。'
       '違法用途不屬於授權目的，並構成對授權條款的違反。'
       '在法律允許的範圍內，任何人使用本軟體或其衍生作品從事違法行為所產生的後果，作者與貢獻者均不承擔責任。',
   'disclaimerWarning': '將本軟體用於違法用途會違反授權條款，並可能帶來法律後果。',
   'understood': '我已了解',
-  'aboutCatClash': '關於 Arcadia',
+  'aboutCatClash': '關於 ArcadiaPlus',
   'aboutCatClashDesc': '了解更多關於此應用程式',
   'aboutDescription':
-      'Arcadia 是一款現代化的跨平台代理用戶端，使用 Flutter 和 Rust 建置。它提供了精美的 Material You 介面和強大的代理功能。',
+      'ArcadiaPlus 是一款現代化的跨平台代理用戶端，使用 Flutter 和 Rust 建置。它提供了精美的 Material You 介面和強大的代理功能。',
   'features': '功能特性',
   'featureSpeed': '高效能 Rust 核心',
   'featureTheme': 'Material You 動態顏色',
@@ -3620,7 +3622,7 @@ const Map<String, String> _zhTWStrings = {
   'direct': '直連',
   // Status
   'startingService': '正在啟動服務...',
-  'arcadiaRunning': 'Arcadia 正在執行',
+  'arcadiaPlusRunning': 'ArcadiaPlus 正在執行',
   'uptime': '執行時間',
   // Traffic
   'realTimeTraffic': '即時流量',
@@ -3719,7 +3721,7 @@ const Map<String, String> _zhTWStrings = {
   'allProxy': '全部代理',
   'recommended': '建議',
   'rustInitErrorTitle': '初始化失敗',
-  'rustInitErrorMessage': '原生核心載入失敗。缺少原生核心時 Arcadia 無法啟動。',
+  'rustInitErrorMessage': '原生核心載入失敗。缺少原生核心時 ArcadiaPlus 無法啟動。',
   'rustInitErrorDetails': '錯誤詳情',
   'rustInitErrorAffectedFeatures': '受影響的功能',
   'rustInitErrorFeatureVpn': '• VPN 連線',

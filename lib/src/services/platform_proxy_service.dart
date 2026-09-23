@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:arcadia/src/rust/api.dart' as rust_api;
-import 'package:arcadia/src/utils/platform_utils.dart';
+import 'package:arcadia_plus/src/rust/api.dart' as rust_api;
+import 'package:arcadia_plus/src/utils/platform_utils.dart';
 
 enum ProxyMode { global, rule, direct }
 
@@ -14,9 +14,9 @@ class PlatformProxyService {
     _setupMethodChannel();
   }
 
-  static const MethodChannel _channel = MethodChannel('com.arcadia/proxy');
+  static const MethodChannel _channel = MethodChannel('com.arcadiaplus/proxy');
   static const MethodChannel _ohosChannel = MethodChannel(
-    'com.arcadia/ohos_proxy',
+    'com.arcadiaplus/ohos_proxy',
   );
 
   bool _systemProxyEnabled = false;

@@ -1,4 +1,4 @@
-# Arcadia HarmonyOS NEXT 构建指南
+# ArcadiaPlus HarmonyOS NEXT 构建指南
 
 > 当前工程仅用于 UI/HAP 构建调试。VPN MethodChannel 会明确返回 `OHOS_VPN_UNSUPPORTED`；仓库未包含可发布的 HarmonyOS NEXT VPN 数据路径。
 
