@@ -2445,8 +2445,7 @@ const Map<String, String> _koStrings = {
   'understood': '이해했습니다',
   'aboutCatClash': 'Arcadia 정보',
   'aboutCatClashDesc': '이 앱에 대해 자세히 알아보기',
-  'aboutDescription':
-      'Arcadia는 Flutter와 Rust로 구축된 현대적인 크로스 플랫폼 프록시 클라이언트입니다.',
+  'aboutDescription': 'Arcadia는 Flutter와 Rust로 구축된 현대적인 크로스 플랫폼 프록시 클라이언트입니다.',
   'features': '기능',
   'featureSpeed': '고성능 Rust 코어',
   'featureTheme': 'Material You 동적 색상',

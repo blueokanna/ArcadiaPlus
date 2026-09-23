@@ -1204,6 +1204,42 @@
 			"type": "shell",
 			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-commit2.cmd",
 			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-desc",
+			"type": "shell",
+			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-desc.ps1",
+			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-desc2",
+			"type": "shell",
+			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-desc2.ps1",
+			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-desc3",
+			"type": "shell",
+			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-desc3.ps1",
+			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-desc-run",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-desc-run.cmd",
+			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-fixfmt",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-fixfmt.cmd",
+			"problemMatcher": []
+		},
+		{
+			"label": "arcadia-fixfmt2",
+			"type": "shell",
+			"command": "cmd /c C:\\Users\\blueo\\AppData\\Local\\Temp\\arcadia-fixfmt2.cmd",
+			"problemMatcher": []
 		}
 	]
 }
