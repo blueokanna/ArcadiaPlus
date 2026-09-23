@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:arcadia_plus/src/services/storage_service.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
 
 /// Owns the DNS settings that the engine can actually carry.
 class DnsSettingsProvider extends ChangeNotifier {

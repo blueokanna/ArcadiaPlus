@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:arcadia_plus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
 class AdaptiveDialog extends StatelessWidget {
   final Widget? title;

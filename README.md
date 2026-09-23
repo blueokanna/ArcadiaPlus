@@ -1,7 +1,7 @@
 # ArcadiaPlus
 
 <p align="center">
-  <img src="assets/arcadia_plus.png" width="128" height="128" alt="ArcadiaPlus 图标" style="border-radius: 12px;">
+  <img src="assets/arcadiaplus.png" width="128" height="128" alt="ArcadiaPlus 图标" style="border-radius: 12px;">
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
 - GeoIP 数据库随安装包分发（`assets/Country.mmdb`），启动时解包到应用支持目录并注册给引擎；解包或注册失败会记录原因，此时 `GEOIP` 规则不会被匹配——不静默降级。
 - Android、Windows、Linux 共用 Rust TUN 数据包处理器，各平台独立管理设备生命周期。
-- Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/arcadia_plus.png` 统一生成。
+- Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/arcadiaplus.png` 统一生成。
 
 ## 协议状态
 
@@ -129,7 +129,7 @@ Flutter UI / Provider
         |
 Flutter Rust Bridge（生成绑定）
         |
-lib-arcadia-plus（rust/ 下的唯一桥接 crate：异步适配、DTO 映射、平台入口）
+lib-arcadiaplus（rust/ 下的唯一桥接 crate：异步适配、DTO 映射、平台入口）
         |
 corduit 0.1.9（引擎：配置、路由、出入站、DNS、TUN、全部协议）
         +-- courierust（HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS 栈）
@@ -185,7 +185,7 @@ HarmonyOS NEXT 使用 [ohos/README.md](ohos/README.md) 中的 DevEco/hvigor 流�
 
 ## 图标
 
-唯一源文件为 `assets/arcadia_plus.png`（正方形，至少 1024x1024）。Windows 环境执行：
+唯一源文件为 `assets/arcadiaplus.png`（正方形，至少 1024x1024）。Windows 环境执行：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
@@ -210,7 +210,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
 - `ArcadiaPlus-<tag>-linux-x64.deb` 与 `-linux-x64.tar.gz` —— Debian 安装包与可携带压缩包。
 - `update-manifest.json` 与 `SHA256SUMS` —— 应用内更新检查读取的校验和元数据。
 
-只有配置了以下仓库 Actions Secrets 时，Android release APK 才会用发布密钥签名（`ARCADIAPLUS_KEYSTORE_BASE64` 是 keystore 文件的 base64 编码，如 `base64 -w0 arcadia_plus.jks`）：
+只有配置了以下仓库 Actions Secrets 时，Android release APK 才会用发布密钥签名（`ARCADIAPLUS_KEYSTORE_BASE64` 是 keystore 文件的 base64 编码，如 `base64 -w0 arcadiaplus.jks`）：
 
 - `ARCADIAPLUS_KEYSTORE_BASE64`
 - `ARCADIAPLUS_KEYSTORE_PASSWORD`

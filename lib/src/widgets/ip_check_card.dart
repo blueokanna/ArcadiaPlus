@@ -4,10 +4,10 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:arcadia_plus/src/utils/responsive_utils.dart';
-import 'package:arcadia_plus/src/utils/animation_utils.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
-import 'package:arcadia_plus/src/providers/proxies_provider.dart'
+import 'package:arcadiaplus/src/utils/responsive_utils.dart';
+import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/providers/proxies_provider.dart'
     show proxySelectionChangedController;
 
 /// IP 信息数据模型

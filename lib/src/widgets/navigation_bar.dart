@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:arcadia_plus/src/utils/platform_utils.dart';
-import 'package:arcadia_plus/src/utils/animation_utils.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
 class AppNavigationBar extends StatefulWidget {
   final ValueChanged<int>? onDestinationSelected;

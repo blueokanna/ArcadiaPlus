@@ -107,9 +107,9 @@ fn build_filter(filter: LogFilter) -> EnvFilter {
 
     match filter {
         LogFilter::Off => EnvFilter::new("off"),
-        LogFilter::UpTo(level) => EnvFilter::new(format!(
-            "warn,corduit={level},rust_lib_arcadia_plus={level}"
-        )),
+        LogFilter::UpTo(level) => {
+            EnvFilter::new(format!("warn,corduit={level},rust_lib_arcadiaplus={level}"))
+        }
     }
 }
 
@@ -190,6 +190,6 @@ mod tests {
         assert!(is_noisy("hyper::proto"));
         assert!(is_noisy("courierust_tls"));
         assert!(!is_noisy("corduit::engine"));
-        assert!(!is_noisy("rust_lib_arcadia_plus"));
+        assert!(!is_noisy("rust_lib_arcadiaplus"));
     }
 }

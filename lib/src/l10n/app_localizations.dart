@@ -282,7 +282,7 @@ class AppLocalizations {
 
   // Status
   String get startingService => _getLocalizedString('startingService');
-  String get arcadiaPlusRunning => _getLocalizedString('arcadiaPlusRunning');
+  String get arcadiaplusRunning => _getLocalizedString('arcadiaplusRunning');
   String get uptime => _getLocalizedString('uptime');
 
   // Traffic
@@ -756,7 +756,7 @@ const Map<String, String> _deStrings = {
   'direct': 'Direkt',
   // Status
   'startingService': 'Dienst wird gestartet...',
-  'arcadiaPlusRunning': 'ArcadiaPlus läuft',
+  'arcadiaplusRunning': 'ArcadiaPlus läuft',
   'uptime': 'Laufzeit',
   // Traffic
   'realTimeTraffic': 'Echtzeit-Datenverkehr',
@@ -1038,7 +1038,7 @@ const Map<String, String> _enStrings = {
   'direct': 'Direct',
   // Status
   'startingService': 'Starting service...',
-  'arcadiaPlusRunning': 'ArcadiaPlus is running',
+  'arcadiaplusRunning': 'ArcadiaPlus is running',
   'uptime': 'Uptime',
   // Traffic
   'realTimeTraffic': 'Real-time Traffic',
@@ -1360,7 +1360,7 @@ const Map<String, String> _esStrings = {
   'direct': 'Directo',
   // Status
   'startingService': 'Iniciando servicio...',
-  'arcadiaPlusRunning': 'ArcadiaPlus está ejecutándose',
+  'arcadiaplusRunning': 'ArcadiaPlus está ejecutándose',
   'uptime': 'Tiempo de actividad',
   // Traffic
   'realTimeTraffic': 'Tráfico en tiempo real',
@@ -1648,7 +1648,7 @@ const Map<String, String> _frStrings = {
   'direct': 'Direct',
   // Status
   'startingService': 'Démarrage du service...',
-  'arcadiaPlusRunning': 'ArcadiaPlus est en cours d\'exécution',
+  'arcadiaplusRunning': 'ArcadiaPlus est en cours d\'exécution',
   'uptime': 'Temps de fonctionnement',
   // Traffic
   'realTimeTraffic': 'Trafic en temps réel',
@@ -1932,7 +1932,7 @@ const Map<String, String> _itStrings = {
   'direct': 'Diretto',
   // Status
   'startingService': 'Avvio del servizio...',
-  'arcadiaPlusRunning': 'ArcadiaPlus è in esecuzione',
+  'arcadiaplusRunning': 'ArcadiaPlus è in esecuzione',
   'uptime': 'Tempo di attività',
   // Traffic
   'realTimeTraffic': 'Traffico in tempo reale',
@@ -2205,7 +2205,7 @@ const Map<String, String> _jaStrings = {
   'direct': '直接',
   // Status
   'startingService': 'サービスを開始しています...',
-  'arcadiaPlusRunning': 'ArcadiaPlusは実行中です',
+  'arcadiaplusRunning': 'ArcadiaPlusは実行中です',
   'uptime': '稼働時間',
   // Traffic
   'realTimeTraffic': 'リアルタイムトラフィック',
@@ -2476,7 +2476,7 @@ const Map<String, String> _koStrings = {
   'direct': '직접',
   // Status
   'startingService': '서비스 시작 중...',
-  'arcadiaPlusRunning': 'ArcadiaPlus가 실행 중입니다',
+  'arcadiaplusRunning': 'ArcadiaPlus가 실행 중입니다',
   'uptime': '가동 시간',
   // Traffic
   'realTimeTraffic': '실시간 트래픽',
@@ -2759,7 +2759,7 @@ const Map<String, String> _ptStrings = {
   'direct': 'Direto',
   // Status
   'startingService': 'Iniciando serviço...',
-  'arcadiaPlusRunning': 'ArcadiaPlus está em execução',
+  'arcadiaplusRunning': 'ArcadiaPlus está em execução',
   'uptime': 'Tempo de atividade',
   // Traffic
   'realTimeTraffic': 'Tráfego em tempo real',
@@ -3043,7 +3043,7 @@ const Map<String, String> _ruStrings = {
   'direct': 'Прямой',
   // Status
   'startingService': 'Запуск сервиса...',
-  'arcadiaPlusRunning': 'ArcadiaPlus работает',
+  'arcadiaplusRunning': 'ArcadiaPlus работает',
   'uptime': 'Время работы',
   // Traffic
   'realTimeTraffic': 'Трафик в реальном времени',
@@ -3316,7 +3316,7 @@ const Map<String, String> _zhCNStrings = {
   'direct': '直连',
   // Status
   'startingService': '正在启动服务...',
-  'arcadiaPlusRunning': 'ArcadiaPlus 正在运行',
+  'arcadiaplusRunning': 'ArcadiaPlus 正在运行',
   'uptime': '运行时间',
   // Traffic
   'realTimeTraffic': '实时流量',
@@ -3622,7 +3622,7 @@ const Map<String, String> _zhTWStrings = {
   'direct': '直連',
   // Status
   'startingService': '正在啟動服務...',
-  'arcadiaPlusRunning': 'ArcadiaPlus 正在執行',
+  'arcadiaplusRunning': 'ArcadiaPlus 正在執行',
   'uptime': '執行時間',
   // Traffic
   'realTimeTraffic': '即時流量',

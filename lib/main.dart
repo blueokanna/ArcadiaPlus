@@ -2,36 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:arcadia_plus/src/theme/app_theme.dart';
-import 'package:arcadia_plus/src/providers/app_state_provider.dart';
-import 'package:arcadia_plus/src/providers/theme_provider.dart';
-import 'package:arcadia_plus/src/providers/profiles_provider.dart';
-import 'package:arcadia_plus/src/providers/network_settings_provider.dart';
-import 'package:arcadia_plus/src/providers/locale_provider.dart';
-import 'package:arcadia_plus/src/providers/proxies_provider.dart';
-import 'package:arcadia_plus/src/providers/dns_settings_provider.dart';
-import 'package:arcadia_plus/src/providers/general_settings_provider.dart';
-import 'package:arcadia_plus/src/providers/update_provider.dart';
-import 'package:arcadia_plus/src/services/storage_service.dart';
-import 'package:arcadia_plus/src/services/native_core_service.dart';
-import 'package:arcadia_plus/src/screens/home_screen.dart';
-import 'package:arcadia_plus/src/screens/settings_screen.dart';
-import 'package:arcadia_plus/src/screens/connections_screen.dart';
-import 'package:arcadia_plus/src/screens/logs_screen.dart';
-import 'package:arcadia_plus/src/screens/network_settings_screen.dart';
-import 'package:arcadia_plus/src/screens/dns_settings_screen.dart';
-import 'package:arcadia_plus/src/screens/basic_config_screen.dart';
-import 'package:arcadia_plus/src/screens/advanced_config_screen.dart';
-import 'package:arcadia_plus/src/screens/proxies_screen.dart';
-import 'package:arcadia_plus/src/widgets/adaptive_scaffold.dart';
-import 'package:arcadia_plus/src/widgets/rust_init_error_dialog.dart';
-import 'package:arcadia_plus/src/widgets/update_prompt.dart';
-import 'package:arcadia_plus/src/utils/platform_utils.dart';
-import 'package:arcadia_plus/src/utils/device_info_utils.dart';
-import 'package:arcadia_plus/src/utils/animation_utils.dart';
-import 'package:arcadia_plus/src/utils/app_lifecycle.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
-import 'package:arcadia_plus/src/screens/profiles_screen.dart';
+import 'package:arcadiaplus/src/theme/app_theme.dart';
+import 'package:arcadiaplus/src/providers/app_state_provider.dart';
+import 'package:arcadiaplus/src/providers/theme_provider.dart';
+import 'package:arcadiaplus/src/providers/profiles_provider.dart';
+import 'package:arcadiaplus/src/providers/network_settings_provider.dart';
+import 'package:arcadiaplus/src/providers/locale_provider.dart';
+import 'package:arcadiaplus/src/providers/proxies_provider.dart';
+import 'package:arcadiaplus/src/providers/dns_settings_provider.dart';
+import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
+import 'package:arcadiaplus/src/providers/update_provider.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
+import 'package:arcadiaplus/src/services/native_core_service.dart';
+import 'package:arcadiaplus/src/screens/home_screen.dart';
+import 'package:arcadiaplus/src/screens/settings_screen.dart';
+import 'package:arcadiaplus/src/screens/connections_screen.dart';
+import 'package:arcadiaplus/src/screens/logs_screen.dart';
+import 'package:arcadiaplus/src/screens/network_settings_screen.dart';
+import 'package:arcadiaplus/src/screens/dns_settings_screen.dart';
+import 'package:arcadiaplus/src/screens/basic_config_screen.dart';
+import 'package:arcadiaplus/src/screens/advanced_config_screen.dart';
+import 'package:arcadiaplus/src/screens/proxies_screen.dart';
+import 'package:arcadiaplus/src/widgets/adaptive_scaffold.dart';
+import 'package:arcadiaplus/src/widgets/rust_init_error_dialog.dart';
+import 'package:arcadiaplus/src/widgets/update_prompt.dart';
+import 'package:arcadiaplus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/utils/device_info_utils.dart';
+import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/screens/profiles_screen.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 
@@ -200,7 +200,7 @@ class _StartupScreenState extends State<_StartupScreen>
                 fit: StackFit.expand,
                 children: [
                   Image.asset(
-                    'assets/arcadia_plus.png',
+                    'assets/arcadiaplus.png',
                     filterQuality: FilterQuality.medium,
                   ),
                   AnimatedBuilder(
@@ -223,7 +223,7 @@ class _StartupScreenState extends State<_StartupScreen>
                       );
                     },
                     child: Image.asset(
-                      'assets/arcadia_plus.png',
+                      'assets/arcadiaplus.png',
                       color: Colors.white,
                       filterQuality: FilterQuality.medium,
                     ),

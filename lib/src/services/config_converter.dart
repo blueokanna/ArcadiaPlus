@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:yaml/yaml.dart';
-import 'package:arcadia_plus/src/services/storage_service.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
 
 /// Parsed proxy information for UI display
 class ParsedProxy {
@@ -217,7 +217,7 @@ class ConfigConverter {
       }
 
       final config = _convertToMap(yamlMap);
-      final arcadiaPlusConfig = _convertClashToArcadiaPlus(
+      final arcadiaplusConfig = _convertClashToArcadiaPlus(
         config,
         generalSettings: generalSettings,
         dnsSettings: dnsSettings,
@@ -226,7 +226,7 @@ class ConfigConverter {
         onWarning: onWarning,
       );
 
-      return jsonEncode(arcadiaPlusConfig);
+      return jsonEncode(arcadiaplusConfig);
     } catch (e) {
       throw Exception('Failed to convert config: $e');
     }

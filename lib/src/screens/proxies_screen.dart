@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:provider/provider.dart';
-import 'package:arcadia_plus/src/providers/proxies_provider.dart';
-import 'package:arcadia_plus/src/services/config_converter.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
-import 'package:arcadia_plus/src/theme/app_shapes.dart';
-import 'package:arcadia_plus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/providers/proxies_provider.dart';
+import 'package:arcadiaplus/src/services/config_converter.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/theme/app_shapes.dart';
+import 'package:arcadiaplus/src/utils/animation_utils.dart';
 
 class ProxiesScreen extends StatefulWidget {
   const ProxiesScreen({super.key});

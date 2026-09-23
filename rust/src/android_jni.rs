@@ -1,6 +1,6 @@
 //! Android `VpnService` JNI entry points.
 //!
-//! Kotlin loads `librust_lib_arcadia_plus.so` and calls
+//! Kotlin loads `librust_lib_arcadiaplus.so` and calls
 //! `ArcadiaPlusVpnService.nativeInitRustBridge()` / `nativeClearRustBridge()`;
 //! both symbols are bound to that class name and library stem, so they stay
 //! here.

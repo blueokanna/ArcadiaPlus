@@ -3,15 +3,15 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:arcadia_plus/src/rust/api.dart';
-import 'package:arcadia_plus/src/rust/types.dart';
-import 'package:arcadia_plus/src/services/storage_service.dart';
-import 'package:arcadia_plus/src/services/config_converter.dart';
-import 'package:arcadia_plus/src/services/platform_proxy_service.dart';
-import 'package:arcadia_plus/src/services/native_core_service.dart';
-import 'package:arcadia_plus/src/services/rule_provider_service.dart';
-import 'package:arcadia_plus/src/utils/app_lifecycle.dart';
-import 'package:arcadia_plus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/rust/api.dart';
+import 'package:arcadiaplus/src/rust/types.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
+import 'package:arcadiaplus/src/services/config_converter.dart';
+import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
+import 'package:arcadiaplus/src/services/native_core_service.dart';
+import 'package:arcadiaplus/src/services/rule_provider_service.dart';
+import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
 class AppStateProvider extends ChangeNotifier {
   // App state

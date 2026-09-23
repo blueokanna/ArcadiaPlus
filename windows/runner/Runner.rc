@@ -92,9 +92,9 @@ BEGIN
             VALUE "CompanyName", "BlueOkanna" "\0"
             VALUE "FileDescription", "ArcadiaPlus - Modern Proxy Client" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "arcadia_plus" "\0"
+            VALUE "InternalName", "arcadiaplus" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 blueokanna and HyphenTeam." "\0"
-            VALUE "OriginalFilename", "arcadia_plus.exe" "\0"
+            VALUE "OriginalFilename", "arcadiaplus.exe" "\0"
             VALUE "ProductName", "ArcadiaPlus" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END

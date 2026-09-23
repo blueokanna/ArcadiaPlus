@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
-import 'package:arcadia_plus/src/providers/locale_provider.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/providers/locale_provider.dart';
 
 void main() {
   test(

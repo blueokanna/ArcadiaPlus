@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:window_manager/window_manager.dart';
-import 'package:arcadia_plus/src/utils/responsive_utils.dart';
+import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 
 class PlatformUtils {
   static bool? _isHarmonyOS;
@@ -202,7 +202,7 @@ class PlatformUtils {
     if (isWindows) {
       return '${Platform.environment['APPDATA']}\\ArcadiaPlus';
     } else if (isLinux || isMacOS) {
-      return '${Platform.environment['HOME']}/.config/arcadia_plus';
+      return '${Platform.environment['HOME']}/.config/arcadiaplus';
     } else if (isAndroid || isHarmonyOS) {
       return '/data/data/com.blueokanna.arcadiaplus/files';
     } else {
@@ -215,7 +215,7 @@ class PlatformUtils {
     if (isWindows) {
       return '${Platform.environment['LOCALAPPDATA']}\\ArcadiaPlus\\logs';
     } else if (isLinux || isMacOS) {
-      return '${Platform.environment['HOME']}/.local/share/arcadia_plus/logs';
+      return '${Platform.environment['HOME']}/.local/share/arcadiaplus/logs';
     } else if (isAndroid || isHarmonyOS) {
       return '/data/data/com.blueokanna.arcadiaplus/cache/logs';
     } else {

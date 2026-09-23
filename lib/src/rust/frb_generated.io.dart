@@ -979,7 +979,7 @@ class RustLibWire implements BaseWire {
 
   late final _cst_new_box_autoadd_u_16Ptr =
       _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint16> Function(ffi.Uint16)>>(
-        'frbgen_arcadia_plus_cst_new_box_autoadd_u_16',
+        'frbgen_arcadiaplus_cst_new_box_autoadd_u_16',
       );
   late final _cst_new_box_autoadd_u_16 = _cst_new_box_autoadd_u_16Ptr
       .asFunction<ffi.Pointer<ffi.Uint16> Function(int)>();
@@ -990,7 +990,7 @@ class RustLibWire implements BaseWire {
 
   late final _cst_new_box_autoadd_u_32Ptr =
       _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint32> Function(ffi.Uint32)>>(
-        'frbgen_arcadia_plus_cst_new_box_autoadd_u_32',
+        'frbgen_arcadiaplus_cst_new_box_autoadd_u_32',
       );
   late final _cst_new_box_autoadd_u_32 = _cst_new_box_autoadd_u_32Ptr
       .asFunction<ffi.Pointer<ffi.Uint32> Function(int)>();
@@ -1001,7 +1001,7 @@ class RustLibWire implements BaseWire {
 
   late final _cst_new_box_autoadd_u_64Ptr =
       _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Uint64> Function(ffi.Uint64)>>(
-        'frbgen_arcadia_plus_cst_new_box_autoadd_u_64',
+        'frbgen_arcadiaplus_cst_new_box_autoadd_u_64',
       );
   late final _cst_new_box_autoadd_u_64 = _cst_new_box_autoadd_u_64Ptr
       .asFunction<ffi.Pointer<ffi.Uint64> Function(int)>();
@@ -1015,7 +1015,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_String> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_String');
+      >('frbgen_arcadiaplus_cst_new_list_String');
   late final _cst_new_list_String = _cst_new_list_StringPtr
       .asFunction<ffi.Pointer<wire_cst_list_String> Function(int)>();
 
@@ -1030,7 +1030,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_active_connection> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_active_connection');
+      >('frbgen_arcadiaplus_cst_new_list_active_connection');
   late final _cst_new_list_active_connection =
       _cst_new_list_active_connectionPtr
           .asFunction<
@@ -1048,7 +1048,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_connection_dto> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_connection_dto');
+      >('frbgen_arcadiaplus_cst_new_list_connection_dto');
   late final _cst_new_list_connection_dto = _cst_new_list_connection_dtoPtr
       .asFunction<ffi.Pointer<wire_cst_list_connection_dto> Function(int)>();
 
@@ -1063,7 +1063,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_connection_info> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_connection_info');
+      >('frbgen_arcadiaplus_cst_new_list_connection_info');
   late final _cst_new_list_connection_info = _cst_new_list_connection_infoPtr
       .asFunction<ffi.Pointer<wire_cst_list_connection_info> Function(int)>();
 
@@ -1077,7 +1077,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_latency_test_result> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_latency_test_result');
+      >('frbgen_arcadiaplus_cst_new_list_latency_test_result');
   late final _cst_new_list_latency_test_result =
       _cst_new_list_latency_test_resultPtr
           .asFunction<
@@ -1095,7 +1095,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_prim_u_8_strict');
+      >('frbgen_arcadiaplus_cst_new_list_prim_u_8_strict');
   late final _cst_new_list_prim_u_8_strict = _cst_new_list_prim_u_8_strictPtr
       .asFunction<ffi.Pointer<wire_cst_list_prim_u_8_strict> Function(int)>();
 
@@ -1110,7 +1110,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_proxy_group_dto> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_proxy_group_dto');
+      >('frbgen_arcadiaplus_cst_new_list_proxy_group_dto');
   late final _cst_new_list_proxy_group_dto = _cst_new_list_proxy_group_dtoPtr
       .asFunction<ffi.Pointer<wire_cst_list_proxy_group_dto> Function(int)>();
 
@@ -1125,7 +1125,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_proxy_info_dto> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_proxy_info_dto');
+      >('frbgen_arcadiaplus_cst_new_list_proxy_info_dto');
   late final _cst_new_list_proxy_info_dto = _cst_new_list_proxy_info_dtoPtr
       .asFunction<ffi.Pointer<wire_cst_list_proxy_info_dto> Function(int)>();
 
@@ -1140,7 +1140,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_proxy_latency_dto> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_proxy_latency_dto');
+      >('frbgen_arcadiaplus_cst_new_list_proxy_latency_dto');
   late final _cst_new_list_proxy_latency_dto =
       _cst_new_list_proxy_latency_dtoPtr
           .asFunction<
@@ -1158,7 +1158,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_record_string_u_16> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_record_string_u_16');
+      >('frbgen_arcadiaplus_cst_new_list_record_string_u_16');
   late final _cst_new_list_record_string_u_16 =
       _cst_new_list_record_string_u_16Ptr
           .asFunction<
@@ -1174,7 +1174,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Pointer<wire_cst_list_rule_dto> Function(ffi.Int32)
         >
-      >('frbgen_arcadia_plus_cst_new_list_rule_dto');
+      >('frbgen_arcadiaplus_cst_new_list_rule_dto');
   late final _cst_new_list_rule_dto = _cst_new_list_rule_dtoPtr
       .asFunction<ffi.Pointer<wire_cst_list_rule_dto> Function(int)>();
 
@@ -1206,7 +1206,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__clear_android_vpn_fdPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__clear_android_vpn_fd',
+        'frbgen_arcadiaplus_wire__crate__api__clear_android_vpn_fd',
       );
   late final _wire__crate__api__clear_android_vpn_fd =
       _wire__crate__api__clear_android_vpn_fdPtr
@@ -1218,7 +1218,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__clear_vpn_fdPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__clear_vpn_fd',
+        'frbgen_arcadiaplus_wire__crate__api__clear_vpn_fd',
       );
   late final _wire__crate__api__clear_vpn_fd =
       _wire__crate__api__clear_vpn_fdPtr.asFunction<void Function(int)>();
@@ -1238,7 +1238,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__close_active_connection');
+      >('frbgen_arcadiaplus_wire__crate__api__close_active_connection');
   late final _wire__crate__api__close_active_connection =
       _wire__crate__api__close_active_connectionPtr
           .asFunction<
@@ -1251,7 +1251,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__close_all_connectionsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__close_all_connections',
+        'frbgen_arcadiaplus_wire__crate__api__close_all_connections',
       );
   late final _wire__crate__api__close_all_connections =
       _wire__crate__api__close_all_connectionsPtr
@@ -1263,7 +1263,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__close_all_connections_dtoPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__close_all_connections_dto',
+        'frbgen_arcadiaplus_wire__crate__api__close_all_connections_dto',
       );
   late final _wire__crate__api__close_all_connections_dto =
       _wire__crate__api__close_all_connections_dtoPtr
@@ -1284,7 +1284,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__close_connection');
+      >('frbgen_arcadiaplus_wire__crate__api__close_connection');
   late final _wire__crate__api__close_connection =
       _wire__crate__api__close_connectionPtr
           .asFunction<
@@ -1306,7 +1306,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__close_connection_by_id');
+      >('frbgen_arcadiaplus_wire__crate__api__close_connection_by_id');
   late final _wire__crate__api__close_connection_by_id =
       _wire__crate__api__close_connection_by_idPtr
           .asFunction<
@@ -1319,7 +1319,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__disable_tun_modePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__disable_tun_mode',
+        'frbgen_arcadiaplus_wire__crate__api__disable_tun_mode',
       );
   late final _wire__crate__api__disable_tun_mode =
       _wire__crate__api__disable_tun_modePtr.asFunction<void Function(int)>();
@@ -1330,7 +1330,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__enable_tun_modePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__enable_tun_mode',
+        'frbgen_arcadiaplus_wire__crate__api__enable_tun_mode',
       );
   late final _wire__crate__api__enable_tun_mode =
       _wire__crate__api__enable_tun_modePtr.asFunction<void Function(int)>();
@@ -1350,7 +1350,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__enable_tun_mode_with_mode');
+      >('frbgen_arcadiaplus_wire__crate__api__enable_tun_mode_with_mode');
   late final _wire__crate__api__enable_tun_mode_with_mode =
       _wire__crate__api__enable_tun_mode_with_modePtr
           .asFunction<
@@ -1363,7 +1363,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__enable_uwp_loopbackPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__enable_uwp_loopback',
+        'frbgen_arcadiaplus_wire__crate__api__enable_uwp_loopback',
       );
   late final _wire__crate__api__enable_uwp_loopback =
       _wire__crate__api__enable_uwp_loopbackPtr
@@ -1375,7 +1375,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__ensure_wintun_dllPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__ensure_wintun_dll',
+        'frbgen_arcadiaplus_wire__crate__api__ensure_wintun_dll',
       );
   late final _wire__crate__api__ensure_wintun_dll =
       _wire__crate__api__ensure_wintun_dllPtr.asFunction<void Function(int)>();
@@ -1386,7 +1386,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_active_connectionsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_active_connections',
+        'frbgen_arcadiaplus_wire__crate__api__get_active_connections',
       );
   late final _wire__crate__api__get_active_connections =
       _wire__crate__api__get_active_connectionsPtr
@@ -1398,7 +1398,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_android_proxy_modePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_android_proxy_mode',
+        'frbgen_arcadiaplus_wire__crate__api__get_android_proxy_mode',
       );
   late final _wire__crate__api__get_android_proxy_mode =
       _wire__crate__api__get_android_proxy_modePtr
@@ -1410,7 +1410,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_android_vpn_fdPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_android_vpn_fd',
+        'frbgen_arcadiaplus_wire__crate__api__get_android_vpn_fd',
       );
   late final _wire__crate__api__get_android_vpn_fd =
       _wire__crate__api__get_android_vpn_fdPtr.asFunction<void Function(int)>();
@@ -1421,7 +1421,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_build_infoPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_build_info',
+        'frbgen_arcadiaplus_wire__crate__api__get_build_info',
       );
   late final _wire__crate__api__get_build_info =
       _wire__crate__api__get_build_infoPtr.asFunction<void Function(int)>();
@@ -1432,7 +1432,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_connection_statsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_connection_stats',
+        'frbgen_arcadiaplus_wire__crate__api__get_connection_stats',
       );
   late final _wire__crate__api__get_connection_stats =
       _wire__crate__api__get_connection_statsPtr
@@ -1444,7 +1444,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_connectionsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_connections',
+        'frbgen_arcadiaplus_wire__crate__api__get_connections',
       );
   late final _wire__crate__api__get_connections =
       _wire__crate__api__get_connectionsPtr.asFunction<void Function(int)>();
@@ -1455,7 +1455,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_connections_dtoPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_connections_dto',
+        'frbgen_arcadiaplus_wire__crate__api__get_connections_dto',
       );
   late final _wire__crate__api__get_connections_dto =
       _wire__crate__api__get_connections_dtoPtr
@@ -1467,7 +1467,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_corduit_statusPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_corduit_status',
+        'frbgen_arcadiaplus_wire__crate__api__get_corduit_status',
       );
   late final _wire__crate__api__get_corduit_status =
       _wire__crate__api__get_corduit_statusPtr.asFunction<void Function(int)>();
@@ -1478,7 +1478,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_dns_configPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_dns_config',
+        'frbgen_arcadiaplus_wire__crate__api__get_dns_config',
       );
   late final _wire__crate__api__get_dns_config =
       _wire__crate__api__get_dns_configPtr.asFunction<void Function(int)>();
@@ -1492,7 +1492,7 @@ class RustLibWire implements BaseWire {
         ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.Pointer<ffi.Uint32>)
         >
-      >('frbgen_arcadia_plus_wire__crate__api__get_logs');
+      >('frbgen_arcadiaplus_wire__crate__api__get_logs');
   late final _wire__crate__api__get_logs = _wire__crate__api__get_logsPtr
       .asFunction<void Function(int, ffi.Pointer<ffi.Uint32>)>();
 
@@ -1502,7 +1502,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_proxiesPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_proxies',
+        'frbgen_arcadiaplus_wire__crate__api__get_proxies',
       );
   late final _wire__crate__api__get_proxies = _wire__crate__api__get_proxiesPtr
       .asFunction<void Function(int)>();
@@ -1513,7 +1513,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_proxy_groupsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_proxy_groups',
+        'frbgen_arcadiaplus_wire__crate__api__get_proxy_groups',
       );
   late final _wire__crate__api__get_proxy_groups =
       _wire__crate__api__get_proxy_groupsPtr.asFunction<void Function(int)>();
@@ -1524,7 +1524,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_proxy_modePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_proxy_mode',
+        'frbgen_arcadiaplus_wire__crate__api__get_proxy_mode',
       );
   late final _wire__crate__api__get_proxy_mode =
       _wire__crate__api__get_proxy_modePtr.asFunction<void Function(int)>();
@@ -1535,7 +1535,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_recursive_dns_statusPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_recursive_dns_status',
+        'frbgen_arcadiaplus_wire__crate__api__get_recursive_dns_status',
       );
   late final _wire__crate__api__get_recursive_dns_status =
       _wire__crate__api__get_recursive_dns_statusPtr
@@ -1547,7 +1547,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_rulesPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_rules',
+        'frbgen_arcadiaplus_wire__crate__api__get_rules',
       );
   late final _wire__crate__api__get_rules = _wire__crate__api__get_rulesPtr
       .asFunction<void Function(int)>();
@@ -1567,7 +1567,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__get_selected_proxy_in_group');
+      >('frbgen_arcadiaplus_wire__crate__api__get_selected_proxy_in_group');
   late final _wire__crate__api__get_selected_proxy_in_group =
       _wire__crate__api__get_selected_proxy_in_groupPtr
           .asFunction<
@@ -1580,7 +1580,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_system_infoPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_system_info',
+        'frbgen_arcadiaplus_wire__crate__api__get_system_info',
       );
   late final _wire__crate__api__get_system_info =
       _wire__crate__api__get_system_infoPtr.asFunction<void Function(int)>();
@@ -1591,7 +1591,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_traffic_statsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_traffic_stats',
+        'frbgen_arcadiaplus_wire__crate__api__get_traffic_stats',
       );
   late final _wire__crate__api__get_traffic_stats =
       _wire__crate__api__get_traffic_statsPtr.asFunction<void Function(int)>();
@@ -1602,7 +1602,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_traffic_stats_dtoPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_traffic_stats_dto',
+        'frbgen_arcadiaplus_wire__crate__api__get_traffic_stats_dto',
       );
   late final _wire__crate__api__get_traffic_stats_dto =
       _wire__crate__api__get_traffic_stats_dtoPtr
@@ -1614,7 +1614,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_tun_statusPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_tun_status',
+        'frbgen_arcadiaplus_wire__crate__api__get_tun_status',
       );
   late final _wire__crate__api__get_tun_status =
       _wire__crate__api__get_tun_statusPtr.asFunction<void Function(int)>();
@@ -1625,7 +1625,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_versionPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_version',
+        'frbgen_arcadiaplus_wire__crate__api__get_version',
       );
   late final _wire__crate__api__get_version = _wire__crate__api__get_versionPtr
       .asFunction<void Function(int)>();
@@ -1636,7 +1636,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_windows_proxy_mode_strPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_windows_proxy_mode_str',
+        'frbgen_arcadiaplus_wire__crate__api__get_windows_proxy_mode_str',
       );
   late final _wire__crate__api__get_windows_proxy_mode_str =
       _wire__crate__api__get_windows_proxy_mode_strPtr
@@ -1648,7 +1648,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_windows_tun_statsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_windows_tun_stats',
+        'frbgen_arcadiaplus_wire__crate__api__get_windows_tun_stats',
       );
   late final _wire__crate__api__get_windows_tun_stats =
       _wire__crate__api__get_windows_tun_statsPtr
@@ -1660,7 +1660,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__get_wintun_dll_pathPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__get_wintun_dll_path',
+        'frbgen_arcadiaplus_wire__crate__api__get_wintun_dll_path',
       );
   late final _wire__crate__api__get_wintun_dll_path =
       _wire__crate__api__get_wintun_dll_pathPtr
@@ -1672,7 +1672,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__init_appPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__init_app',
+        'frbgen_arcadiaplus_wire__crate__api__init_app',
       );
   late final _wire__crate__api__init_app = _wire__crate__api__init_appPtr
       .asFunction<void Function(int)>();
@@ -1692,7 +1692,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__initialize_corduit');
+      >('frbgen_arcadiaplus_wire__crate__api__initialize_corduit');
   late final _wire__crate__api__initialize_corduit =
       _wire__crate__api__initialize_corduitPtr
           .asFunction<
@@ -1705,7 +1705,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__is_proxy_runningPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__is_proxy_running',
+        'frbgen_arcadiaplus_wire__crate__api__is_proxy_running',
       );
   late final _wire__crate__api__is_proxy_running =
       _wire__crate__api__is_proxy_runningPtr.asFunction<void Function(int)>();
@@ -1716,7 +1716,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__is_wintun_availablePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__is_wintun_available',
+        'frbgen_arcadiaplus_wire__crate__api__is_wintun_available',
       );
   late final _wire__crate__api__is_wintun_available =
       _wire__crate__api__is_wintun_availablePtr
@@ -1728,7 +1728,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__open_uwp_loopback_utilityPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__open_uwp_loopback_utility',
+        'frbgen_arcadiaplus_wire__crate__api__open_uwp_loopback_utility',
       );
   late final _wire__crate__api__open_uwp_loopback_utility =
       _wire__crate__api__open_uwp_loopback_utilityPtr
@@ -1749,7 +1749,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__reload_config_from_file');
+      >('frbgen_arcadiaplus_wire__crate__api__reload_config_from_file');
   late final _wire__crate__api__reload_config_from_file =
       _wire__crate__api__reload_config_from_filePtr
           .asFunction<
@@ -1771,7 +1771,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__reload_config_from_yaml');
+      >('frbgen_arcadiaplus_wire__crate__api__reload_config_from_yaml');
   late final _wire__crate__api__reload_config_from_yaml =
       _wire__crate__api__reload_config_from_yamlPtr
           .asFunction<
@@ -1793,7 +1793,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__reload_corduit');
+      >('frbgen_arcadiaplus_wire__crate__api__reload_corduit');
   late final _wire__crate__api__reload_corduit =
       _wire__crate__api__reload_corduitPtr
           .asFunction<
@@ -1817,7 +1817,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__select_proxy');
+      >('frbgen_arcadiaplus_wire__crate__api__select_proxy');
   late final _wire__crate__api__select_proxy =
       _wire__crate__api__select_proxyPtr
           .asFunction<
@@ -1849,7 +1849,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__select_proxy_in_group');
+      >('frbgen_arcadiaplus_wire__crate__api__select_proxy_in_group');
   late final _wire__crate__api__select_proxy_in_group =
       _wire__crate__api__select_proxy_in_groupPtr
           .asFunction<
@@ -1875,7 +1875,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__set_android_proxy_mode');
+      >('frbgen_arcadiaplus_wire__crate__api__set_android_proxy_mode');
   late final _wire__crate__api__set_android_proxy_mode =
       _wire__crate__api__set_android_proxy_modePtr
           .asFunction<
@@ -1888,7 +1888,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__set_android_vpn_fdPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Int32)>>(
-        'frbgen_arcadia_plus_wire__crate__api__set_android_vpn_fd',
+        'frbgen_arcadiaplus_wire__crate__api__set_android_vpn_fd',
       );
   late final _wire__crate__api__set_android_vpn_fd =
       _wire__crate__api__set_android_vpn_fdPtr
@@ -1909,7 +1909,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__set_geoip_database_path');
+      >('frbgen_arcadiaplus_wire__crate__api__set_geoip_database_path');
   late final _wire__crate__api__set_geoip_database_path =
       _wire__crate__api__set_geoip_database_pathPtr
           .asFunction<
@@ -1931,7 +1931,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__set_log_level');
+      >('frbgen_arcadiaplus_wire__crate__api__set_log_level');
   late final _wire__crate__api__set_log_level =
       _wire__crate__api__set_log_levelPtr
           .asFunction<
@@ -1950,7 +1950,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__set_protect_socket_callback_enabledPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Bool)>>(
-        'frbgen_arcadia_plus_wire__crate__api__set_protect_socket_callback_enabled',
+        'frbgen_arcadiaplus_wire__crate__api__set_protect_socket_callback_enabled',
       );
   late final _wire__crate__api__set_protect_socket_callback_enabled =
       _wire__crate__api__set_protect_socket_callback_enabledPtr
@@ -1962,7 +1962,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__set_proxy_modePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Int32)>>(
-        'frbgen_arcadia_plus_wire__crate__api__set_proxy_mode',
+        'frbgen_arcadiaplus_wire__crate__api__set_proxy_mode',
       );
   late final _wire__crate__api__set_proxy_mode =
       _wire__crate__api__set_proxy_modePtr
@@ -1974,7 +1974,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__set_vpn_fdPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64, ffi.Int32)>>(
-        'frbgen_arcadia_plus_wire__crate__api__set_vpn_fd',
+        'frbgen_arcadiaplus_wire__crate__api__set_vpn_fd',
       );
   late final _wire__crate__api__set_vpn_fd = _wire__crate__api__set_vpn_fdPtr
       .asFunction<void Function(int, int)>();
@@ -1994,7 +1994,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__set_windows_proxy_mode');
+      >('frbgen_arcadiaplus_wire__crate__api__set_windows_proxy_mode');
   late final _wire__crate__api__set_windows_proxy_mode =
       _wire__crate__api__set_windows_proxy_modePtr
           .asFunction<
@@ -2007,7 +2007,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__start_android_vpnPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__start_android_vpn',
+        'frbgen_arcadiaplus_wire__crate__api__start_android_vpn',
       );
   late final _wire__crate__api__start_android_vpn =
       _wire__crate__api__start_android_vpnPtr.asFunction<void Function(int)>();
@@ -2018,7 +2018,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__start_corduitPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__start_corduit',
+        'frbgen_arcadiaplus_wire__crate__api__start_corduit',
       );
   late final _wire__crate__api__start_corduit =
       _wire__crate__api__start_corduitPtr.asFunction<void Function(int)>();
@@ -2038,7 +2038,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__start_proxy_from_file');
+      >('frbgen_arcadiaplus_wire__crate__api__start_proxy_from_file');
   late final _wire__crate__api__start_proxy_from_file =
       _wire__crate__api__start_proxy_from_filePtr
           .asFunction<
@@ -2060,7 +2060,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__start_proxy_from_yaml');
+      >('frbgen_arcadiaplus_wire__crate__api__start_proxy_from_yaml');
   late final _wire__crate__api__start_proxy_from_yaml =
       _wire__crate__api__start_proxy_from_yamlPtr
           .asFunction<
@@ -2082,7 +2082,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__start_recursive_dns');
+      >('frbgen_arcadiaplus_wire__crate__api__start_recursive_dns');
   late final _wire__crate__api__start_recursive_dns =
       _wire__crate__api__start_recursive_dnsPtr
           .asFunction<
@@ -2113,7 +2113,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__start_tun_mode');
+      >('frbgen_arcadiaplus_wire__crate__api__start_tun_mode');
   late final _wire__crate__api__start_tun_mode =
       _wire__crate__api__start_tun_modePtr
           .asFunction<
@@ -2131,7 +2131,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__stop_android_vpnPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__stop_android_vpn',
+        'frbgen_arcadiaplus_wire__crate__api__stop_android_vpn',
       );
   late final _wire__crate__api__stop_android_vpn =
       _wire__crate__api__stop_android_vpnPtr.asFunction<void Function(int)>();
@@ -2142,7 +2142,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__stop_corduitPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__stop_corduit',
+        'frbgen_arcadiaplus_wire__crate__api__stop_corduit',
       );
   late final _wire__crate__api__stop_corduit =
       _wire__crate__api__stop_corduitPtr.asFunction<void Function(int)>();
@@ -2153,7 +2153,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__stop_proxyPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__stop_proxy',
+        'frbgen_arcadiaplus_wire__crate__api__stop_proxy',
       );
   late final _wire__crate__api__stop_proxy = _wire__crate__api__stop_proxyPtr
       .asFunction<void Function(int)>();
@@ -2164,7 +2164,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__stop_recursive_dnsPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__stop_recursive_dns',
+        'frbgen_arcadiaplus_wire__crate__api__stop_recursive_dns',
       );
   late final _wire__crate__api__stop_recursive_dns =
       _wire__crate__api__stop_recursive_dnsPtr.asFunction<void Function(int)>();
@@ -2175,7 +2175,7 @@ class RustLibWire implements BaseWire {
 
   late final _wire__crate__api__stop_tun_modePtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadia_plus_wire__crate__api__stop_tun_mode',
+        'frbgen_arcadiaplus_wire__crate__api__stop_tun_mode',
       );
   late final _wire__crate__api__stop_tun_mode =
       _wire__crate__api__stop_tun_modePtr.asFunction<void Function(int)>();
@@ -2201,7 +2201,7 @@ class RustLibWire implements BaseWire {
             ffi.Uint64,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__test_all_proxies_latency');
+      >('frbgen_arcadiaplus_wire__crate__api__test_all_proxies_latency');
   late final _wire__crate__api__test_all_proxies_latency =
       _wire__crate__api__test_all_proxies_latencyPtr
           .asFunction<
@@ -2223,7 +2223,7 @@ class RustLibWire implements BaseWire {
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__test_config');
+      >('frbgen_arcadiaplus_wire__crate__api__test_config');
   late final _wire__crate__api__test_config = _wire__crate__api__test_configPtr
       .asFunction<
         void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
@@ -2250,7 +2250,7 @@ class RustLibWire implements BaseWire {
             ffi.Uint32,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__test_outbound_latency');
+      >('frbgen_arcadiaplus_wire__crate__api__test_outbound_latency');
   late final _wire__crate__api__test_outbound_latency =
       _wire__crate__api__test_outbound_latencyPtr
           .asFunction<
@@ -2274,7 +2274,7 @@ class RustLibWire implements BaseWire {
             ffi.Uint32,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__test_proxies_latency');
+      >('frbgen_arcadiaplus_wire__crate__api__test_proxies_latency');
   late final _wire__crate__api__test_proxies_latency =
       _wire__crate__api__test_proxies_latencyPtr
           .asFunction<
@@ -2309,7 +2309,7 @@ class RustLibWire implements BaseWire {
             ffi.Uint32,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__test_proxy_latency');
+      >('frbgen_arcadiaplus_wire__crate__api__test_proxy_latency');
   late final _wire__crate__api__test_proxy_latency =
       _wire__crate__api__test_proxy_latencyPtr
           .asFunction<
@@ -2345,7 +2345,7 @@ class RustLibWire implements BaseWire {
             ffi.Uint64,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__test_proxy_latency_dto');
+      >('frbgen_arcadiaplus_wire__crate__api__test_proxy_latency_dto');
   late final _wire__crate__api__test_proxy_latency_dto =
       _wire__crate__api__test_proxy_latency_dtoPtr
           .asFunction<
@@ -2387,7 +2387,7 @@ class RustLibWire implements BaseWire {
             ffi.Uint32,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__test_shadowsocks_latency');
+      >('frbgen_arcadiaplus_wire__crate__api__test_shadowsocks_latency');
   late final _wire__crate__api__test_shadowsocks_latency =
       _wire__crate__api__test_shadowsocks_latencyPtr
           .asFunction<
@@ -2425,7 +2425,7 @@ class RustLibWire implements BaseWire {
             ffi.Uint32,
           )
         >
-      >('frbgen_arcadia_plus_wire__crate__api__test_tcp_connectivity');
+      >('frbgen_arcadiaplus_wire__crate__api__test_tcp_connectivity');
   late final _wire__crate__api__test_tcp_connectivity =
       _wire__crate__api__test_tcp_connectivityPtr
           .asFunction<

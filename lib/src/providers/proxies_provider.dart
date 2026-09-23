@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:arcadia_plus/src/services/config_converter.dart';
-import 'package:arcadia_plus/src/services/storage_service.dart';
-import 'package:arcadia_plus/src/rust/api.dart' as rust_api;
-import 'package:arcadia_plus/src/services/native_core_service.dart';
+import 'package:arcadiaplus/src/services/config_converter.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
+import 'package:arcadiaplus/src/rust/api.dart' as rust_api;
+import 'package:arcadiaplus/src/services/native_core_service.dart';
 
 /// Latency test result
 class LatencyResult {

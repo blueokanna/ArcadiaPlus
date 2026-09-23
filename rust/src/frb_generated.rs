@@ -3837,17 +3837,17 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__clear_android_vpn_fd(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__clear_android_vpn_fd(port_: i64) {
         wire__crate__api__clear_android_vpn_fd_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__clear_vpn_fd(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__clear_vpn_fd(port_: i64) {
         wire__crate__api__clear_vpn_fd_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__close_active_connection(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__close_active_connection(
         port_: i64,
         connection_id: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -3855,17 +3855,17 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__close_all_connections(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__close_all_connections(port_: i64) {
         wire__crate__api__close_all_connections_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__close_all_connections_dto(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__close_all_connections_dto(port_: i64) {
         wire__crate__api__close_all_connections_dto_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__close_connection(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__close_connection(
         port_: i64,
         connection_id: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -3873,7 +3873,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__close_connection_by_id(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__close_connection_by_id(
         port_: i64,
         id: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -3881,17 +3881,17 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__disable_tun_mode(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__disable_tun_mode(port_: i64) {
         wire__crate__api__disable_tun_mode_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__enable_tun_mode(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__enable_tun_mode(port_: i64) {
         wire__crate__api__enable_tun_mode_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__enable_tun_mode_with_mode(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__enable_tun_mode_with_mode(
         port_: i64,
         mode: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -3899,92 +3899,92 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__enable_uwp_loopback(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__enable_uwp_loopback(port_: i64) {
         wire__crate__api__enable_uwp_loopback_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__ensure_wintun_dll(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__ensure_wintun_dll(port_: i64) {
         wire__crate__api__ensure_wintun_dll_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_active_connections(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_active_connections(port_: i64) {
         wire__crate__api__get_active_connections_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_android_proxy_mode(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_android_proxy_mode(port_: i64) {
         wire__crate__api__get_android_proxy_mode_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_android_vpn_fd(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_android_vpn_fd(port_: i64) {
         wire__crate__api__get_android_vpn_fd_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_build_info(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_build_info(port_: i64) {
         wire__crate__api__get_build_info_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_connection_stats(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_connection_stats(port_: i64) {
         wire__crate__api__get_connection_stats_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_connections(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_connections(port_: i64) {
         wire__crate__api__get_connections_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_connections_dto(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_connections_dto(port_: i64) {
         wire__crate__api__get_connections_dto_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_corduit_status(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_corduit_status(port_: i64) {
         wire__crate__api__get_corduit_status_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_dns_config(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_dns_config(port_: i64) {
         wire__crate__api__get_dns_config_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_logs(port_: i64, lines: *mut u32) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_logs(port_: i64, lines: *mut u32) {
         wire__crate__api__get_logs_impl(port_, lines)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_proxies(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_proxies(port_: i64) {
         wire__crate__api__get_proxies_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_proxy_groups(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_proxy_groups(port_: i64) {
         wire__crate__api__get_proxy_groups_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_proxy_mode(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_proxy_mode(port_: i64) {
         wire__crate__api__get_proxy_mode_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_recursive_dns_status(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_recursive_dns_status(port_: i64) {
         wire__crate__api__get_recursive_dns_status_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_rules(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_rules(port_: i64) {
         wire__crate__api__get_rules_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_selected_proxy_in_group(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_selected_proxy_in_group(
         port_: i64,
         group_name: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -3992,52 +3992,52 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_system_info(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_system_info(port_: i64) {
         wire__crate__api__get_system_info_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_traffic_stats(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_traffic_stats(port_: i64) {
         wire__crate__api__get_traffic_stats_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_traffic_stats_dto(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_traffic_stats_dto(port_: i64) {
         wire__crate__api__get_traffic_stats_dto_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_tun_status(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_tun_status(port_: i64) {
         wire__crate__api__get_tun_status_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_version(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_version(port_: i64) {
         wire__crate__api__get_version_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_windows_proxy_mode_str(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_windows_proxy_mode_str(port_: i64) {
         wire__crate__api__get_windows_proxy_mode_str_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_windows_tun_stats(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_windows_tun_stats(port_: i64) {
         wire__crate__api__get_windows_tun_stats_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__get_wintun_dll_path(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_wintun_dll_path(port_: i64) {
         wire__crate__api__get_wintun_dll_path_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__init_app(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__init_app(port_: i64) {
         wire__crate__api__init_app_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__initialize_corduit(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__initialize_corduit(
         port_: i64,
         config_json: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4045,22 +4045,22 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__is_proxy_running(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__is_proxy_running(port_: i64) {
         wire__crate__api__is_proxy_running_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__is_wintun_available(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__is_wintun_available(port_: i64) {
         wire__crate__api__is_wintun_available_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__open_uwp_loopback_utility(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__open_uwp_loopback_utility(port_: i64) {
         wire__crate__api__open_uwp_loopback_utility_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__reload_config_from_file(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__reload_config_from_file(
         port_: i64,
         config_path: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4068,7 +4068,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__reload_config_from_yaml(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__reload_config_from_yaml(
         port_: i64,
         yaml_config: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4076,7 +4076,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__reload_corduit(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__reload_corduit(
         port_: i64,
         config_json: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4084,7 +4084,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__select_proxy(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__select_proxy(
         port_: i64,
         group_tag: *mut wire_cst_list_prim_u_8_strict,
         proxy_tag: *mut wire_cst_list_prim_u_8_strict,
@@ -4093,7 +4093,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__select_proxy_in_group(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__select_proxy_in_group(
         port_: i64,
         group_name: *mut wire_cst_list_prim_u_8_strict,
         proxy_name: *mut wire_cst_list_prim_u_8_strict,
@@ -4102,7 +4102,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__set_android_proxy_mode(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_android_proxy_mode(
         port_: i64,
         mode: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4110,15 +4110,12 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__set_android_vpn_fd(
-        port_: i64,
-        fd: i32,
-    ) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_android_vpn_fd(port_: i64, fd: i32) {
         wire__crate__api__set_android_vpn_fd_impl(port_, fd)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__set_geoip_database_path(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_geoip_database_path(
         port_: i64,
         path: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4126,7 +4123,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__set_log_level(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_log_level(
         port_: i64,
         level: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4134,7 +4131,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__set_protect_socket_callback_enabled(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_protect_socket_callback_enabled(
         port_: i64,
         enabled: bool,
     ) {
@@ -4142,17 +4139,17 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__set_proxy_mode(port_: i64, mode: i32) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_proxy_mode(port_: i64, mode: i32) {
         wire__crate__api__set_proxy_mode_impl(port_, mode)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__set_vpn_fd(port_: i64, fd: i32) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_vpn_fd(port_: i64, fd: i32) {
         wire__crate__api__set_vpn_fd_impl(port_, fd)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__set_windows_proxy_mode(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_windows_proxy_mode(
         port_: i64,
         mode: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4160,17 +4157,17 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__start_android_vpn(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_android_vpn(port_: i64) {
         wire__crate__api__start_android_vpn_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__start_corduit(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_corduit(port_: i64) {
         wire__crate__api__start_corduit_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__start_proxy_from_file(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_proxy_from_file(
         port_: i64,
         config_path: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4178,7 +4175,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__start_proxy_from_yaml(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_proxy_from_yaml(
         port_: i64,
         yaml_config: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4186,7 +4183,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__start_recursive_dns(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_recursive_dns(
         port_: i64,
         listen: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4194,7 +4191,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__start_tun_mode(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_tun_mode(
         port_: i64,
         tun_name: *mut wire_cst_list_prim_u_8_strict,
         tun_address: *mut wire_cst_list_prim_u_8_strict,
@@ -4204,32 +4201,32 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__stop_android_vpn(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_android_vpn(port_: i64) {
         wire__crate__api__stop_android_vpn_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__stop_corduit(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_corduit(port_: i64) {
         wire__crate__api__stop_corduit_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__stop_proxy(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_proxy(port_: i64) {
         wire__crate__api__stop_proxy_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__stop_recursive_dns(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_recursive_dns(port_: i64) {
         wire__crate__api__stop_recursive_dns_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__stop_tun_mode(port_: i64) {
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_tun_mode(port_: i64) {
         wire__crate__api__stop_tun_mode_impl(port_)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__test_all_proxies_latency(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__test_all_proxies_latency(
         port_: i64,
         test_url: *mut wire_cst_list_prim_u_8_strict,
         timeout_ms: u64,
@@ -4238,7 +4235,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__test_config(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__test_config(
         port_: i64,
         config_json: *mut wire_cst_list_prim_u_8_strict,
     ) {
@@ -4246,7 +4243,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__test_outbound_latency(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__test_outbound_latency(
         port_: i64,
         outbound_name: *mut wire_cst_list_prim_u_8_strict,
         timeout_ms: u32,
@@ -4255,7 +4252,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__test_proxies_latency(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__test_proxies_latency(
         port_: i64,
         proxies: *mut wire_cst_list_record_string_u_16,
         timeout_ms: u32,
@@ -4264,7 +4261,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__test_proxy_latency(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__test_proxy_latency(
         port_: i64,
         server: *mut wire_cst_list_prim_u_8_strict,
         port: u16,
@@ -4274,7 +4271,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__test_proxy_latency_dto(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__test_proxy_latency_dto(
         port_: i64,
         tag: *mut wire_cst_list_prim_u_8_strict,
         test_url: *mut wire_cst_list_prim_u_8_strict,
@@ -4284,7 +4281,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__test_shadowsocks_latency(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__test_shadowsocks_latency(
         port_: i64,
         server: *mut wire_cst_list_prim_u_8_strict,
         port: u16,
@@ -4298,7 +4295,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_wire__crate__api__test_tcp_connectivity(
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__test_tcp_connectivity(
         port_: i64,
         server: *mut wire_cst_list_prim_u_8_strict,
         port: u16,
@@ -4308,22 +4305,22 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_box_autoadd_u_16(value: u16) -> *mut u16 {
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_box_autoadd_u_16(value: u16) -> *mut u16 {
         flutter_rust_bridge::for_generated::new_leak_box_ptr(value)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_box_autoadd_u_32(value: u32) -> *mut u32 {
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_box_autoadd_u_32(value: u32) -> *mut u32 {
         flutter_rust_bridge::for_generated::new_leak_box_ptr(value)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_box_autoadd_u_64(value: u64) -> *mut u64 {
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_box_autoadd_u_64(value: u64) -> *mut u64 {
         flutter_rust_bridge::for_generated::new_leak_box_ptr(value)
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_String(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_String(
         len: i32,
     ) -> *mut wire_cst_list_String {
         let wrap = wire_cst_list_String {
@@ -4337,7 +4334,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_active_connection(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_active_connection(
         len: i32,
     ) -> *mut wire_cst_list_active_connection {
         let wrap = wire_cst_list_active_connection {
@@ -4351,7 +4348,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_connection_dto(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_connection_dto(
         len: i32,
     ) -> *mut wire_cst_list_connection_dto {
         let wrap = wire_cst_list_connection_dto {
@@ -4365,7 +4362,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_connection_info(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_connection_info(
         len: i32,
     ) -> *mut wire_cst_list_connection_info {
         let wrap = wire_cst_list_connection_info {
@@ -4379,7 +4376,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_latency_test_result(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_latency_test_result(
         len: i32,
     ) -> *mut wire_cst_list_latency_test_result {
         let wrap = wire_cst_list_latency_test_result {
@@ -4393,7 +4390,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_prim_u_8_strict(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_prim_u_8_strict(
         len: i32,
     ) -> *mut wire_cst_list_prim_u_8_strict {
         let ans = wire_cst_list_prim_u_8_strict {
@@ -4404,7 +4401,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_proxy_group_dto(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_proxy_group_dto(
         len: i32,
     ) -> *mut wire_cst_list_proxy_group_dto {
         let wrap = wire_cst_list_proxy_group_dto {
@@ -4418,7 +4415,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_proxy_info_dto(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_proxy_info_dto(
         len: i32,
     ) -> *mut wire_cst_list_proxy_info_dto {
         let wrap = wire_cst_list_proxy_info_dto {
@@ -4432,7 +4429,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_proxy_latency_dto(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_proxy_latency_dto(
         len: i32,
     ) -> *mut wire_cst_list_proxy_latency_dto {
         let wrap = wire_cst_list_proxy_latency_dto {
@@ -4446,7 +4443,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_record_string_u_16(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_record_string_u_16(
         len: i32,
     ) -> *mut wire_cst_list_record_string_u_16 {
         let wrap = wire_cst_list_record_string_u_16 {
@@ -4460,7 +4457,7 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadia_plus_cst_new_list_rule_dto(
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_rule_dto(
         len: i32,
     ) -> *mut wire_cst_list_rule_dto {
         let wrap = wire_cst_list_rule_dto {

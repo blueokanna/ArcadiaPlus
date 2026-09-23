@@ -1,7 +1,7 @@
 # ArcadiaPlus
 
 <p align="center">
-  <img src="assets/arcadia_plus.png" width="128" height="128" alt="ArcadiaPlus Logo" style="border-radius: 12px;">
+  <img src="assets/arcadiaplus.png" width="128" height="128" alt="ArcadiaPlus Logo" style="border-radius: 12px;">
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 - Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
 - The GeoIP database ships with the installer (`assets/Country.mmdb`), is unpacked into the app support directory at start-up, and is registered with the engine; a failure to unpack or register is recorded, and `GEOIP` rules simply do not match while it is missing — never a silent downgrade.
 - Shared Rust TUN packet processing for Android, Windows, and Linux, with platform-owned device lifecycles.
-- Generated app icons for Windows, macOS, Linux, Android, iOS, and HarmonyOS NEXT from `assets/arcadia_plus.png`.
+- Generated app icons for Windows, macOS, Linux, Android, iOS, and HarmonyOS NEXT from `assets/arcadiaplus.png`.
 
 ## Protocol Status
 
@@ -129,7 +129,7 @@ Flutter UI / Provider
         |
 Flutter Rust Bridge (generated bindings)
         |
-lib-arcadia-plus (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
+lib-arcadiaplus (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
 corduit 0.1.9 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
@@ -185,7 +185,7 @@ The corduit dependency in `rust/Cargo.toml` carries a `path` (a sibling `../Cord
 
 ## Icons
 
-The single source is `assets/arcadia_plus.png` and must be square and at least 1024x1024. On Windows run:
+The single source is `assets/arcadiaplus.png` and must be square and at least 1024x1024. On Windows run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
@@ -210,7 +210,7 @@ Pushing a `vMAJOR.MINOR.PATCH` tag — or dispatching the release workflow from 
 - `ArcadiaPlus-<tag>-linux-x64.deb` and `-linux-x64.tar.gz` — Debian package and relocatable bundle.
 - `update-manifest.json` and `SHA256SUMS` — the checksum-verified metadata the in-app updater reads.
 
-The Android release APK is signed with the project's release key only when these repository Actions secrets are configured (`ARCADIAPLUS_KEYSTORE_BASE64` is the base64 encoding of the keystore file, e.g. `base64 -w0 arcadia_plus.jks`):
+The Android release APK is signed with the project's release key only when these repository Actions secrets are configured (`ARCADIAPLUS_KEYSTORE_BASE64` is the base64 encoding of the keystore file, e.g. `base64 -w0 arcadiaplus.jks`):
 
 - `ARCADIAPLUS_KEYSTORE_BASE64`
 - `ARCADIAPLUS_KEYSTORE_PASSWORD`

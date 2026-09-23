@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:arcadia_plus/src/providers/app_state_provider.dart';
-import 'package:arcadia_plus/src/providers/theme_provider.dart';
-import 'package:arcadia_plus/src/providers/locale_provider.dart';
-import 'package:arcadia_plus/src/providers/general_settings_provider.dart';
-import 'package:arcadia_plus/src/providers/update_provider.dart';
-import 'package:arcadia_plus/src/widgets/adaptive_list_tile.dart';
-import 'package:arcadia_plus/src/utils/platform_utils.dart';
-import 'package:arcadia_plus/src/utils/animation_utils.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/providers/app_state_provider.dart';
+import 'package:arcadiaplus/src/providers/theme_provider.dart';
+import 'package:arcadiaplus/src/providers/locale_provider.dart';
+import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
+import 'package:arcadiaplus/src/providers/update_provider.dart';
+import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadiaplus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class SettingsScreen extends StatefulWidget {

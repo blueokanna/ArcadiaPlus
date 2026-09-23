@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
-import 'package:arcadia_plus/src/providers/update_provider.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/providers/update_provider.dart';
 
 class UpdatePromptHost extends StatefulWidget {
   const UpdatePromptHost({required this.child, super.key});

@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:arcadia_plus/src/services/platform_proxy_service.dart';
-import 'package:arcadia_plus/src/providers/app_state_provider.dart';
-import 'package:arcadia_plus/src/providers/network_settings_provider.dart';
-import 'package:arcadia_plus/src/utils/responsive_utils.dart';
-import 'package:arcadia_plus/src/utils/animation_utils.dart';
-import 'package:arcadia_plus/src/utils/platform_utils.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
+import 'package:arcadiaplus/src/providers/app_state_provider.dart';
+import 'package:arcadiaplus/src/providers/network_settings_provider.dart';
+import 'package:arcadiaplus/src/utils/responsive_utils.dart';
+import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
 class QuickActions extends StatefulWidget {
   const QuickActions({super.key});

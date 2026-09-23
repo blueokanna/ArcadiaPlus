@@ -1,4 +1,4 @@
-group 'com.flutter_rust_bridge.rust_lib_arcadia_plus'
+group 'com.flutter_rust_bridge.rust_lib_arcadiaplus'
 version '1.0'
 
 buildscript {
@@ -23,7 +23,7 @@ apply plugin: 'com.android.library'
 
 android {
     if (project.android.hasProperty("namespace")) {
-        namespace 'com.flutter_rust_bridge.rust_lib_arcadia_plus'
+        namespace 'com.flutter_rust_bridge.rust_lib_arcadiaplus'
     }
 
     compileSdkVersion 33
@@ -42,5 +42,5 @@ android {
 apply from: "../cargokit/gradle/plugin.gradle"
 cargokit {
     manifestDir = "../../rust"
-    libname = "rust_lib_arcadia_plus"
+    libname = "rust_lib_arcadiaplus"
 }

@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:arcadia_plus/src/services/platform_proxy_service.dart';
-import 'package:arcadia_plus/src/services/storage_service.dart';
-import 'package:arcadia_plus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
+import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
 /// Owns the network-related switches and applies them to the platform.
 ///

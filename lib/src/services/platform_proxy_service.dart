@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:arcadia_plus/src/rust/api.dart' as rust_api;
-import 'package:arcadia_plus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/rust/api.dart' as rust_api;
+import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
 enum ProxyMode { global, rule, direct }
 

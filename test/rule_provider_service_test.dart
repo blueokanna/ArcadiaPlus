@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:arcadia_plus/src/services/rule_provider_service.dart';
+import 'package:arcadiaplus/src/services/rule_provider_service.dart';
 
 String httpProfile({
   String behavior = 'domain',
@@ -34,9 +34,7 @@ void main() {
   late Directory support;
 
   setUp(() {
-    sandbox = Directory.systemTemp.createTempSync(
-      'arcadia_plus-rule-providers',
-    );
+    sandbox = Directory.systemTemp.createTempSync('arcadiaplus-rule-providers');
     support = Directory('${sandbox.path}/support')..createSync(recursive: true);
   });
 

@@ -2,10 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:arcadia_plus/src/providers/network_settings_provider.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
-import 'package:arcadia_plus/src/widgets/adaptive_list_tile.dart';
-import 'package:arcadia_plus/src/rust/api.dart' as api;
+import 'package:arcadiaplus/src/providers/network_settings_provider.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadiaplus/src/rust/api.dart' as api;
 
 class NetworkSettingsScreen extends StatefulWidget {
   const NetworkSettingsScreen({super.key});

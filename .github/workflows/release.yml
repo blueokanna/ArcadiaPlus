@@ -369,7 +369,7 @@ jobs:
           DefaultDirName={autopf}\ArcadiaPlus
           DefaultGroupName=ArcadiaPlus
           DisableProgramGroupPage=yes
-          UninstallDisplayIcon={app}\arcadia_plus.exe
+          UninstallDisplayIcon={app}\arcadiaplus.exe
           OutputDir=$($PWD.Path)\dist
           OutputBaseFilename=ArcadiaPlus-$tag-windows-x64-setup
           Compression=lzma2/max
@@ -386,13 +386,13 @@ jobs:
           [Files]
           Source: "$($PWD.Path)\build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
           [Icons]
-          Name: "{autoprograms}\ArcadiaPlus"; Filename: "{app}\arcadia_plus.exe"
-          Name: "{autodesktop}\ArcadiaPlus"; Filename: "{app}\arcadia_plus.exe"; Tasks: desktopicon
+          Name: "{autoprograms}\ArcadiaPlus"; Filename: "{app}\arcadiaplus.exe"
+          Name: "{autodesktop}\ArcadiaPlus"; Filename: "{app}\arcadiaplus.exe"; Tasks: desktopicon
           [Run]
-          Filename: "{app}\arcadia_plus.exe"; Description: "{cm:LaunchProgram,ArcadiaPlus}"; Flags: nowait postinstall skipifsilent
+          Filename: "{app}\arcadiaplus.exe"; Description: "{cm:LaunchProgram,ArcadiaPlus}"; Flags: nowait postinstall skipifsilent
           "@
-          Set-Content -Path "$env:RUNNER_TEMP\arcadia_plus.iss" -Value $iss -Encoding utf8
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "$env:RUNNER_TEMP\arcadia_plus.iss"
+          Set-Content -Path "$env:RUNNER_TEMP\arcadiaplus.iss" -Value $iss -Encoding utf8
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "$env:RUNNER_TEMP\arcadiaplus.iss"
           Get-ChildItem dist
 
       - name: Upload the Windows artifacts
@@ -527,24 +527,24 @@ jobs:
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           version='${{ needs.validate.outputs.version }}'
-          pkg="$(mktemp -d)/arcadia_plus"
-          install -d "$pkg/DEBIAN" "$pkg/usr/lib/arcadia_plus" "$pkg/usr/bin" \
+          pkg="$(mktemp -d)/arcadiaplus"
+          install -d "$pkg/DEBIAN" "$pkg/usr/lib/arcadiaplus" "$pkg/usr/bin" \
                      "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/512x512/apps"
-          cp -a build/linux/x64/release/bundle/. "$pkg/usr/lib/arcadia_plus/"
-          ln -s /usr/lib/arcadia_plus/arcadia_plus "$pkg/usr/bin/arcadia_plus"
-          cp assets/arcadia_plus.png "$pkg/usr/share/icons/hicolor/512x512/apps/arcadia_plus.png"
-          cat > "$pkg/usr/share/applications/arcadia_plus.desktop" <<'DESKTOP'
+          cp -a build/linux/x64/release/bundle/. "$pkg/usr/lib/arcadiaplus/"
+          ln -s /usr/lib/arcadiaplus/arcadiaplus "$pkg/usr/bin/arcadiaplus"
+          cp assets/arcadiaplus.png "$pkg/usr/share/icons/hicolor/512x512/apps/arcadiaplus.png"
+          cat > "$pkg/usr/share/applications/arcadiaplus.desktop" <<'DESKTOP'
           [Desktop Entry]
           Name=ArcadiaPlus
           Comment=Cross-platform proxy client built with Flutter and Rust
-          Exec=arcadia_plus
-          Icon=arcadia_plus
+          Exec=arcadiaplus
+          Icon=arcadiaplus
           Terminal=false
           Type=Application
           Categories=Network;Utility;
           DESKTOP
           cat > "$pkg/DEBIAN/control" <<CONTROL
-          Package: arcadia_plus
+          Package: arcadiaplus
           Version: $version
           Architecture: amd64
           Section: net

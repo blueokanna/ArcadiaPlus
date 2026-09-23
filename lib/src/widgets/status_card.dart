@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:arcadia_plus/src/rust/types.dart';
-import 'package:arcadia_plus/src/utils/responsive_utils.dart';
-import 'package:arcadia_plus/src/utils/animation_utils.dart';
-import 'package:arcadia_plus/src/utils/app_lifecycle.dart';
-import 'package:arcadia_plus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/rust/types.dart';
+import 'package:arcadiaplus/src/utils/responsive_utils.dart';
+import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
 class StatusCard extends StatefulWidget {
   final bool isRunning;
@@ -414,7 +414,7 @@ class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
     if (widget.isLoading) {
       return l10n?.startingService ?? 'Starting service...';
     } else if (widget.isRunning) {
-      return l10n?.arcadiaPlusRunning ?? 'ArcadiaPlus is running';
+      return l10n?.arcadiaplusRunning ?? 'ArcadiaPlus is running';
     } else {
       return l10n?.serviceNotRunning ?? 'Service not running';
     }

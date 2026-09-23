@@ -31,7 +31,7 @@ class ArcadiaPlusVpnService : VpnService() {
         private const val TAG = "ArcadiaPlusVpnService"
         const val ACTION_START = "com.blueokanna.arcadiaplus.START_VPN"
         const val ACTION_STOP = "com.blueokanna.arcadiaplus.STOP_VPN"
-        const val NOTIFICATION_CHANNEL_ID = "arcadia_plus_vpn"
+        const val NOTIFICATION_CHANNEL_ID = "arcadiaplus_vpn"
         const val NOTIFICATION_ID = 1
 
         private val _isRunning = AtomicBoolean(false)
@@ -88,7 +88,7 @@ class ArcadiaPlusVpnService : VpnService() {
             Log.d(TAG, "Primary ABI: ${Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown"}")
 
             try {
-                System.loadLibrary("rust_lib_arcadia_plus")
+                System.loadLibrary("rust_lib_arcadiaplus")
                 _libraryLoaded.set(true)
                 _libraryLoadError = null
                 Log.d(TAG, "=== Native library loaded successfully ===")
@@ -110,7 +110,7 @@ class ArcadiaPlusVpnService : VpnService() {
         /** Get detailed library loading information for diagnostics */
         fun getLibraryInfo(context: Context): Map<String, Any> {
             val nativeLibDir = context.applicationInfo.nativeLibraryDir
-            val libFile = java.io.File(nativeLibDir, "librust_lib_arcadia_plus.so")
+            val libFile = java.io.File(nativeLibDir, "librust_lib_arcadiaplus.so")
 
             Log.d(TAG, "=== Library Info ===")
             Log.d(TAG, "Native lib dir: $nativeLibDir")
@@ -459,7 +459,7 @@ class ArcadiaPlusVpnService : VpnService() {
                 // must stay free to answer the system's callbacks.
                 Thread(
                                 { startVpn() },
-                                "arcadia_plus-vpn-start",
+                                "arcadiaplus-vpn-start",
                         )
                         .start()
             }
