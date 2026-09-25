@@ -10,6 +10,7 @@ import 'package:arcadiaplus/src/services/config_converter.dart';
 import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
 import 'package:arcadiaplus/src/services/native_core_service.dart';
 import 'package:arcadiaplus/src/services/rule_provider_service.dart';
+import 'package:arcadiaplus/src/services/system_dns_service.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
@@ -294,6 +295,14 @@ class AppStateProvider extends ChangeNotifier {
   ) async {
     final warnings = <String>[];
     final dnsSettings = await StorageService.instance.getDnsSettings();
+    // The engine has no `append-system-dns` key, so the app-level switch is
+    // expressed by adding the platform's own resolvers to the list. Reading
+    // them is best-effort by design: an unsupported platform, a missing
+    // `/etc/resolv.conf`, or a `reg` that is not on PATH all yield an empty
+    // list rather than failing the profile load.
+    final systemDnsServers = generalSettings.appendSystemDns
+        ? await SystemDnsService.instance.read()
+        : const <String>[];
     final report = await RuleProviderService.instance.prepare(
       profileId,
       configContent,
@@ -304,6 +313,7 @@ class AppStateProvider extends ChangeNotifier {
       generalSettings: generalSettings,
       dnsSettings: dnsSettings,
       recursiveDnsAddress: _recursiveDnsAddress,
+      systemDnsServers: systemDnsServers,
       ruleProviderPaths: report.paths,
       onWarning: warnings.add,
     );

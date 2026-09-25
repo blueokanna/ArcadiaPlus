@@ -302,6 +302,53 @@ rules: []
     expect(dns['nameservers'], ['127.0.0.1:5353', '1.1.1.1']);
   });
 
+  test('appended platform resolvers follow the configured ones, once each', () {
+    const yaml = '''
+dns:
+  nameserver: [1.1.1.1]
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns =
+        jsonDecode(
+              ConfigConverter.convertClashYamlToJson(
+                yaml,
+                // `append system DNS` has no key of its own in the engine's
+                // config, so the setting is expressed by adding the platform's
+                // resolvers to this list. Order is the point: what the user
+                // configured is asked first.
+                systemDnsServers: const ['192.168.1.1', '1.1.1.1'],
+              ),
+            )['dns']
+            as Map;
+
+    expect(dns['nameservers'], ['1.1.1.1', '192.168.1.1']);
+  });
+
+  test('platform resolvers stay behind a local recursive resolver', () {
+    const yaml = '''
+dns:
+  nameserver: [1.1.1.1]
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns =
+        jsonDecode(
+              ConfigConverter.convertClashYamlToJson(
+                yaml,
+                recursiveDnsAddress: '127.0.0.1:5353',
+                systemDnsServers: const ['192.168.1.1'],
+              ),
+            )['dns']
+            as Map;
+
+    expect(dns['nameservers'], ['127.0.0.1:5353', '1.1.1.1', '192.168.1.1']);
+  });
+
   test('scalar dns entries survive as single-element lists', () {
     const yaml = '''
 dns:

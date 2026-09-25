@@ -142,7 +142,7 @@ Clear ownership boundaries matter more than adding macros, generics, or complex 
 
 ## Prerequisites
 
-- Flutter SDK (Dart `^3.12.0`; CI uses Flutter 3.47.2)
+- Flutter SDK (Dart `^3.12.0`, Flutter `>=3.44.0 <3.45.0`; CI and the release workflow pin 3.44.6)
 - Rust ≥ 1.88 (edition 2021; `rust-toolchain.toml` pins 1.97.0 so local and CI lint with the same compiler)
 - Android: Android SDK, NDK, and JDK 17
 - Windows: Visual Studio C++ toolchain, Wintun, and elevation
@@ -160,6 +160,12 @@ cd rust
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
+```
+
+`pubspec.lock` is valid for exactly one Flutter version line: the SDK pins the versions of the packages it ships (`test_api`, `matcher`, `vector_math`, `meta`, `intl`, ...). Resolving that lockfile with a different line does not error — it silently rewrites the lock for the line you ran, and the `flutter pub get --enforce-lockfile` step in CI then fails. Check that your local Flutter falls inside `environment.flutter` and that the lockfile is untouched before pushing:
+
+```bash
+flutter pub get --enforce-lockfile
 ```
 
 The Dart bindings are generated from `flutter_rust_bridge.yaml`; after changing Rust `api`/`types`, regenerate them:

@@ -4,6 +4,14 @@ import 'package:arcadiaplus/src/theme/app_shapes.dart';
 class AppTheme {
   static const String _fontFamily = 'Roboto';
 
+  /// Alpha of the interface's background layers while a wallpaper is showing.
+  ///
+  /// Translucent enough that the picture reads through, dense enough that text
+  /// keeps its contrast against whatever the picture happens to be there. A
+  /// surface that stayed opaque would hide the wallpaper completely, which is
+  /// the whole reason this exists.
+  static const double wallpaperSurfaceAlpha = 0.78;
+
   static TextStyle _textStyle({
     double? fontSize,
     FontWeight? fontWeight,
@@ -106,11 +114,39 @@ class AppTheme {
     return ColorScheme.fromSeed(seedColor: seedColor, brightness: brightness);
   }
 
-  // Create theme data for a specific theme
-  static ThemeData createTheme(String themeName, Brightness brightness) {
-    final colorScheme = _generateColorScheme(themeName, brightness);
-    return _buildThemeData(colorScheme, brightness);
+  /// The palette [themeName] resolves to in [brightness], for a preview.
+  ///
+  /// Cached because `ColorScheme.fromSeed` is HCT arithmetic, not a lookup: a
+  /// grid of ten themes would otherwise run it twenty times per rebuild just
+  /// to draw the swatches. The cache is bounded by the theme list, which is a
+  /// compile-time constant.
+  static ColorScheme previewScheme(String themeName, Brightness brightness) {
+    final key = '$themeName:${brightness.name}';
+    return _previewSchemes[key] ??= _generateColorScheme(themeName, brightness);
   }
+
+  static final Map<String, ColorScheme> _previewSchemes = {};
+
+  /// The built [ThemeData] for a named theme and brightness.
+  ///
+  /// Memoised for the same reason as [previewScheme], only more so: this builds
+  /// a colour scheme and twenty-odd sub-themes, and the app asks for both
+  /// brightnesses every time the locale or the theme mode changes. [ThemeData]
+  /// is immutable, so handing out the same instance is safe.
+  static ThemeData createTheme(String themeName, Brightness brightness) {
+    final key = '$themeName:${brightness.name}';
+    return _themes[key] ??= _buildThemeData(
+      _generateColorScheme(themeName, brightness),
+      brightness,
+    );
+  }
+
+  static final Map<String, ThemeData> _themes = {};
+
+  // Create theme data for a specific theme
+  //
+  // Implemented by the memoised [createTheme] above; this used to build the
+  // theme on every call, which is what the cache avoids.
 
   // Create dynamic theme from system colors
   static ThemeData createDynamicTheme(
@@ -121,6 +157,64 @@ class AppTheme {
       return _buildThemeData(dynamicColorScheme, brightness);
     }
     return createTheme(defaultTheme, brightness);
+  }
+
+  /// Returns [base] with its background layers made translucent, so a wallpaper
+  /// drawn behind the app shows through.
+  ///
+  /// Only the layers that sit *under* content are changed. Text, icons, and the
+  /// contrast between a container and what is written on it come from the
+  /// colour scheme and stay exactly as they were; what changes is that a card
+  /// is a veil over the picture instead of a lid on it.
+  ///
+  /// Memoised per base theme: the derivation runs on every rebuild of the
+  /// `MaterialApp` while a wallpaper is showing, and [ThemeData] is immutable,
+  /// so the result for one base theme is always the same. An [Expando] rather
+  /// than a map, so a theme nothing uses any more does not stay alive to keep
+  /// its entry alive with it.
+  static ThemeData withTranslucentSurfaces(ThemeData base) =>
+      _translucent[base] ??= _deriveTranslucent(base);
+
+  static final Expando<ThemeData> _translucent = Expando<ThemeData>(
+    'wallpaper surfaces',
+  );
+
+  static ThemeData _deriveTranslucent(ThemeData base) {
+    final scheme = base.colorScheme;
+    Color veil(Color color) => color.withValues(alpha: wallpaperSurfaceAlpha);
+
+    return base.copyWith(
+      // The page background itself is the wallpaper, so the scaffold stops
+      // painting over it.
+      scaffoldBackgroundColor: Colors.transparent,
+      canvasColor: Colors.transparent,
+      appBarTheme: base.appBarTheme.copyWith(
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+      ),
+      cardTheme: base.cardTheme.copyWith(
+        color: veil(scheme.surfaceContainerLow),
+      ),
+      dialogTheme: base.dialogTheme.copyWith(
+        backgroundColor: veil(scheme.surfaceContainerHigh),
+      ),
+      bottomSheetTheme: base.bottomSheetTheme.copyWith(
+        backgroundColor: veil(scheme.surfaceContainerLow),
+        modalBackgroundColor: veil(scheme.surfaceContainerLow),
+      ),
+      popupMenuTheme: base.popupMenuTheme.copyWith(
+        color: veil(scheme.surfaceContainerHigh),
+      ),
+      navigationBarTheme: base.navigationBarTheme.copyWith(
+        backgroundColor: Colors.transparent,
+      ),
+      extensions: [
+        ...base.extensions.values.where(
+          (extension) => extension is! WallpaperSurface,
+        ),
+        const WallpaperSurface(alpha: wallpaperSurfaceAlpha),
+      ],
+    );
   }
 
   // Build complete ThemeData from ColorScheme
@@ -660,4 +754,32 @@ class AppTheme {
   static const Color connectedColor = Color(0xFF146C2E);
   static const Color disconnectedColor = Color(0xFFBA1A1A);
   static const Color connectingColor = Color(0xFF7D5800);
+}
+
+/// Tells widgets that paint their own background how far their surface should
+/// be veiled while a wallpaper is showing.
+///
+/// A [ThemeExtension] rather than a flag threaded through constructors: the
+/// bottom navigation bar, for one, chooses its own colour, and it has to match
+/// what [AppTheme.withTranslucentSurfaces] did to the cards and app bars. This
+/// is the framework's own mechanism for a theme to hand a value to a widget
+/// without either of them knowing the other.
+class WallpaperSurface extends ThemeExtension<WallpaperSurface> {
+  const WallpaperSurface({required this.alpha});
+
+  /// Alpha to apply to a surface colour, 0 = nothing drawn, 1 = opaque.
+  final double alpha;
+
+  /// [color] as a veil over the wallpaper.
+  Color veil(Color color) => color.withValues(alpha: alpha);
+
+  @override
+  WallpaperSurface copyWith({double? alpha}) =>
+      WallpaperSurface(alpha: alpha ?? this.alpha);
+
+  @override
+  WallpaperSurface lerp(ThemeExtension<WallpaperSurface>? other, double t) {
+    if (other is! WallpaperSurface) return this;
+    return WallpaperSurface(alpha: alpha + (other.alpha - alpha) * t);
+  }
 }

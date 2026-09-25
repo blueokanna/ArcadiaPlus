@@ -33,12 +33,18 @@ class AppLocalizations {
       ..._updateStrings['de']!,
       ..._networkStrings['de']!,
       ..._aboutStrings['de']!,
+      ..._dnsScreenStrings['de']!,
+      ..._wallpaperStrings['de']!,
+      ..._settingsActionStrings['de']!,
     },
     'en': {
       ..._enStrings,
       ..._updateStrings['en']!,
       ..._networkStrings['en']!,
       ..._aboutStrings['en']!,
+      ..._dnsScreenStrings['en']!,
+      ..._wallpaperStrings['en']!,
+      ..._settingsActionStrings['en']!,
     },
     'es': {
       ..._esStrings,
@@ -46,6 +52,9 @@ class AppLocalizations {
       ..._updateStrings['es']!,
       ..._networkStrings['es']!,
       ..._aboutStrings['es']!,
+      ..._dnsScreenStrings['es']!,
+      ..._wallpaperStrings['es']!,
+      ..._settingsActionStrings['es']!,
     },
     'fr': {
       ..._frStrings,
@@ -53,6 +62,9 @@ class AppLocalizations {
       ..._updateStrings['fr']!,
       ..._networkStrings['fr']!,
       ..._aboutStrings['fr']!,
+      ..._dnsScreenStrings['fr']!,
+      ..._wallpaperStrings['fr']!,
+      ..._settingsActionStrings['fr']!,
     },
     'it': {
       ..._itStrings,
@@ -60,6 +72,9 @@ class AppLocalizations {
       ..._updateStrings['it']!,
       ..._networkStrings['it']!,
       ..._aboutStrings['it']!,
+      ..._dnsScreenStrings['it']!,
+      ..._wallpaperStrings['it']!,
+      ..._settingsActionStrings['it']!,
     },
     'ja': {
       ..._jaStrings,
@@ -67,6 +82,9 @@ class AppLocalizations {
       ..._updateStrings['ja']!,
       ..._networkStrings['ja']!,
       ..._aboutStrings['ja']!,
+      ..._dnsScreenStrings['ja']!,
+      ..._wallpaperStrings['ja']!,
+      ..._settingsActionStrings['ja']!,
     },
     'ko': {
       ..._koStrings,
@@ -74,6 +92,9 @@ class AppLocalizations {
       ..._updateStrings['ko']!,
       ..._networkStrings['ko']!,
       ..._aboutStrings['ko']!,
+      ..._dnsScreenStrings['ko']!,
+      ..._wallpaperStrings['ko']!,
+      ..._settingsActionStrings['ko']!,
     },
     'pt': {
       ..._ptStrings,
@@ -81,6 +102,9 @@ class AppLocalizations {
       ..._updateStrings['pt']!,
       ..._networkStrings['pt']!,
       ..._aboutStrings['pt']!,
+      ..._dnsScreenStrings['pt']!,
+      ..._wallpaperStrings['pt']!,
+      ..._settingsActionStrings['pt']!,
     },
     'ru': {
       ..._ruStrings,
@@ -88,12 +112,18 @@ class AppLocalizations {
       ..._updateStrings['ru']!,
       ..._networkStrings['ru']!,
       ..._aboutStrings['ru']!,
+      ..._dnsScreenStrings['ru']!,
+      ..._wallpaperStrings['ru']!,
+      ..._settingsActionStrings['ru']!,
     },
     'zh_CN': {
       ..._zhCNStrings,
       ..._updateStrings['zh_CN']!,
       ..._networkStrings['zh_CN']!,
       ..._aboutStrings['zh_CN']!,
+      ..._dnsScreenStrings['zh_CN']!,
+      ..._wallpaperStrings['zh_CN']!,
+      ..._settingsActionStrings['zh_CN']!,
     },
     'zh_TW': {
       ..._zhTWStrings,
@@ -101,6 +131,9 @@ class AppLocalizations {
       ..._updateStrings['zh_TW']!,
       ..._networkStrings['zh_TW']!,
       ..._aboutStrings['zh_TW']!,
+      ..._dnsScreenStrings['zh_TW']!,
+      ..._wallpaperStrings['zh_TW']!,
+      ..._settingsActionStrings['zh_TW']!,
     },
   };
 
@@ -482,7 +515,6 @@ class AppLocalizations {
   String get speedTestUrl => _getLocalizedString('speedTestUrl');
   String get unifiedDelay => _getLocalizedString('unifiedDelay');
   String get unifiedDelayDesc => _getLocalizedString('unifiedDelayDesc');
-  String get dnsRelated => _getLocalizedString('dnsRelated');
   String get appendSystemDns => _getLocalizedString('appendSystemDns');
   String get appendSystemDnsDesc => _getLocalizedString('appendSystemDnsDesc');
   String get processRelated => _getLocalizedString('processRelated');
@@ -496,6 +528,7 @@ class AppLocalizations {
   String get overrideDnsDesc => _getLocalizedString('overrideDnsDesc');
   String get dnsStatus => _getLocalizedString('dnsStatus');
   String get listenAddress => _getLocalizedString('listenAddress');
+  String get listenAddressDesc => _getLocalizedString('listenAddressDesc');
   String get hostsSettings => _getLocalizedString('hostsSettings');
   String get advancedSettings => _getLocalizedString('advancedSettings');
   String get dnsMode => _getLocalizedString('dnsMode');
@@ -507,6 +540,53 @@ class AppLocalizations {
   String get nameservers => _getLocalizedString('nameservers');
   String get addNewItem => _getLocalizedString('addNewItem');
   String get noDataYet => _getLocalizedString('noDataYet');
+  String get dnsBehaviour => _getLocalizedString('dnsBehaviour');
+  String get dnsOverrideOffNotice =>
+      _getLocalizedString('dnsOverrideOffNotice');
+  String get recursiveResolver => _getLocalizedString('recursiveResolver');
+  String get recursiveResolverDesc =>
+      _getLocalizedString('recursiveResolverDesc');
+  String get appendSystemDnsUnsupported =>
+      _getLocalizedString('appendSystemDnsUnsupported');
+  String get dnsQuickAdd => _getLocalizedString('dnsQuickAdd');
+  String get dnsPresetRecommended =>
+      _getLocalizedString('dnsPresetRecommended');
+  String get dnsPresetPrivacy => _getLocalizedString('dnsPresetPrivacy');
+  String get dnsPresetFamily => _getLocalizedString('dnsPresetFamily');
+  String get dnsPresetDomestic => _getLocalizedString('dnsPresetDomestic');
+  String get dnsPresetAdded => _getLocalizedString('dnsPresetAdded');
+  String get dnsUpstreamHint => _getLocalizedString('dnsUpstreamHint');
+  String get dnsUpstreamUnknown => _getLocalizedString('dnsUpstreamUnknown');
+
+  // Wallpaper and appearance
+  String get wallpaper => _getLocalizedString('wallpaper');
+  String get wallpaperDesc => _getLocalizedString('wallpaperDesc');
+  String get wallpaperChoose => _getLocalizedString('wallpaperChoose');
+  String get wallpaperChange => _getLocalizedString('wallpaperChange');
+  String get wallpaperRemove => _getLocalizedString('wallpaperRemove');
+  String get wallpaperPreview => _getLocalizedString('wallpaperPreview');
+  String get wallpaperBlur => _getLocalizedString('wallpaperBlur');
+  String get wallpaperBlurDesc => _getLocalizedString('wallpaperBlurDesc');
+  String get wallpaperDim => _getLocalizedString('wallpaperDim');
+  String get wallpaperDimDesc => _getLocalizedString('wallpaperDimDesc');
+  String get wallpaperScreenTitle =>
+      _getLocalizedString('wallpaperScreenTitle');
+  String get wallpaperUnsupported =>
+      _getLocalizedString('wallpaperUnsupported');
+  String get wallpaperFailed => _getLocalizedString('wallpaperFailed');
+  String get wallpaperRemoveConfirm =>
+      _getLocalizedString('wallpaperRemoveConfirm');
+
+  // Settings actions
+  String get autoSystemProxy => _getLocalizedString('autoSystemProxy');
+  String get autoSystemProxyDesc => _getLocalizedString('autoSystemProxyDesc');
+  String get restartServiceConfirm =>
+      _getLocalizedString('restartServiceConfirm');
+  String get resetSettingsConfirm =>
+      _getLocalizedString('resetSettingsConfirm');
+  String get resetSettingsDone => _getLocalizedString('resetSettingsDone');
+  String get reset => _getLocalizedString('reset');
+  String get appearancePreview => _getLocalizedString('appearancePreview');
   String get ruleModeDesc => _getLocalizedString('ruleModeDesc');
   String get globalModeDesc => _getLocalizedString('globalModeDesc');
   String get vpnProxy => _getLocalizedString('vpnProxy');
@@ -1782,7 +1862,6 @@ const Map<String, String> _enStrings = {
   'speedTestUrl': 'Speed Test URL',
   'unifiedDelay': 'Unified Delay',
   'unifiedDelayDesc': 'Use unified delay calculation',
-  'dnsRelated': 'DNS Related',
   'appendSystemDns': 'Append System DNS',
   'appendSystemDnsDesc': 'Append system DNS to nameserver',
   'processRelated': 'Process Related',
@@ -4059,7 +4138,6 @@ const Map<String, String> _zhCNStrings = {
   'speedTestUrl': '测速 URL',
   'unifiedDelay': '统一延迟',
   'unifiedDelayDesc': '使用统一的延迟计算方式',
-  'dnsRelated': 'DNS 相关',
   'appendSystemDns': '追加系统 DNS',
   'appendSystemDnsDesc': '将系统 DNS 追加到 nameserver',
   'processRelated': '进程相关',
@@ -4380,7 +4458,6 @@ const Map<String, String> _deAdvancedStrings = {
   'speedTestUrl': 'URL für Geschwindigkeitstest',
   'unifiedDelay': 'Einheitliche Verzögerung',
   'unifiedDelayDesc': 'Einheitliche Verzögerungsberechnung verwenden',
-  'dnsRelated': 'DNS-bezogen',
   'appendSystemDns': 'System-DNS anhängen',
   'appendSystemDnsDesc': 'System-DNS an die Nameserver anhängen',
   'processRelated': 'Prozessbezogen',
@@ -4415,7 +4492,6 @@ const Map<String, String> _esAdvancedStrings = {
   'speedTestUrl': 'URL de prueba de velocidad',
   'unifiedDelay': 'Latencia unificada',
   'unifiedDelayDesc': 'Usar el cálculo de latencia unificada',
-  'dnsRelated': 'Opciones de DNS',
   'appendSystemDns': 'Añadir DNS del sistema',
   'appendSystemDnsDesc':
       'Añadir el DNS del sistema a los servidores de nombres',
@@ -4451,7 +4527,6 @@ const Map<String, String> _frAdvancedStrings = {
   'speedTestUrl': 'URL du test de débit',
   'unifiedDelay': 'Latence unifiée',
   'unifiedDelayDesc': 'Utiliser le calcul de latence unifiée',
-  'dnsRelated': 'Options DNS',
   'appendSystemDns': 'Ajouter le DNS système',
   'appendSystemDnsDesc': 'Ajouter le DNS système aux serveurs de noms',
   'processRelated': 'Options des processus',
@@ -4487,7 +4562,6 @@ const Map<String, String> _itAdvancedStrings = {
   'speedTestUrl': 'URL del test di velocità',
   'unifiedDelay': 'Latenza unificata',
   'unifiedDelayDesc': 'Usa il calcolo della latenza unificata',
-  'dnsRelated': 'Opzioni DNS',
   'appendSystemDns': 'Aggiungi DNS di sistema',
   'appendSystemDnsDesc': 'Aggiungi il DNS di sistema ai server dei nomi',
   'processRelated': 'Opzioni dei processi',
@@ -4522,7 +4596,6 @@ const Map<String, String> _jaAdvancedStrings = {
   'speedTestUrl': '速度テスト URL',
   'unifiedDelay': '統一遅延',
   'unifiedDelayDesc': '統一された遅延計算を使用する',
-  'dnsRelated': 'DNS 関連',
   'appendSystemDns': 'システム DNS を追加',
   'appendSystemDnsDesc': 'システム DNS をネームサーバーに追加する',
   'processRelated': 'プロセス関連',
@@ -4557,7 +4630,6 @@ const Map<String, String> _koAdvancedStrings = {
   'speedTestUrl': '속도 테스트 URL',
   'unifiedDelay': '통합 지연 시간',
   'unifiedDelayDesc': '통합 지연 시간 계산 사용',
-  'dnsRelated': 'DNS 관련',
   'appendSystemDns': '시스템 DNS 추가',
   'appendSystemDnsDesc': '시스템 DNS를 네임 서버에 추가',
   'processRelated': '프로세스 관련',
@@ -4592,7 +4664,6 @@ const Map<String, String> _ptAdvancedStrings = {
   'speedTestUrl': 'URL do teste de velocidade',
   'unifiedDelay': 'Latência unificada',
   'unifiedDelayDesc': 'Usar o cálculo de latência unificada',
-  'dnsRelated': 'Opções de DNS',
   'appendSystemDns': 'Adicionar DNS do sistema',
   'appendSystemDnsDesc': 'Adicionar o DNS do sistema aos servidores de nomes',
   'processRelated': 'Opções de processos',
@@ -4627,7 +4698,6 @@ const Map<String, String> _ruAdvancedStrings = {
   'speedTestUrl': 'URL для проверки скорости',
   'unifiedDelay': 'Унифицированная задержка',
   'unifiedDelayDesc': 'Использовать единый расчёт задержки',
-  'dnsRelated': 'Параметры DNS',
   'appendSystemDns': 'Добавить системный DNS',
   'appendSystemDnsDesc': 'Добавить системный DNS к серверам имён',
   'processRelated': 'Параметры процессов',
@@ -4662,7 +4732,6 @@ const Map<String, String> _zhTWAdvancedStrings = {
   'speedTestUrl': '測速 URL',
   'unifiedDelay': '統一延遲',
   'unifiedDelayDesc': '使用統一的延遲計算方式',
-  'dnsRelated': 'DNS 相關',
   'appendSystemDns': '附加系統 DNS',
   'appendSystemDnsDesc': '將系統 DNS 附加至名稱伺服器',
   'processRelated': '程序相關',
@@ -4685,4 +4754,617 @@ const Map<String, String> _zhTWAdvancedStrings = {
   'nameservers': '名稱伺服器',
   'addNewItem': '新增項目...',
   'noDataYet': '尚無資料',
+};
+
+// =============================================================================
+// DNS screen, wallpaper, and settings actions
+//
+// Three feature-area maps rather than three more entries in every base map:
+// the same shape as `_networkStrings` above, spread last into
+// `_localizedValues` so a key here wins, with every locale carrying the same
+// key set as `en` because `missingTranslationKeys` compares against it.
+//
+// Protocol badges (`DoH`, `DoT`, `UDP`) and the address syntax samples stay in
+// one spelling for every locale on purpose: they are identifiers, not prose.
+// =============================================================================
+const Map<String, Map<String, String>> _dnsScreenStrings = {
+  'de': {
+    'dnsBehaviour': 'DNS-Verhalten',
+    'dnsOverrideOffNotice':
+        '„DNS überschreiben“ ist aus, daher nutzt die Engine den DNS-Abschnitt '
+        'des aktiven Profils. Alles darunter gilt, sobald der Schalter an ist.',
+    'recursiveResolver': 'Rekursiver Resolver',
+    'recursiveResolverDesc':
+        'Anfragen lokal von der DNS-Wurzel beantworten (RecurseX), statt sie '
+        'an die Nameserver oben weiterzuleiten',
+    'appendSystemDnsUnsupported':
+        'Diese Plattform gibt ihre Resolver nicht an Anwendungen weiter; die '
+        'Einstellung hat hier keine Wirkung',
+    'dnsQuickAdd': 'Schnell hinzufügen',
+    'dnsPresetRecommended': 'Empfohlen',
+    'dnsPresetPrivacy': 'Datenschutz',
+    'dnsPresetFamily': 'Familienfilter',
+    'dnsPresetDomestic': 'Festlandchina',
+    'listenAddressDesc':
+        'Adresse, auf der der DNS-Dienst der Engine lauscht; TUN-Abfragen '
+        'werden im Tunnel beantwortet.',
+    'dnsPresetAdded': 'Bereits in der Liste',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown':
+        'Unbekanntes Format: wird unverändert gespeichert und an die Engine '
+        'übergeben, die entscheidet, was sie akzeptiert.',
+  },
+  'en': {
+    'dnsBehaviour': 'DNS Behaviour',
+    'dnsOverrideOffNotice':
+        'Override DNS is off, so the engine uses the DNS section of the active '
+        'profile. Everything below applies once the switch is on.',
+    'recursiveResolver': 'Recursive Resolver',
+    'recursiveResolverDesc':
+        'Answer from the DNS root on this machine (RecurseX) instead of '
+        'forwarding to the nameservers above',
+    'appendSystemDnsUnsupported':
+        'This platform does not expose its resolvers to applications, so this '
+        'setting has no effect here',
+    'dnsQuickAdd': 'Quick add',
+    'dnsPresetRecommended': 'Recommended',
+    'dnsPresetPrivacy': 'Privacy',
+    'dnsPresetFamily': 'Family filter',
+    'dnsPresetDomestic': 'Mainland China',
+    'listenAddressDesc':
+        'Where the engine’s own DNS service listens. Queries captured by TUN '
+        'are answered inside the tunnel, not here.',
+    'dnsPresetAdded': 'Already in the list',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown':
+        'Unrecognised format: kept exactly as typed and passed to the engine, '
+        'which has the final say on what it accepts.',
+  },
+  'es': {
+    'dnsBehaviour': 'Comportamiento de DNS',
+    'dnsOverrideOffNotice':
+        'La sustitución de DNS está desactivada, así que el motor usa la '
+        'sección DNS del perfil activo. Todo lo de abajo se aplica al activar '
+        'el interruptor.',
+    'recursiveResolver': 'Resolutor recursivo',
+    'recursiveResolverDesc':
+        'Responder desde la raíz DNS en este equipo (RecurseX) en lugar de '
+        'reenviar a los servidores de nombres de arriba',
+    'appendSystemDnsUnsupported':
+        'Esta plataforma no expone sus resolutores a las aplicaciones, así que '
+        'esta opción no tiene efecto aquí',
+    'dnsQuickAdd': 'Añadir rápido',
+    'dnsPresetRecommended': 'Recomendado',
+    'dnsPresetPrivacy': 'Privacidad',
+    'dnsPresetFamily': 'Filtro familiar',
+    'dnsPresetDomestic': 'China continental',
+    'listenAddressDesc':
+        'Dirección donde escucha el servicio DNS del motor. Las consultas de '
+        'TUN se responden dentro del túnel, no aquí.',
+    'dnsPresetAdded': 'Ya está en la lista',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown':
+        'Formato no reconocido: se guarda tal cual y se entrega al motor, que '
+        'decide qué acepta.',
+  },
+  'fr': {
+    'dnsBehaviour': 'Comportement DNS',
+    'dnsOverrideOffNotice':
+        'Le remplacement du DNS est désactivé : le moteur utilise la section '
+        'DNS du profil actif. Tout ce qui suit s’applique dès que '
+        'l’interrupteur est activé.',
+    'recursiveResolver': 'Résolveur récursif',
+    'recursiveResolverDesc':
+        'Répondre depuis la racine DNS sur cette machine (RecurseX) au lieu de '
+        'transmettre aux serveurs de noms ci-dessus',
+    'appendSystemDnsUnsupported':
+        'Cette plateforme n’expose pas ses résolveurs aux applications : ce '
+        'réglage reste sans effet ici',
+    'dnsQuickAdd': 'Ajout rapide',
+    'dnsPresetRecommended': 'Recommandé',
+    'dnsPresetPrivacy': 'Confidentialité',
+    'dnsPresetFamily': 'Filtrage familial',
+    'dnsPresetDomestic': 'Chine continentale',
+    'listenAddressDesc':
+        'Adresse d’écoute du service DNS du moteur. Les requêtes interceptées '
+        'par TUN reçoivent leur réponse dans le tunnel, pas ici.',
+    'dnsPresetAdded': 'Déjà dans la liste',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown':
+        'Format non reconnu : conservé tel quel et transmis au moteur, qui '
+        'décide de ce qu’il accepte.',
+  },
+  'it': {
+    'dnsBehaviour': 'Comportamento DNS',
+    'dnsOverrideOffNotice':
+        'La sostituzione del DNS è disattivata, quindi il motore usa la '
+        'sezione DNS del profilo attivo. Tutto ciò che segue vale quando '
+        'l’interruttore è attivo.',
+    'recursiveResolver': 'Resolver ricorsivo',
+    'recursiveResolverDesc':
+        'Rispondere dalla radice DNS su questa macchina (RecurseX) invece di '
+        'inoltrare ai server dei nomi qui sopra',
+    'appendSystemDnsUnsupported':
+        'Questa piattaforma non espone i propri resolver alle applicazioni, '
+        'quindi l’opzione qui non ha effetto',
+    'dnsQuickAdd': 'Aggiunta rapida',
+    'dnsPresetRecommended': 'Consigliati',
+    'dnsPresetPrivacy': 'Privacy',
+    'dnsPresetFamily': 'Filtro famiglia',
+    'dnsPresetDomestic': 'Cina continentale',
+    'listenAddressDesc':
+        'Indirizzo su cui resta in ascolto il servizio DNS del motore. Le '
+        'query catturate da TUN ricevono risposta nel tunnel, non qui.',
+    'dnsPresetAdded': 'Già nell’elenco',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown':
+        'Formato non riconosciuto: viene salvato così com’è e passato al '
+        'motore, che decide cosa accettare.',
+  },
+  'ja': {
+    'dnsBehaviour': 'DNS の動作',
+    'dnsOverrideOffNotice':
+        'DNS の上書きが無効のため、エンジンは有効なプロファイルの DNS '
+        'セクションを使用します。以下はスイッチを有効にした時点で適用されます。',
+    'recursiveResolver': '再帰リゾルバー',
+    'recursiveResolverDesc':
+        '上のネームサーバーへ転送せず、この端末で DNS ルートから解決します'
+        '（RecurseX）',
+    'appendSystemDnsUnsupported': 'このプラットフォームはリゾルバーをアプリに公開しないため、この設定は効果がありません',
+    'dnsQuickAdd': 'クイック追加',
+    'dnsPresetRecommended': 'おすすめ',
+    'dnsPresetPrivacy': 'プライバシー',
+    'dnsPresetFamily': 'ファミリーフィルター',
+    'dnsPresetDomestic': '中国本土',
+    'listenAddressDesc':
+        'エンジン自身の DNS サービスが待ち受けるアドレスです。TUN が捕捉したクエリはトンネル内で応答します。',
+    'dnsPresetAdded': 'すでに追加済み',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown': '形式を判別できません。入力どおりに保存してエンジンに渡し、採用可否はエンジンが判断します。',
+  },
+  'ko': {
+    'dnsBehaviour': 'DNS 동작',
+    'dnsOverrideOffNotice':
+        'DNS 재정의가 꺼져 있어 엔진은 활성 프로필의 DNS 섹션을 사용합니다. '
+        '아래 설정은 스위치를 켠 뒤에 적용됩니다.',
+    'recursiveResolver': '재귀 리졸버',
+    'recursiveResolverDesc':
+        '위 네임 서버로 전달하지 않고 이 기기에서 DNS 루트부터 직접 '
+        '조회합니다(RecurseX)',
+    'appendSystemDnsUnsupported': '이 플랫폼은 리졸버를 앱에 공개하지 않으므로 이 설정은 아무 효과가 없습니다',
+    'dnsQuickAdd': '빠른 추가',
+    'dnsPresetRecommended': '추천',
+    'dnsPresetPrivacy': '개인정보 보호',
+    'dnsPresetFamily': '자녀 보호 필터',
+    'dnsPresetDomestic': '중국 본토',
+    'listenAddressDesc':
+        '엔진 자체 DNS 서비스가 수신 대기하는 주소입니다. TUN이 가로챈 쿼리는 터널 안에서 응답합니다.',
+    'dnsPresetAdded': '이미 목록에 있음',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown':
+        '형식을 인식하지 못했습니다. 입력한 그대로 저장해 엔진에 전달하며, 허용 여부는 엔진이 판단합니다.',
+  },
+  'pt': {
+    'dnsBehaviour': 'Comportamento do DNS',
+    'dnsOverrideOffNotice':
+        'A substituição de DNS está desativada, por isso o motor usa a secção '
+        'DNS do perfil ativo. Tudo o que está abaixo passa a valer quando a '
+        'chave é ligada.',
+    'recursiveResolver': 'Resolvedor recursivo',
+    'recursiveResolverDesc':
+        'Responder a partir da raiz do DNS nesta máquina (RecurseX) em vez de '
+        'encaminhar para os servidores de nomes acima',
+    'appendSystemDnsUnsupported':
+        'Esta plataforma não expõe os seus resolvedores às aplicações, por isso '
+        'esta opção não tem efeito aqui',
+    'dnsQuickAdd': 'Adição rápida',
+    'dnsPresetRecommended': 'Recomendado',
+    'dnsPresetPrivacy': 'Privacidade',
+    'dnsPresetFamily': 'Filtro familiar',
+    'dnsPresetDomestic': 'China continental',
+    'listenAddressDesc':
+        'Endereço onde o serviço DNS do motor escuta. Os pedidos capturados '
+        'pelo TUN são respondidos dentro do túnel, não aqui.',
+    'dnsPresetAdded': 'Já está na lista',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown':
+        'Formato não reconhecido: é guardado tal como escrito e entregue ao '
+        'motor, que decide o que aceita.',
+  },
+  'ru': {
+    'dnsBehaviour': 'Поведение DNS',
+    'dnsOverrideOffNotice':
+        'Замена DNS выключена, поэтому движок использует раздел DNS активного '
+        'профиля. Всё ниже вступит в силу после включения переключателя.',
+    'recursiveResolver': 'Рекурсивный резолвер',
+    'recursiveResolverDesc':
+        'Отвечать от корня DNS на этом компьютере (RecurseX), а не '
+        'пересылать запросы на серверы имён выше',
+    'appendSystemDnsUnsupported':
+        'Эта платформа не предоставляет свои резолверы приложениям, поэтому '
+        'здесь настройка ни на что не влияет',
+    'dnsQuickAdd': 'Быстрое добавление',
+    'dnsPresetRecommended': 'Рекомендуемые',
+    'dnsPresetPrivacy': 'Приватность',
+    'dnsPresetFamily': 'Семейный фильтр',
+    'dnsPresetDomestic': 'Материковый Китай',
+    'listenAddressDesc':
+        'Адрес, на котором слушает DNS-служба движка. Запросы, перехваченные '
+        'TUN, обрабатываются внутри туннеля, а не здесь.',
+    'dnsPresetAdded': 'Уже в списке',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown':
+        'Формат не распознан: значение сохраняется как есть и передаётся '
+        'движку — он решает, что принимает.',
+  },
+  'zh_CN': {
+    'dnsBehaviour': 'DNS 行为',
+    'dnsOverrideOffNotice': '“覆盖 DNS” 关闭时，引擎使用当前订阅里的 DNS 段；开关打开后，下面的设置才会生效。',
+    'recursiveResolver': '本机递归解析',
+    'recursiveResolverDesc': '不转发给上面的服务器，直接在本机从 DNS 根开始解析（RecurseX）',
+    'appendSystemDnsUnsupported': '该平台不向应用暴露系统解析器，此开关在这里不会生效',
+    'dnsQuickAdd': '快捷添加',
+    'dnsPresetRecommended': '推荐',
+    'dnsPresetPrivacy': '隐私',
+    'dnsPresetFamily': '家庭过滤',
+    'dnsPresetDomestic': '中国大陆',
+    'listenAddressDesc': '引擎自带 DNS 服务的监听地址；被 TUN 截获的查询由隧道内部应答，不走这个地址。',
+    'dnsPresetAdded': '已在列表中',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown': '格式无法识别：按原样保存并交给引擎，由引擎判断是否接受。',
+  },
+  'zh_TW': {
+    'dnsBehaviour': 'DNS 行為',
+    'dnsOverrideOffNotice': '「覆寫 DNS」關閉時，引擎使用目前訂閱的 DNS 區段；開關開啟後，下方設定才會生效。',
+    'recursiveResolver': '本機遞迴解析',
+    'recursiveResolverDesc': '不轉發給上方伺服器，直接在本機從 DNS 根開始解析（RecurseX）',
+    'appendSystemDnsUnsupported': '此平台不向應用程式公開系統解析器，這個開關在這裡不會生效',
+    'dnsQuickAdd': '快速新增',
+    'dnsPresetRecommended': '推薦',
+    'dnsPresetPrivacy': '隱私',
+    'dnsPresetFamily': '家庭過濾',
+    'dnsPresetDomestic': '中國大陸',
+    'listenAddressDesc': '引擎內建 DNS 服務的監聽位址；被 TUN 攔截的查詢由通道內部回應，不走這個位址。',
+    'dnsPresetAdded': '已在清單中',
+    'dnsUpstreamHint':
+        '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
+    'dnsUpstreamUnknown': '格式無法識別：依原樣保存並交給引擎，由引擎判斷是否接受。',
+  },
+};
+
+const Map<String, Map<String, String>> _wallpaperStrings = {
+  'de': {
+    'wallpaper': 'Hintergrundbild',
+    'wallpaperDesc': 'Ein Bild hinter der Oberfläche anzeigen',
+    'wallpaperChoose': 'Bild auswählen',
+    'wallpaperChange': 'Bild wechseln',
+    'wallpaperRemove': 'Hintergrundbild entfernen',
+    'wallpaperPreview': 'Vorschau',
+    'wallpaperBlur': 'Weichzeichnen',
+    'wallpaperBlurDesc': 'Gaußscher Weichzeichner über dem Bild',
+    'wallpaperDim': 'Abdunkeln',
+    'wallpaperDimDesc': 'Dunkelt das Bild ab, damit Text lesbar bleibt',
+    'wallpaperScreenTitle': 'Hintergrundbild und Darstellung',
+    'wallpaperUnsupported':
+        'Hintergrundbilder werden auf dieser Plattform nicht unterstützt',
+    'wallpaperFailed':
+        'Das Bild konnte nicht gelesen werden. Bitte eine andere Datei wählen.',
+    'wallpaperRemoveConfirm':
+        'Die gespeicherte Kopie des Bildes wird gelöscht. Die von dir gewählte '
+        'Datei bleibt, wo sie ist.',
+  },
+  'en': {
+    'wallpaper': 'Wallpaper',
+    'wallpaperDesc': 'Show a picture behind the interface',
+    'wallpaperChoose': 'Choose image',
+    'wallpaperChange': 'Change image',
+    'wallpaperRemove': 'Remove wallpaper',
+    'wallpaperPreview': 'Preview',
+    'wallpaperBlur': 'Blur',
+    'wallpaperBlurDesc': 'Gaussian blur applied to the picture',
+    'wallpaperDim': 'Dim',
+    'wallpaperDimDesc': 'Darkens the picture so text stays readable',
+    'wallpaperScreenTitle': 'Wallpaper and appearance',
+    'wallpaperUnsupported': 'Wallpaper is not supported on this platform',
+    'wallpaperFailed': 'That image could not be read. Pick another file.',
+    'wallpaperRemoveConfirm':
+        'The app’s stored copy of the picture is deleted. The file you picked '
+        'is left where it is.',
+  },
+  'es': {
+    'wallpaper': 'Fondo de pantalla',
+    'wallpaperDesc': 'Mostrar una imagen detrás de la interfaz',
+    'wallpaperChoose': 'Elegir imagen',
+    'wallpaperChange': 'Cambiar imagen',
+    'wallpaperRemove': 'Quitar fondo',
+    'wallpaperPreview': 'Vista previa',
+    'wallpaperBlur': 'Desenfoque',
+    'wallpaperBlurDesc': 'Desenfoque gaussiano aplicado a la imagen',
+    'wallpaperDim': 'Oscurecer',
+    'wallpaperDimDesc': 'Oscurece la imagen para que el texto siga legible',
+    'wallpaperScreenTitle': 'Fondo y apariencia',
+    'wallpaperUnsupported': 'Esta plataforma no admite fondos de pantalla',
+    'wallpaperFailed': 'No se pudo leer la imagen. Elige otro archivo.',
+    'wallpaperRemoveConfirm':
+        'Se elimina la copia guardada de la imagen. El archivo que elegiste no '
+        'se toca.',
+  },
+  'fr': {
+    'wallpaper': 'Fond d’écran',
+    'wallpaperDesc': 'Afficher une image derrière l’interface',
+    'wallpaperChoose': 'Choisir une image',
+    'wallpaperChange': 'Changer d’image',
+    'wallpaperRemove': 'Retirer le fond d’écran',
+    'wallpaperPreview': 'Aperçu',
+    'wallpaperBlur': 'Flou',
+    'wallpaperBlurDesc': 'Flou gaussien appliqué à l’image',
+    'wallpaperDim': 'Assombrir',
+    'wallpaperDimDesc': 'Assombrit l’image pour garder le texte lisible',
+    'wallpaperScreenTitle': 'Fond d’écran et apparence',
+    'wallpaperUnsupported':
+        'Les fonds d’écran ne sont pas pris en charge sur cette plateforme',
+    'wallpaperFailed':
+        'Impossible de lire l’image. Choisissez un autre fichier.',
+    'wallpaperRemoveConfirm':
+        'La copie enregistrée de l’image est supprimée. Le fichier que vous '
+        'avez choisi reste où il est.',
+  },
+  'it': {
+    'wallpaper': 'Sfondo',
+    'wallpaperDesc': 'Mostra un’immagine dietro l’interfaccia',
+    'wallpaperChoose': 'Scegli immagine',
+    'wallpaperChange': 'Cambia immagine',
+    'wallpaperRemove': 'Rimuovi sfondo',
+    'wallpaperPreview': 'Anteprima',
+    'wallpaperBlur': 'Sfocatura',
+    'wallpaperBlurDesc': 'Sfocatura gaussiana applicata all’immagine',
+    'wallpaperDim': 'Scurisci',
+    'wallpaperDimDesc': 'Scurisce l’immagine per mantenere leggibile il testo',
+    'wallpaperScreenTitle': 'Sfondo e aspetto',
+    'wallpaperUnsupported':
+        'Gli sfondi non sono supportati su questa piattaforma',
+    'wallpaperFailed': 'Impossibile leggere l’immagine. Scegli un altro file.',
+    'wallpaperRemoveConfirm':
+        'La copia salvata dell’immagine viene eliminata. Il file che hai scelto '
+        'resta dov’è.',
+  },
+  'ja': {
+    'wallpaper': '壁紙',
+    'wallpaperDesc': '画面の背景に画像を表示します',
+    'wallpaperChoose': '画像を選択',
+    'wallpaperChange': '画像を変更',
+    'wallpaperRemove': '壁紙を削除',
+    'wallpaperPreview': 'プレビュー',
+    'wallpaperBlur': 'ぼかし',
+    'wallpaperBlurDesc': '画像にガウスぼかしを適用します',
+    'wallpaperDim': '暗さ',
+    'wallpaperDimDesc': '文字が読めるように画像を暗くします',
+    'wallpaperScreenTitle': '壁紙と外観',
+    'wallpaperUnsupported': 'このプラットフォームでは壁紙を利用できません',
+    'wallpaperFailed': '画像を読み込めませんでした。別のファイルを選んでください。',
+    'wallpaperRemoveConfirm': '保存した画像のコピーを削除します。選択した元のファイルはそのまま残ります。',
+  },
+  'ko': {
+    'wallpaper': '배경 화면',
+    'wallpaperDesc': '인터페이스 뒤에 이미지를 표시합니다',
+    'wallpaperChoose': '이미지 선택',
+    'wallpaperChange': '이미지 변경',
+    'wallpaperRemove': '배경 화면 제거',
+    'wallpaperPreview': '미리보기',
+    'wallpaperBlur': '흐림',
+    'wallpaperBlurDesc': '이미지에 가우시안 블러를 적용합니다',
+    'wallpaperDim': '어둡게',
+    'wallpaperDimDesc': '글자가 잘 보이도록 이미지를 어둡게 합니다',
+    'wallpaperScreenTitle': '배경 화면과 모양',
+    'wallpaperUnsupported': '이 플랫폼에서는 배경 화면을 지원하지 않습니다',
+    'wallpaperFailed': '이미지를 읽을 수 없습니다. 다른 파일을 선택하세요.',
+    'wallpaperRemoveConfirm': '저장된 이미지 복사본을 삭제합니다. 선택한 원본 파일은 그대로 남습니다.',
+  },
+  'pt': {
+    'wallpaper': 'Papel de parede',
+    'wallpaperDesc': 'Mostrar uma imagem atrás da interface',
+    'wallpaperChoose': 'Escolher imagem',
+    'wallpaperChange': 'Trocar imagem',
+    'wallpaperRemove': 'Remover papel de parede',
+    'wallpaperPreview': 'Pré-visualização',
+    'wallpaperBlur': 'Desfoque',
+    'wallpaperBlurDesc': 'Desfoque gaussiano aplicado à imagem',
+    'wallpaperDim': 'Escurecer',
+    'wallpaperDimDesc': 'Escurece a imagem para manter o texto legível',
+    'wallpaperScreenTitle': 'Papel de parede e aparência',
+    'wallpaperUnsupported':
+        'Papéis de parede não são suportados nesta plataforma',
+    'wallpaperFailed': 'Não foi possível ler a imagem. Escolha outro ficheiro.',
+    'wallpaperRemoveConfirm':
+        'A cópia guardada da imagem é eliminada. O ficheiro que escolheu fica '
+        'onde está.',
+  },
+  'ru': {
+    'wallpaper': 'Обои',
+    'wallpaperDesc': 'Показывать изображение за интерфейсом',
+    'wallpaperChoose': 'Выбрать изображение',
+    'wallpaperChange': 'Сменить изображение',
+    'wallpaperRemove': 'Убрать обои',
+    'wallpaperPreview': 'Предпросмотр',
+    'wallpaperBlur': 'Размытие',
+    'wallpaperBlurDesc': 'Размытие по Гауссу для изображения',
+    'wallpaperDim': 'Затемнение',
+    'wallpaperDimDesc': 'Затемняет изображение, чтобы текст оставался читаемым',
+    'wallpaperScreenTitle': 'Обои и оформление',
+    'wallpaperUnsupported': 'Обои не поддерживаются на этой платформе',
+    'wallpaperFailed':
+        'Не удалось прочитать изображение. Выберите другой файл.',
+    'wallpaperRemoveConfirm':
+        'Сохранённая копия изображения будет удалена. Выбранный вами файл '
+        'останется на месте.',
+  },
+  'zh_CN': {
+    'wallpaper': '壁纸',
+    'wallpaperDesc': '在界面背后显示一张图片',
+    'wallpaperChoose': '选择图片',
+    'wallpaperChange': '更换图片',
+    'wallpaperRemove': '移除壁纸',
+    'wallpaperPreview': '预览',
+    'wallpaperBlur': '模糊',
+    'wallpaperBlurDesc': '对壁纸应用高斯模糊',
+    'wallpaperDim': '暗化',
+    'wallpaperDimDesc': '压暗壁纸，保证文字依然清晰',
+    'wallpaperScreenTitle': '壁纸与外观',
+    'wallpaperUnsupported': '当前平台不支持自定义壁纸',
+    'wallpaperFailed': '无法读取该图片，请换一个文件。',
+    'wallpaperRemoveConfirm': '会删除应用保存的那份图片副本，你选择的原文件不受影响。',
+  },
+  'zh_TW': {
+    'wallpaper': '桌布',
+    'wallpaperDesc': '在介面背後顯示一張圖片',
+    'wallpaperChoose': '選擇圖片',
+    'wallpaperChange': '更換圖片',
+    'wallpaperRemove': '移除桌布',
+    'wallpaperPreview': '預覽',
+    'wallpaperBlur': '模糊',
+    'wallpaperBlurDesc': '對桌布套用高斯模糊',
+    'wallpaperDim': '暗化',
+    'wallpaperDimDesc': '壓暗桌布，讓文字依然清晰',
+    'wallpaperScreenTitle': '桌布與外觀',
+    'wallpaperUnsupported': '目前平台不支援自訂桌布',
+    'wallpaperFailed': '無法讀取該圖片，請換一個檔案。',
+    'wallpaperRemoveConfirm': '會刪除應用程式保存的圖片副本，你選擇的原始檔案不受影響。',
+  },
+};
+
+const Map<String, Map<String, String>> _settingsActionStrings = {
+  'de': {
+    'autoSystemProxy': 'Automatischer Systemproxy',
+    'autoSystemProxyDesc': 'Systemproxy beim Start des Dienstes aktivieren',
+    'restartServiceConfirm':
+        'ArcadiaPlus-Dienst neu starten? Dabei brechen alle aktiven '
+        'Verbindungen ab.',
+    'resetSettingsConfirm':
+        'Alle Einstellungen auf die Standardwerte zurücksetzen? Das lässt sich '
+        'nicht rückgängig machen.',
+    'resetSettingsDone': 'Einstellungen zurückgesetzt',
+    'reset': 'Zurücksetzen',
+    'appearancePreview': 'Farbvorschau des Themas',
+  },
+  'en': {
+    'autoSystemProxy': 'Automatic system proxy',
+    'autoSystemProxyDesc': 'Enable the system proxy when the service starts',
+    'restartServiceConfirm':
+        'Restart the ArcadiaPlus service? Every active connection drops while '
+        'it restarts.',
+    'resetSettingsConfirm':
+        'Reset every setting to its default? This cannot be undone.',
+    'resetSettingsDone': 'Settings reset',
+    'reset': 'Reset',
+    'appearancePreview': 'Theme colour preview',
+  },
+  'es': {
+    'autoSystemProxy': 'Proxy del sistema automático',
+    'autoSystemProxyDesc':
+        'Activar el proxy del sistema al iniciar el servicio',
+    'restartServiceConfirm':
+        '¿Reiniciar el servicio ArcadiaPlus? Se cortarán todas las conexiones '
+        'activas.',
+    'resetSettingsConfirm':
+        '¿Restablecer todos los ajustes a sus valores predeterminados? No se '
+        'puede deshacer.',
+    'resetSettingsDone': 'Ajustes restablecidos',
+    'reset': 'Restablecer',
+    'appearancePreview': 'Vista previa de colores del tema',
+  },
+  'fr': {
+    'autoSystemProxy': 'Proxy système automatique',
+    'autoSystemProxyDesc': 'Activer le proxy système au démarrage du service',
+    'restartServiceConfirm':
+        'Redémarrer le service ArcadiaPlus ? Toutes les connexions actives '
+        'seront coupées.',
+    'resetSettingsConfirm':
+        'Rétablir tous les réglages par défaut ? Cette action est irréversible.',
+    'resetSettingsDone': 'Réglages rétablis',
+    'reset': 'Rétablir',
+    'appearancePreview': 'Aperçu des couleurs du thème',
+  },
+  'it': {
+    'autoSystemProxy': 'Proxy di sistema automatico',
+    'autoSystemProxyDesc': 'Attiva il proxy di sistema all’avvio del servizio',
+    'restartServiceConfirm':
+        'Riavviare il servizio ArcadiaPlus? Tutte le connessioni attive '
+        'verranno interrotte.',
+    'resetSettingsConfirm':
+        'Ripristinare tutte le impostazioni ai valori predefiniti? '
+        'L’operazione non è reversibile.',
+    'resetSettingsDone': 'Impostazioni ripristinate',
+    'reset': 'Ripristina',
+    'appearancePreview': 'Anteprima colori del tema',
+  },
+  'ja': {
+    'autoSystemProxy': 'システムプロキシの自動設定',
+    'autoSystemProxyDesc': 'サービス開始時にシステムプロキシを設定します',
+    'restartServiceConfirm': 'ArcadiaPlus サービスを再起動しますか？ 実行中の接続はすべて切断されます。',
+    'resetSettingsConfirm': 'すべての設定を初期値に戻しますか？ この操作は取り消せません。',
+    'resetSettingsDone': '設定をリセットしました',
+    'reset': 'リセット',
+    'appearancePreview': 'テーマの配色プレビュー',
+  },
+  'ko': {
+    'autoSystemProxy': '시스템 프록시 자동 설정',
+    'autoSystemProxyDesc': '서비스 시작 시 시스템 프록시를 설정합니다',
+    'restartServiceConfirm': 'ArcadiaPlus 서비스를 다시 시작할까요? 활성 연결이 모두 끊깁니다.',
+    'resetSettingsConfirm': '모든 설정을 기본값으로 되돌릴까요? 되돌릴 수 없습니다.',
+    'resetSettingsDone': '설정을 초기화했습니다',
+    'reset': '초기화',
+    'appearancePreview': '테마 색상 미리보기',
+  },
+  'pt': {
+    'autoSystemProxy': 'Proxy de sistema automático',
+    'autoSystemProxyDesc': 'Ativar o proxy do sistema ao iniciar o serviço',
+    'restartServiceConfirm':
+        'Reiniciar o serviço ArcadiaPlus? Todas as conexões ativas serão '
+        'cortadas.',
+    'resetSettingsConfirm':
+        'Repor todas as definições nos valores predefinidos? Não é possível '
+        'anular.',
+    'resetSettingsDone': 'Definições repostas',
+    'reset': 'Repor',
+    'appearancePreview': 'Pré-visualização das cores do tema',
+  },
+  'ru': {
+    'autoSystemProxy': 'Автоматический системный прокси',
+    'autoSystemProxyDesc': 'Включать системный прокси при запуске службы',
+    'restartServiceConfirm':
+        'Перезапустить службу ArcadiaPlus? Все активные соединения оборвутся.',
+    'resetSettingsConfirm':
+        'Сбросить все настройки к значениям по умолчанию? Отменить это нельзя.',
+    'resetSettingsDone': 'Настройки сброшены',
+    'reset': 'Сбросить',
+    'appearancePreview': 'Предпросмотр цветов темы',
+  },
+  'zh_CN': {
+    'autoSystemProxy': '自动系统代理',
+    'autoSystemProxyDesc': '启动服务时自动配置系统代理',
+    'restartServiceConfirm': '确定重启 ArcadiaPlus 服务吗？所有活动连接会暂时中断。',
+    'resetSettingsConfirm': '确定把所有设置恢复为默认值吗？此操作无法撤销。',
+    'resetSettingsDone': '设置已重置',
+    'reset': '重置',
+    'appearancePreview': '主题配色预览',
+  },
+  'zh_TW': {
+    'autoSystemProxy': '自動系統代理',
+    'autoSystemProxyDesc': '啟動服務時自動設定系統代理',
+    'restartServiceConfirm': '確定要重新啟動 ArcadiaPlus 服務嗎？所有連線會暫時中斷。',
+    'resetSettingsConfirm': '確定要把所有設定回復為預設值嗎？此操作無法復原。',
+    'resetSettingsDone': '設定已重設',
+    'reset': '重設',
+    'appearancePreview': '主題配色預覽',
+  },
 };

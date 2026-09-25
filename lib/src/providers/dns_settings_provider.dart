@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
 
@@ -51,29 +52,21 @@ class DnsSettingsProvider extends ChangeNotifier {
   }
 
   Future<void> setEnable(bool value) async {
-    _settings = _settings.copyWith(enable: value);
-    await _saveSettings();
-    notifyListeners();
+    await _update((s) => s.copyWith(enable: value));
   }
 
   /// Whether this app's DNS section replaces the profile's on the next start.
   Future<void> setOverrideDns(bool value) async {
-    _settings = _settings.copyWith(overrideDns: value);
-    await _saveSettings();
-    notifyListeners();
+    await _update((s) => s.copyWith(overrideDns: value));
   }
 
   Future<void> setListen(String value) async {
-    _settings = _settings.copyWith(listen: value);
-    await _saveSettings();
-    notifyListeners();
+    await _update((s) => s.copyWith(listen: value));
   }
 
   /// Starts or stops the RecurseX front-end on the next start.
   Future<void> setUseRecursiveResolver(bool value) async {
-    _settings = _settings.copyWith(useRecursiveResolver: value);
-    await _saveSettings();
-    notifyListeners();
+    await _update((s) => s.copyWith(useRecursiveResolver: value));
   }
 
   /// `normal`, `redir-host` or `fake-ip`; anything else is refused rather than
@@ -83,44 +76,92 @@ class DnsSettingsProvider extends ChangeNotifier {
       debugPrint('Unsupported DNS mode: $value');
       return;
     }
-    _settings = _settings.copyWith(dnsMode: value);
-    await _saveSettings();
-    notifyListeners();
+    await _update((s) => s.copyWith(dnsMode: value));
   }
 
   Future<void> setNameservers(List<String> value) async {
-    _settings = _settings.copyWith(nameservers: value);
-    await _saveSettings();
-    notifyListeners();
+    await _update((s) => s.copyWith(nameservers: List.unmodifiable(value)));
   }
 
-  Future<void> addNameserver(String server) async {
-    final trimmed = server.trim();
-    if (trimmed.isEmpty || _settings.nameservers.contains(trimmed)) return;
-    await setNameservers([..._settings.nameservers, trimmed]);
+  Future<void> addNameserver(String server) => addNameservers([server]);
+
+  /// Adds every entry of [servers] that is not already in the list.
+  ///
+  /// The presets in the editor are added in one call, so a single save and a
+  /// single notification cover a whole batch — and the list is only replaced
+  /// when something was actually missing.
+  Future<void> addNameservers(Iterable<String> servers) async {
+    final additions = <String>[];
+    for (final server in servers) {
+      final trimmed = server.trim();
+      if (trimmed.isEmpty) continue;
+      if (_settings.nameservers.contains(trimmed)) continue;
+      if (additions.contains(trimmed)) continue;
+      additions.add(trimmed);
+    }
+    if (additions.isEmpty) return;
+    await setNameservers([..._settings.nameservers, ...additions]);
   }
 
   Future<void> removeNameserver(String server) async {
+    if (!_settings.nameservers.contains(server)) return;
     await setNameservers(
       _settings.nameservers.where((entry) => entry != server).toList(),
     );
   }
 
   Future<void> setFallback(List<String> value) async {
-    _settings = _settings.copyWith(fallback: value);
+    await _update((s) => s.copyWith(fallback: List.unmodifiable(value)));
+  }
+
+  Future<void> addFallback(String server) => addFallbacks([server]);
+
+  /// Adds every entry of [servers] that is not already in the fallback list,
+  /// in one write and one notification, for the same reason as
+  /// [addNameservers].
+  Future<void> addFallbacks(Iterable<String> servers) async {
+    final additions = <String>[];
+    for (final server in servers) {
+      final trimmed = server.trim();
+      if (trimmed.isEmpty) continue;
+      if (_settings.fallback.contains(trimmed)) continue;
+      if (additions.contains(trimmed)) continue;
+      additions.add(trimmed);
+    }
+    if (additions.isEmpty) return;
+    await setFallback([..._settings.fallback, ...additions]);
+  }
+
+  Future<void> removeFallback(String server) async {
+    if (!_settings.fallback.contains(server)) return;
+    await setFallback(
+      _settings.fallback.where((entry) => entry != server).toList(),
+    );
+  }
+
+  /// Applies [change] and persists it, but only when it produces a different
+  /// record.
+  ///
+  /// A provider that notifies on every write rebuilds every `Consumer` that
+  /// watches it — here, the whole settings list — even when the user re-picked
+  /// the value that was already selected.
+  Future<void> _update(DnsSettings Function(DnsSettings current) change) async {
+    final next = change(_settings);
+    if (_sameAs(next)) return;
+    _settings = next;
     await _saveSettings();
     notifyListeners();
   }
 
-  Future<void> addFallback(String server) async {
-    final trimmed = server.trim();
-    if (trimmed.isEmpty || _settings.fallback.contains(trimmed)) return;
-    await setFallback([..._settings.fallback, trimmed]);
-  }
-
-  Future<void> removeFallback(String server) async {
-    await setFallback(
-      _settings.fallback.where((entry) => entry != server).toList(),
-    );
+  bool _sameAs(DnsSettings other) {
+    final current = _settings;
+    return current.enable == other.enable &&
+        current.overrideDns == other.overrideDns &&
+        current.listen == other.listen &&
+        current.useRecursiveResolver == other.useRecursiveResolver &&
+        current.dnsMode == other.dnsMode &&
+        current.nameserversRevision == other.nameserversRevision &&
+        listEquals(current.nameservers, other.nameservers) &&
+        listEquals(current.fallback, other.fallback);
   }
 }

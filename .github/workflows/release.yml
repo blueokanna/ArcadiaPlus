@@ -109,10 +109,13 @@ jobs:
       - name: Check out the proxy engine the bridge points at
         uses: ./.github/actions/checkout-engine
 
+      # Keep this in step with `pubspec.lock` and `environment.flutter`:
+      # the Flutter SDK pins the versions of the packages it ships, so the
+      # lockfile describes exactly one SDK line. See .github/workflows/ci.yml.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.2'
+          flutter-version: '3.44.6'
           channel: stable
           cache: true
 
@@ -182,7 +185,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.2'
+          flutter-version: '3.44.6'
           channel: stable
           cache: true
 
@@ -319,7 +322,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.2'
+          flutter-version: '3.44.6'
           channel: stable
           cache: true
 
@@ -426,7 +429,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.2'
+          flutter-version: '3.44.6'
           channel: stable
           cache: true
 
@@ -498,7 +501,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.2'
+          flutter-version: '3.44.6'
           channel: stable
           cache: true
 

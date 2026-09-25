@@ -207,6 +207,7 @@ class ConfigConverter {
     GeneralSettings? generalSettings,
     DnsSettings? dnsSettings,
     String? recursiveDnsAddress,
+    List<String> systemDnsServers = const [],
     Map<String, String>? ruleProviderPaths,
     void Function(String message)? onWarning,
   }) {
@@ -222,6 +223,7 @@ class ConfigConverter {
         generalSettings: generalSettings,
         dnsSettings: dnsSettings,
         recursiveDnsAddress: recursiveDnsAddress,
+        systemDnsServers: systemDnsServers,
         ruleProviderPaths: ruleProviderPaths,
         onWarning: onWarning,
       );
@@ -259,6 +261,7 @@ class ConfigConverter {
     GeneralSettings? generalSettings,
     DnsSettings? dnsSettings,
     String? recursiveDnsAddress,
+    List<String> systemDnsServers = const [],
     Map<String, String>? ruleProviderPaths,
     void Function(String message)? onWarning,
   }) {
@@ -283,6 +286,7 @@ class ConfigConverter {
         clash,
         dnsSettings: dnsSettings,
         recursiveDnsAddress: recursiveDnsAddress,
+        systemDnsServers: systemDnsServers,
       ),
       'inbounds': _extractInbounds(clash, generalSettings: generalSettings),
       'outbounds': outbounds,
@@ -461,10 +465,16 @@ class ConfigConverter {
   /// Two sources exist and one has to win: the profile's own `dns` block, or
   /// the app's DNS settings once the user turns on "override DNS". The switch
   /// is what makes the choice explicit instead of silently preferring one.
+  ///
+  /// [systemDnsServers] is the platform's own resolver list, read by
+  /// `SystemDnsService` when "append system DNS" is on. The engine has no such
+  /// key, so the setting is expressed by appending: a machine that reaches its
+  /// local resolvers but not a public DoH endpoint keeps working.
   static Map<String, dynamic> _extractDnsConfig(
     Map<String, dynamic> clash, {
     DnsSettings? dnsSettings,
     String? recursiveDnsAddress,
+    List<String> systemDnsServers = const [],
   }) {
     final override = dnsSettings != null && dnsSettings.overrideDns;
     final dns = override
@@ -478,12 +488,17 @@ class ConfigConverter {
         ? const ['8.8.8.8', '1.1.1.1']
         : configured;
 
+    final withSystemDns = <String>[...effectiveConfigured];
+    for (final server in systemDnsServers) {
+      if (!withSystemDns.contains(server)) withSystemDns.add(server);
+    }
+
     // A running RecurseX front-end stays authoritative: put it first and
     // every forwarded query becomes a recursive one, with the configured
     // upstreams kept behind it as fallbacks.
     final nameservers = recursiveDnsAddress == null
-        ? effectiveConfigured
-        : [recursiveDnsAddress, ...effectiveConfigured];
+        ? withSystemDns
+        : [recursiveDnsAddress, ...withSystemDns];
 
     final fallback = override
         ? dnsSettings.fallback

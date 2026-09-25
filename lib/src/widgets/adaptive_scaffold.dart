@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:arcadiaplus/src/theme/app_theme.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/widgets/navigation_bar.dart';
@@ -128,9 +129,18 @@ class AdaptiveScaffold extends StatelessWidget {
 
   /// 构建底部导航栏，处理安全区域
   Widget _buildBottomNav(BuildContext context, EdgeInsets safeArea) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // With a wallpaper behind the app the theme's surfaces are veils; a bar
+    // that kept painting an opaque colour would be the one solid strip across
+    // an otherwise translucent interface.
+    final veil = Theme.of(context).extension<WallpaperSurface>();
+    final background =
+        veil?.veil(colorScheme.surfaceContainerLow) ??
+        colorScheme.surfaceContainerLow;
+
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        color: background,
         // 添加顶部分隔线
         border: Border(
           top: BorderSide(

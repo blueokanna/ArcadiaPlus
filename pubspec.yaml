@@ -6,6 +6,14 @@ version: 1.0.4+4
 
 environment:
   sdk: ^3.12.0
+  # Pinned to the Flutter line that produced `pubspec.lock`. The Flutter SDK
+  # pins the exact versions of the packages it ships (`test_api`, `matcher`,
+  # `vector_math`, `meta`, `intl`, ...), so a different SDK line cannot satisfy
+  # the lockfile: `flutter pub get --enforce-lockfile` (what CI runs) fails, and
+  # a plain `flutter pub get` silently rewrites the lock for that line instead.
+  # Keep this, `pubspec.lock`, and the `flutter-version` inputs in
+  # `.github/workflows/{ci,release}.yml` in step with each other.
+  flutter: '>=3.44.0 <3.45.0'
 
 dependencies:
   flutter:

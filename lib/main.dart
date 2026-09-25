@@ -12,6 +12,7 @@ import 'package:arcadiaplus/src/providers/proxies_provider.dart';
 import 'package:arcadiaplus/src/providers/dns_settings_provider.dart';
 import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
 import 'package:arcadiaplus/src/providers/update_provider.dart';
+import 'package:arcadiaplus/src/providers/wallpaper_provider.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
 import 'package:arcadiaplus/src/services/native_core_service.dart';
 import 'package:arcadiaplus/src/screens/home_screen.dart';
@@ -24,9 +25,11 @@ import 'package:arcadiaplus/src/screens/basic_config_screen.dart';
 import 'package:arcadiaplus/src/screens/advanced_config_screen.dart';
 import 'package:arcadiaplus/src/screens/proxies_screen.dart';
 import 'package:arcadiaplus/src/screens/about_screen.dart';
+import 'package:arcadiaplus/src/screens/wallpaper_screen.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_scaffold.dart';
 import 'package:arcadiaplus/src/widgets/rust_init_error_dialog.dart';
 import 'package:arcadiaplus/src/widgets/update_prompt.dart';
+import 'package:arcadiaplus/src/widgets/wallpaper_backdrop.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/device_info_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
@@ -291,6 +294,7 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
         ChangeNotifierProvider(create: (_) => DnsSettingsProvider()),
         ChangeNotifierProvider(create: (_) => GeneralSettingsProvider()),
         ChangeNotifierProvider(create: (_) => UpdateProvider()),
+        ChangeNotifierProvider(create: (_) => WallpaperProvider()),
       ],
       child: DynamicColorBuilder(
         builder: (lightColorScheme, darkColorScheme) {
@@ -323,24 +327,42 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
               // provider as a whole rebuilt this `MaterialApp` — along with
               // both `ThemeData` objects and the entire tree below it — once a
               // second, because the provider notifies on every traffic sample.
-              return Selector<AppStateProvider, ThemeMode>(
-                selector: (_, appState) => appState.themeMode,
-                builder: (context, themeMode, child) => MaterialApp.router(
-                  title: 'ArcadiaPlus',
-                  debugShowCheckedModeBanner: false,
-                  theme: lightTheme,
-                  darkTheme: darkTheme,
-                  themeMode: themeMode,
-                  locale: localeProvider.currentLocale,
-                  localizationsDelegates: const [
-                    AppLocalizations.delegate,
-                    GlobalMaterialLocalizations.delegate,
-                    GlobalWidgetsLocalizations.delegate,
-                    GlobalCupertinoLocalizations.delegate,
-                  ],
-                  supportedLocales: AppLocalizations.supportedLocales,
-                  routerConfig: _router,
-                ),
+              //
+              // The wallpaper is watched the same way, as one bool: it changes
+              // two things at once — the layer behind the interface, and
+              // whether the interface's own surfaces are veils over it — and a
+              // blur slider that is still being dragged must not rebuild the
+              // app just because the picture changed.
+              return Selector<WallpaperProvider, bool>(
+                selector: (_, wallpaper) => wallpaper.isVisible,
+                builder: (context, wallpaperVisible, child) =>
+                    Selector<AppStateProvider, ThemeMode>(
+                      selector: (_, appState) => appState.themeMode,
+                      builder: (context, themeMode, child) =>
+                          MaterialApp.router(
+                            title: 'ArcadiaPlus',
+                            debugShowCheckedModeBanner: false,
+                            theme: wallpaperVisible
+                                ? AppTheme.withTranslucentSurfaces(lightTheme)
+                                : lightTheme,
+                            darkTheme: wallpaperVisible
+                                ? AppTheme.withTranslucentSurfaces(darkTheme)
+                                : darkTheme,
+                            themeMode: themeMode,
+                            locale: localeProvider.currentLocale,
+                            localizationsDelegates: const [
+                              AppLocalizations.delegate,
+                              GlobalMaterialLocalizations.delegate,
+                              GlobalWidgetsLocalizations.delegate,
+                              GlobalCupertinoLocalizations.delegate,
+                            ],
+                            supportedLocales: AppLocalizations.supportedLocales,
+                            routerConfig: _router,
+                            builder: (context, child) => WallpaperBackdrop(
+                              child: child ?? const SizedBox.shrink(),
+                            ),
+                          ),
+                    ),
               );
             },
           );
@@ -415,6 +437,11 @@ final GoRouter _router = GoRouter(
           path: '/advanced-config',
           pageBuilder: (context, state) =>
               _buildExpressivePage(state, const AdvancedConfigScreen()),
+        ),
+        GoRoute(
+          path: '/wallpaper',
+          pageBuilder: (context, state) =>
+              _buildExpressivePage(state, const WallpaperScreen()),
         ),
       ],
     ),

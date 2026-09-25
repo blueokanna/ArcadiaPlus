@@ -6,6 +6,7 @@ import 'package:arcadiaplus/src/providers/theme_provider.dart';
 import 'package:arcadiaplus/src/providers/locale_provider.dart';
 import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
 import 'package:arcadiaplus/src/providers/update_provider.dart';
+import 'package:arcadiaplus/src/providers/wallpaper_provider.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
 import 'package:arcadiaplus/src/widgets/license_viewer.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
@@ -123,12 +124,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
                         title: Text(l10n?.themeStyle ?? '主题风格'),
-                        subtitle: Text(
-                          themeProvider.useDynamicColors
-                              ? (l10n?.dynamicColors ?? '动态颜色')
-                              : themeProvider.getThemeDisplayName(
-                                  themeProvider.selectedTheme,
-                                ),
+                        subtitle: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                themeProvider.useDynamicColors
+                                    ? (l10n?.dynamicColors ?? '动态颜色')
+                                    : themeProvider.getThemeDisplayName(
+                                        themeProvider.selectedTheme,
+                                      ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            // The palette the theme actually resolves to, so
+                            // "Ocean Blue" is not just a name.
+                            _PaletteStrip(
+                              scheme: themeProvider.getThemePreviewScheme(
+                                themeProvider.selectedTheme,
+                                Theme.of(context).brightness,
+                              ),
+                              size: 12,
+                            ),
+                          ],
                         ),
                         leading: Container(
                           width: 24,
@@ -155,6 +173,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         enabled: !themeProvider.useDynamicColors,
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
+                      // Only where a wallpaper can exist: `Image.file` has no
+                      // file system behind it on the web, so the entry is
+                      // absent there instead of leading to a dead screen.
+                      if (WallpaperProvider.isSupported) ...[
+                        Consumer<WallpaperProvider>(
+                          builder: (context, wallpaper, child) {
+                            return AdaptiveListTile(
+                              title: Text(l10n?.wallpaper ?? 'Wallpaper'),
+                              subtitle: Text(
+                                wallpaper.isVisible
+                                    ? (l10n?.enabled ?? 'Enabled')
+                                    : (l10n?.disabled ?? 'Disabled'),
+                              ),
+                              leading: Icon(
+                                Icons.wallpaper_outlined,
+                                color: colorScheme.primary,
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () => context.push('/wallpaper'),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                      ],
                       AdaptiveListTile(
                         title: Text(l10n?.dynamicColors ?? '动态颜色'),
                         subtitle: Text(
@@ -339,8 +381,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       // 自动系统代理设置 (Windows)
                       if (PlatformUtils.isDesktop) ...[
                         AdaptiveListTile(
-                          title: const Text('自动系统代理'),
-                          subtitle: const Text('启动服务时自动配置系统代理'),
+                          title: Text(
+                            l10n?.autoSystemProxy ?? 'Automatic system proxy',
+                          ),
+                          subtitle: Text(
+                            l10n?.autoSystemProxyDesc ??
+                                'Enable the system proxy when the service '
+                                    'starts',
+                          ),
                           leading: Icon(
                             Icons.settings_system_daydream_outlined,
                             color: colorScheme.primary,
@@ -661,8 +709,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n?.restartService ?? '重启服务'),
-        content: const Text('确定要重启 ArcadiaPlus 服务吗？这将暂时断开所有活动连接。'),
+        title: Text(l10n?.restartService ?? 'Restart Service'),
+        content: Text(
+          l10n?.restartServiceConfirm ??
+              'Restart the service? Active connections drop while it does.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -673,7 +724,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               appState.restartService();
               Navigator.of(context).pop();
             },
-            child: const Text('重启'),
+            child: Text(l10n?.restartService ?? 'Restart'),
           ),
         ],
       ),
@@ -686,8 +737,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n?.resetSettings ?? '重置设置'),
-        content: const Text('确定要重置所有设置为默认值吗？此操作无法撤销。'),
+        title: Text(l10n?.resetSettings ?? 'Reset Settings'),
+        content: Text(
+          l10n?.resetSettingsConfirm ??
+              'Reset every setting to its default? This cannot be undone.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -698,7 +752,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('设置已重置'),
+                  content: Text(l10n?.resetSettingsDone ?? 'Settings reset'),
                   behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -707,7 +761,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
             style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
-            child: const Text('重置'),
+            child: Text(l10n?.reset ?? 'Reset'),
           ),
         ],
       ),
@@ -764,102 +818,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   Expanded(
-                    child: GridView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 2.5,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4, bottom: 8),
+                          child: Text(
+                            l10n?.appearancePreview ?? 'Theme colour preview',
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(color: colorScheme.onSurfaceVariant),
                           ),
-                      itemCount: themeProvider.availableThemes.length,
-                      itemBuilder: (context, index) {
-                        final themeName = themeProvider.availableThemes[index];
-                        final isSelected =
-                            themeProvider.selectedTheme == themeName;
-                        final seedColor = themeProvider.getThemeSeedColor(
-                          themeName,
-                        );
+                        ),
+                        Expanded(
+                          child: GridView.builder(
+                            controller: scrollController,
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 2,
+                                  childAspectRatio: 2.5,
+                                  crossAxisSpacing: 12,
+                                  mainAxisSpacing: 12,
+                                ),
+                            itemCount: themeProvider.availableThemes.length,
+                            itemBuilder: (context, index) {
+                              final themeName =
+                                  themeProvider.availableThemes[index];
+                              final isSelected =
+                                  themeProvider.selectedTheme == themeName;
+                              final preview = themeProvider
+                                  .getThemePreviewScheme(
+                                    themeName,
+                                    Theme.of(context).brightness,
+                                  );
 
-                        return Material(
-                          color: isSelected
-                              ? colorScheme.primaryContainer
-                              : colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InkWell(
-                            onTap: () {
-                              themeProvider.setTheme(themeName);
-                              Navigator.of(context).pop();
-                            },
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              decoration: BoxDecoration(
+                              return Material(
+                                color: isSelected
+                                    ? colorScheme.primaryContainer
+                                    : colorScheme.surfaceContainerHigh,
                                 borderRadius: BorderRadius.circular(16),
-                                border: isSelected
-                                    ? Border.all(
-                                        color: colorScheme.primary,
-                                        width: 2,
-                                      )
-                                    : null,
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
+                                child: InkWell(
+                                  onTap: () {
+                                    themeProvider.setTheme(themeName);
+                                    Navigator.of(context).pop();
+                                  },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
                                     decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: seedColor,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: seedColor.withValues(
-                                            alpha: 0.3,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: isSelected
+                                          ? Border.all(
+                                              color: colorScheme.primary,
+                                              width: 2,
+                                            )
+                                          : null,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 34,
+                                          height: 34,
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: colorScheme
+                                                .surfaceContainerHighest,
                                           ),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 2),
+                                          child: isSelected
+                                              ? Icon(
+                                                  Icons.check,
+                                                  size: 18,
+                                                  color: colorScheme.primary,
+                                                )
+                                              : _PaletteStrip(
+                                                  scheme: preview,
+                                                  size: 7,
+                                                  stack: true,
+                                                ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            themeProvider.getThemeDisplayName(
+                                              themeName,
+                                            ),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(
+                                                  fontWeight: isSelected
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w500,
+                                                  color: isSelected
+                                                      ? colorScheme
+                                                            .onPrimaryContainer
+                                                      : colorScheme.onSurface,
+                                                ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                       ],
                                     ),
-                                    child: isSelected
-                                        ? const Icon(
-                                            Icons.check,
-                                            color: Colors.white,
-                                            size: 18,
-                                          )
-                                        : null,
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      themeProvider.getThemeDisplayName(
-                                        themeName,
-                                      ),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            fontWeight: isSelected
-                                                ? FontWeight.w600
-                                                : FontWeight.w500,
-                                            color: isSelected
-                                                ? colorScheme.onPrimaryContainer
-                                                : colorScheme.onSurface,
-                                          ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -982,6 +1052,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
         );
       },
+    );
+  }
+}
+
+/// The primary, secondary and tertiary colours of a palette, side by side.
+///
+/// Three swatches rather than one: a single colour cannot tell the difference
+/// between two themes that share an accent, and it is the relationship between
+/// the roles that makes a Material palette look like itself.
+class _PaletteStrip extends StatelessWidget {
+  const _PaletteStrip({
+    required this.scheme,
+    required this.size,
+    this.stack = false,
+  });
+
+  final ColorScheme scheme;
+
+  /// Diameter of one swatch, in logical pixels.
+  final double size;
+
+  /// Overlaps the swatches, for a slot as small as the row's leading circle.
+  final bool stack;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = [scheme.primary, scheme.secondary, scheme.tertiary];
+    final step = stack ? size * 0.82 : size + 3;
+
+    return SizedBox(
+      width: step * (colors.length - 1) + size,
+      height: size,
+      child: Stack(
+        children: [
+          for (final (index, color) in colors.indexed)
+            Positioned(
+              left: index * step,
+              top: 0,
+              child: Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -134,38 +134,6 @@ class _AdvancedConfigScreenState extends State<AdvancedConfigScreen> {
 
               const SizedBox(height: 24),
 
-              // DNS 相关
-              _buildSectionHeader(
-                context,
-                l10n?.dnsRelated ?? 'DNS Related',
-                Icons.dns_outlined,
-              ),
-              Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerLow,
-                child: Column(
-                  children: [
-                    AdaptiveListTile(
-                      title: Text(l10n?.appendSystemDns ?? 'Append System DNS'),
-                      subtitle: Text(
-                        l10n?.appendSystemDnsDesc ??
-                            'Append system DNS to nameserver',
-                      ),
-                      leading: Icon(
-                        Icons.add_circle_outline,
-                        color: colorScheme.primary,
-                      ),
-                      trailing: Switch.adaptive(
-                        value: settings.appendSystemDns,
-                        onChanged: (v) => settings.setAppendSystemDns(v),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
               // 进程相关
               _buildSectionHeader(
                 context,

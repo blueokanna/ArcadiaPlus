@@ -3,6 +3,37 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+
+/// Keeps a repeating [AnimationController] out of the background.
+///
+/// A loop that keeps ticking while the app is not on screen is the kind of
+/// waste nobody notices until the battery is flat: nothing is drawn, and the
+/// frames are still requested. [AppLifecycle.active] already exists for timers,
+/// and this puts every repeating animation in the app on the same switch.
+///
+/// [syncLoops] is called by the mixin, so it cannot be folded into an
+/// `initState` override: a class's own member *wins* over a mixin's, so a
+/// widget that declares `initState` would silently never call this one. The
+/// widget calls [startWatchingLifecycle] and [stopWatchingLifecycle] itself.
+mixin LifecycleAwareLoops<T extends StatefulWidget> on State<T> {
+  /// Starts or stops the repeating controllers for the state the app is in.
+  ///
+  /// Implemented by the widget, which is the only thing that knows what each
+  /// controller should do: the mixin knows *when* to ask, not *what* to do.
+  void syncLoops();
+
+  /// Subscribes [syncLoops] to the app's foreground state.
+  void startWatchingLifecycle() {
+    AppLifecycle.instance.active.addListener(syncLoops);
+  }
+
+  /// Unsubscribes [syncLoops]. Called from `dispose`, before the controllers
+  /// are disposed, so a callback cannot reach a disposed controller.
+  void stopWatchingLifecycle() {
+    AppLifecycle.instance.active.removeListener(syncLoops);
+  }
+}
 
 class AnimationUtils {
   AnimationUtils._();
@@ -669,7 +700,7 @@ class PulseAnimation extends StatefulWidget {
 }
 
 class _PulseAnimationState extends State<PulseAnimation>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, LifecycleAwareLoops<PulseAnimation> {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -682,24 +713,30 @@ class _PulseAnimationState extends State<PulseAnimation>
       end: widget.maxScale,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
-    if (widget.isActive) {
-      _controller.repeat(reverse: true);
-    }
+    startWatchingLifecycle();
+    syncLoops();
   }
 
   @override
   void didUpdateWidget(PulseAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isActive && !oldWidget.isActive) {
-      _controller.repeat(reverse: true);
-    } else if (!widget.isActive && oldWidget.isActive) {
+    if (widget.isActive != oldWidget.isActive) syncLoops();
+  }
+
+  @override
+  void syncLoops() {
+    // `isActive` is the caller's intent, the lifecycle is whether anyone can
+    // see the result. Both have to hold.
+    if (!widget.isActive || !AppLifecycle.instance.isActive) {
       _controller.stop();
-      _controller.reset();
+      return;
     }
+    if (!_controller.isAnimating) _controller.repeat(reverse: true);
   }
 
   @override
   void dispose() {
+    stopWatchingLifecycle();
     _controller.dispose();
     super.dispose();
   }
@@ -741,7 +778,9 @@ class BreathingAnimation extends StatefulWidget {
 }
 
 class _BreathingAnimationState extends State<BreathingAnimation>
-    with SingleTickerProviderStateMixin {
+    with
+        SingleTickerProviderStateMixin,
+        LifecycleAwareLoops<BreathingAnimation> {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -754,24 +793,28 @@ class _BreathingAnimationState extends State<BreathingAnimation>
       end: widget.maxOpacity,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
-    if (widget.isActive) {
-      _controller.repeat(reverse: true);
-    }
+    startWatchingLifecycle();
+    syncLoops();
   }
 
   @override
   void didUpdateWidget(BreathingAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isActive && !oldWidget.isActive) {
-      _controller.repeat(reverse: true);
-    } else if (!widget.isActive && oldWidget.isActive) {
+    if (widget.isActive != oldWidget.isActive) syncLoops();
+  }
+
+  @override
+  void syncLoops() {
+    if (!widget.isActive || !AppLifecycle.instance.isActive) {
       _controller.stop();
-      _controller.value = 1.0;
+      return;
     }
+    if (!_controller.isAnimating) _controller.repeat(reverse: true);
   }
 
   @override
   void dispose() {
+    stopWatchingLifecycle();
     _controller.dispose();
     super.dispose();
   }
@@ -807,7 +850,7 @@ class RippleAnimation extends StatefulWidget {
 }
 
 class _RippleAnimationState extends State<RippleAnimation>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, LifecycleAwareLoops<RippleAnimation> {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
@@ -827,24 +870,28 @@ class _RippleAnimationState extends State<RippleAnimation>
       end: 0.0,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    if (widget.isActive) {
-      _controller.repeat();
-    }
+    startWatchingLifecycle();
+    syncLoops();
   }
 
   @override
   void didUpdateWidget(RippleAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.isActive && !oldWidget.isActive) {
-      _controller.repeat();
-    } else if (!widget.isActive && oldWidget.isActive) {
+    if (widget.isActive != oldWidget.isActive) syncLoops();
+  }
+
+  @override
+  void syncLoops() {
+    if (!widget.isActive || !AppLifecycle.instance.isActive) {
       _controller.stop();
-      _controller.reset();
+      return;
     }
+    if (!_controller.isAnimating) _controller.repeat();
   }
 
   @override
   void dispose() {
+    stopWatchingLifecycle();
     _controller.dispose();
     super.dispose();
   }

@@ -13,6 +13,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// `fake-ip-ttl`, `cache-size`, a hosts table) is passed through by the config
 /// converter untouched: it is a profile-level knob, and duplicating it here
 /// would mean two owners for one value.
+///
+/// Records carry [nameserversRevision] so a list this app shipped as a default
+/// can be told apart from one the user built, which is what makes it safe to
+/// grow the former and leave the latter alone.
 class DnsSettings {
   /// Every value `dns.enhanced_mode` may hold.
   ///
@@ -32,6 +36,34 @@ class DnsSettings {
   /// nothing depends on an address that only exists in this process.
   static const String defaultMode = 'redir-host';
 
+  /// The upstreams a fresh install starts with.
+  ///
+  /// Two public DoH resolvers that are reachable almost everywhere, plus the
+  /// two large Chinese operators so a user behind a network that drops the
+  /// first pair still resolves. Four is not a statement about how many are
+  /// ideal — it is one working entry per failure mode this app has actually
+  /// seen, and the editor offers more in one tap.
+  static const List<String> defaultNameservers = [
+    'https://dns.cloudflare.com/dns-query',
+    'https://dns.google/dns-query',
+    'https://doh.pub/dns-query',
+    'https://dns.alidns.com/dns-query',
+  ];
+
+  /// The list an earlier build shipped. A stored list that still matches it
+  /// exactly was never touched by the user, so it is safe to grow.
+  static const List<String> _legacyDefaultNameservers = [
+    'https://dns.google/dns-query',
+    'https://cloudflare-dns.com/dns-query',
+  ];
+
+  /// Bumped when [defaultNameservers] grows. Records on disk carry the value
+  /// they were written with, so the migration below runs once per install.
+  static const int nameserverDefaultsRevision = 2;
+
+  /// The revision this record was written with.
+  final int nameserversRevision;
+
   final bool enable;
   final bool overrideDns;
   final String listen;
@@ -46,11 +78,9 @@ class DnsSettings {
     this.listen = '127.0.0.1:53',
     this.useRecursiveResolver = false,
     this.dnsMode = defaultMode,
-    this.nameservers = const [
-      'https://dns.google/dns-query',
-      'https://cloudflare-dns.com/dns-query',
-    ],
+    this.nameservers = defaultNameservers,
     this.fallback = const [],
+    this.nameserversRevision = nameserverDefaultsRevision,
   }) : assert(
          modes.contains(dnsMode),
          'dnsMode must be one of ${DnsSettings.modes}',
@@ -64,6 +94,7 @@ class DnsSettings {
     'dnsMode': dnsMode,
     'nameservers': nameservers,
     'fallback': fallback,
+    'nameserversRevision': nameserversRevision,
   };
 
   factory DnsSettings.fromJson(Map<String, dynamic> json) => DnsSettings(
@@ -74,6 +105,8 @@ class DnsSettings {
     dnsMode: normaliseMode(json['dnsMode']),
     nameservers: (json['nameservers'] as List?)?.cast<String>() ?? const [],
     fallback: (json['fallback'] as List?)?.cast<String>() ?? const [],
+    // Records written before the revision existed carry the first default set.
+    nameserversRevision: (json['nameserversRevision'] as num?)?.toInt() ?? 1,
   );
 
   /// A stored mode, or [defaultMode] when it is missing or no longer one of
@@ -86,6 +119,25 @@ class DnsSettings {
   static String normaliseMode(Object? stored) =>
       stored is String && modes.contains(stored) ? stored : defaultMode;
 
+  /// Grows an untouched nameserver list to the current default set and stamps
+  /// the record, so this happens once rather than on every load.
+  ///
+  /// A list that no longer matches the old default is the user's own choice —
+  /// including an empty one — and is left exactly as it is, because silently
+  /// adding resolvers to a list somebody pruned would undo their decision.
+  DnsSettings withCurrentNameserverDefaults() {
+    if (nameserversRevision >= nameserverDefaultsRevision) return this;
+
+    final untouched =
+        nameservers.length == _legacyDefaultNameservers.length &&
+        nameservers.toSet().containsAll(_legacyDefaultNameservers);
+
+    return copyWith(
+      nameservers: untouched ? defaultNameservers : nameservers,
+      nameserversRevision: nameserverDefaultsRevision,
+    );
+  }
+
   DnsSettings copyWith({
     bool? enable,
     bool? overrideDns,
@@ -94,6 +146,7 @@ class DnsSettings {
     String? dnsMode,
     List<String>? nameservers,
     List<String>? fallback,
+    int? nameserversRevision,
   }) {
     return DnsSettings(
       enable: enable ?? this.enable,
@@ -103,6 +156,7 @@ class DnsSettings {
       dnsMode: dnsMode ?? this.dnsMode,
       nameservers: nameservers ?? this.nameservers,
       fallback: fallback ?? this.fallback,
+      nameserversRevision: nameserversRevision ?? this.nameserversRevision,
     );
   }
 }
@@ -441,6 +495,86 @@ class NetworkSettings {
   }
 }
 
+/// Wallpaper settings model.
+///
+/// [imagePath] is a file this app owns a copy of, not the file the user picked:
+/// a mobile picker hands out a path in a cache directory the OS is free to
+/// reclaim, and a picture that silently disappears after a week is worse than
+/// no picture at all. `WallpaperService` does the copying.
+///
+/// [blur] and [dim] are what make a photograph usable as a background: without
+/// blur, details compete with text; without dim, a bright photo does the same.
+class WallpaperSettings {
+  /// Sigma of the gaussian blur, in logical pixels. The ceiling keeps the cost
+  /// of the filter bounded — a full-screen blur is not free.
+  static const double maxBlur = 40;
+
+  /// Alpha of the scrim drawn between the picture and the interface.
+  static const double maxDim = 0.8;
+
+  final String? imagePath;
+  final bool enabled;
+  final double blur;
+  final double dim;
+
+  const WallpaperSettings({
+    this.imagePath,
+    this.enabled = true,
+    this.blur = 18,
+    this.dim = 0.35,
+  });
+
+  /// Whether a picture exists to draw.
+  bool get hasImage => (imagePath ?? '').isNotEmpty;
+
+  /// Whether the picture should be drawn right now.
+  bool get isVisible => enabled && hasImage;
+
+  Map<String, dynamic> toJson() => {
+    'imagePath': imagePath,
+    'enabled': enabled,
+    'blur': blur,
+    'dim': dim,
+  };
+
+  factory WallpaperSettings.fromJson(Map<String, dynamic> json) =>
+      WallpaperSettings(
+        imagePath: json['imagePath'] as String?,
+        enabled: json['enabled'] as bool? ?? true,
+        blur: _clamp(json['blur'] as num?, 0, maxBlur, 18),
+        dim: _clamp(json['dim'] as num?, 0, maxDim, 0.35),
+      );
+
+  WallpaperSettings copyWith({
+    Object? imagePath = _unset,
+    bool? enabled,
+    double? blur,
+    double? dim,
+  }) {
+    return WallpaperSettings(
+      imagePath: imagePath == _unset ? this.imagePath : imagePath as String?,
+      enabled: enabled ?? this.enabled,
+      blur: _clamp(blur, 0, maxBlur, this.blur),
+      dim: _clamp(dim, 0, maxDim, this.dim),
+    );
+  }
+
+  /// A stored number, or [fallback] when it is missing or outside `[min, max]`.
+  ///
+  /// A slider whose value is out of range throws at build time, and these
+  /// numbers outlive the code that wrote them, so they are bounded on read.
+  static double _clamp(num? value, double min, double max, double fallback) {
+    if (value == null) return fallback;
+    final number = value.toDouble();
+    if (number.isNaN || number.isInfinite) return fallback;
+    return number.clamp(min, max);
+  }
+}
+
+/// Sentinel for [WallpaperSettings.copyWith] so `imagePath: null` can mean
+/// "clear the picture" instead of "keep the current one".
+const Object _unset = Object();
+
 /// Storage service for persisting app data
 class StorageService {
   static StorageService? _instance;
@@ -595,7 +729,17 @@ class StorageService {
     if (json == null) return DnsSettings();
 
     try {
-      return DnsSettings.fromJson(jsonDecode(json));
+      final settings = DnsSettings.fromJson(jsonDecode(json));
+      if (settings.nameserversRevision >=
+          DnsSettings.nameserverDefaultsRevision) {
+        return settings;
+      }
+      // The default upstream list grew since this record was written. Grow it
+      // once, then stamp the record, so this happens once rather than on every
+      // load.
+      final migrated = settings.withCurrentNameserverDefaults();
+      await saveDnsSettings(migrated);
+      return migrated;
     } catch (e) {
       debugPrint('Failed to load DNS settings: $e');
       return DnsSettings();
@@ -624,10 +768,27 @@ class StorageService {
     await _prefs?.setString('generalSettings', jsonEncode(settings.toJson()));
   }
 
+  // ==================== Wallpaper ====================
+
+  Future<WallpaperSettings> getWallpaperSettings() async {
+    final json = _prefs?.getString('wallpaperSettings');
+    if (json == null) return const WallpaperSettings();
+
+    try {
+      return WallpaperSettings.fromJson(jsonDecode(json));
+    } catch (e) {
+      debugPrint('Failed to load wallpaper settings: $e');
+      return const WallpaperSettings();
+    }
+  }
+
+  Future<void> saveWallpaperSettings(WallpaperSettings settings) async {
+    await _prefs?.setString('wallpaperSettings', jsonEncode(settings.toJson()));
+  }
+
   // ==================== Data Directory ====================
 
   String get dataDirectory => _dataDir ?? '';
-
   Future<String> getConfigPath() async {
     return '$_dataDir/config';
   }

@@ -182,7 +182,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 
 ## 环境要求
 
-- Flutter SDK（Dart `^3.12.0`；CI 使用 Flutter 3.47.2）
+- Flutter SDK（Dart `^3.12.0`，Flutter `>=3.44.0 <3.45.0`；CI 与发布流程固定使用 3.44.6）
 - Rust ≥ 1.88（edition 2021；`rust-toolchain.toml` 固定 1.97.0，本地与 CI 使用同一编译器跑 rustfmt/clippy）
 - Android：Android SDK、NDK、JDK 17
 - Windows：Visual Studio C++ 工具链；Wintun/管理员权限
@@ -200,6 +200,12 @@ cd rust
 cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
+```
+
+`pubspec.lock` 只对一条 Flutter 版本线成立：Flutter SDK 会钉死它自带包（`test_api`、`matcher`、`vector_math`、`meta`、`intl` 等）的版本。换一条版本线跑 `flutter pub get` 不会报错，但会把这个 lockfile 静默改写成那条线的解析结果，CI 上的 `flutter pub get --enforce-lockfile` 随后必然失败。提交前请确认本机 Flutter 落在 `environment.flutter` 声明的区间内，并用 `--enforce-lockfile` 确认 lockfile 没被动过：
+
+```bash
+flutter pub get --enforce-lockfile
 ```
 
 Dart 桥接代码由 `flutter_rust_bridge.yaml` 驱动生成；改动 Rust 侧 `api`/`types` 后必须重新执行：

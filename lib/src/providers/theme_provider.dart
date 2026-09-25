@@ -27,6 +27,26 @@ class ThemeProvider extends ChangeNotifier {
     return AppTheme.getThemeSeedColor(themeName);
   }
 
+  /// The palette a theme resolves to, for the picker's swatches.
+  ColorScheme getThemePreviewScheme(String themeName, Brightness brightness) {
+    return AppTheme.previewScheme(themeName, brightness);
+  }
+
+  /// The palette of the theme in use, for the settings row.
+  ColorScheme get currentThemePreviewScheme =>
+      AppTheme.previewScheme(_selectedTheme, _previewBrightness);
+
+  /// The brightness the last built theme used. Defaults to light so the row
+  /// has something plausible to draw before the first theme is built.
+  Brightness _previewBrightness = Brightness.light;
+
+  /// Remembers which brightness the app is actually in, so the settings row
+  /// previews the theme the user is looking at rather than the other one.
+  void setPreviewBrightness(Brightness brightness) {
+    if (_previewBrightness == brightness) return;
+    _previewBrightness = brightness;
+  }
+
   void setTheme(String themeName) {
     if (_selectedTheme != themeName && availableThemes.contains(themeName)) {
       _selectedTheme = themeName;
