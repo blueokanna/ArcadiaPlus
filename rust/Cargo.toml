@@ -12,7 +12,7 @@ name = "rust_lib_arcadiaplus"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-corduit = { version = "0.2.0", path = "../../Corduit", features = [
+corduit = { version = "0.2.0", features = [
     "hysteria2",
     "reality",
     "tuic",
