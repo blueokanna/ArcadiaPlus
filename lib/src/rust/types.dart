@@ -190,12 +190,43 @@ class DnsConfigDto {
   final List<String> nameservers;
   final List<String> fallback;
 
+  /// Per-domain upstream overrides (`nameserver-policy`).
+  final Map<String, List<String>> nameserverPolicy;
+
+  /// Resolvers used only to resolve an upstream's own host name.
+  final List<String> defaultNameserver;
+  final DnsFallbackFilterDto fallbackFilter;
+  final String fakeIpRange;
+  final List<String> fakeIpFilter;
+  final int fakeIpTtl;
+
+  /// How many static `hosts` entries are in effect.
+  ///
+  /// The entries themselves stay in the engine: a UI needs the count, and a
+  /// hosts block can run to thousands of lines. A count of hosts or of cache
+  /// slots cannot approach `u32::MAX`, and the narrower type keeps it a plain
+  /// Dart `int` instead of the `BigInt` every byte counter needs.
+  final int hostCount;
+  final bool useHosts;
+
+  /// Forward-cache capacity, in entries.
+  final int cacheSize;
+
   const DnsConfigDto({
     required this.enable,
     required this.listen,
     required this.enhancedMode,
     required this.nameservers,
     required this.fallback,
+    required this.nameserverPolicy,
+    required this.defaultNameserver,
+    required this.fallbackFilter,
+    required this.fakeIpRange,
+    required this.fakeIpFilter,
+    required this.fakeIpTtl,
+    required this.hostCount,
+    required this.useHosts,
+    required this.cacheSize,
   });
 
   @override
@@ -204,7 +235,16 @@ class DnsConfigDto {
       listen.hashCode ^
       enhancedMode.hashCode ^
       nameservers.hashCode ^
-      fallback.hashCode;
+      fallback.hashCode ^
+      nameserverPolicy.hashCode ^
+      defaultNameserver.hashCode ^
+      fallbackFilter.hashCode ^
+      fakeIpRange.hashCode ^
+      fakeIpFilter.hashCode ^
+      fakeIpTtl.hashCode ^
+      hostCount.hashCode ^
+      useHosts.hashCode ^
+      cacheSize.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -215,7 +255,153 @@ class DnsConfigDto {
           listen == other.listen &&
           enhancedMode == other.enhancedMode &&
           nameservers == other.nameservers &&
-          fallback == other.fallback;
+          fallback == other.fallback &&
+          nameserverPolicy == other.nameserverPolicy &&
+          defaultNameserver == other.defaultNameserver &&
+          fallbackFilter == other.fallbackFilter &&
+          fakeIpRange == other.fakeIpRange &&
+          fakeIpFilter == other.fakeIpFilter &&
+          fakeIpTtl == other.fakeIpTtl &&
+          hostCount == other.hostCount &&
+          useHosts == other.useHosts &&
+          cacheSize == other.cacheSize;
+}
+
+/// `fallback-filter`: what makes an answer suspect enough to re-resolve it
+/// through `fallback`.
+class DnsFallbackFilterDto {
+  /// Whether a geographic signal may trigger the re-resolve.
+  final bool? geoip;
+
+  /// The country `geoip` keys on.
+  final String? geoipCode;
+
+  /// Ranges whose answers always trigger the re-resolve.
+  final List<String> ipcidr;
+
+  /// Suffixes whose answers always trigger the re-resolve.
+  final List<String> domain;
+
+  const DnsFallbackFilterDto({
+    this.geoip,
+    this.geoipCode,
+    required this.ipcidr,
+    required this.domain,
+  });
+
+  @override
+  int get hashCode =>
+      geoip.hashCode ^ geoipCode.hashCode ^ ipcidr.hashCode ^ domain.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DnsFallbackFilterDto &&
+          runtimeType == other.runtimeType &&
+          geoip == other.geoip &&
+          geoipCode == other.geoipCode &&
+          ipcidr == other.ipcidr &&
+          domain == other.domain;
+}
+
+/// Clash-compatible dashboard API status. The secret is never reported.
+class ExternalControllerStatus {
+  /// Whether the controller's accept loop is running.
+  final bool running;
+
+  /// The bound address, `None` while stopped.
+  final String? addr;
+
+  /// Whether requests must present `general.secret`.
+  final bool secretRequired;
+
+  const ExternalControllerStatus({
+    required this.running,
+    this.addr,
+    required this.secretRequired,
+  });
+
+  @override
+  int get hashCode =>
+      running.hashCode ^ addr.hashCode ^ secretRequired.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ExternalControllerStatus &&
+          runtimeType == other.runtimeType &&
+          running == other.running &&
+          addr == other.addr &&
+          secretRequired == other.secretRequired;
+}
+
+/// The engine's live `general` settings, read from the running instance.
+class GeneralSnapshot {
+  /// The configured mode, spelled `rule` / `global` / `direct`.
+  final String mode;
+
+  /// The runtime override: `1` global, `2` direct, `3` rule, `0` none.
+  final int runtimeMode;
+
+  /// The configured log level.
+  final String logLevel;
+
+  /// Whether the inbound listeners accept remote clients.
+  final bool allowLan;
+
+  /// The address the inbounds bind to.
+  final String bindAddress;
+
+  /// Whether IPv6 is enabled for outbound dialling.
+  final bool ipv6;
+
+  /// Whether host-name resolution races its candidate addresses.
+  final bool tcpConcurrent;
+
+  /// The SOCKS inbound port, when one is configured.
+  final int? socksPort;
+
+  /// The mixed inbound port, when one is configured.
+  final int? mixedPort;
+
+  const GeneralSnapshot({
+    required this.mode,
+    required this.runtimeMode,
+    required this.logLevel,
+    required this.allowLan,
+    required this.bindAddress,
+    required this.ipv6,
+    required this.tcpConcurrent,
+    this.socksPort,
+    this.mixedPort,
+  });
+
+  @override
+  int get hashCode =>
+      mode.hashCode ^
+      runtimeMode.hashCode ^
+      logLevel.hashCode ^
+      allowLan.hashCode ^
+      bindAddress.hashCode ^
+      ipv6.hashCode ^
+      tcpConcurrent.hashCode ^
+      socksPort.hashCode ^
+      mixedPort.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is GeneralSnapshot &&
+          runtimeType == other.runtimeType &&
+          mode == other.mode &&
+          runtimeMode == other.runtimeMode &&
+          logLevel == other.logLevel &&
+          allowLan == other.allowLan &&
+          bindAddress == other.bindAddress &&
+          ipv6 == other.ipv6 &&
+          tcpConcurrent == other.tcpConcurrent &&
+          socksPort == other.socksPort &&
+          mixedPort == other.mixedPort;
 }
 
 /// Latency test result.
@@ -401,6 +587,36 @@ class RecursiveDnsStatus {
           runtimeType == other.runtimeType &&
           running == other.running &&
           listen == other.listen;
+}
+
+/// Loopback JSON-RPC server status. The token itself is never reported.
+class RpcServerStatus {
+  /// Whether the server's accept loop is running.
+  final bool running;
+
+  /// The bound address, `None` while stopped.
+  final String? addr;
+
+  /// Whether requests must present a bearer token.
+  final bool tokenSet;
+
+  const RpcServerStatus({
+    required this.running,
+    this.addr,
+    required this.tokenSet,
+  });
+
+  @override
+  int get hashCode => running.hashCode ^ addr.hashCode ^ tokenSet.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RpcServerStatus &&
+          runtimeType == other.runtimeType &&
+          running == other.running &&
+          addr == other.addr &&
+          tokenSet == other.tokenSet;
 }
 
 /// Rule DTO.

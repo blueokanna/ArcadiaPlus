@@ -67,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 611365399;
+  int get rustContentHash => -139664526;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -121,6 +121,10 @@ abstract class RustLibApi extends BaseApi {
 
   Future<DnsConfigDto> crateApiGetDnsConfig();
 
+  Future<ExternalControllerStatus> crateApiGetExternalControllerStatus();
+
+  Future<GeneralSnapshot> crateApiGetGeneralSnapshot();
+
   Future<List<String>> crateApiGetLogs({int? lines});
 
   Future<List<ProxyInfoDto>> crateApiGetProxies();
@@ -130,6 +134,8 @@ abstract class RustLibApi extends BaseApi {
   Future<int> crateApiGetProxyMode();
 
   Future<RecursiveDnsStatus> crateApiGetRecursiveDnsStatus();
+
+  Future<RpcServerStatus> crateApiGetRpcServerStatus();
 
   Future<List<RuleDto>> crateApiGetRules();
 
@@ -198,11 +204,20 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiStartCorduit();
 
+  Future<void> crateApiStartExternalController({
+    required String externalController,
+    String? secret,
+  });
+
+  Future<void> crateApiStartExternalControllerFromConfig();
+
   Future<void> crateApiStartProxyFromFile({required String configPath});
 
   Future<void> crateApiStartProxyFromYaml({required String yamlConfig});
 
   Future<String> crateApiStartRecursiveDns({required String listen});
+
+  Future<void> crateApiStartRpcServer({required int port, String? token});
 
   Future<void> crateApiStartTunMode({
     required String tunName,
@@ -214,9 +229,13 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiStopCorduit();
 
+  Future<void> crateApiStopExternalController();
+
   Future<void> crateApiStopProxy();
 
   Future<void> crateApiStopRecursiveDns();
+
+  Future<void> crateApiStopRpcServer();
 
   Future<void> crateApiStopTunMode();
 
@@ -729,6 +748,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_dns_config", argNames: []);
 
   @override
+  Future<ExternalControllerStatus> crateApiGetExternalControllerStatus() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__get_external_controller_status(port_);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_external_controller_status,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiGetExternalControllerStatusConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiGetExternalControllerStatusConstMeta =>
+      const TaskConstMeta(
+        debugName: "get_external_controller_status",
+        argNames: [],
+      );
+
+  @override
+  Future<GeneralSnapshot> crateApiGetGeneralSnapshot() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__get_general_snapshot(port_);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_general_snapshot,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiGetGeneralSnapshotConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiGetGeneralSnapshotConstMeta =>
+      const TaskConstMeta(debugName: "get_general_snapshot", argNames: []);
+
+  @override
   Future<List<String>> crateApiGetLogs({int? lines}) {
     return handler.executeNormal(
       NormalTask(
@@ -833,6 +897,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiGetRecursiveDnsStatusConstMeta =>
       const TaskConstMeta(debugName: "get_recursive_dns_status", argNames: []);
+
+  @override
+  Future<RpcServerStatus> crateApiGetRpcServerStatus() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__get_rpc_server_status(port_);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_rpc_server_status,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiGetRpcServerStatusConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiGetRpcServerStatusConstMeta =>
+      const TaskConstMeta(debugName: "get_rpc_server_status", argNames: []);
 
   @override
   Future<List<RuleDto>> crateApiGetRules() {
@@ -1533,6 +1618,65 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "start_corduit", argNames: []);
 
   @override
+  Future<void> crateApiStartExternalController({
+    required String externalController,
+    String? secret,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          var arg0 = cst_encode_String(externalController);
+          var arg1 = cst_encode_opt_String(secret);
+          return wire.wire__crate__api__start_external_controller(
+            port_,
+            arg0,
+            arg1,
+          );
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiStartExternalControllerConstMeta,
+        argValues: [externalController, secret],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiStartExternalControllerConstMeta =>
+      const TaskConstMeta(
+        debugName: "start_external_controller",
+        argNames: ["externalController", "secret"],
+      );
+
+  @override
+  Future<void> crateApiStartExternalControllerFromConfig() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__start_external_controller_from_config(
+            port_,
+          );
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiStartExternalControllerFromConfigConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiStartExternalControllerFromConfigConstMeta =>
+      const TaskConstMeta(
+        debugName: "start_external_controller_from_config",
+        argNames: [],
+      );
+
+  @override
   Future<void> crateApiStartProxyFromFile({required String configPath}) {
     return handler.executeNormal(
       NormalTask(
@@ -1602,6 +1746,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiStartRecursiveDnsConstMeta => const TaskConstMeta(
     debugName: "start_recursive_dns",
     argNames: ["listen"],
+  );
+
+  @override
+  Future<void> crateApiStartRpcServer({required int port, String? token}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          var arg0 = cst_encode_u_16(port);
+          var arg1 = cst_encode_opt_String(token);
+          return wire.wire__crate__api__start_rpc_server(port_, arg0, arg1);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiStartRpcServerConstMeta,
+        argValues: [port, token],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiStartRpcServerConstMeta => const TaskConstMeta(
+    debugName: "start_rpc_server",
+    argNames: ["port", "token"],
   );
 
   @override
@@ -1677,6 +1846,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "stop_corduit", argNames: []);
 
   @override
+  Future<void> crateApiStopExternalController() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__stop_external_controller(port_);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiStopExternalControllerConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiStopExternalControllerConstMeta =>
+      const TaskConstMeta(debugName: "stop_external_controller", argNames: []);
+
+  @override
   Future<void> crateApiStopProxy() {
     return handler.executeNormal(
       NormalTask(
@@ -1717,6 +1907,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiStopRecursiveDnsConstMeta =>
       const TaskConstMeta(debugName: "stop_recursive_dns", argNames: []);
+
+  @override
+  Future<void> crateApiStopRpcServer() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__stop_rpc_server(port_);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiStopRpcServerConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiStopRpcServerConstMeta =>
+      const TaskConstMeta(debugName: "stop_rpc_server", argNames: []);
 
   @override
   Future<void> crateApiStopTunMode() {
@@ -2005,6 +2216,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @protected
+  Map<String, List<String>> dco_decode_Map_String_list_String_None(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return Map.fromEntries(
+      dco_decode_list_record_string_list_string(
+        raw,
+      ).map((e) => MapEntry(e.$1, e.$2)),
+    );
+  }
+
+  @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as String;
@@ -2036,6 +2259,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  bool dco_decode_box_autoadd_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
   }
@@ -2100,14 +2329,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   DnsConfigDto dco_decode_dns_config_dto(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return DnsConfigDto(
       enable: dco_decode_bool(arr[0]),
       listen: dco_decode_String(arr[1]),
       enhancedMode: dco_decode_String(arr[2]),
       nameservers: dco_decode_list_String(arr[3]),
       fallback: dco_decode_list_String(arr[4]),
+      nameserverPolicy: dco_decode_Map_String_list_String_None(arr[5]),
+      defaultNameserver: dco_decode_list_String(arr[6]),
+      fallbackFilter: dco_decode_dns_fallback_filter_dto(arr[7]),
+      fakeIpRange: dco_decode_String(arr[8]),
+      fakeIpFilter: dco_decode_list_String(arr[9]),
+      fakeIpTtl: dco_decode_u_32(arr[10]),
+      hostCount: dco_decode_u_32(arr[11]),
+      useHosts: dco_decode_bool(arr[12]),
+      cacheSize: dco_decode_u_32(arr[13]),
+    );
+  }
+
+  @protected
+  DnsFallbackFilterDto dco_decode_dns_fallback_filter_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return DnsFallbackFilterDto(
+      geoip: dco_decode_opt_box_autoadd_bool(arr[0]),
+      geoipCode: dco_decode_opt_String(arr[1]),
+      ipcidr: dco_decode_list_String(arr[2]),
+      domain: dco_decode_list_String(arr[3]),
+    );
+  }
+
+  @protected
+  ExternalControllerStatus dco_decode_external_controller_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return ExternalControllerStatus(
+      running: dco_decode_bool(arr[0]),
+      addr: dco_decode_opt_String(arr[1]),
+      secretRequired: dco_decode_bool(arr[2]),
     );
   }
 
@@ -2115,6 +2380,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double dco_decode_f_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
+  }
+
+  @protected
+  GeneralSnapshot dco_decode_general_snapshot(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return GeneralSnapshot(
+      mode: dco_decode_String(arr[0]),
+      runtimeMode: dco_decode_i_32(arr[1]),
+      logLevel: dco_decode_String(arr[2]),
+      allowLan: dco_decode_bool(arr[3]),
+      bindAddress: dco_decode_String(arr[4]),
+      ipv6: dco_decode_bool(arr[5]),
+      tcpConcurrent: dco_decode_bool(arr[6]),
+      socksPort: dco_decode_opt_box_autoadd_u_16(arr[7]),
+      mixedPort: dco_decode_opt_box_autoadd_u_16(arr[8]),
+    );
   }
 
   @protected
@@ -2198,6 +2482,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<(String, List<String>)> dco_decode_list_record_string_list_string(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_record_string_list_string)
+        .toList();
+  }
+
+  @protected
   List<(String, int)> dco_decode_list_record_string_u_16(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_record_string_u_16).toList();
@@ -2213,6 +2507,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  bool? dco_decode_opt_box_autoadd_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_bool(raw);
   }
 
   @protected
@@ -2293,6 +2593,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  (String, List<String>) dco_decode_record_string_list_string(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2) {
+      throw Exception('Expected 2 elements, got ${arr.length}');
+    }
+    return (dco_decode_String(arr[0]), dco_decode_list_String(arr[1]));
+  }
+
+  @protected
   (String, int) dco_decode_record_string_u_16(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2346,6 +2656,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return RecursiveDnsStatus(
       running: dco_decode_bool(arr[0]),
       listen: dco_decode_opt_String(arr[1]),
+    );
+  }
+
+  @protected
+  RpcServerStatus dco_decode_rpc_server_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return RpcServerStatus(
+      running: dco_decode_bool(arr[0]),
+      addr: dco_decode_opt_String(arr[1]),
+      tokenSet: dco_decode_bool(arr[2]),
     );
   }
 
@@ -2456,6 +2779,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Map<String, List<String>> sse_decode_Map_String_list_String_None(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_record_string_list_string(deserializer);
+    return Map.fromEntries(inner.map((e) => MapEntry(e.$1, e.$2)));
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
@@ -2501,6 +2833,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  bool sse_decode_box_autoadd_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_bool(deserializer));
   }
 
   @protected
@@ -2579,12 +2917,64 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_enhancedMode = sse_decode_String(deserializer);
     var var_nameservers = sse_decode_list_String(deserializer);
     var var_fallback = sse_decode_list_String(deserializer);
+    var var_nameserverPolicy = sse_decode_Map_String_list_String_None(
+      deserializer,
+    );
+    var var_defaultNameserver = sse_decode_list_String(deserializer);
+    var var_fallbackFilter = sse_decode_dns_fallback_filter_dto(deserializer);
+    var var_fakeIpRange = sse_decode_String(deserializer);
+    var var_fakeIpFilter = sse_decode_list_String(deserializer);
+    var var_fakeIpTtl = sse_decode_u_32(deserializer);
+    var var_hostCount = sse_decode_u_32(deserializer);
+    var var_useHosts = sse_decode_bool(deserializer);
+    var var_cacheSize = sse_decode_u_32(deserializer);
     return DnsConfigDto(
       enable: var_enable,
       listen: var_listen,
       enhancedMode: var_enhancedMode,
       nameservers: var_nameservers,
       fallback: var_fallback,
+      nameserverPolicy: var_nameserverPolicy,
+      defaultNameserver: var_defaultNameserver,
+      fallbackFilter: var_fallbackFilter,
+      fakeIpRange: var_fakeIpRange,
+      fakeIpFilter: var_fakeIpFilter,
+      fakeIpTtl: var_fakeIpTtl,
+      hostCount: var_hostCount,
+      useHosts: var_useHosts,
+      cacheSize: var_cacheSize,
+    );
+  }
+
+  @protected
+  DnsFallbackFilterDto sse_decode_dns_fallback_filter_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_geoip = sse_decode_opt_box_autoadd_bool(deserializer);
+    var var_geoipCode = sse_decode_opt_String(deserializer);
+    var var_ipcidr = sse_decode_list_String(deserializer);
+    var var_domain = sse_decode_list_String(deserializer);
+    return DnsFallbackFilterDto(
+      geoip: var_geoip,
+      geoipCode: var_geoipCode,
+      ipcidr: var_ipcidr,
+      domain: var_domain,
+    );
+  }
+
+  @protected
+  ExternalControllerStatus sse_decode_external_controller_status(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_running = sse_decode_bool(deserializer);
+    var var_addr = sse_decode_opt_String(deserializer);
+    var var_secretRequired = sse_decode_bool(deserializer);
+    return ExternalControllerStatus(
+      running: var_running,
+      addr: var_addr,
+      secretRequired: var_secretRequired,
     );
   }
 
@@ -2592,6 +2982,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   double sse_decode_f_64(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  GeneralSnapshot sse_decode_general_snapshot(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_mode = sse_decode_String(deserializer);
+    var var_runtimeMode = sse_decode_i_32(deserializer);
+    var var_logLevel = sse_decode_String(deserializer);
+    var var_allowLan = sse_decode_bool(deserializer);
+    var var_bindAddress = sse_decode_String(deserializer);
+    var var_ipv6 = sse_decode_bool(deserializer);
+    var var_tcpConcurrent = sse_decode_bool(deserializer);
+    var var_socksPort = sse_decode_opt_box_autoadd_u_16(deserializer);
+    var var_mixedPort = sse_decode_opt_box_autoadd_u_16(deserializer);
+    return GeneralSnapshot(
+      mode: var_mode,
+      runtimeMode: var_runtimeMode,
+      logLevel: var_logLevel,
+      allowLan: var_allowLan,
+      bindAddress: var_bindAddress,
+      ipv6: var_ipv6,
+      tcpConcurrent: var_tcpConcurrent,
+      socksPort: var_socksPort,
+      mixedPort: var_mixedPort,
+    );
   }
 
   @protected
@@ -2741,6 +3156,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<(String, List<String>)> sse_decode_list_record_string_list_string(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <(String, List<String>)>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_record_string_list_string(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<(String, int)> sse_decode_list_record_string_u_16(
     SseDeserializer deserializer,
   ) {
@@ -2772,6 +3201,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_bool(deserializer));
     } else {
       return null;
     }
@@ -2877,6 +3317,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  (String, List<String>) sse_decode_record_string_list_string(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_String(deserializer);
+    var var_field1 = sse_decode_list_String(deserializer);
+    return (var_field0, var_field1);
+  }
+
+  @protected
   (String, int) sse_decode_record_string_u_16(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_field0 = sse_decode_String(deserializer);
@@ -2926,6 +3376,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_running = sse_decode_bool(deserializer);
     var var_listen = sse_decode_opt_String(deserializer);
     return RecursiveDnsStatus(running: var_running, listen: var_listen);
+  }
+
+  @protected
+  RpcServerStatus sse_decode_rpc_server_status(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_running = sse_decode_bool(deserializer);
+    var var_addr = sse_decode_opt_String(deserializer);
+    var var_tokenSet = sse_decode_bool(deserializer);
+    return RpcServerStatus(
+      running: var_running,
+      addr: var_addr,
+      tokenSet: var_tokenSet,
+    );
   }
 
   @protected
@@ -3087,6 +3550,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_Map_String_list_String_None(
+    Map<String, List<String>> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_record_string_list_string(
+      self.entries.map((e) => (e.key, e.value)).toList(),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
@@ -3118,6 +3593,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self, serializer);
   }
 
   @protected
@@ -3177,12 +3658,61 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.enhancedMode, serializer);
     sse_encode_list_String(self.nameservers, serializer);
     sse_encode_list_String(self.fallback, serializer);
+    sse_encode_Map_String_list_String_None(self.nameserverPolicy, serializer);
+    sse_encode_list_String(self.defaultNameserver, serializer);
+    sse_encode_dns_fallback_filter_dto(self.fallbackFilter, serializer);
+    sse_encode_String(self.fakeIpRange, serializer);
+    sse_encode_list_String(self.fakeIpFilter, serializer);
+    sse_encode_u_32(self.fakeIpTtl, serializer);
+    sse_encode_u_32(self.hostCount, serializer);
+    sse_encode_bool(self.useHosts, serializer);
+    sse_encode_u_32(self.cacheSize, serializer);
+  }
+
+  @protected
+  void sse_encode_dns_fallback_filter_dto(
+    DnsFallbackFilterDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_box_autoadd_bool(self.geoip, serializer);
+    sse_encode_opt_String(self.geoipCode, serializer);
+    sse_encode_list_String(self.ipcidr, serializer);
+    sse_encode_list_String(self.domain, serializer);
+  }
+
+  @protected
+  void sse_encode_external_controller_status(
+    ExternalControllerStatus self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.running, serializer);
+    sse_encode_opt_String(self.addr, serializer);
+    sse_encode_bool(self.secretRequired, serializer);
   }
 
   @protected
   void sse_encode_f_64(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_general_snapshot(
+    GeneralSnapshot self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.mode, serializer);
+    sse_encode_i_32(self.runtimeMode, serializer);
+    sse_encode_String(self.logLevel, serializer);
+    sse_encode_bool(self.allowLan, serializer);
+    sse_encode_String(self.bindAddress, serializer);
+    sse_encode_bool(self.ipv6, serializer);
+    sse_encode_bool(self.tcpConcurrent, serializer);
+    sse_encode_opt_box_autoadd_u_16(self.socksPort, serializer);
+    sse_encode_opt_box_autoadd_u_16(self.mixedPort, serializer);
   }
 
   @protected
@@ -3313,6 +3843,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_record_string_list_string(
+    List<(String, List<String>)> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_record_string_list_string(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_record_string_u_16(
     List<(String, int)> self,
     SseSerializer serializer,
@@ -3340,6 +3882,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_bool(self, serializer);
     }
   }
 
@@ -3419,6 +3971,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_record_string_list_string(
+    (String, List<String>) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.$1, serializer);
+    sse_encode_list_String(self.$2, serializer);
+  }
+
+  @protected
   void sse_encode_record_string_u_16(
     (String, int) self,
     SseSerializer serializer,
@@ -3462,6 +4024,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_bool(self.running, serializer);
     sse_encode_opt_String(self.listen, serializer);
+  }
+
+  @protected
+  void sse_encode_rpc_server_status(
+    RpcServerStatus self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_bool(self.running, serializer);
+    sse_encode_opt_String(self.addr, serializer);
+    sse_encode_bool(self.tokenSet, serializer);
   }
 
   @protected

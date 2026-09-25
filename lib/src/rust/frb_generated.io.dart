@@ -20,6 +20,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   @protected
+  Map<String, List<String>> dco_decode_Map_String_list_String_None(dynamic raw);
+
+  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
@@ -27,6 +30,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_16(dynamic raw);
@@ -47,7 +53,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DnsConfigDto dco_decode_dns_config_dto(dynamic raw);
 
   @protected
+  DnsFallbackFilterDto dco_decode_dns_fallback_filter_dto(dynamic raw);
+
+  @protected
+  ExternalControllerStatus dco_decode_external_controller_status(dynamic raw);
+
+  @protected
   double dco_decode_f_64(dynamic raw);
+
+  @protected
+  GeneralSnapshot dco_decode_general_snapshot(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
@@ -86,6 +101,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ProxyLatencyDto> dco_decode_list_proxy_latency_dto(dynamic raw);
 
   @protected
+  List<(String, List<String>)> dco_decode_list_record_string_list_string(
+    dynamic raw,
+  );
+
+  @protected
   List<(String, int)> dco_decode_list_record_string_u_16(dynamic raw);
 
   @protected
@@ -93,6 +113,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
@@ -116,6 +139,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ProxyStatus dco_decode_proxy_status(dynamic raw);
 
   @protected
+  (String, List<String>) dco_decode_record_string_list_string(dynamic raw);
+
+  @protected
   (String, int) dco_decode_record_string_u_16(dynamic raw);
 
   @protected
@@ -129,6 +155,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RecursiveDnsStatus dco_decode_recursive_dns_status(dynamic raw);
+
+  @protected
+  RpcServerStatus dco_decode_rpc_server_status(dynamic raw);
 
   @protected
   RuleDto dco_decode_rule_dto(dynamic raw);
@@ -161,6 +190,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  Map<String, List<String>> sse_decode_Map_String_list_String_None(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
@@ -168,6 +202,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
@@ -188,7 +225,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DnsConfigDto sse_decode_dns_config_dto(SseDeserializer deserializer);
 
   @protected
+  DnsFallbackFilterDto sse_decode_dns_fallback_filter_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExternalControllerStatus sse_decode_external_controller_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  GeneralSnapshot sse_decode_general_snapshot(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -243,6 +293,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<(String, List<String>)> sse_decode_list_record_string_list_string(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<(String, int)> sse_decode_list_record_string_u_16(
     SseDeserializer deserializer,
   );
@@ -252,6 +307,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
   int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
@@ -275,6 +333,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ProxyStatus sse_decode_proxy_status(SseDeserializer deserializer);
 
   @protected
+  (String, List<String>) sse_decode_record_string_list_string(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   (String, int) sse_decode_record_string_u_16(SseDeserializer deserializer);
 
   @protected
@@ -290,6 +353,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RecursiveDnsStatus sse_decode_recursive_dns_status(
     SseDeserializer deserializer,
   );
+
+  @protected
+  RpcServerStatus sse_decode_rpc_server_status(SseDeserializer deserializer);
 
   @protected
   RuleDto sse_decode_rule_dto(SseDeserializer deserializer);
@@ -322,9 +388,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  ffi.Pointer<wire_cst_list_record_string_list_string>
+  cst_encode_Map_String_list_String_None(Map<String, List<String>> raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return cst_encode_list_record_string_list_string(
+      raw.entries.map((e) => (e.key, e.value)).toList(),
+    );
+  }
+
+  @protected
   ffi.Pointer<wire_cst_list_prim_u_8_strict> cst_encode_String(String raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return cst_encode_list_prim_u_8_strict(utf8.encoder.convert(raw));
+  }
+
+  @protected
+  ffi.Pointer<ffi.Bool> cst_encode_box_autoadd_bool(bool raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return wire.cst_new_box_autoadd_bool(cst_encode_bool(raw));
   }
 
   @protected
@@ -453,6 +534,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  ffi.Pointer<wire_cst_list_record_string_list_string>
+  cst_encode_list_record_string_list_string(List<(String, List<String>)> raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    final ans = wire.cst_new_list_record_string_list_string(raw.length);
+    for (var i = 0; i < raw.length; ++i) {
+      cst_api_fill_to_wire_record_string_list_string(raw[i], ans.ref.ptr[i]);
+    }
+    return ans;
+  }
+
+  @protected
   ffi.Pointer<wire_cst_list_record_string_u_16>
   cst_encode_list_record_string_u_16(List<(String, int)> raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
@@ -481,6 +573,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return raw == null ? ffi.nullptr : cst_encode_String(raw);
+  }
+
+  @protected
+  ffi.Pointer<ffi.Bool> cst_encode_opt_box_autoadd_bool(bool? raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return raw == null ? ffi.nullptr : cst_encode_box_autoadd_bool(raw);
   }
 
   @protected
@@ -570,6 +668,59 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     wireObj.enhanced_mode = cst_encode_String(apiObj.enhancedMode);
     wireObj.nameservers = cst_encode_list_String(apiObj.nameservers);
     wireObj.fallback = cst_encode_list_String(apiObj.fallback);
+    wireObj.nameserver_policy = cst_encode_Map_String_list_String_None(
+      apiObj.nameserverPolicy,
+    );
+    wireObj.default_nameserver = cst_encode_list_String(
+      apiObj.defaultNameserver,
+    );
+    cst_api_fill_to_wire_dns_fallback_filter_dto(
+      apiObj.fallbackFilter,
+      wireObj.fallback_filter,
+    );
+    wireObj.fake_ip_range = cst_encode_String(apiObj.fakeIpRange);
+    wireObj.fake_ip_filter = cst_encode_list_String(apiObj.fakeIpFilter);
+    wireObj.fake_ip_ttl = cst_encode_u_32(apiObj.fakeIpTtl);
+    wireObj.host_count = cst_encode_u_32(apiObj.hostCount);
+    wireObj.use_hosts = cst_encode_bool(apiObj.useHosts);
+    wireObj.cache_size = cst_encode_u_32(apiObj.cacheSize);
+  }
+
+  @protected
+  void cst_api_fill_to_wire_dns_fallback_filter_dto(
+    DnsFallbackFilterDto apiObj,
+    wire_cst_dns_fallback_filter_dto wireObj,
+  ) {
+    wireObj.geoip = cst_encode_opt_box_autoadd_bool(apiObj.geoip);
+    wireObj.geoip_code = cst_encode_opt_String(apiObj.geoipCode);
+    wireObj.ipcidr = cst_encode_list_String(apiObj.ipcidr);
+    wireObj.domain = cst_encode_list_String(apiObj.domain);
+  }
+
+  @protected
+  void cst_api_fill_to_wire_external_controller_status(
+    ExternalControllerStatus apiObj,
+    wire_cst_external_controller_status wireObj,
+  ) {
+    wireObj.running = cst_encode_bool(apiObj.running);
+    wireObj.addr = cst_encode_opt_String(apiObj.addr);
+    wireObj.secret_required = cst_encode_bool(apiObj.secretRequired);
+  }
+
+  @protected
+  void cst_api_fill_to_wire_general_snapshot(
+    GeneralSnapshot apiObj,
+    wire_cst_general_snapshot wireObj,
+  ) {
+    wireObj.mode = cst_encode_String(apiObj.mode);
+    wireObj.runtime_mode = cst_encode_i_32(apiObj.runtimeMode);
+    wireObj.log_level = cst_encode_String(apiObj.logLevel);
+    wireObj.allow_lan = cst_encode_bool(apiObj.allowLan);
+    wireObj.bind_address = cst_encode_String(apiObj.bindAddress);
+    wireObj.ipv6 = cst_encode_bool(apiObj.ipv6);
+    wireObj.tcp_concurrent = cst_encode_bool(apiObj.tcpConcurrent);
+    wireObj.socks_port = cst_encode_opt_box_autoadd_u_16(apiObj.socksPort);
+    wireObj.mixed_port = cst_encode_opt_box_autoadd_u_16(apiObj.mixedPort);
   }
 
   @protected
@@ -631,6 +782,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  void cst_api_fill_to_wire_record_string_list_string(
+    (String, List<String>) apiObj,
+    wire_cst_record_string_list_string wireObj,
+  ) {
+    wireObj.field0 = cst_encode_String(apiObj.$1);
+    wireObj.field1 = cst_encode_list_String(apiObj.$2);
+  }
+
+  @protected
   void cst_api_fill_to_wire_record_string_u_16(
     (String, int) apiObj,
     wire_cst_record_string_u_16 wireObj,
@@ -670,6 +830,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ) {
     wireObj.running = cst_encode_bool(apiObj.running);
     wireObj.listen = cst_encode_opt_String(apiObj.listen);
+  }
+
+  @protected
+  void cst_api_fill_to_wire_rpc_server_status(
+    RpcServerStatus apiObj,
+    wire_cst_rpc_server_status wireObj,
+  ) {
+    wireObj.running = cst_encode_bool(apiObj.running);
+    wireObj.addr = cst_encode_opt_String(apiObj.addr);
+    wireObj.token_set = cst_encode_bool(apiObj.tokenSet);
   }
 
   @protected
@@ -755,6 +925,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void cst_encode_unit(void raw);
 
   @protected
+  void sse_encode_Map_String_list_String_None(
+    Map<String, List<String>> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
@@ -765,6 +941,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
@@ -788,7 +967,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_dns_config_dto(DnsConfigDto self, SseSerializer serializer);
 
   @protected
+  void sse_encode_dns_fallback_filter_dto(
+    DnsFallbackFilterDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_external_controller_status(
+    ExternalControllerStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_general_snapshot(
+    GeneralSnapshot self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
@@ -854,6 +1051,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_record_string_list_string(
+    List<(String, List<String>)> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_record_string_u_16(
     List<(String, int)> self,
     SseSerializer serializer,
@@ -864,6 +1067,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
@@ -890,6 +1096,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_proxy_status(ProxyStatus self, SseSerializer serializer);
 
   @protected
+  void sse_encode_record_string_list_string(
+    (String, List<String>) self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_record_string_u_16(
     (String, int) self,
     SseSerializer serializer,
@@ -910,6 +1122,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_recursive_dns_status(
     RecursiveDnsStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_rpc_server_status(
+    RpcServerStatus self,
     SseSerializer serializer,
   );
 
@@ -972,6 +1190,17 @@ class RustLibWire implements BaseWire {
   RustLibWire.fromLookup(
     ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup,
   ) : _lookup = lookup;
+
+  ffi.Pointer<ffi.Bool> cst_new_box_autoadd_bool(bool value) {
+    return _cst_new_box_autoadd_bool(value);
+  }
+
+  late final _cst_new_box_autoadd_boolPtr =
+      _lookup<ffi.NativeFunction<ffi.Pointer<ffi.Bool> Function(ffi.Bool)>>(
+        'frbgen_arcadiaplus_cst_new_box_autoadd_bool',
+      );
+  late final _cst_new_box_autoadd_bool = _cst_new_box_autoadd_boolPtr
+      .asFunction<ffi.Pointer<ffi.Bool> Function(bool)>();
 
   ffi.Pointer<ffi.Uint16> cst_new_box_autoadd_u_16(int value) {
     return _cst_new_box_autoadd_u_16(value);
@@ -1145,6 +1374,25 @@ class RustLibWire implements BaseWire {
       _cst_new_list_proxy_latency_dtoPtr
           .asFunction<
             ffi.Pointer<wire_cst_list_proxy_latency_dto> Function(int)
+          >();
+
+  ffi.Pointer<wire_cst_list_record_string_list_string>
+  cst_new_list_record_string_list_string(int len) {
+    return _cst_new_list_record_string_list_string(len);
+  }
+
+  late final _cst_new_list_record_string_list_stringPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_record_string_list_string> Function(
+            ffi.Int32,
+          )
+        >
+      >('frbgen_arcadiaplus_cst_new_list_record_string_list_string');
+  late final _cst_new_list_record_string_list_string =
+      _cst_new_list_record_string_list_stringPtr
+          .asFunction<
+            ffi.Pointer<wire_cst_list_record_string_list_string> Function(int)
           >();
 
   ffi.Pointer<wire_cst_list_record_string_u_16> cst_new_list_record_string_u_16(
@@ -1483,6 +1731,30 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__api__get_dns_config =
       _wire__crate__api__get_dns_configPtr.asFunction<void Function(int)>();
 
+  void wire__crate__api__get_external_controller_status(int port_) {
+    return _wire__crate__api__get_external_controller_status(port_);
+  }
+
+  late final _wire__crate__api__get_external_controller_statusPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__get_external_controller_status',
+      );
+  late final _wire__crate__api__get_external_controller_status =
+      _wire__crate__api__get_external_controller_statusPtr
+          .asFunction<void Function(int)>();
+
+  void wire__crate__api__get_general_snapshot(int port_) {
+    return _wire__crate__api__get_general_snapshot(port_);
+  }
+
+  late final _wire__crate__api__get_general_snapshotPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__get_general_snapshot',
+      );
+  late final _wire__crate__api__get_general_snapshot =
+      _wire__crate__api__get_general_snapshotPtr
+          .asFunction<void Function(int)>();
+
   void wire__crate__api__get_logs(int port_, ffi.Pointer<ffi.Uint32> lines) {
     return _wire__crate__api__get_logs(port_, lines);
   }
@@ -1539,6 +1811,18 @@ class RustLibWire implements BaseWire {
       );
   late final _wire__crate__api__get_recursive_dns_status =
       _wire__crate__api__get_recursive_dns_statusPtr
+          .asFunction<void Function(int)>();
+
+  void wire__crate__api__get_rpc_server_status(int port_) {
+    return _wire__crate__api__get_rpc_server_status(port_);
+  }
+
+  late final _wire__crate__api__get_rpc_server_statusPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__get_rpc_server_status',
+      );
+  late final _wire__crate__api__get_rpc_server_status =
+      _wire__crate__api__get_rpc_server_statusPtr
           .asFunction<void Function(int)>();
 
   void wire__crate__api__get_rules(int port_) {
@@ -2023,6 +2307,50 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__api__start_corduit =
       _wire__crate__api__start_corduitPtr.asFunction<void Function(int)>();
 
+  void wire__crate__api__start_external_controller(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> external_controller,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> secret,
+  ) {
+    return _wire__crate__api__start_external_controller(
+      port_,
+      external_controller,
+      secret,
+    );
+  }
+
+  late final _wire__crate__api__start_external_controllerPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )
+        >
+      >('frbgen_arcadiaplus_wire__crate__api__start_external_controller');
+  late final _wire__crate__api__start_external_controller =
+      _wire__crate__api__start_external_controllerPtr
+          .asFunction<
+            void Function(
+              int,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            )
+          >();
+
+  void wire__crate__api__start_external_controller_from_config(int port_) {
+    return _wire__crate__api__start_external_controller_from_config(port_);
+  }
+
+  late final _wire__crate__api__start_external_controller_from_configPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__start_external_controller_from_config',
+      );
+  late final _wire__crate__api__start_external_controller_from_config =
+      _wire__crate__api__start_external_controller_from_configPtr
+          .asFunction<void Function(int)>();
+
   void wire__crate__api__start_proxy_from_file(
     int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> config_path,
@@ -2089,6 +2417,30 @@ class RustLibWire implements BaseWire {
             void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
           >();
 
+  void wire__crate__api__start_rpc_server(
+    int port_,
+    int port,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> token,
+  ) {
+    return _wire__crate__api__start_rpc_server(port_, port, token);
+  }
+
+  late final _wire__crate__api__start_rpc_serverPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Uint16,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+          )
+        >
+      >('frbgen_arcadiaplus_wire__crate__api__start_rpc_server');
+  late final _wire__crate__api__start_rpc_server =
+      _wire__crate__api__start_rpc_serverPtr
+          .asFunction<
+            void Function(int, int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
+          >();
+
   void wire__crate__api__start_tun_mode(
     int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> tun_name,
@@ -2147,6 +2499,18 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__api__stop_corduit =
       _wire__crate__api__stop_corduitPtr.asFunction<void Function(int)>();
 
+  void wire__crate__api__stop_external_controller(int port_) {
+    return _wire__crate__api__stop_external_controller(port_);
+  }
+
+  late final _wire__crate__api__stop_external_controllerPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__stop_external_controller',
+      );
+  late final _wire__crate__api__stop_external_controller =
+      _wire__crate__api__stop_external_controllerPtr
+          .asFunction<void Function(int)>();
+
   void wire__crate__api__stop_proxy(int port_) {
     return _wire__crate__api__stop_proxy(port_);
   }
@@ -2168,6 +2532,17 @@ class RustLibWire implements BaseWire {
       );
   late final _wire__crate__api__stop_recursive_dns =
       _wire__crate__api__stop_recursive_dnsPtr.asFunction<void Function(int)>();
+
+  void wire__crate__api__stop_rpc_server(int port_) {
+    return _wire__crate__api__stop_rpc_server(port_);
+  }
+
+  late final _wire__crate__api__stop_rpc_serverPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__stop_rpc_server',
+      );
+  late final _wire__crate__api__stop_rpc_server =
+      _wire__crate__api__stop_rpc_serverPtr.asFunction<void Function(int)>();
 
   void wire__crate__api__stop_tun_mode(int port_) {
     return _wire__crate__api__stop_tun_mode(port_);
@@ -2615,19 +2990,116 @@ final class wire_cst_dns_config_dto extends ffi.Struct {
 
   external ffi.Pointer<wire_cst_list_String> fallback;
 
-  static ffi.Pointer<wire_cst_dns_config_dto> $allocate(
+  external ffi.Pointer<wire_cst_list_record_string_list_string>
+  nameserver_policy;
+
+  external ffi.Pointer<wire_cst_list_String> default_nameserver;
+
+  external wire_cst_dns_fallback_filter_dto fallback_filter;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> fake_ip_range;
+
+  external ffi.Pointer<wire_cst_list_String> fake_ip_filter;
+
+  @ffi.Uint32()
+  external int fake_ip_ttl;
+
+  @ffi.Uint32()
+  external int host_count;
+
+  @ffi.Bool()
+  external bool use_hosts;
+
+  @ffi.Uint32()
+  external int cache_size;
+}
+
+final class wire_cst_dns_fallback_filter_dto extends ffi.Struct {
+  external ffi.Pointer<ffi.Bool> geoip;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> geoip_code;
+
+  external ffi.Pointer<wire_cst_list_String> ipcidr;
+
+  external ffi.Pointer<wire_cst_list_String> domain;
+
+  static ffi.Pointer<wire_cst_dns_fallback_filter_dto> $allocate(
     ffi.Allocator $allocator, {
-    required bool enable,
-    required ffi.Pointer<wire_cst_list_prim_u_8_strict> listen,
-    required ffi.Pointer<wire_cst_list_prim_u_8_strict> enhanced_mode,
-    required ffi.Pointer<wire_cst_list_String> nameservers,
-    required ffi.Pointer<wire_cst_list_String> fallback,
-  }) => $allocator<wire_cst_dns_config_dto>()
-    ..ref.enable = enable
-    ..ref.listen = listen
-    ..ref.enhanced_mode = enhanced_mode
-    ..ref.nameservers = nameservers
-    ..ref.fallback = fallback;
+    required ffi.Pointer<ffi.Bool> geoip,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> geoip_code,
+    required ffi.Pointer<wire_cst_list_String> ipcidr,
+    required ffi.Pointer<wire_cst_list_String> domain,
+  }) => $allocator<wire_cst_dns_fallback_filter_dto>()
+    ..ref.geoip = geoip
+    ..ref.geoip_code = geoip_code
+    ..ref.ipcidr = ipcidr
+    ..ref.domain = domain;
+}
+
+final class wire_cst_external_controller_status extends ffi.Struct {
+  @ffi.Bool()
+  external bool running;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> addr;
+
+  @ffi.Bool()
+  external bool secret_required;
+
+  static ffi.Pointer<wire_cst_external_controller_status> $allocate(
+    ffi.Allocator $allocator, {
+    required bool running,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> addr,
+    required bool secret_required,
+  }) => $allocator<wire_cst_external_controller_status>()
+    ..ref.running = running
+    ..ref.addr = addr
+    ..ref.secret_required = secret_required;
+}
+
+final class wire_cst_general_snapshot extends ffi.Struct {
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> mode;
+
+  @ffi.Int32()
+  external int runtime_mode;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> log_level;
+
+  @ffi.Bool()
+  external bool allow_lan;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> bind_address;
+
+  @ffi.Bool()
+  external bool ipv6;
+
+  @ffi.Bool()
+  external bool tcp_concurrent;
+
+  external ffi.Pointer<ffi.Uint16> socks_port;
+
+  external ffi.Pointer<ffi.Uint16> mixed_port;
+
+  static ffi.Pointer<wire_cst_general_snapshot> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> mode,
+    required int runtime_mode,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> log_level,
+    required bool allow_lan,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> bind_address,
+    required bool ipv6,
+    required bool tcp_concurrent,
+    required ffi.Pointer<ffi.Uint16> socks_port,
+    required ffi.Pointer<ffi.Uint16> mixed_port,
+  }) => $allocator<wire_cst_general_snapshot>()
+    ..ref.mode = mode
+    ..ref.runtime_mode = runtime_mode
+    ..ref.log_level = log_level
+    ..ref.allow_lan = allow_lan
+    ..ref.bind_address = bind_address
+    ..ref.ipv6 = ipv6
+    ..ref.tcp_concurrent = tcp_concurrent
+    ..ref.socks_port = socks_port
+    ..ref.mixed_port = mixed_port;
 }
 
 final class wire_cst_latency_test_result extends ffi.Struct {
@@ -2788,6 +3260,21 @@ final class wire_cst_list_proxy_latency_dto extends ffi.Struct {
     ..ref.len = len;
 }
 
+final class wire_cst_list_record_string_list_string extends ffi.Struct {
+  external ffi.Pointer<wire_cst_record_string_list_string> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_record_string_list_string> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_record_string_list_string> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_record_string_list_string>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
 final class wire_cst_list_record_string_u_16 extends ffi.Struct {
   external ffi.Pointer<wire_cst_record_string_u_16> ptr;
 
@@ -2925,6 +3412,20 @@ final class wire_cst_proxy_status extends ffi.Struct {
     ..ref.uptime = uptime;
 }
 
+final class wire_cst_record_string_list_string extends ffi.Struct {
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> field0;
+
+  external ffi.Pointer<wire_cst_list_String> field1;
+
+  static ffi.Pointer<wire_cst_record_string_list_string> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> field0,
+    required ffi.Pointer<wire_cst_list_String> field1,
+  }) => $allocator<wire_cst_record_string_list_string>()
+    ..ref.field0 = field0
+    ..ref.field1 = field1;
+}
+
 final class wire_cst_record_string_u_16 extends ffi.Struct {
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> field0;
 
@@ -3015,6 +3516,26 @@ final class wire_cst_recursive_dns_status extends ffi.Struct {
   }) => $allocator<wire_cst_recursive_dns_status>()
     ..ref.running = running
     ..ref.listen = listen;
+}
+
+final class wire_cst_rpc_server_status extends ffi.Struct {
+  @ffi.Bool()
+  external bool running;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> addr;
+
+  @ffi.Bool()
+  external bool token_set;
+
+  static ffi.Pointer<wire_cst_rpc_server_status> $allocate(
+    ffi.Allocator $allocator, {
+    required bool running,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> addr,
+    required bool token_set,
+  }) => $allocator<wire_cst_rpc_server_status>()
+    ..ref.running = running
+    ..ref.addr = addr
+    ..ref.token_set = token_set;
 }
 
 final class wire_cst_rule_dto extends ffi.Struct {

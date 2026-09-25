@@ -398,6 +398,74 @@ pub async fn get_build_info() -> String {
         .unwrap_or_default()
 }
 
+// ============== Control plane ==============
+
+/// Start the loopback JSON-RPC server on `port`.
+///
+/// The token keeps corduit's `Option` shape, but `None` is almost never what
+/// you want: corduit then generates a random token and never hands it back —
+/// [`get_rpc_server_status`] reports only *that* one is required, never which
+/// — so the server that comes up is one nobody, this app included, can
+/// authenticate to. Pass a token you can actually show.
+#[frb]
+pub async fn start_rpc_server(port: u16, token: Option<String>) -> std::result::Result<(), String> {
+    run(move || engine::api::start_rpc_server(port, token)).await
+}
+
+#[frb]
+pub async fn stop_rpc_server() -> std::result::Result<(), String> {
+    run(|| engine::api::stop_rpc_server()).await
+}
+
+#[frb]
+pub async fn get_rpc_server_status() -> std::result::Result<RpcServerStatus, String> {
+    run(|| engine::api::get_rpc_server_status().map(RpcServerStatus::from)).await
+}
+
+/// Start the Clash-compatible dashboard API at `external_controller`.
+///
+/// [`start_corduit`] already does this from `general.external-controller` and
+/// `general.secret`, so this is for the case where the address changed after
+/// the engine came up: a config reload does not rebind the controller, and
+/// this is the only way to move it without stopping the proxy.
+#[frb]
+pub async fn start_external_controller(
+    external_controller: String,
+    secret: Option<String>,
+) -> std::result::Result<(), String> {
+    run(move || engine::api::start_external_controller(&external_controller, secret)).await
+}
+
+/// Start the dashboard API from the running config, if it declares one.
+///
+/// A config without `general.external-controller` is not an error here: the
+/// engine reports success and leaves the controller off.
+#[frb]
+pub async fn start_external_controller_from_config() -> std::result::Result<(), String> {
+    run(|| engine::api::start_external_controller_from_config()).await
+}
+
+#[frb]
+pub async fn stop_external_controller() -> std::result::Result<(), String> {
+    run(|| engine::api::stop_external_controller()).await
+}
+
+#[frb]
+pub async fn get_external_controller_status(
+) -> std::result::Result<ExternalControllerStatus, String> {
+    run(|| engine::api::get_external_controller_status().map(ExternalControllerStatus::from)).await
+}
+
+/// The engine's live `general` settings.
+///
+/// Read from the running instance rather than from the config the app holds,
+/// which is the whole point: a mode switched through the dashboard API is
+/// invisible to anything but this call.
+#[frb]
+pub async fn get_general_snapshot() -> std::result::Result<GeneralSnapshot, String> {
+    run(|| engine::api::get_general_snapshot().map(GeneralSnapshot::from)).await
+}
+
 // ============== TUN ==============
 
 #[frb]

@@ -2,15 +2,18 @@ import { FlutterPlugin, MethodChannel, MethodCall, MethodResult } from '@aspect/
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 
-const TAG = 'CatClashPlugin';
+const TAG = 'ArcadiaPlusPlugin';
 const DOMAIN = 0x0000;
 
 /**
- * CatClash Flutter Plugin for HarmonyOS NEXT
- * 
- * This plugin provides the method channel interface between Flutter and native OHOS code.
+ * ArcadiaPlus Flutter Plugin for HarmonyOS NEXT
+ *
+ * Bridges the `com.arcadiaplus/ohos_proxy` method channel to native OHOS APIs.
+ * VPN control is deliberately unimplemented: every VPN method answers with
+ * `OHOS_VPN_UNSUPPORTED` so the Dart side can report a real reason instead of
+ * pretending the tunnel came up.
  */
-export class CatClashPlugin implements FlutterPlugin {
+export class ArcadiaPlusPlugin implements FlutterPlugin {
   private channel: MethodChannel | null = null;
 
   onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding): void {
@@ -22,13 +25,13 @@ export class CatClashPlugin implements FlutterPlugin {
       }
     });
     
-    hilog.info(DOMAIN, TAG, 'CatClash plugin attached to engine');
+    hilog.info(DOMAIN, TAG, 'ArcadiaPlus plugin attached to engine');
   }
 
   onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding): void {
     this.channel?.setMethodCallHandler(null);
     this.channel = null;
-    hilog.info(DOMAIN, TAG, 'CatClash plugin detached from engine');
+    hilog.info(DOMAIN, TAG, 'ArcadiaPlus plugin detached from engine');
   }
 
   private handleMethodCall(call: MethodCall, result: MethodResult): void {

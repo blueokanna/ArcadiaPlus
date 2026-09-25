@@ -8,11 +8,30 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// Only the knobs the engine can actually carry are modelled here
 /// (`dns.enable`, `dns.listen`, `dns.nameservers`, `dns.fallback`,
-/// `dns.enhanced_mode`). Clash fields such as `nameserver-policy`,
-/// `fallback-filter`, `fake-ip-range` or a hosts table have no counterpart in
-/// the engine's DNS configuration, and keeping them in the UI would promise
-/// behaviour that cannot happen.
+/// `dns.enhanced_mode`). Everything else the profile may declare
+/// (`nameserver-policy`, `fallback-filter`, `fake-ip-range`, `fake-ip-filter`,
+/// `fake-ip-ttl`, `cache-size`, a hosts table) is passed through by the config
+/// converter untouched: it is a profile-level knob, and duplicating it here
+/// would mean two owners for one value.
 class DnsSettings {
+  /// Every value `dns.enhanced_mode` may hold.
+  ///
+  /// The engine accepts all three: `normal` and `redir-host` are two spellings
+  /// of one behaviour (it answers with the real address and routes on the
+  /// resolved IP), and `fake-ip` answers from a reserved pool instead. The
+  /// vocabulary lives here because the settings store, the settings provider
+  /// and the picker all have to agree on it, and they drift the moment one of
+  /// them keeps its own copy.
+  static const List<String> modes = ['redir-host', 'fake-ip', 'normal'];
+
+  /// What a profile that names no mode gets, and what a stored value that is
+  /// not in [modes] falls back to.
+  ///
+  /// mihomo's default: a profile that does not ask for fake addresses should
+  /// not get them, so every connection keeps the name it was made to and
+  /// nothing depends on an address that only exists in this process.
+  static const String defaultMode = 'redir-host';
+
   final bool enable;
   final bool overrideDns;
   final String listen;
@@ -26,13 +45,16 @@ class DnsSettings {
     this.overrideDns = false,
     this.listen = '127.0.0.1:53',
     this.useRecursiveResolver = false,
-    this.dnsMode = 'fake-ip',
+    this.dnsMode = defaultMode,
     this.nameservers = const [
       'https://dns.google/dns-query',
       'https://cloudflare-dns.com/dns-query',
     ],
     this.fallback = const [],
-  });
+  }) : assert(
+         modes.contains(dnsMode),
+         'dnsMode must be one of ${DnsSettings.modes}',
+       );
 
   Map<String, dynamic> toJson() => {
     'enable': enable,
@@ -49,10 +71,20 @@ class DnsSettings {
     overrideDns: json['overrideDns'] as bool? ?? false,
     listen: json['listen'] as String? ?? '127.0.0.1:53',
     useRecursiveResolver: json['useRecursiveResolver'] as bool? ?? false,
-    dnsMode: json['dnsMode'] as String? ?? 'fake-ip',
+    dnsMode: normaliseMode(json['dnsMode']),
     nameservers: (json['nameservers'] as List?)?.cast<String>() ?? const [],
     fallback: (json['fallback'] as List?)?.cast<String>() ?? const [],
   );
+
+  /// A stored mode, or [defaultMode] when it is missing or no longer one of
+  /// [modes].
+  ///
+  /// Persisted values outlive the vocabulary that wrote them, and the picker
+  /// asserts that its value is one of its items — so an unknown string read
+  /// back from disk would not merely be wrong, it would take the screen down.
+  /// Normalising on read keeps that class of failure out of the UI.
+  static String normaliseMode(Object? stored) =>
+      stored is String && modes.contains(stored) ? stored : defaultMode;
 
   DnsSettings copyWith({
     bool? enable,

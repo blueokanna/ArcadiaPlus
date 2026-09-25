@@ -3,6 +3,12 @@ import 'package:arcadiaplus/src/services/storage_service.dart';
 
 /// Owns the DNS settings that the engine can actually carry.
 class DnsSettingsProvider extends ChangeNotifier {
+  /// Every mode the engine accepts, in the order the picker shows them.
+  ///
+  /// Re-exported from the model so the settings screen does not have to import
+  /// the store just to list its options.
+  static const List<String> modes = DnsSettings.modes;
+
   DnsSettings _settings = DnsSettings();
   bool _isLoading = false;
 
@@ -70,9 +76,10 @@ class DnsSettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// `normal` or `fake-ip`; anything else is refused rather than stored.
+  /// `normal`, `redir-host` or `fake-ip`; anything else is refused rather than
+  /// stored, because the engine would not know what to do with it.
   Future<void> setDnsMode(String value) async {
-    if (value != 'normal' && value != 'fake-ip') {
+    if (!modes.contains(value)) {
       debugPrint('Unsupported DNS mode: $value');
       return;
     }

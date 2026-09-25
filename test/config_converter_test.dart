@@ -322,4 +322,163 @@ rules: []
       '+.example.com': ['tcp://10.0.0.1:8080'],
     });
   });
+
+  test('fake-ip range, filter, cache size and hosts reach the engine', () {
+    const yaml = '''
+dns:
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.19.0.0/16
+  fake-ip-filter: ['+.lan', 'time.example']
+  cache-size: 4096
+  hosts:
+    static.example: 203.0.113.9
+    listed.example: ['203.0.113.10', '203.0.113.11']
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns = convert(yaml)['dns'] as Map;
+
+    expect(dns['fake_ip_range'], '198.19.0.0/16');
+    expect(dns['fake_ip_filter'], ['+.lan', 'time.example']);
+    expect(dns['cache_size'], 4096);
+    expect(dns['hosts'], {
+      'static.example': '203.0.113.9',
+      'listed.example': '203.0.113.10',
+    });
+  });
+
+  test('a profile without these keys leaves them to the engine defaults', () {
+    const yaml = '''
+dns:
+  nameserver: [1.1.1.1]
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns = convert(yaml)['dns'] as Map;
+
+    // Absent rather than sent as a zero value: an empty range or a cache size of
+    // zero would replace the engine's own defaults with something unusable.
+    expect(dns.containsKey('fake_ip_range'), isFalse);
+    expect(dns.containsKey('fake_ip_filter'), isFalse);
+    expect(dns.containsKey('cache_size'), isFalse);
+    expect(dns.containsKey('hosts'), isFalse);
+  });
+
+  test('the general section carries only what the engine reads', () {
+    const yaml = '''
+port: 7890
+socks-port: 7891
+mixed-port: 7892
+redir-port: 7893
+tproxy-port: 7894
+bind-address: 127.0.0.1
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final general = convert(yaml)['general'] as Map;
+    expect(general.containsKey('port'), isFalse);
+    expect(general.containsKey('redir_port'), isFalse);
+    expect(general.containsKey('tproxy_port'), isFalse);
+    expect(general['socks_port'], 7891);
+    expect(general['mixed_port'], 7892);
+    expect(general['bind_address'], '127.0.0.1');
+  });
+
+  test('a transparent-proxy port says it is unsupported', () {
+    const yaml = '''
+redir-port: 7893
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final warnings = <String>[];
+    convert(yaml, onWarning: warnings.add);
+
+    expect(
+      warnings.any((w) => w.contains('redir-port') && w.contains('no effect')),
+      isTrue,
+      reason: 'a setting with no implementation must say so: $warnings',
+    );
+  });
+
+  test('a cache size of zero counts as absent', () {
+    const yaml = '''
+dns:
+  cache-size: 0
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    expect((convert(yaml)['dns'] as Map).containsKey('cache_size'), isFalse);
+  });
+
+  test('a nonsense fake-ip range is still forwarded for the engine to judge', () {
+    const yaml = '''
+dns:
+  fake-ip-range: not-a-cidr
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    // This layer does not decide CIDR validity: the engine validates the pool
+    // and reports the offending value, and duplicating that rule here would let
+    // the two drift apart.
+    expect((convert(yaml)['dns'] as Map)['fake_ip_range'], 'not-a-cidr');
+  });
+
+  test("a profile that names no mode gets mihomo's default, not fake-ip", () {
+    const yaml = '''
+dns:
+  nameserver: [1.1.1.1]
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    expect((convert(yaml)['dns'] as Map)['enhanced_mode'], 'redir-host');
+  });
+
+  test('an explicit mode still wins over the default', () {
+    const yaml = '''
+dns:
+  enhanced-mode: fake-ip
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    expect((convert(yaml)['dns'] as Map)['enhanced_mode'], 'fake-ip');
+  });
+
+  test('fake-ip-ttl is forwarded, and zero counts as absent', () {
+    const withTtl = '''
+dns:
+  fake-ip-ttl: 1
+proxies: []
+proxy-groups: []
+rules: []
+''';
+    expect((convert(withTtl)['dns'] as Map)['fake_ip_ttl'], 1);
+
+    const zeroTtl = '''
+dns:
+  fake-ip-ttl: 0
+proxies: []
+proxy-groups: []
+rules: []
+''';
+    expect(
+      (convert(zeroTtl)['dns'] as Map).containsKey('fake_ip_ttl'),
+      isFalse,
+    );
+  });
 }

@@ -12,7 +12,7 @@
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.1.9 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.2.0 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 配置转换采用显式降级：corduit 无法构建的协议节点会被丢弃、引用回落 `DIRECT`，corduit 没有对应类型的规则会被跳过——每次降级都通过 `onWarning` 上报，不静默处理。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
@@ -22,7 +22,7 @@
 
 ## 协议状态
 
-协议实现位于 corduit 0.1.9；本仓库只负责把它们接进 Flutter，并未对真实服务端互操作做验证。
+协议实现位于 corduit 0.2.0；本仓库只负责把它们接进 Flutter，并未对真实服务端互操作做验证。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
@@ -116,25 +116,64 @@ adb shell 'P=$(pidof com.blueokanna.arcadiaplus); for t in /proc/$P/task/*; do e
 
 ## 已知限制
 
-以下能力目前会被保存但不会改变运行时行为，写入文档以便不被当成已生效：
+这些是需要知道的边界，避免把某个设置当成它并不具备的能力：
 
-- DNS 设置页除“本地递归解析”（`useRecursiveResolver`，会拉起 RecurseX 并把引擎上游指向它）以外的字段：引擎的 DNS 配置来自 profile 的 `dns` 段（`enable` / `listen` / `nameservers` / `fallback` / `enhanced-mode`），corduit 的 `DnsConfig` 没有 `nameserver-policy`、`fallback-filter`、`hosts`、`prefer-h3` 等字段。
-- General 设置页的 hosts 映射（同一个原因：引擎 DNS 配置里没有 hosts 表）。
+- App 能编辑的 DNS 面只有 DNS 设置页，且只在“覆盖 DNS”开启时生效——未开启时以 profile 的 `dns` 段为准。引擎更宽的 DNS 面（`nameserver-policy`、`fallback-filter`、`fake-ip-range` / `-filter` / `-ttl`、`cache-size`、`hosts`）由 profile 直接透传，没有对应的设置页。
 - 系统代理的 bypass 列表：Windows（`ProxyOverride`）与 Linux（`ignore-hosts`）会下发，macOS 的 `networksetup` 路径暂时只在启用/关闭时设置代理本身。
 
 ## 架构
+```mermaid
+flowchart TB
+    %% =========================
+    %% UI Layer
+    %% =========================
+    subgraph UI["① Flutter 应用层"]
+        FLUTTER["Flutter UI / Provider"]
+    end
 
-```text
-Flutter UI / Provider
-        |
-Flutter Rust Bridge（生成绑定）
-        |
-lib-arcadiaplus（rust/ 下的唯一桥接 crate：异步适配、DTO 映射、平台入口）
-        |
-corduit 0.1.9（引擎：配置、路由、出入站、DNS、TUN、全部协议）
-        +-- courierust（HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS 栈）
-        +-- nextjson / rustbinary（配置与二进制编解码）
-RecurseX 0.1.0（可选：本地递归 DNS 前端，由桥接层托管生命周期）
+    %% =========================
+    %% Bridge Layer
+    %% =========================
+    subgraph BRIDGE["② Flutter ↔ Rust 桥接层"]
+        FRB["Flutter Rust Bridge<br/>生成绑定"]
+        ARC["lib-arcadiaplus<br/>rust/ 下唯一桥接 crate<br/><br/>• 异步适配<br/>• DTO 映射<br/>• 平台入口<br/>• 生命周期托管"]
+    end
+
+    %% =========================
+    %% Engine Layer
+    %% =========================
+    subgraph ENGINE["③ 核心引擎层"]
+        CORDUIT["corduit 0.2.0<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
+    end
+
+    %% =========================
+    %% Foundation Layer
+    %% =========================
+    subgraph FOUNDATION["④ 基础协议与编解码层"]
+        COURIER["courierust<br/>HTTP/1.1 · HTTP/2 · HTTP/3<br/>WebSocket · TLS 栈"]
+
+        CODEC["nextjson / rustbinary<br/>配置与二进制编解码"]
+    end
+
+    %% =========================
+    %% Optional DNS Resolver
+    %% =========================
+    subgraph OPTIONAL["⑤ 可选本地递归 DNS"]
+        RECURSE["recurse-x 0.2.1<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
+    end
+
+    %% Main call path
+    FLUTTER --> FRB
+    FRB --> ARC
+    ARC --> CORDUIT
+
+    %% Engine dependencies
+    CORDUIT --> COURIER
+    CORDUIT --> CODEC
+
+    %% Optional resolver lifecycle / integration
+    ARC -. "可选启用 / 生命周期托管" .-> RECURSE
+    CORDUIT -. "DNS 解析能力" .-> RECURSE
 ```
 
 corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个引擎调用派发到阻塞工作线程（`run`），因此代理启停、延迟探测或 TUN 切换都不会卡住 Flutter 隔离区。

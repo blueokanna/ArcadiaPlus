@@ -1,0 +1,67 @@
+name: Check out the proxy engine
+description: >-
+  Materialises the sibling `Corduit` checkout that `rust/Cargo.toml` points at
+  through `path = "../../Corduit"`. The engine version requirement in that file
+  is the single source of truth: this action reads it, prefers the matching
+  `v<version>` tag, and refuses to continue when the checked-out engine does not
+  report that exact version.
+
+# Why this exists instead of a plain `crates.io` dependency
+# ---------------------------------------------------------
+# The engine is developed in lockstep with this app, so local builds resolve it
+# by path. A path dependency is only usable when the directory exists, which a
+# bare `actions/checkout` of this repository does not provide — the build would
+# fail during dependency resolution, before any compiler diagnostic. Checking
+# the engine out into the exact relative location a developer has on disk makes
+# CI build the same dependency graph the committed `Cargo.lock` records, so
+# `--locked` stays meaningful on both sides.
+#
+# Once the engine version required by `rust/Cargo.toml` is published to
+# crates.io, delete the `path = ...` key from that dependency and CI resolves it
+# from the registry with no further change here.
+
+runs:
+  using: composite
+  steps:
+    - name: Fetch the engine at the version the bridge requires
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        manifest="rust/Cargo.toml"
+        requirement="$(sed -nE 's/^corduit[[:space:]]*=[[:space:]]*\{[[:space:]]*version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$manifest" | head -n1)"
+        if [[ -z "${requirement:-}" ]]; then
+          echo "::error file=$manifest::No readable 'corduit = { version = \"...\", ... }' requirement; this action cannot infer which engine revision to use."
+          exit 1
+        fi
+
+        engine="$(cd "${GITHUB_WORKSPACE}/.." && pwd)/Corduit"
+        url="https://github.com/blueokanna/Corduit.git"
+        echo "Engine requirement: $requirement"
+        echo "Engine target:      $engine"
+
+        rm -rf "$engine"
+
+        # Prefer the release tag so the engine revision is pinned by name rather
+        # than by whatever the default branch happens to be at build time.
+        if git ls-remote --exit-code --tags "$url" "refs/tags/v${requirement}" >/dev/null 2>&1; then
+          ref="v${requirement}"
+          echo "Pinned to tag $ref."
+        else
+          ref="$(git ls-remote --symref "$url" HEAD | sed -nE 's|^ref: refs/heads/([^[:space:]]+)[[:space:]]+HEAD$|\1|p')"
+          ref="${ref:-main}"
+          echo "::warning title=Unpinned engine::Corduit has no v${requirement} tag, so this build follows branch '${ref}'. Tag the engine release to pin CI to an immutable revision."
+        fi
+
+        git clone --depth 1 --branch "$ref" "$url" "$engine"
+
+        # A checkout that silently reports a different version would surface as
+        # an unexplained resolution failure, so check it here and name the
+        # mismatch instead.
+        actual="$(sed -nE 's/^version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$engine/Cargo.toml" | head -n1)"
+        if [[ "$actual" != "$requirement" ]]; then
+          echo "::error title=Engine version mismatch::rust/Cargo.toml requires corduit ${requirement} but '${ref}' reports ${actual}. Bump the requirement and the engine together."
+          exit 1
+        fi
+
+        echo "Engine $actual ready at $engine"

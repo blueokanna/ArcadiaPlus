@@ -6,6 +6,8 @@
 //! corduit's DTOs, and the `From` impls below are the single place where
 //! one is turned into the other.
 
+use std::collections::HashMap;
+
 use flutter_rust_bridge::frb;
 
 use corduit as engine;
@@ -169,6 +171,21 @@ pub struct RuleDto {
     pub matched_count: u64,
 }
 
+/// `fallback-filter`: what makes an answer suspect enough to re-resolve it
+/// through `fallback`.
+#[frb]
+#[derive(Debug, Clone)]
+pub struct DnsFallbackFilterDto {
+    /// Whether a geographic signal may trigger the re-resolve.
+    pub geoip: Option<bool>,
+    /// The country `geoip` keys on.
+    pub geoip_code: Option<String>,
+    /// Ranges whose answers always trigger the re-resolve.
+    pub ipcidr: Vec<String>,
+    /// Suffixes whose answers always trigger the re-resolve.
+    pub domain: Vec<String>,
+}
+
 /// DNS config DTO.
 #[frb]
 #[derive(Debug, Clone)]
@@ -178,6 +195,24 @@ pub struct DnsConfigDto {
     pub enhanced_mode: String,
     pub nameservers: Vec<String>,
     pub fallback: Vec<String>,
+    /// Per-domain upstream overrides (`nameserver-policy`).
+    pub nameserver_policy: HashMap<String, Vec<String>>,
+    /// Resolvers used only to resolve an upstream's own host name.
+    pub default_nameserver: Vec<String>,
+    pub fallback_filter: DnsFallbackFilterDto,
+    pub fake_ip_range: String,
+    pub fake_ip_filter: Vec<String>,
+    pub fake_ip_ttl: u32,
+    /// How many static `hosts` entries are in effect.
+    ///
+    /// The entries themselves stay in the engine: a UI needs the count, and a
+    /// hosts block can run to thousands of lines. A count of hosts or of cache
+    /// slots cannot approach `u32::MAX`, and the narrower type keeps it a plain
+    /// Dart `int` instead of the `BigInt` every byte counter needs.
+    pub host_count: u32,
+    pub use_hosts: bool,
+    /// Forward-cache capacity, in entries.
+    pub cache_size: u32,
 }
 
 /// RecurseX recursive DNS front-end status.
@@ -189,6 +224,54 @@ pub struct RecursiveDnsStatus {
     /// The bound `host:port`, present while [`crate::api::start_recursive_dns`]
     /// has an active listener.
     pub listen: Option<String>,
+}
+
+/// Loopback JSON-RPC server status. The token itself is never reported.
+#[frb]
+#[derive(Debug, Clone)]
+pub struct RpcServerStatus {
+    /// Whether the server's accept loop is running.
+    pub running: bool,
+    /// The bound address, `None` while stopped.
+    pub addr: Option<String>,
+    /// Whether requests must present a bearer token.
+    pub token_set: bool,
+}
+
+/// Clash-compatible dashboard API status. The secret is never reported.
+#[frb]
+#[derive(Debug, Clone)]
+pub struct ExternalControllerStatus {
+    /// Whether the controller's accept loop is running.
+    pub running: bool,
+    /// The bound address, `None` while stopped.
+    pub addr: Option<String>,
+    /// Whether requests must present `general.secret`.
+    pub secret_required: bool,
+}
+
+/// The engine's live `general` settings, read from the running instance.
+#[frb]
+#[derive(Debug, Clone)]
+pub struct GeneralSnapshot {
+    /// The configured mode, spelled `rule` / `global` / `direct`.
+    pub mode: String,
+    /// The runtime override: `1` global, `2` direct, `3` rule, `0` none.
+    pub runtime_mode: i32,
+    /// The configured log level.
+    pub log_level: String,
+    /// Whether the inbound listeners accept remote clients.
+    pub allow_lan: bool,
+    /// The address the inbounds bind to.
+    pub bind_address: String,
+    /// Whether IPv6 is enabled for outbound dialling.
+    pub ipv6: bool,
+    /// Whether host-name resolution races its candidate addresses.
+    pub tcp_concurrent: bool,
+    /// The SOCKS inbound port, when one is configured.
+    pub socks_port: Option<u16>,
+    /// The mixed inbound port, when one is configured.
+    pub mixed_port: Option<u16>,
 }
 
 // ============== corduit → bridge conversions ==============
@@ -383,6 +466,17 @@ impl From<engine::RuleDto> for RuleDto {
     }
 }
 
+impl From<engine::DnsFallbackFilterDto> for DnsFallbackFilterDto {
+    fn from(value: engine::DnsFallbackFilterDto) -> Self {
+        Self {
+            geoip: value.geoip,
+            geoip_code: value.geoip_code,
+            ipcidr: value.ipcidr,
+            domain: value.domain,
+        }
+    }
+}
+
 impl From<engine::DnsConfigDto> for DnsConfigDto {
     fn from(value: engine::DnsConfigDto) -> Self {
         Self {
@@ -391,6 +485,51 @@ impl From<engine::DnsConfigDto> for DnsConfigDto {
             enhanced_mode: value.enhanced_mode,
             nameservers: value.nameservers,
             fallback: value.fallback,
+            nameserver_policy: value.nameserver_policy,
+            default_nameserver: value.default_nameserver,
+            fallback_filter: DnsFallbackFilterDto::from(value.fallback_filter),
+            fake_ip_range: value.fake_ip_range,
+            fake_ip_filter: value.fake_ip_filter,
+            fake_ip_ttl: value.fake_ip_ttl,
+            host_count: u32::try_from(value.host_count).unwrap_or(u32::MAX),
+            use_hosts: value.use_hosts,
+            cache_size: u32::try_from(value.cache_size).unwrap_or(u32::MAX),
+        }
+    }
+}
+
+impl From<engine::RpcServerStatus> for RpcServerStatus {
+    fn from(value: engine::RpcServerStatus) -> Self {
+        Self {
+            running: value.running,
+            addr: value.addr,
+            token_set: value.token_set,
+        }
+    }
+}
+
+impl From<engine::ExternalControllerStatus> for ExternalControllerStatus {
+    fn from(value: engine::ExternalControllerStatus) -> Self {
+        Self {
+            running: value.running,
+            addr: value.addr,
+            secret_required: value.secret_required,
+        }
+    }
+}
+
+impl From<engine::GeneralSnapshot> for GeneralSnapshot {
+    fn from(value: engine::GeneralSnapshot) -> Self {
+        Self {
+            mode: value.mode,
+            runtime_mode: value.runtime_mode,
+            log_level: value.log_level,
+            allow_lan: value.allow_lan,
+            bind_address: value.bind_address,
+            ipv6: value.ipv6,
+            tcp_concurrent: value.tcp_concurrent,
+            socks_port: value.socks_port,
+            mixed_port: value.mixed_port,
         }
     }
 }

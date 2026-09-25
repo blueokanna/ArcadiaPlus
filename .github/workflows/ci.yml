@@ -27,6 +27,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v5
 
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
+
       - name: Reclaim disk space this build does not need
         run: |
           set -euo pipefail
@@ -157,6 +160,9 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v5
+
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable

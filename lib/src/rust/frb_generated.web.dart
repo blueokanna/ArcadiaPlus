@@ -22,6 +22,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   @protected
+  Map<String, List<String>> dco_decode_Map_String_list_String_None(dynamic raw);
+
+  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
@@ -29,6 +32,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  bool dco_decode_box_autoadd_bool(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_16(dynamic raw);
@@ -49,7 +55,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DnsConfigDto dco_decode_dns_config_dto(dynamic raw);
 
   @protected
+  DnsFallbackFilterDto dco_decode_dns_fallback_filter_dto(dynamic raw);
+
+  @protected
+  ExternalControllerStatus dco_decode_external_controller_status(dynamic raw);
+
+  @protected
   double dco_decode_f_64(dynamic raw);
+
+  @protected
+  GeneralSnapshot dco_decode_general_snapshot(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
@@ -88,6 +103,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<ProxyLatencyDto> dco_decode_list_proxy_latency_dto(dynamic raw);
 
   @protected
+  List<(String, List<String>)> dco_decode_list_record_string_list_string(
+    dynamic raw,
+  );
+
+  @protected
   List<(String, int)> dco_decode_list_record_string_u_16(dynamic raw);
 
   @protected
@@ -95,6 +115,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  bool? dco_decode_opt_box_autoadd_bool(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
@@ -118,6 +141,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ProxyStatus dco_decode_proxy_status(dynamic raw);
 
   @protected
+  (String, List<String>) dco_decode_record_string_list_string(dynamic raw);
+
+  @protected
   (String, int) dco_decode_record_string_u_16(dynamic raw);
 
   @protected
@@ -131,6 +157,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RecursiveDnsStatus dco_decode_recursive_dns_status(dynamic raw);
+
+  @protected
+  RpcServerStatus dco_decode_rpc_server_status(dynamic raw);
 
   @protected
   RuleDto dco_decode_rule_dto(dynamic raw);
@@ -163,6 +192,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void dco_decode_unit(dynamic raw);
 
   @protected
+  Map<String, List<String>> sse_decode_Map_String_list_String_None(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
@@ -170,6 +204,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  bool sse_decode_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
@@ -190,7 +227,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DnsConfigDto sse_decode_dns_config_dto(SseDeserializer deserializer);
 
   @protected
+  DnsFallbackFilterDto sse_decode_dns_fallback_filter_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  ExternalControllerStatus sse_decode_external_controller_status(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  GeneralSnapshot sse_decode_general_snapshot(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -245,6 +295,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<(String, List<String>)> sse_decode_list_record_string_list_string(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<(String, int)> sse_decode_list_record_string_u_16(
     SseDeserializer deserializer,
   );
@@ -254,6 +309,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  bool? sse_decode_opt_box_autoadd_bool(SseDeserializer deserializer);
 
   @protected
   int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
@@ -277,6 +335,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ProxyStatus sse_decode_proxy_status(SseDeserializer deserializer);
 
   @protected
+  (String, List<String>) sse_decode_record_string_list_string(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   (String, int) sse_decode_record_string_u_16(SseDeserializer deserializer);
 
   @protected
@@ -292,6 +355,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RecursiveDnsStatus sse_decode_recursive_dns_status(
     SseDeserializer deserializer,
   );
+
+  @protected
+  RpcServerStatus sse_decode_rpc_server_status(SseDeserializer deserializer);
 
   @protected
   RuleDto sse_decode_rule_dto(SseDeserializer deserializer);
@@ -324,6 +390,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_decode_unit(SseDeserializer deserializer);
 
   @protected
+  JSAny cst_encode_Map_String_list_String_None(Map<String, List<String>> raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return cst_encode_list_record_string_list_string(
+      raw.entries.map((e) => (e.key, e.value)).toList(),
+    );
+  }
+
+  @protected
   String cst_encode_String(String raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return raw;
@@ -348,6 +422,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       cst_encode_String(raw.rulePayload),
       cst_encode_opt_String(raw.processName),
     ].jsify()!;
+  }
+
+  @protected
+  bool cst_encode_box_autoadd_bool(bool raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return cst_encode_bool(raw);
   }
 
   @protected
@@ -409,6 +489,52 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       cst_encode_String(raw.enhancedMode),
       cst_encode_list_String(raw.nameservers),
       cst_encode_list_String(raw.fallback),
+      cst_encode_Map_String_list_String_None(raw.nameserverPolicy),
+      cst_encode_list_String(raw.defaultNameserver),
+      cst_encode_dns_fallback_filter_dto(raw.fallbackFilter),
+      cst_encode_String(raw.fakeIpRange),
+      cst_encode_list_String(raw.fakeIpFilter),
+      cst_encode_u_32(raw.fakeIpTtl),
+      cst_encode_u_32(raw.hostCount),
+      cst_encode_bool(raw.useHosts),
+      cst_encode_u_32(raw.cacheSize),
+    ].jsify()!;
+  }
+
+  @protected
+  JSAny cst_encode_dns_fallback_filter_dto(DnsFallbackFilterDto raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_opt_box_autoadd_bool(raw.geoip),
+      cst_encode_opt_String(raw.geoipCode),
+      cst_encode_list_String(raw.ipcidr),
+      cst_encode_list_String(raw.domain),
+    ].jsify()!;
+  }
+
+  @protected
+  JSAny cst_encode_external_controller_status(ExternalControllerStatus raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_bool(raw.running),
+      cst_encode_opt_String(raw.addr),
+      cst_encode_bool(raw.secretRequired),
+    ].jsify()!;
+  }
+
+  @protected
+  JSAny cst_encode_general_snapshot(GeneralSnapshot raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_String(raw.mode),
+      cst_encode_i_32(raw.runtimeMode),
+      cst_encode_String(raw.logLevel),
+      cst_encode_bool(raw.allowLan),
+      cst_encode_String(raw.bindAddress),
+      cst_encode_bool(raw.ipv6),
+      cst_encode_bool(raw.tcpConcurrent),
+      cst_encode_opt_box_autoadd_u_16(raw.socksPort),
+      cst_encode_opt_box_autoadd_u_16(raw.mixedPort),
     ].jsify()!;
   }
 
@@ -484,6 +610,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  JSAny cst_encode_list_record_string_list_string(
+    List<(String, List<String>)> raw,
+  ) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return raw.map(cst_encode_record_string_list_string).toList().jsify()!;
+  }
+
+  @protected
   JSAny cst_encode_list_record_string_u_16(List<(String, int)> raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return raw.map(cst_encode_record_string_u_16).toList().jsify()!;
@@ -499,6 +633,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? cst_encode_opt_String(String? raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return raw == null ? null : cst_encode_String(raw);
+  }
+
+  @protected
+  bool? cst_encode_opt_box_autoadd_bool(bool? raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return raw == null ? null : cst_encode_box_autoadd_bool(raw);
   }
 
   @protected
@@ -567,6 +707,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  JSAny cst_encode_record_string_list_string((String, List<String>) raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [cst_encode_String(raw.$1), cst_encode_list_String(raw.$2)].jsify()!;
+  }
+
+  @protected
   JSAny cst_encode_record_string_u_16((String, int) raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return [cst_encode_String(raw.$1), cst_encode_u_16(raw.$2)].jsify()!;
@@ -606,6 +752,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     return [
       cst_encode_bool(raw.running),
       cst_encode_opt_String(raw.listen),
+    ].jsify()!;
+  }
+
+  @protected
+  JSAny cst_encode_rpc_server_status(RpcServerStatus raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_bool(raw.running),
+      cst_encode_opt_String(raw.addr),
+      cst_encode_bool(raw.tokenSet),
     ].jsify()!;
   }
 
@@ -698,6 +854,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void cst_encode_unit(void raw);
 
   @protected
+  void sse_encode_Map_String_list_String_None(
+    Map<String, List<String>> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
@@ -708,6 +870,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_bool(bool self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
@@ -731,7 +896,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_dns_config_dto(DnsConfigDto self, SseSerializer serializer);
 
   @protected
+  void sse_encode_dns_fallback_filter_dto(
+    DnsFallbackFilterDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_external_controller_status(
+    ExternalControllerStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_general_snapshot(
+    GeneralSnapshot self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
@@ -797,6 +980,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_record_string_list_string(
+    List<(String, List<String>)> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_record_string_u_16(
     List<(String, int)> self,
     SseSerializer serializer,
@@ -807,6 +996,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_bool(bool? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
@@ -833,6 +1025,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_proxy_status(ProxyStatus self, SseSerializer serializer);
 
   @protected
+  void sse_encode_record_string_list_string(
+    (String, List<String>) self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_record_string_u_16(
     (String, int) self,
     SseSerializer serializer,
@@ -853,6 +1051,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_recursive_dns_status(
     RecursiveDnsStatus self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_rpc_server_status(
+    RpcServerStatus self,
     SseSerializer serializer,
   );
 
@@ -969,6 +1173,12 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__get_dns_config(NativePortType port_) =>
       wasmModule.wire__crate__api__get_dns_config(port_);
 
+  void wire__crate__api__get_external_controller_status(NativePortType port_) =>
+      wasmModule.wire__crate__api__get_external_controller_status(port_);
+
+  void wire__crate__api__get_general_snapshot(NativePortType port_) =>
+      wasmModule.wire__crate__api__get_general_snapshot(port_);
+
   void wire__crate__api__get_logs(NativePortType port_, int? lines) =>
       wasmModule.wire__crate__api__get_logs(port_, lines);
 
@@ -983,6 +1193,9 @@ class RustLibWire implements BaseWire {
 
   void wire__crate__api__get_recursive_dns_status(NativePortType port_) =>
       wasmModule.wire__crate__api__get_recursive_dns_status(port_);
+
+  void wire__crate__api__get_rpc_server_status(NativePortType port_) =>
+      wasmModule.wire__crate__api__get_rpc_server_status(port_);
 
   void wire__crate__api__get_rules(NativePortType port_) =>
       wasmModule.wire__crate__api__get_rules(port_);
@@ -1108,6 +1321,21 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__start_corduit(NativePortType port_) =>
       wasmModule.wire__crate__api__start_corduit(port_);
 
+  void wire__crate__api__start_external_controller(
+    NativePortType port_,
+    String external_controller,
+    String? secret,
+  ) => wasmModule.wire__crate__api__start_external_controller(
+    port_,
+    external_controller,
+    secret,
+  );
+
+  void wire__crate__api__start_external_controller_from_config(
+    NativePortType port_,
+  ) =>
+      wasmModule.wire__crate__api__start_external_controller_from_config(port_);
+
   void wire__crate__api__start_proxy_from_file(
     NativePortType port_,
     String config_path,
@@ -1122,6 +1350,12 @@ class RustLibWire implements BaseWire {
     NativePortType port_,
     String listen,
   ) => wasmModule.wire__crate__api__start_recursive_dns(port_, listen);
+
+  void wire__crate__api__start_rpc_server(
+    NativePortType port_,
+    int port,
+    String? token,
+  ) => wasmModule.wire__crate__api__start_rpc_server(port_, port, token);
 
   void wire__crate__api__start_tun_mode(
     NativePortType port_,
@@ -1141,11 +1375,17 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__stop_corduit(NativePortType port_) =>
       wasmModule.wire__crate__api__stop_corduit(port_);
 
+  void wire__crate__api__stop_external_controller(NativePortType port_) =>
+      wasmModule.wire__crate__api__stop_external_controller(port_);
+
   void wire__crate__api__stop_proxy(NativePortType port_) =>
       wasmModule.wire__crate__api__stop_proxy(port_);
 
   void wire__crate__api__stop_recursive_dns(NativePortType port_) =>
       wasmModule.wire__crate__api__stop_recursive_dns(port_);
+
+  void wire__crate__api__stop_rpc_server(NativePortType port_) =>
+      wasmModule.wire__crate__api__stop_rpc_server(port_);
 
   void wire__crate__api__stop_tun_mode(NativePortType port_) =>
       wasmModule.wire__crate__api__stop_tun_mode(port_);
@@ -1300,6 +1540,12 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void wire__crate__api__get_dns_config(NativePortType port_);
 
+  external void wire__crate__api__get_external_controller_status(
+    NativePortType port_,
+  );
+
+  external void wire__crate__api__get_general_snapshot(NativePortType port_);
+
   external void wire__crate__api__get_logs(NativePortType port_, int? lines);
 
   external void wire__crate__api__get_proxies(NativePortType port_);
@@ -1311,6 +1557,8 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__api__get_recursive_dns_status(
     NativePortType port_,
   );
+
+  external void wire__crate__api__get_rpc_server_status(NativePortType port_);
 
   external void wire__crate__api__get_rules(NativePortType port_);
 
@@ -1420,6 +1668,16 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void wire__crate__api__start_corduit(NativePortType port_);
 
+  external void wire__crate__api__start_external_controller(
+    NativePortType port_,
+    String external_controller,
+    String? secret,
+  );
+
+  external void wire__crate__api__start_external_controller_from_config(
+    NativePortType port_,
+  );
+
   external void wire__crate__api__start_proxy_from_file(
     NativePortType port_,
     String config_path,
@@ -1435,6 +1693,12 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
     String listen,
   );
 
+  external void wire__crate__api__start_rpc_server(
+    NativePortType port_,
+    int port,
+    String? token,
+  );
+
   external void wire__crate__api__start_tun_mode(
     NativePortType port_,
     String tun_name,
@@ -1446,9 +1710,15 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void wire__crate__api__stop_corduit(NativePortType port_);
 
+  external void wire__crate__api__stop_external_controller(
+    NativePortType port_,
+  );
+
   external void wire__crate__api__stop_proxy(NativePortType port_);
 
   external void wire__crate__api__stop_recursive_dns(NativePortType port_);
+
+  external void wire__crate__api__stop_rpc_server(NativePortType port_);
 
   external void wire__crate__api__stop_tun_mode(NativePortType port_);
 

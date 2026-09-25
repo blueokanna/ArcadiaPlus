@@ -2,15 +2,15 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "CatClash Entry Module"
+      "value": "ArcadiaPlus Entry Module"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "CatClash Main Application"
+      "value": "ArcadiaPlus Main Application"
     },
     {
       "name": "EntryAbility_label",
-      "value": "CatClash"
+      "value": "ArcadiaPlus"
     },
     {
       "name": "vpn_service_desc",

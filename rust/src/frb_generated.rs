@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueNom,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 611365399;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -139664526;
 
 // Section: executor
 
@@ -510,6 +510,50 @@ fn wire__crate__api__get_dns_config_impl(port_: flutter_rust_bridge::for_generat
         },
     )
 }
+fn wire__crate__api__get_external_controller_status_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_external_controller_status",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::get_external_controller_status().await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__get_general_snapshot_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_general_snapshot",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::get_general_snapshot().await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__get_logs_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     lines: impl CstDecode<Option<u32>>,
@@ -608,6 +652,28 @@ fn wire__crate__api__get_recursive_dns_status_impl(
                 transform_result_dco::<_, _, String>(
                     (move || async move {
                         let output_ok = crate::api::get_recursive_dns_status().await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__get_rpc_server_status_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_rpc_server_status",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::get_rpc_server_status().await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -1310,6 +1376,58 @@ fn wire__crate__api__start_corduit_impl(port_: flutter_rust_bridge::for_generate
         },
     )
 }
+fn wire__crate__api__start_external_controller_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    external_controller: impl CstDecode<String>,
+    secret: impl CstDecode<Option<String>>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "start_external_controller",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_external_controller = external_controller.cst_decode();
+            let api_secret = secret.cst_decode();
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::start_external_controller(
+                            api_external_controller,
+                            api_secret,
+                        )
+                        .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__start_external_controller_from_config_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "start_external_controller_from_config",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::start_external_controller_from_config().await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__start_proxy_from_file_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     config_path: impl CstDecode<String>,
@@ -1374,6 +1492,32 @@ fn wire__crate__api__start_recursive_dns_impl(
                 transform_result_dco::<_, _, String>(
                     (move || async move {
                         let output_ok = crate::api::start_recursive_dns(api_listen).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__start_rpc_server_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    port: impl CstDecode<u16>,
+    token: impl CstDecode<Option<String>>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "start_rpc_server",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_port = port.cst_decode();
+            let api_token = token.cst_decode();
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::start_rpc_server(api_port, api_token).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -1455,6 +1599,28 @@ fn wire__crate__api__stop_corduit_impl(port_: flutter_rust_bridge::for_generated
         },
     )
 }
+fn wire__crate__api__stop_external_controller_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "stop_external_controller",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::stop_external_controller().await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__stop_proxy_impl(port_: flutter_rust_bridge::for_generated::MessagePort) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
@@ -1489,6 +1655,26 @@ fn wire__crate__api__stop_recursive_dns_impl(
                 transform_result_dco::<_, _, String>(
                     (move || async move {
                         let output_ok = crate::api::stop_recursive_dns().await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__stop_rpc_server_impl(port_: flutter_rust_bridge::for_generated::MessagePort) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "stop_rpc_server",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::stop_rpc_server().await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -1807,6 +1993,14 @@ impl CstDecode<u8> for u8 {
         self
     }
 }
+impl SseDecode for std::collections::HashMap<String, Vec<String>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <Vec<(String, Vec<String>)>>::sse_decode(deserializer);
+        return inner.into_iter().collect();
+    }
+}
+
 impl SseDecode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1918,12 +2112,61 @@ impl SseDecode for crate::types::DnsConfigDto {
         let mut var_enhancedMode = <String>::sse_decode(deserializer);
         let mut var_nameservers = <Vec<String>>::sse_decode(deserializer);
         let mut var_fallback = <Vec<String>>::sse_decode(deserializer);
+        let mut var_nameserverPolicy =
+            <std::collections::HashMap<String, Vec<String>>>::sse_decode(deserializer);
+        let mut var_defaultNameserver = <Vec<String>>::sse_decode(deserializer);
+        let mut var_fallbackFilter = <crate::types::DnsFallbackFilterDto>::sse_decode(deserializer);
+        let mut var_fakeIpRange = <String>::sse_decode(deserializer);
+        let mut var_fakeIpFilter = <Vec<String>>::sse_decode(deserializer);
+        let mut var_fakeIpTtl = <u32>::sse_decode(deserializer);
+        let mut var_hostCount = <u32>::sse_decode(deserializer);
+        let mut var_useHosts = <bool>::sse_decode(deserializer);
+        let mut var_cacheSize = <u32>::sse_decode(deserializer);
         return crate::types::DnsConfigDto {
             enable: var_enable,
             listen: var_listen,
             enhanced_mode: var_enhancedMode,
             nameservers: var_nameservers,
             fallback: var_fallback,
+            nameserver_policy: var_nameserverPolicy,
+            default_nameserver: var_defaultNameserver,
+            fallback_filter: var_fallbackFilter,
+            fake_ip_range: var_fakeIpRange,
+            fake_ip_filter: var_fakeIpFilter,
+            fake_ip_ttl: var_fakeIpTtl,
+            host_count: var_hostCount,
+            use_hosts: var_useHosts,
+            cache_size: var_cacheSize,
+        };
+    }
+}
+
+impl SseDecode for crate::types::DnsFallbackFilterDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_geoip = <Option<bool>>::sse_decode(deserializer);
+        let mut var_geoipCode = <Option<String>>::sse_decode(deserializer);
+        let mut var_ipcidr = <Vec<String>>::sse_decode(deserializer);
+        let mut var_domain = <Vec<String>>::sse_decode(deserializer);
+        return crate::types::DnsFallbackFilterDto {
+            geoip: var_geoip,
+            geoip_code: var_geoipCode,
+            ipcidr: var_ipcidr,
+            domain: var_domain,
+        };
+    }
+}
+
+impl SseDecode for crate::types::ExternalControllerStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_running = <bool>::sse_decode(deserializer);
+        let mut var_addr = <Option<String>>::sse_decode(deserializer);
+        let mut var_secretRequired = <bool>::sse_decode(deserializer);
+        return crate::types::ExternalControllerStatus {
+            running: var_running,
+            addr: var_addr,
+            secret_required: var_secretRequired,
         };
     }
 }
@@ -1932,6 +2175,32 @@ impl SseDecode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         deserializer.cursor.read_f64::<NativeEndian>().unwrap()
+    }
+}
+
+impl SseDecode for crate::types::GeneralSnapshot {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_mode = <String>::sse_decode(deserializer);
+        let mut var_runtimeMode = <i32>::sse_decode(deserializer);
+        let mut var_logLevel = <String>::sse_decode(deserializer);
+        let mut var_allowLan = <bool>::sse_decode(deserializer);
+        let mut var_bindAddress = <String>::sse_decode(deserializer);
+        let mut var_ipv6 = <bool>::sse_decode(deserializer);
+        let mut var_tcpConcurrent = <bool>::sse_decode(deserializer);
+        let mut var_socksPort = <Option<u16>>::sse_decode(deserializer);
+        let mut var_mixedPort = <Option<u16>>::sse_decode(deserializer);
+        return crate::types::GeneralSnapshot {
+            mode: var_mode,
+            runtime_mode: var_runtimeMode,
+            log_level: var_logLevel,
+            allow_lan: var_allowLan,
+            bind_address: var_bindAddress,
+            ipv6: var_ipv6,
+            tcp_concurrent: var_tcpConcurrent,
+            socks_port: var_socksPort,
+            mixed_port: var_mixedPort,
+        };
     }
 }
 
@@ -2073,6 +2342,18 @@ impl SseDecode for Vec<crate::types::ProxyLatencyDto> {
     }
 }
 
+impl SseDecode for Vec<(String, Vec<String>)> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<(String, Vec<String>)>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<(String, u16)> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2102,6 +2383,17 @@ impl SseDecode for Option<String> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<String>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<bool> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<bool>::sse_decode(deserializer));
         } else {
             return None;
         }
@@ -2211,6 +2503,15 @@ impl SseDecode for crate::types::ProxyStatus {
     }
 }
 
+impl SseDecode for (String, Vec<String>) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_field0 = <String>::sse_decode(deserializer);
+        let mut var_field1 = <Vec<String>>::sse_decode(deserializer);
+        return (var_field0, var_field1);
+    }
+}
+
 impl SseDecode for (String, u16) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2254,6 +2555,20 @@ impl SseDecode for crate::types::RecursiveDnsStatus {
         return crate::types::RecursiveDnsStatus {
             running: var_running,
             listen: var_listen,
+        };
+    }
+}
+
+impl SseDecode for crate::types::RpcServerStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_running = <bool>::sse_decode(deserializer);
+        let mut var_addr = <Option<String>>::sse_decode(deserializer);
+        let mut var_tokenSet = <bool>::sse_decode(deserializer);
+        return crate::types::RpcServerStatus {
+            running: var_running,
+            addr: var_addr,
+            token_set: var_tokenSet,
         };
     }
 }
@@ -2502,6 +2817,15 @@ impl flutter_rust_bridge::IntoDart for crate::types::DnsConfigDto {
             self.enhanced_mode.into_into_dart().into_dart(),
             self.nameservers.into_into_dart().into_dart(),
             self.fallback.into_into_dart().into_dart(),
+            self.nameserver_policy.into_into_dart().into_dart(),
+            self.default_nameserver.into_into_dart().into_dart(),
+            self.fallback_filter.into_into_dart().into_dart(),
+            self.fake_ip_range.into_into_dart().into_dart(),
+            self.fake_ip_filter.into_into_dart().into_dart(),
+            self.fake_ip_ttl.into_into_dart().into_dart(),
+            self.host_count.into_into_dart().into_dart(),
+            self.use_hosts.into_into_dart().into_dart(),
+            self.cache_size.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2509,6 +2833,76 @@ impl flutter_rust_bridge::IntoDart for crate::types::DnsConfigDto {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::types::DnsConfigDto {}
 impl flutter_rust_bridge::IntoIntoDart<crate::types::DnsConfigDto> for crate::types::DnsConfigDto {
     fn into_into_dart(self) -> crate::types::DnsConfigDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::DnsFallbackFilterDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.geoip.into_into_dart().into_dart(),
+            self.geoip_code.into_into_dart().into_dart(),
+            self.ipcidr.into_into_dart().into_dart(),
+            self.domain.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::types::DnsFallbackFilterDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::DnsFallbackFilterDto>
+    for crate::types::DnsFallbackFilterDto
+{
+    fn into_into_dart(self) -> crate::types::DnsFallbackFilterDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::ExternalControllerStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.running.into_into_dart().into_dart(),
+            self.addr.into_into_dart().into_dart(),
+            self.secret_required.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::types::ExternalControllerStatus
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::ExternalControllerStatus>
+    for crate::types::ExternalControllerStatus
+{
+    fn into_into_dart(self) -> crate::types::ExternalControllerStatus {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::GeneralSnapshot {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.mode.into_into_dart().into_dart(),
+            self.runtime_mode.into_into_dart().into_dart(),
+            self.log_level.into_into_dart().into_dart(),
+            self.allow_lan.into_into_dart().into_dart(),
+            self.bind_address.into_into_dart().into_dart(),
+            self.ipv6.into_into_dart().into_dart(),
+            self.tcp_concurrent.into_into_dart().into_dart(),
+            self.socks_port.into_into_dart().into_dart(),
+            self.mixed_port.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::types::GeneralSnapshot {}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::GeneralSnapshot>
+    for crate::types::GeneralSnapshot
+{
+    fn into_into_dart(self) -> crate::types::GeneralSnapshot {
         self
     }
 }
@@ -2636,6 +3030,25 @@ impl flutter_rust_bridge::IntoIntoDart<crate::types::RecursiveDnsStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::RpcServerStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.running.into_into_dart().into_dart(),
+            self.addr.into_into_dart().into_dart(),
+            self.token_set.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::types::RpcServerStatus {}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::RpcServerStatus>
+    for crate::types::RpcServerStatus
+{
+    fn into_into_dart(self) -> crate::types::RpcServerStatus {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::types::RuleDto {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2734,6 +3147,13 @@ impl flutter_rust_bridge::IntoIntoDart<crate::types::TunStatus> for crate::types
     }
 }
 
+impl SseEncode for std::collections::HashMap<String, Vec<String>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<(String, Vec<String>)>>::sse_encode(self.into_iter().collect(), serializer);
+    }
+}
+
 impl SseEncode for String {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2806,6 +3226,37 @@ impl SseEncode for crate::types::DnsConfigDto {
         <String>::sse_encode(self.enhanced_mode, serializer);
         <Vec<String>>::sse_encode(self.nameservers, serializer);
         <Vec<String>>::sse_encode(self.fallback, serializer);
+        <std::collections::HashMap<String, Vec<String>>>::sse_encode(
+            self.nameserver_policy,
+            serializer,
+        );
+        <Vec<String>>::sse_encode(self.default_nameserver, serializer);
+        <crate::types::DnsFallbackFilterDto>::sse_encode(self.fallback_filter, serializer);
+        <String>::sse_encode(self.fake_ip_range, serializer);
+        <Vec<String>>::sse_encode(self.fake_ip_filter, serializer);
+        <u32>::sse_encode(self.fake_ip_ttl, serializer);
+        <u32>::sse_encode(self.host_count, serializer);
+        <bool>::sse_encode(self.use_hosts, serializer);
+        <u32>::sse_encode(self.cache_size, serializer);
+    }
+}
+
+impl SseEncode for crate::types::DnsFallbackFilterDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<bool>>::sse_encode(self.geoip, serializer);
+        <Option<String>>::sse_encode(self.geoip_code, serializer);
+        <Vec<String>>::sse_encode(self.ipcidr, serializer);
+        <Vec<String>>::sse_encode(self.domain, serializer);
+    }
+}
+
+impl SseEncode for crate::types::ExternalControllerStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.running, serializer);
+        <Option<String>>::sse_encode(self.addr, serializer);
+        <bool>::sse_encode(self.secret_required, serializer);
     }
 }
 
@@ -2813,6 +3264,21 @@ impl SseEncode for f64 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         serializer.cursor.write_f64::<NativeEndian>(self).unwrap();
+    }
+}
+
+impl SseEncode for crate::types::GeneralSnapshot {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.mode, serializer);
+        <i32>::sse_encode(self.runtime_mode, serializer);
+        <String>::sse_encode(self.log_level, serializer);
+        <bool>::sse_encode(self.allow_lan, serializer);
+        <String>::sse_encode(self.bind_address, serializer);
+        <bool>::sse_encode(self.ipv6, serializer);
+        <bool>::sse_encode(self.tcp_concurrent, serializer);
+        <Option<u16>>::sse_encode(self.socks_port, serializer);
+        <Option<u16>>::sse_encode(self.mixed_port, serializer);
     }
 }
 
@@ -2930,6 +3396,16 @@ impl SseEncode for Vec<crate::types::ProxyLatencyDto> {
     }
 }
 
+impl SseEncode for Vec<(String, Vec<String>)> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <(String, Vec<String>)>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<(String, u16)> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2956,6 +3432,16 @@ impl SseEncode for Option<String> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <String>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<bool> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <bool>::sse_encode(value, serializer);
         }
     }
 }
@@ -3033,6 +3519,14 @@ impl SseEncode for crate::types::ProxyStatus {
     }
 }
 
+impl SseEncode for (String, Vec<String>) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.0, serializer);
+        <Vec<String>>::sse_encode(self.1, serializer);
+    }
+}
+
 impl SseEncode for (String, u16) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3068,6 +3562,15 @@ impl SseEncode for crate::types::RecursiveDnsStatus {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <bool>::sse_encode(self.running, serializer);
         <Option<String>>::sse_encode(self.listen, serializer);
+    }
+}
+
+impl SseEncode for crate::types::RpcServerStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.running, serializer);
+        <Option<String>>::sse_encode(self.addr, serializer);
+        <bool>::sse_encode(self.token_set, serializer);
     }
 }
 
@@ -3180,6 +3683,15 @@ mod io {
 
     // Section: dart2rust
 
+    impl CstDecode<std::collections::HashMap<String, Vec<String>>>
+        for *mut wire_cst_list_record_string_list_string
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> std::collections::HashMap<String, Vec<String>> {
+            let vec: Vec<(String, Vec<String>)> = self.cst_decode();
+            vec.into_iter().collect()
+        }
+    }
     impl CstDecode<String> for *mut wire_cst_list_prim_u_8_strict {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> String {
@@ -3206,6 +3718,12 @@ mod io {
                 rule_payload: self.rule_payload.cst_decode(),
                 process_name: self.process_name.cst_decode(),
             }
+        }
+    }
+    impl CstDecode<bool> for *mut bool {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> bool {
+            unsafe { *flutter_rust_bridge::for_generated::box_from_leak_ptr(self) }
         }
     }
     impl CstDecode<u16> for *mut u16 {
@@ -3267,6 +3785,52 @@ mod io {
                 enhanced_mode: self.enhanced_mode.cst_decode(),
                 nameservers: self.nameservers.cst_decode(),
                 fallback: self.fallback.cst_decode(),
+                nameserver_policy: self.nameserver_policy.cst_decode(),
+                default_nameserver: self.default_nameserver.cst_decode(),
+                fallback_filter: self.fallback_filter.cst_decode(),
+                fake_ip_range: self.fake_ip_range.cst_decode(),
+                fake_ip_filter: self.fake_ip_filter.cst_decode(),
+                fake_ip_ttl: self.fake_ip_ttl.cst_decode(),
+                host_count: self.host_count.cst_decode(),
+                use_hosts: self.use_hosts.cst_decode(),
+                cache_size: self.cache_size.cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::DnsFallbackFilterDto> for wire_cst_dns_fallback_filter_dto {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::DnsFallbackFilterDto {
+            crate::types::DnsFallbackFilterDto {
+                geoip: self.geoip.cst_decode(),
+                geoip_code: self.geoip_code.cst_decode(),
+                ipcidr: self.ipcidr.cst_decode(),
+                domain: self.domain.cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::ExternalControllerStatus> for wire_cst_external_controller_status {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::ExternalControllerStatus {
+            crate::types::ExternalControllerStatus {
+                running: self.running.cst_decode(),
+                addr: self.addr.cst_decode(),
+                secret_required: self.secret_required.cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::GeneralSnapshot> for wire_cst_general_snapshot {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::GeneralSnapshot {
+            crate::types::GeneralSnapshot {
+                mode: self.mode.cst_decode(),
+                runtime_mode: self.runtime_mode.cst_decode(),
+                log_level: self.log_level.cst_decode(),
+                allow_lan: self.allow_lan.cst_decode(),
+                bind_address: self.bind_address.cst_decode(),
+                ipv6: self.ipv6.cst_decode(),
+                tcp_concurrent: self.tcp_concurrent.cst_decode(),
+                socks_port: self.socks_port.cst_decode(),
+                mixed_port: self.mixed_port.cst_decode(),
             }
         }
     }
@@ -3370,6 +3934,16 @@ mod io {
             vec.into_iter().map(CstDecode::cst_decode).collect()
         }
     }
+    impl CstDecode<Vec<(String, Vec<String>)>> for *mut wire_cst_list_record_string_list_string {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> Vec<(String, Vec<String>)> {
+            let vec = unsafe {
+                let wrap = flutter_rust_bridge::for_generated::box_from_leak_ptr(self);
+                flutter_rust_bridge::for_generated::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(CstDecode::cst_decode).collect()
+        }
+    }
     impl CstDecode<Vec<(String, u16)>> for *mut wire_cst_list_record_string_u_16 {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> Vec<(String, u16)> {
@@ -3437,6 +4011,12 @@ mod io {
             }
         }
     }
+    impl CstDecode<(String, Vec<String>)> for wire_cst_record_string_list_string {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> (String, Vec<String>) {
+            (self.field0.cst_decode(), self.field1.cst_decode())
+        }
+    }
     impl CstDecode<(String, u16)> for wire_cst_record_string_u_16 {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> (String, u16) {
@@ -3473,6 +4053,16 @@ mod io {
             crate::types::RecursiveDnsStatus {
                 running: self.running.cst_decode(),
                 listen: self.listen.cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::RpcServerStatus> for wire_cst_rpc_server_status {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::RpcServerStatus {
+            crate::types::RpcServerStatus {
+                running: self.running.cst_decode(),
+                addr: self.addr.cst_decode(),
+                token_set: self.token_set.cst_decode(),
             }
         }
     }
@@ -3610,10 +4200,68 @@ mod io {
                 enhanced_mode: core::ptr::null_mut(),
                 nameservers: core::ptr::null_mut(),
                 fallback: core::ptr::null_mut(),
+                nameserver_policy: core::ptr::null_mut(),
+                default_nameserver: core::ptr::null_mut(),
+                fallback_filter: Default::default(),
+                fake_ip_range: core::ptr::null_mut(),
+                fake_ip_filter: core::ptr::null_mut(),
+                fake_ip_ttl: Default::default(),
+                host_count: Default::default(),
+                use_hosts: Default::default(),
+                cache_size: Default::default(),
             }
         }
     }
     impl Default for wire_cst_dns_config_dto {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+    impl NewWithNullPtr for wire_cst_dns_fallback_filter_dto {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                geoip: core::ptr::null_mut(),
+                geoip_code: core::ptr::null_mut(),
+                ipcidr: core::ptr::null_mut(),
+                domain: core::ptr::null_mut(),
+            }
+        }
+    }
+    impl Default for wire_cst_dns_fallback_filter_dto {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+    impl NewWithNullPtr for wire_cst_external_controller_status {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                running: Default::default(),
+                addr: core::ptr::null_mut(),
+                secret_required: Default::default(),
+            }
+        }
+    }
+    impl Default for wire_cst_external_controller_status {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+    impl NewWithNullPtr for wire_cst_general_snapshot {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                mode: core::ptr::null_mut(),
+                runtime_mode: Default::default(),
+                log_level: core::ptr::null_mut(),
+                allow_lan: Default::default(),
+                bind_address: core::ptr::null_mut(),
+                ipv6: Default::default(),
+                tcp_concurrent: Default::default(),
+                socks_port: core::ptr::null_mut(),
+                mixed_port: core::ptr::null_mut(),
+            }
+        }
+    }
+    impl Default for wire_cst_general_snapshot {
         fn default() -> Self {
             Self::new_with_null_ptr()
         }
@@ -3696,6 +4344,19 @@ mod io {
             Self::new_with_null_ptr()
         }
     }
+    impl NewWithNullPtr for wire_cst_record_string_list_string {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                field0: core::ptr::null_mut(),
+                field1: core::ptr::null_mut(),
+            }
+        }
+    }
+    impl Default for wire_cst_record_string_list_string {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
     impl NewWithNullPtr for wire_cst_record_string_u_16 {
         fn new_with_null_ptr() -> Self {
             Self {
@@ -3750,6 +4411,20 @@ mod io {
         }
     }
     impl Default for wire_cst_recursive_dns_status {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+    impl NewWithNullPtr for wire_cst_rpc_server_status {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                running: Default::default(),
+                addr: core::ptr::null_mut(),
+                token_set: Default::default(),
+            }
+        }
+    }
+    impl Default for wire_cst_rpc_server_status {
         fn default() -> Self {
             Self::new_with_null_ptr()
         }
@@ -3954,6 +4629,18 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_external_controller_status(
+        port_: i64,
+    ) {
+        wire__crate__api__get_external_controller_status_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_general_snapshot(port_: i64) {
+        wire__crate__api__get_general_snapshot_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_logs(port_: i64, lines: *mut u32) {
         wire__crate__api__get_logs_impl(port_, lines)
     }
@@ -3976,6 +4663,11 @@ mod io {
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_recursive_dns_status(port_: i64) {
         wire__crate__api__get_recursive_dns_status_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_rpc_server_status(port_: i64) {
+        wire__crate__api__get_rpc_server_status_impl(port_)
     }
 
     #[unsafe(no_mangle)]
@@ -4167,6 +4859,22 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_external_controller(
+        port_: i64,
+        external_controller: *mut wire_cst_list_prim_u_8_strict,
+        secret: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__api__start_external_controller_impl(port_, external_controller, secret)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_external_controller_from_config(
+        port_: i64,
+    ) {
+        wire__crate__api__start_external_controller_from_config_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_proxy_from_file(
         port_: i64,
         config_path: *mut wire_cst_list_prim_u_8_strict,
@@ -4191,6 +4899,15 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_rpc_server(
+        port_: i64,
+        port: u16,
+        token: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__api__start_rpc_server_impl(port_, port, token)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_tun_mode(
         port_: i64,
         tun_name: *mut wire_cst_list_prim_u_8_strict,
@@ -4211,6 +4928,11 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_external_controller(port_: i64) {
+        wire__crate__api__stop_external_controller_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_proxy(port_: i64) {
         wire__crate__api__stop_proxy_impl(port_)
     }
@@ -4218,6 +4940,11 @@ mod io {
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_recursive_dns(port_: i64) {
         wire__crate__api__stop_recursive_dns_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__stop_rpc_server(port_: i64) {
+        wire__crate__api__stop_rpc_server_impl(port_)
     }
 
     #[unsafe(no_mangle)]
@@ -4302,6 +5029,11 @@ mod io {
         timeout_ms: u32,
     ) {
         wire__crate__api__test_tcp_connectivity_impl(port_, server, port, timeout_ms)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_box_autoadd_bool(value: bool) -> *mut bool {
+        flutter_rust_bridge::for_generated::new_leak_box_ptr(value)
     }
 
     #[unsafe(no_mangle)]
@@ -4443,6 +5175,20 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_record_string_list_string(
+        len: i32,
+    ) -> *mut wire_cst_list_record_string_list_string {
+        let wrap = wire_cst_list_record_string_list_string {
+            ptr: flutter_rust_bridge::for_generated::new_leak_vec_ptr(
+                <wire_cst_record_string_list_string>::new_with_null_ptr(),
+                len,
+            ),
+            len,
+        };
+        flutter_rust_bridge::for_generated::new_leak_box_ptr(wrap)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_cst_new_list_record_string_u_16(
         len: i32,
     ) -> *mut wire_cst_list_record_string_u_16 {
@@ -4522,6 +5268,43 @@ mod io {
         enhanced_mode: *mut wire_cst_list_prim_u_8_strict,
         nameservers: *mut wire_cst_list_String,
         fallback: *mut wire_cst_list_String,
+        nameserver_policy: *mut wire_cst_list_record_string_list_string,
+        default_nameserver: *mut wire_cst_list_String,
+        fallback_filter: wire_cst_dns_fallback_filter_dto,
+        fake_ip_range: *mut wire_cst_list_prim_u_8_strict,
+        fake_ip_filter: *mut wire_cst_list_String,
+        fake_ip_ttl: u32,
+        host_count: u32,
+        use_hosts: bool,
+        cache_size: u32,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_dns_fallback_filter_dto {
+        geoip: *mut bool,
+        geoip_code: *mut wire_cst_list_prim_u_8_strict,
+        ipcidr: *mut wire_cst_list_String,
+        domain: *mut wire_cst_list_String,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_external_controller_status {
+        running: bool,
+        addr: *mut wire_cst_list_prim_u_8_strict,
+        secret_required: bool,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_general_snapshot {
+        mode: *mut wire_cst_list_prim_u_8_strict,
+        runtime_mode: i32,
+        log_level: *mut wire_cst_list_prim_u_8_strict,
+        allow_lan: bool,
+        bind_address: *mut wire_cst_list_prim_u_8_strict,
+        ipv6: bool,
+        tcp_concurrent: bool,
+        socks_port: *mut u16,
+        mixed_port: *mut u16,
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
@@ -4587,6 +5370,12 @@ mod io {
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
+    pub struct wire_cst_list_record_string_list_string {
+        ptr: *mut wire_cst_record_string_list_string,
+        len: i32,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
     pub struct wire_cst_list_record_string_u_16 {
         ptr: *mut wire_cst_record_string_u_16,
         len: i32,
@@ -4634,6 +5423,12 @@ mod io {
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
+    pub struct wire_cst_record_string_list_string {
+        field0: *mut wire_cst_list_prim_u_8_strict,
+        field1: *mut wire_cst_list_String,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
     pub struct wire_cst_record_string_u_16 {
         field0: *mut wire_cst_list_prim_u_8_strict,
         field1: u16,
@@ -4661,6 +5456,13 @@ mod io {
     pub struct wire_cst_recursive_dns_status {
         running: bool,
         listen: *mut wire_cst_list_prim_u_8_strict,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_rpc_server_status {
+        running: bool,
+        addr: *mut wire_cst_list_prim_u_8_strict,
+        token_set: bool,
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
@@ -4837,8 +5639,8 @@ mod web {
                 .unwrap();
             assert_eq!(
                 self_.length(),
-                5,
-                "Expected 5 elements, got {}",
+                14,
+                "Expected 14 elements, got {}",
                 self_.length()
             );
             crate::types::DnsConfigDto {
@@ -4847,6 +5649,85 @@ mod web {
                 enhanced_mode: self_.get(2).cst_decode(),
                 nameservers: self_.get(3).cst_decode(),
                 fallback: self_.get(4).cst_decode(),
+                nameserver_policy: self_.get(5).cst_decode(),
+                default_nameserver: self_.get(6).cst_decode(),
+                fallback_filter: self_.get(7).cst_decode(),
+                fake_ip_range: self_.get(8).cst_decode(),
+                fake_ip_filter: self_.get(9).cst_decode(),
+                fake_ip_ttl: self_.get(10).cst_decode(),
+                host_count: self_.get(11).cst_decode(),
+                use_hosts: self_.get(12).cst_decode(),
+                cache_size: self_.get(13).cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::DnsFallbackFilterDto>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::DnsFallbackFilterDto {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                4,
+                "Expected 4 elements, got {}",
+                self_.length()
+            );
+            crate::types::DnsFallbackFilterDto {
+                geoip: self_.get(0).cst_decode(),
+                geoip_code: self_.get(1).cst_decode(),
+                ipcidr: self_.get(2).cst_decode(),
+                domain: self_.get(3).cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::ExternalControllerStatus>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::ExternalControllerStatus {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                3,
+                "Expected 3 elements, got {}",
+                self_.length()
+            );
+            crate::types::ExternalControllerStatus {
+                running: self_.get(0).cst_decode(),
+                addr: self_.get(1).cst_decode(),
+                secret_required: self_.get(2).cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::GeneralSnapshot>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::GeneralSnapshot {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                9,
+                "Expected 9 elements, got {}",
+                self_.length()
+            );
+            crate::types::GeneralSnapshot {
+                mode: self_.get(0).cst_decode(),
+                runtime_mode: self_.get(1).cst_decode(),
+                log_level: self_.get(2).cst_decode(),
+                allow_lan: self_.get(3).cst_decode(),
+                bind_address: self_.get(4).cst_decode(),
+                ipv6: self_.get(5).cst_decode(),
+                tcp_concurrent: self_.get(6).cst_decode(),
+                socks_port: self_.get(7).cst_decode(),
+                mixed_port: self_.get(8).cst_decode(),
             }
         }
     }
@@ -4965,6 +5846,18 @@ mod web {
     {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> Vec<crate::types::ProxyLatencyDto> {
+            self.dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap()
+                .iter()
+                .map(CstDecode::cst_decode)
+                .collect()
+        }
+    }
+    impl CstDecode<Vec<(String, Vec<String>)>>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> Vec<(String, Vec<String>)> {
             self.dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
                 .unwrap()
                 .iter()
@@ -5091,6 +5984,23 @@ mod web {
             }
         }
     }
+    impl CstDecode<(String, Vec<String>)>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> (String, Vec<String>) {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                2,
+                "Expected 2 elements, got {}",
+                self_.length()
+            );
+            (self_.get(0).cst_decode(), self_.get(1).cst_decode())
+        }
+    }
     impl CstDecode<(String, u16)> for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> (String, u16) {
@@ -5167,6 +6077,27 @@ mod web {
             crate::types::RecursiveDnsStatus {
                 running: self_.get(0).cst_decode(),
                 listen: self_.get(1).cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::RpcServerStatus>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::RpcServerStatus {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                3,
+                "Expected 3 elements, got {}",
+                self_.length()
+            );
+            crate::types::RpcServerStatus {
+                running: self_.get(0).cst_decode(),
+                addr: self_.get(1).cst_decode(),
+                token_set: self_.get(2).cst_decode(),
             }
         }
     }
@@ -5284,6 +6215,15 @@ mod web {
                 mtu: self_.get(2).cst_decode(),
                 error: self_.get(3).cst_decode(),
             }
+        }
+    }
+    impl CstDecode<std::collections::HashMap<String, Vec<String>>>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> std::collections::HashMap<String, Vec<String>> {
+            let vec: Vec<(String, Vec<String>)> = self.cst_decode();
+            vec.into_iter().collect()
         }
     }
     impl CstDecode<String> for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue {
@@ -5499,6 +6439,20 @@ mod web {
     }
 
     #[wasm_bindgen]
+    pub fn wire__crate__api__get_external_controller_status(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+    ) {
+        wire__crate__api__get_external_controller_status_impl(port_)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__get_general_snapshot(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+    ) {
+        wire__crate__api__get_general_snapshot_impl(port_)
+    }
+
+    #[wasm_bindgen]
     pub fn wire__crate__api__get_logs(
         port_: flutter_rust_bridge::for_generated::MessagePort,
         lines: flutter_rust_bridge::for_generated::wasm_bindgen::JsValue,
@@ -5530,6 +6484,13 @@ mod web {
         port_: flutter_rust_bridge::for_generated::MessagePort,
     ) {
         wire__crate__api__get_recursive_dns_status_impl(port_)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__get_rpc_server_status(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+    ) {
+        wire__crate__api__get_rpc_server_status_impl(port_)
     }
 
     #[wasm_bindgen]
@@ -5752,6 +6713,22 @@ mod web {
     }
 
     #[wasm_bindgen]
+    pub fn wire__crate__api__start_external_controller(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        external_controller: String,
+        secret: Option<String>,
+    ) {
+        wire__crate__api__start_external_controller_impl(port_, external_controller, secret)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__start_external_controller_from_config(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+    ) {
+        wire__crate__api__start_external_controller_from_config_impl(port_)
+    }
+
+    #[wasm_bindgen]
     pub fn wire__crate__api__start_proxy_from_file(
         port_: flutter_rust_bridge::for_generated::MessagePort,
         config_path: String,
@@ -5773,6 +6750,15 @@ mod web {
         listen: String,
     ) {
         wire__crate__api__start_recursive_dns_impl(port_, listen)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__start_rpc_server(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        port: u16,
+        token: Option<String>,
+    ) {
+        wire__crate__api__start_rpc_server_impl(port_, port, token)
     }
 
     #[wasm_bindgen]
@@ -5798,6 +6784,13 @@ mod web {
     }
 
     #[wasm_bindgen]
+    pub fn wire__crate__api__stop_external_controller(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+    ) {
+        wire__crate__api__stop_external_controller_impl(port_)
+    }
+
+    #[wasm_bindgen]
     pub fn wire__crate__api__stop_proxy(port_: flutter_rust_bridge::for_generated::MessagePort) {
         wire__crate__api__stop_proxy_impl(port_)
     }
@@ -5807,6 +6800,13 @@ mod web {
         port_: flutter_rust_bridge::for_generated::MessagePort,
     ) {
         wire__crate__api__stop_recursive_dns_impl(port_)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__stop_rpc_server(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+    ) {
+        wire__crate__api__stop_rpc_server_impl(port_)
     }
 
     #[wasm_bindgen]

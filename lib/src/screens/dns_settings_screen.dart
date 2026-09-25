@@ -5,6 +5,19 @@ import 'package:arcadiaplus/src/providers/dns_settings_provider.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
+/// Display name for a `dns.enhanced_mode` value.
+///
+/// `redir-host` and `normal` are one behaviour under two names — the spelling
+/// mihomo profiles use, and the one this engine canonicalises to — so both stay
+/// visible instead of one being quietly renamed out from under the profiles
+/// that already say it.
+String _modeLabel(String mode) => switch (mode) {
+  'redir-host' => 'Redir-Host',
+  'fake-ip' => 'Fake-IP',
+  'normal' => 'Normal',
+  _ => mode,
+};
+
 /// DNS settings, limited to what the engine can carry.
 ///
 /// `overrideDns` decides which DNS section the engine receives: this screen's
@@ -189,15 +202,16 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
                           underline: const SizedBox.shrink(),
                           isDense: true,
                           borderRadius: BorderRadius.circular(12),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'normal',
-                              child: Text('Normal'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'fake-ip',
-                              child: Text('Fake-IP'),
-                            ),
+                          // Built from the provider's vocabulary rather than a
+                          // second copy of it: a picker whose items drift from
+                          // the values the store accepts offers a choice that
+                          // does nothing when it is taken.
+                          items: [
+                            for (final mode in DnsSettingsProvider.modes)
+                              DropdownMenuItem(
+                                value: mode,
+                                child: Text(_modeLabel(mode)),
+                              ),
                           ],
                           onChanged: (v) {
                             if (v != null) dnsSettings.setDnsMode(v);
@@ -298,6 +312,7 @@ class _DnsSettingsScreenState extends State<DnsSettingsScreen> {
 
   String _getDnsModeText(String mode, AppLocalizations? l10n) {
     switch (mode) {
+      case 'redir-host':
       case 'normal':
         return l10n?.normalMode ?? 'Normal Mode';
       case 'fake-ip':

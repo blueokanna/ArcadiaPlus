@@ -1,9 +1,9 @@
-# HarmonyOS obfuscation rules for CatClash
+# HarmonyOS obfuscation rules for ArcadiaPlus
 # Add your obfuscation rules here
 
 # Keep Flutter related classes
 -keep class io.flutter.** { *; }
 -keep class com.aspect.flutter_ohos.** { *; }
 
-# Keep CatClash plugin classes
+# Keep ArcadiaPlus plugin classes
 -keep class com.blueokanna.arcadiaplus.** { *; }

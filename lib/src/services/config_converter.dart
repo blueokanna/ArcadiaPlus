@@ -383,8 +383,9 @@ class ConfigConverter {
     GeneralSettings? generalSettings,
     void Function(String message)? onWarning,
   }) {
-    // Use generalSettings if provided, otherwise fall back to YAML values
-    final httpPort = generalSettings?.httpPort ?? clash['port'] ?? 7890;
+    // Use generalSettings if provided, otherwise fall back to YAML values.
+    // The HTTP port is not read here: it reaches the engine as an inbound, built
+    // by `_extractInbounds` from the same setting.
     final socksPort = generalSettings?.socksPort ?? clash['socks-port'];
     final mixedPort = generalSettings?.mixedPort ?? clash['mixed-port'];
     final allowLan = generalSettings?.allowLan ?? clash['allow-lan'] ?? false;
@@ -425,11 +426,21 @@ class ConfigConverter {
     final mode = generalSettings?.mode ?? clash['mode'] ?? 'rule';
     final logLevel = generalSettings?.logLevel ?? clash['log-level'] ?? 'info';
 
+    // `port`, `redir-port` and `tproxy-port` are deliberately not sent. The
+    // HTTP, SOCKS and mixed ports reach the engine as real inbounds instead, and
+    // the transparent-proxy ports have no implementation to reach at all — a
+    // field read by nothing is how a settings screen ends up lying.
+    for (final legacy in ['redir-port', 'tproxy-port']) {
+      if (clash[legacy] != null) {
+        onWarning?.call(
+          '$legacy is not supported: this engine has no transparent-proxy '
+          'inbound, so the setting has no effect.',
+        );
+      }
+    }
+
     return {
-      'port': httpPort,
       'socks_port': socksPort,
-      'redir_port': clash['redir-port'],
-      'tproxy_port': clash['tproxy-port'],
       'mixed_port': mixedPort,
       'authentication': authentication,
       'allow_lan': allowLan,
@@ -492,6 +503,16 @@ class ConfigConverter {
       }
     });
 
+    // Pass-through keys the app's own DNS settings cannot express yet, so they
+    // come from the profile. With "override DNS" on, `dns` is empty and every
+    // key below is omitted — leaving the engine's own defaults in place rather
+    // than handing it a value nobody chose.
+    final fakeIpRange = dns['fake-ip-range'];
+    final fakeIpFilter = _toStringList(dns['fake-ip-filter']);
+    final fakeIpTtl = _toPositiveInt(dns['fake-ip-ttl']);
+    final cacheSize = _toPositiveInt(dns['cache-size']);
+    final hosts = _extractHosts(dns['hosts']);
+
     return {
       'enable': override ? dnsSettings.enable : (dns['enable'] ?? true),
       'listen': override
@@ -499,11 +520,55 @@ class ConfigConverter {
           : (dns['listen'] ?? '127.0.0.1:53'),
       'nameservers': nameservers,
       'fallback': fallback,
+      // mihomo's default is `redir-host`, not `fake-ip`. A profile that does not
+      // name a mode gets real answers, which is what it would get under mihomo.
       'enhanced_mode': override
           ? dnsSettings.dnsMode
-          : (dns['enhanced-mode'] ?? 'fake-ip'),
+          : (dns['enhanced-mode'] ?? 'redir-host'),
       'nameserver_policy': policy,
+      if (fakeIpRange is String && fakeIpRange.trim().isNotEmpty)
+        'fake_ip_range': fakeIpRange.trim(),
+      if (fakeIpFilter.isNotEmpty) 'fake_ip_filter': fakeIpFilter,
+      'fake_ip_ttl': ?fakeIpTtl,
+      'cache_size': ?cacheSize,
+      if (hosts.isNotEmpty) 'hosts': hosts,
     };
+  }
+
+  /// A positive integer, or null when the value is absent or nonsense.
+  ///
+  /// `cache-size: 0` would be a cache that never stores anything, which is a
+  /// mistake rather than a setting, so it is treated as absent.
+  static int? _toPositiveInt(Object? value) {
+    final parsed = value is int ? value : int.tryParse('${value ?? ''}');
+    if (parsed == null || parsed < 1) {
+      return null;
+    }
+    return parsed;
+  }
+
+  /// The profile's `hosts` block, one string per name.
+  ///
+  /// Clash accepts a bare string or a list as the value, and a name-to-name
+  /// alias. Every shape is forwarded as written: the engine keeps the entries
+  /// it can use and reports the ones it cannot, which is better than this layer
+  /// deciding for it and losing an entry silently.
+  static Map<String, String> _extractHosts(Object? value) {
+    if (value is! Map) {
+      return const {};
+    }
+    final hosts = <String, String>{};
+    value.forEach((key, entry) {
+      if (key is! String || key.trim().isEmpty) {
+        return;
+      }
+      final candidates = _toStringList(entry);
+      if (candidates.isEmpty) {
+        return;
+      }
+      hosts[key.trim()] = candidates.first;
+    });
+    return hosts;
   }
 
   /// Clash accepts a single server as a bare string wherever a list is also

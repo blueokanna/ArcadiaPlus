@@ -12,11 +12,15 @@ name = "rust_lib_arcadiaplus"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-corduit = { version = "0.1.9", features = ["hysteria2", "reality", "tuic"] }
+corduit = { version = "0.2.0", path = "../../Corduit", features = [
+    "hysteria2",
+    "reality",
+    "tuic",
+] }
 flutter_rust_bridge = "=2.13.0"
 once_cell = "1.21.4"
 parking_lot = "0.12"
-recurse-x = "0.2.0"
+recurse-x = { version = "0.2.1" }
 tokio = { version = "1.53.1", features = ["rt"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }

@@ -106,6 +106,9 @@ jobs:
       - name: Checkout tagged source
         uses: actions/checkout@v5
 
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -156,6 +159,9 @@ jobs:
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
+
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
 
       - name: Reclaim disk space this build does not need
         run: |
@@ -222,10 +228,10 @@ jobs:
       - name: Decode the Android release keystore
         shell: bash
         env:
-          KEYSTORE_BASE64: ${{ secrets.ARCADIAPLUS_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ARCADIAPLUS_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ARCADIAPLUS_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.ARCADIAPLUS_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.VELOGUARD_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.VELOGUARD_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.VELOGUARD_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.VELOGUARD_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           if [[ -z "$KEYSTORE_BASE64" ]]; then
@@ -306,6 +312,9 @@ jobs:
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
+
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -411,6 +420,9 @@ jobs:
       - name: Checkout tagged source
         uses: actions/checkout@v5
 
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -473,6 +485,9 @@ jobs:
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
+
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
 
       - name: Install the Linux desktop build dependencies
         run: |

@@ -12,7 +12,7 @@
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
-- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.1.9, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
+- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.2.0, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
 - Explicit configuration downgrades: a node whose protocol corduit cannot build is dropped and its references fall back to `DIRECT`, and a rule type corduit has no rule for is skipped — every downgrade is reported through `onWarning`, never silent.
 - Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
 - Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
@@ -22,7 +22,7 @@
 
 ## Protocol Status
 
-The protocol implementations live in corduit 0.1.9. This repository wires them into Flutter and has not run real-server interoperability tests itself.
+The protocol implementations live in corduit 0.2.0. This repository wires them into Flutter and has not run real-server interoperability tests itself.
 
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
@@ -116,10 +116,9 @@ The bar: with the tunnel idle, `procs_running` should stay in the single digits,
 
 ## Known Limitations
 
-These are stored today but do not change runtime behaviour; they are listed so they are not mistaken for working features:
+Gaps and boundaries worth knowing, so nothing here is mistaken for a feature it is not:
 
-- Every field on the DNS settings page other than “local recursive resolution” (`useRecursiveResolver`, which starts RecurseX and points the engine's upstreams at it). The engine takes its DNS configuration from the profile's `dns` section (`enable` / `listen` / `nameservers` / `fallback` / `enhanced-mode`), and corduit's `DnsConfig` has no `nameserver-policy`, `fallback-filter`, `hosts`, or `prefer-h3` field.
-- The hosts mapping on the General settings page, for the same reason: there is no hosts table in the engine's DNS configuration.
+- The DNS settings page is the only DNS surface the app edits, and it is applied only while “override DNS” is on — without it the profile's `dns` block wins. The engine's wider DNS surface (`nameserver-policy`, `fallback-filter`, `fake-ip-range` / `-filter` / `-ttl`, `cache-size`, `hosts`) is passed through from the profile and has no page of its own.
 - The system proxy bypass list reaches Windows (`ProxyOverride`) and Linux (`ignore-hosts`); the macOS `networksetup` path currently only sets or clears the proxies themselves.
 
 ## Architecture
@@ -131,10 +130,10 @@ Flutter Rust Bridge (generated bindings)
         |
 lib-arcadiaplus (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
-corduit 0.1.9 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
+corduit 0.2.0 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
         +-- nextjson / rustbinary (config and binary codecs)
-RecurseX 0.1.0 (optional local recursive DNS front-end, lifecycle owned by the bridge)
+recurse-x 0.2.1 (optional local recursion: the resolver, plus the client-facing UDP/TCP DNS server whose lifecycle the bridge owns)
 ```
 
 corduit is synchronous while the Dart surface stays `Future`-based, so the bridge dispatches every engine call onto a blocking worker (`run`). Starting the proxy, probing latency, or toggling TUN therefore never stalls the Flutter isolate.

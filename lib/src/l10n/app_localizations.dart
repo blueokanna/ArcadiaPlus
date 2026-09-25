@@ -246,8 +246,9 @@ class AppLocalizations {
   String get disclaimerContent => _getLocalizedString('disclaimerContent');
   String get disclaimerWarning => _getLocalizedString('disclaimerWarning');
   String get understood => _getLocalizedString('understood');
-  String get aboutCatClash => _getLocalizedString('aboutCatClash');
-  String get aboutCatClashDesc => _getLocalizedString('aboutCatClashDesc');
+  String get aboutArcadiaPlus => _getLocalizedString('aboutArcadiaPlus');
+  String get aboutArcadiaPlusDesc =>
+      _getLocalizedString('aboutArcadiaPlusDesc');
   String get aboutDescription => _getLocalizedString('aboutDescription');
   String get features => _getLocalizedString('features');
   String get featureSpeed => _getLocalizedString('featureSpeed');
@@ -724,8 +725,8 @@ const Map<String, String> _deStrings = {
       'Die rechtswidrige Nutzung dieser Software verstößt gegen die '
       'Lizenz und kann rechtliche Folgen haben.',
   'understood': 'Verstanden',
-  'aboutCatClash': 'Über ArcadiaPlus',
-  'aboutCatClashDesc': 'Erfahren Sie mehr über diese App',
+  'aboutArcadiaPlus': 'Über ArcadiaPlus',
+  'aboutArcadiaPlusDesc': 'Erfahren Sie mehr über diese App',
   'aboutDescription':
       'ArcadiaPlus ist ein moderner plattformübergreifender Proxy-Client, der mit Flutter und Rust entwickelt wurde.',
   'features': 'Funktionen',
@@ -1006,8 +1007,8 @@ const Map<String, String> _enStrings = {
       'Using this software to break the law violates the license and '
       'can carry legal consequences.',
   'understood': 'Understood',
-  'aboutCatClash': 'About ArcadiaPlus',
-  'aboutCatClashDesc': 'Learn more about this app',
+  'aboutArcadiaPlus': 'About ArcadiaPlus',
+  'aboutArcadiaPlusDesc': 'Learn more about this app',
   'aboutDescription':
       'ArcadiaPlus is a modern cross-platform proxy client built with Flutter and Rust. It provides a beautiful Material You interface and powerful proxy features.',
   'features': 'Features',
@@ -1328,8 +1329,8 @@ const Map<String, String> _esStrings = {
       'Usar este software para infringir la ley incumple la licencia y '
       'puede acarrear consecuencias legales.',
   'understood': 'Entendido',
-  'aboutCatClash': 'Acerca de ArcadiaPlus',
-  'aboutCatClashDesc': 'Más información sobre esta aplicación',
+  'aboutArcadiaPlus': 'Acerca de ArcadiaPlus',
+  'aboutArcadiaPlusDesc': 'Más información sobre esta aplicación',
   'aboutDescription':
       'ArcadiaPlus es un cliente proxy multiplataforma moderno construido con Flutter y Rust.',
   'features': 'Características',
@@ -1616,8 +1617,8 @@ const Map<String, String> _frStrings = {
       'Utiliser ce logiciel pour enfreindre la loi viole la licence et '
       'peut entraîner des conséquences juridiques.',
   'understood': 'Compris',
-  'aboutCatClash': 'À propos d\'ArcadiaPlus',
-  'aboutCatClashDesc': 'En savoir plus sur cette application',
+  'aboutArcadiaPlus': 'À propos d\'ArcadiaPlus',
+  'aboutArcadiaPlusDesc': 'En savoir plus sur cette application',
   'aboutDescription':
       'ArcadiaPlus est un client proxy multiplateforme moderne construit avec Flutter et Rust.',
   'features': 'Fonctionnalités',
@@ -1900,8 +1901,8 @@ const Map<String, String> _itStrings = {
       'Usare questo software per violare la legge infrange la licenza '
       'e può comportare conseguenze legali.',
   'understood': 'Capito',
-  'aboutCatClash': 'Info su ArcadiaPlus',
-  'aboutCatClashDesc': 'Scopri di più su questa app',
+  'aboutArcadiaPlus': 'Info su ArcadiaPlus',
+  'aboutArcadiaPlusDesc': 'Scopri di più su questa app',
   'aboutDescription':
       'ArcadiaPlus è un client proxy multipiattaforma moderno costruito con Flutter e Rust.',
   'features': 'Funzionalità',
@@ -2173,8 +2174,8 @@ const Map<String, String> _jaStrings = {
       '法律で認められる範囲において、本ソフトウェアまたはその派生作品が第三者による違法行為に使用されたことによる結果について、作者および貢献者は責任を負いません。',
   'disclaimerWarning': '本ソフトウェアを違法行為に使用することはライセンス違反であり、法的な結果を招く可能性があります。',
   'understood': '了解',
-  'aboutCatClash': 'ArcadiaPlusについて',
-  'aboutCatClashDesc': 'このアプリについて詳しく',
+  'aboutArcadiaPlus': 'ArcadiaPlusについて',
+  'aboutArcadiaPlusDesc': 'このアプリについて詳しく',
   'aboutDescription':
       'ArcadiaPlusはFlutterとRustで構築された最新のクロスプラットフォームプロキシクライアントです。',
   'features': '機能',
@@ -2444,8 +2445,8 @@ const Map<String, String> _koStrings = {
       '법률이 허용하는 범위에서, 제3자가 이 소프트웨어 또는 이를 기반으로 한 파생 저작물을 위법하게 사용함으로써 발생하는 결과에 대해 저자와 기여자는 책임을 지지 않습니다.',
   'disclaimerWarning': '이 소프트웨어를 위법하게 사용하는 것은 라이선스 위반이며 법적 결과를 초래할 수 있습니다.',
   'understood': '이해했습니다',
-  'aboutCatClash': 'ArcadiaPlus 정보',
-  'aboutCatClashDesc': '이 앱에 대해 자세히 알아보기',
+  'aboutArcadiaPlus': 'ArcadiaPlus 정보',
+  'aboutArcadiaPlusDesc': '이 앱에 대해 자세히 알아보기',
   'aboutDescription':
       'ArcadiaPlus는 Flutter와 Rust로 구축된 현대적인 크로스 플랫폼 프록시 클라이언트입니다.',
   'features': '기능',
@@ -2727,8 +2728,8 @@ const Map<String, String> _ptStrings = {
       'Usar este software para infringir a lei viola a licença e pode '
       'acarretar consequências legais.',
   'understood': 'Entendido',
-  'aboutCatClash': 'Sobre ArcadiaPlus',
-  'aboutCatClashDesc': 'Saiba mais sobre este app',
+  'aboutArcadiaPlus': 'Sobre ArcadiaPlus',
+  'aboutArcadiaPlusDesc': 'Saiba mais sobre este app',
   'aboutDescription':
       'ArcadiaPlus é um cliente proxy multiplataforma moderno construído com Flutter e Rust.',
   'features': 'Recursos',
@@ -3011,8 +3012,8 @@ const Map<String, String> _ruStrings = {
       'Использование этого ПО в нарушение закона нарушает лицензию и '
       'может повлечь юридические последствия.',
   'understood': 'Понятно',
-  'aboutCatClash': 'О ArcadiaPlus',
-  'aboutCatClashDesc': 'Узнать больше об этом приложении',
+  'aboutArcadiaPlus': 'О ArcadiaPlus',
+  'aboutArcadiaPlusDesc': 'Узнать больше об этом приложении',
   'aboutDescription':
       'ArcadiaPlus - современный кроссплатформенный прокси-клиент, созданный на Flutter и Rust.',
   'features': 'Функции',
@@ -3284,8 +3285,8 @@ const Map<String, String> _zhCNStrings = {
       '在法律允许的范围内，任何人使用本软件或其衍生作品从事违法行为所产生的后果，作者与贡献者均不承担责任。',
   'disclaimerWarning': '将本软件用于违法用途会违反许可条款，并可能带来法律后果。',
   'understood': '我已了解',
-  'aboutCatClash': '关于 ArcadiaPlus',
-  'aboutCatClashDesc': '了解更多关于此应用',
+  'aboutArcadiaPlus': '关于 ArcadiaPlus',
+  'aboutArcadiaPlusDesc': '了解更多关于此应用',
   'aboutDescription':
       'ArcadiaPlus 是一款现代化的跨平台代理客户端，使用 Flutter 和 Rust 构建。它提供了精美的 Material You 界面和强大的代理功能。',
   'features': '功能特性',
@@ -3590,8 +3591,8 @@ const Map<String, String> _zhTWStrings = {
       '在法律允許的範圍內，任何人使用本軟體或其衍生作品從事違法行為所產生的後果，作者與貢獻者均不承擔責任。',
   'disclaimerWarning': '將本軟體用於違法用途會違反授權條款，並可能帶來法律後果。',
   'understood': '我已了解',
-  'aboutCatClash': '關於 ArcadiaPlus',
-  'aboutCatClashDesc': '了解更多關於此應用程式',
+  'aboutArcadiaPlus': '關於 ArcadiaPlus',
+  'aboutArcadiaPlusDesc': '了解更多關於此應用程式',
   'aboutDescription':
       'ArcadiaPlus 是一款現代化的跨平台代理用戶端，使用 Flutter 和 Rust 建置。它提供了精美的 Material You 介面和強大的代理功能。',
   'features': '功能特性',

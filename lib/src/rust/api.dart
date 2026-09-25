@@ -241,6 +241,56 @@ Future<String> getVersion() => RustLib.instance.api.crateApiGetVersion();
 
 Future<String> getBuildInfo() => RustLib.instance.api.crateApiGetBuildInfo();
 
+/// Start the loopback JSON-RPC server on `port`.
+///
+/// The token keeps corduit's `Option` shape, but `None` is almost never what
+/// you want: corduit then generates a random token and never hands it back —
+/// [`get_rpc_server_status`] reports only *that* one is required, never which
+/// — so the server that comes up is one nobody, this app included, can
+/// authenticate to. Pass a token you can actually show.
+Future<void> startRpcServer({required int port, String? token}) =>
+    RustLib.instance.api.crateApiStartRpcServer(port: port, token: token);
+
+Future<void> stopRpcServer() => RustLib.instance.api.crateApiStopRpcServer();
+
+Future<RpcServerStatus> getRpcServerStatus() =>
+    RustLib.instance.api.crateApiGetRpcServerStatus();
+
+/// Start the Clash-compatible dashboard API at `external_controller`.
+///
+/// [`start_corduit`] already does this from `general.external-controller` and
+/// `general.secret`, so this is for the case where the address changed after
+/// the engine came up: a config reload does not rebind the controller, and
+/// this is the only way to move it without stopping the proxy.
+Future<void> startExternalController({
+  required String externalController,
+  String? secret,
+}) => RustLib.instance.api.crateApiStartExternalController(
+  externalController: externalController,
+  secret: secret,
+);
+
+/// Start the dashboard API from the running config, if it declares one.
+///
+/// A config without `general.external-controller` is not an error here: the
+/// engine reports success and leaves the controller off.
+Future<void> startExternalControllerFromConfig() =>
+    RustLib.instance.api.crateApiStartExternalControllerFromConfig();
+
+Future<void> stopExternalController() =>
+    RustLib.instance.api.crateApiStopExternalController();
+
+Future<ExternalControllerStatus> getExternalControllerStatus() =>
+    RustLib.instance.api.crateApiGetExternalControllerStatus();
+
+/// The engine's live `general` settings.
+///
+/// Read from the running instance rather than from the config the app holds,
+/// which is the whole point: a mode switched through the dashboard API is
+/// invisible to anything but this call.
+Future<GeneralSnapshot> getGeneralSnapshot() =>
+    RustLib.instance.api.crateApiGetGeneralSnapshot();
+
 Future<void> startTunMode({
   required String tunName,
   required String tunAddress,
