@@ -23,6 +23,7 @@ import 'package:arcadiaplus/src/screens/dns_settings_screen.dart';
 import 'package:arcadiaplus/src/screens/basic_config_screen.dart';
 import 'package:arcadiaplus/src/screens/advanced_config_screen.dart';
 import 'package:arcadiaplus/src/screens/proxies_screen.dart';
+import 'package:arcadiaplus/src/screens/about_screen.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_scaffold.dart';
 import 'package:arcadiaplus/src/widgets/rust_init_error_dialog.dart';
 import 'package:arcadiaplus/src/widgets/update_prompt.dart';
@@ -394,6 +395,11 @@ final GoRouter _router = GoRouter(
           path: '/network-settings',
           pageBuilder: (context, state) =>
               _buildExpressivePage(state, const NetworkSettingsScreen()),
+        ),
+        GoRoute(
+          path: '/about',
+          pageBuilder: (context, state) =>
+              _buildExpressivePage(state, const AboutScreen()),
         ),
         GoRoute(
           path: '/dns-settings',

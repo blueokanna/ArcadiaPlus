@@ -21,6 +21,18 @@ class _QuickActionsState extends State<QuickActions> {
   bool _isTunLoading = false;
   bool _isUpdating = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // The switches mirror the platform, and the platform can have changed
+    // while nothing was showing them. One read on appearance is enough: every
+    // change made from inside the app arrives through the service's own
+    // notifications.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<NetworkSettingsProvider>().refresh();
+    });
+  }
+
   Future<void> _toggleSystemProxy(
     bool enable,
     NetworkSettingsProvider networkSettings,
@@ -165,13 +177,13 @@ class _QuickActionsState extends State<QuickActions> {
   Widget _buildMobileLayout(ColorScheme colorScheme, double spacing) {
     final appState = context.watch<AppStateProvider>();
     final isServiceRunning = appState.isServiceRunning;
-    final tunEnabled = PlatformProxyService.instance.tunModeEnabled;
+    final networkSettings = context.watch<NetworkSettingsProvider>();
 
     return Column(
       children: [
         _ServiceStatusCard(
           isRunning: isServiceRunning,
-          isTunEnabled: tunEnabled,
+          isTunEnabled: networkSettings.tunEnabled,
           currentMode: appState.proxyMode,
         ),
         SizedBox(height: spacing * 2),
@@ -190,39 +202,51 @@ class _QuickActionsState extends State<QuickActions> {
   Widget _buildDesktopLayout(ColorScheme colorScheme, double spacing) {
     final l10n = AppLocalizations.of(context);
     final networkSettings = context.watch<NetworkSettingsProvider>();
+    final isServiceRunning = context.watch<AppStateProvider>().isServiceRunning;
+
+    // Both switches configure a route to the local mixed port, so with the
+    // engine stopped they would only point this machine at a port nobody
+    // listens on. Offering them anyway is how "the proxy is on" and "the
+    // internet is gone" come together.
+    final stoppedHint =
+        l10n?.serviceNotRunning ?? 'ArcadiaPlus service is not running';
+    final systemProxyCard = _ProxyCard(
+      icon: Icons.language_rounded,
+      title: l10n?.systemProxy ?? 'System Proxy',
+      subtitle: networkSettings.systemProxy
+          ? (l10n?.enabled ?? 'Enabled')
+          : (l10n?.disabled ?? 'Disabled'),
+      description: isServiceRunning || networkSettings.systemProxy
+          ? (l10n?.setSystemHttpSocksProxy ?? 'Set system HTTP/SOCKS proxy')
+          : stoppedHint,
+      isEnabled: networkSettings.systemProxy,
+      isLoading: _isProxyLoading,
+      enabled: isServiceRunning,
+      onToggle: (enable) => _toggleSystemProxy(enable, networkSettings),
+    );
+    final tunCard = _ProxyCard(
+      icon: Icons.router_rounded,
+      title: l10n?.tunMode ?? 'TUN Mode',
+      subtitle: networkSettings.tunEnabled
+          ? (l10n?.enabled ?? 'Enabled')
+          : (l10n?.disabled ?? 'Disabled'),
+      description: isServiceRunning || networkSettings.tunEnabled
+          ? (l10n?.tunModeDesc ?? 'Requires administrator privileges')
+          : stoppedHint,
+      isEnabled: networkSettings.tunEnabled,
+      isLoading: _isTunLoading,
+      enabled: isServiceRunning,
+      onToggle: (enable) => _toggleTunMode(enable, networkSettings),
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
         if (constraints.maxWidth < 500) {
           return Column(
             children: [
-              _ProxyCard(
-                icon: Icons.language_rounded,
-                title: l10n?.systemProxy ?? 'System Proxy',
-                subtitle: networkSettings.systemProxy
-                    ? (l10n?.enabled ?? 'Enabled')
-                    : (l10n?.disabled ?? 'Disabled'),
-                description:
-                    l10n?.setSystemHttpSocksProxy ??
-                    'Set system HTTP/SOCKS proxy',
-                isEnabled: networkSettings.systemProxy,
-                isLoading: _isProxyLoading,
-                onToggle: (enable) =>
-                    _toggleSystemProxy(enable, networkSettings),
-              ),
+              systemProxyCard,
               SizedBox(height: spacing * 1.5),
-              _ProxyCard(
-                icon: Icons.router_rounded,
-                title: l10n?.tunMode ?? 'TUN Mode',
-                subtitle: networkSettings.tunEnabled
-                    ? (l10n?.enabled ?? 'Enabled')
-                    : (l10n?.disabled ?? 'Disabled'),
-                description:
-                    l10n?.tunModeDesc ?? 'Requires administrator privileges',
-                isEnabled: networkSettings.tunEnabled,
-                isLoading: _isTunLoading,
-                onToggle: (enable) => _toggleTunMode(enable, networkSettings),
-              ),
+              tunCard,
             ],
           );
         }
@@ -231,37 +255,9 @@ class _QuickActionsState extends State<QuickActions> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: _ProxyCard(
-                  icon: Icons.language_rounded,
-                  title: l10n?.systemProxy ?? 'System Proxy',
-                  subtitle: networkSettings.systemProxy
-                      ? (l10n?.enabled ?? 'Enabled')
-                      : (l10n?.disabled ?? 'Disabled'),
-                  description:
-                      l10n?.setSystemHttpSocksProxy ??
-                      'Set system HTTP/SOCKS proxy',
-                  isEnabled: networkSettings.systemProxy,
-                  isLoading: _isProxyLoading,
-                  onToggle: (enable) =>
-                      _toggleSystemProxy(enable, networkSettings),
-                ),
-              ),
+              Expanded(child: systemProxyCard),
               SizedBox(width: spacing * 1.5),
-              Expanded(
-                child: _ProxyCard(
-                  icon: Icons.router_rounded,
-                  title: l10n?.tunMode ?? 'TUN Mode',
-                  subtitle: networkSettings.tunEnabled
-                      ? (l10n?.enabled ?? 'Enabled')
-                      : (l10n?.disabled ?? 'Disabled'),
-                  description:
-                      l10n?.tunModeDesc ?? 'Requires administrator privileges',
-                  isEnabled: networkSettings.tunEnabled,
-                  isLoading: _isTunLoading,
-                  onToggle: (enable) => _toggleTunMode(enable, networkSettings),
-                ),
-              ),
+              Expanded(child: tunCard),
             ],
           ),
         );
@@ -273,7 +269,7 @@ class _QuickActionsState extends State<QuickActions> {
     final textTheme = Theme.of(context).textTheme;
     final borderRadius = ResponsiveUtils.getBorderRadius(context);
     final l10n = AppLocalizations.of(context);
-    final tunEnabled = PlatformProxyService.instance.tunModeEnabled;
+    final tunEnabled = context.watch<NetworkSettingsProvider>().tunEnabled;
     final currentProxyMode = context.watch<AppStateProvider>().proxyMode;
 
     return AnimatedContainer(
@@ -753,6 +749,12 @@ class _ProxyCard extends StatelessWidget {
   final String description;
   final bool isEnabled;
   final bool isLoading;
+
+  /// Whether the switch may be turned *on*. Both settings write a route to the
+  /// local mixed port, so with the engine stopped they would only point this
+  /// machine at a port nobody listens on. Turning one off is always allowed:
+  /// that is the way back from a session that died with the proxy still set.
+  final bool enabled;
   final Function(bool) onToggle;
 
   const _ProxyCard({
@@ -762,6 +764,7 @@ class _ProxyCard extends StatelessWidget {
     required this.description,
     required this.isEnabled,
     required this.isLoading,
+    required this.enabled,
     required this.onToggle,
   });
 
@@ -771,136 +774,140 @@ class _ProxyCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final borderRadius = ResponsiveUtils.getBorderRadius(context);
     final spacing = ResponsiveUtils.getSpacing(context);
+    final interactive = (enabled || isEnabled) && !isLoading;
 
-    return AnimatedContainer(
-      duration: AnimationUtils.stateChangeDuration,
-      curve: AnimationUtils.curveEmphasized,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        gradient: isEnabled
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  colorScheme.primaryContainer,
-                  colorScheme.primaryContainer.withValues(alpha: 0.7),
-                ],
-              )
-            : null,
-        color: isEnabled ? null : colorScheme.surfaceContainerHigh,
-        border: Border.all(
-          color: isEnabled ? colorScheme.primary : colorScheme.outlineVariant,
-          width: isEnabled ? 2 : 1,
-        ),
-        boxShadow: isEnabled
-            ? [
-                BoxShadow(
-                  color: colorScheme.primary.withValues(alpha: 0.2),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: InkWell(
-          onTap: isLoading ? null : () => onToggle(!isEnabled),
+    return Opacity(
+      opacity: enabled || isEnabled ? 1 : 0.55,
+      child: AnimatedContainer(
+        duration: AnimationUtils.stateChangeDuration,
+        curve: AnimationUtils.curveEmphasized,
+        decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(borderRadius),
-          child: Padding(
-            padding: EdgeInsets.all(spacing * 2),
-            child: Row(
-              children: [
-                AnimatedContainer(
-                  duration: AnimationUtils.stateChangeDuration,
-                  padding: EdgeInsets.all(spacing * 1.5),
-                  decoration: BoxDecoration(
-                    color: isEnabled
-                        ? colorScheme.primary
-                        : colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(borderRadius * 0.7),
+          gradient: isEnabled
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    colorScheme.primaryContainer,
+                    colorScheme.primaryContainer.withValues(alpha: 0.7),
+                  ],
+                )
+              : null,
+          color: isEnabled ? null : colorScheme.surfaceContainerHigh,
+          border: Border.all(
+            color: isEnabled ? colorScheme.primary : colorScheme.outlineVariant,
+            width: isEnabled ? 2 : 1,
+          ),
+          boxShadow: isEnabled
+              ? [
+                  BoxShadow(
+                    color: colorScheme.primary.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 24,
-                    color: isEnabled
-                        ? colorScheme.onPrimary
-                        : colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                SizedBox(width: spacing * 1.75),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: isEnabled
-                              ? colorScheme.onPrimaryContainer
-                              : colorScheme.onSurface,
-                        ),
-                      ),
-                      SizedBox(height: spacing * 0.25),
-                      Row(
-                        children: [
-                          AnimatedContainer(
-                            duration: AnimationUtils.durationMedium2,
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isEnabled
-                                  ? Colors.green
-                                  : colorScheme.outline,
-                            ),
-                          ),
-                          SizedBox(width: spacing * 0.75),
-                          Text(
-                            subtitle,
-                            style: textTheme.bodySmall?.copyWith(
-                              color: isEnabled
-                                  ? colorScheme.onPrimaryContainer.withValues(
-                                      alpha: 0.7,
-                                    )
-                                  : colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                if (isLoading)
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: InkWell(
+            onTap: interactive ? () => onToggle(!isEnabled) : null,
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: Padding(
+              padding: EdgeInsets.all(spacing * 2),
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: AnimationUtils.stateChangeDuration,
+                    padding: EdgeInsets.all(spacing * 1.5),
+                    decoration: BoxDecoration(
                       color: isEnabled
-                          ? colorScheme.onPrimaryContainer
-                          : colorScheme.primary,
+                          ? colorScheme.primary
+                          : colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(borderRadius * 0.7),
                     ),
-                  )
-                else
-                  Switch(
-                    value: isEnabled,
-                    onChanged: isLoading ? null : onToggle,
-                    activeTrackColor: colorScheme.primary,
-                    thumbIcon: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.selected)) {
-                        return Icon(
-                          Icons.check,
-                          size: 14,
-                          color: colorScheme.onPrimary,
-                        );
-                      }
-                      return null;
-                    }),
+                    child: Icon(
+                      icon,
+                      size: 24,
+                      color: isEnabled
+                          ? colorScheme.onPrimary
+                          : colorScheme.onSurfaceVariant,
+                    ),
                   ),
-              ],
+                  SizedBox(width: spacing * 1.75),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: isEnabled
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onSurface,
+                          ),
+                        ),
+                        SizedBox(height: spacing * 0.25),
+                        Row(
+                          children: [
+                            AnimatedContainer(
+                              duration: AnimationUtils.durationMedium2,
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isEnabled
+                                    ? Colors.green
+                                    : colorScheme.outline,
+                              ),
+                            ),
+                            SizedBox(width: spacing * 0.75),
+                            Text(
+                              subtitle,
+                              style: textTheme.bodySmall?.copyWith(
+                                color: isEnabled
+                                    ? colorScheme.onPrimaryContainer.withValues(
+                                        alpha: 0.7,
+                                      )
+                                    : colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isLoading)
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: isEnabled
+                            ? colorScheme.onPrimaryContainer
+                            : colorScheme.primary,
+                      ),
+                    )
+                  else
+                    Switch(
+                      value: isEnabled,
+                      onChanged: interactive ? onToggle : null,
+                      activeTrackColor: colorScheme.primary,
+                      thumbIcon: WidgetStateProperty.resolveWith((states) {
+                        if (states.contains(WidgetState.selected)) {
+                          return Icon(
+                            Icons.check,
+                            size: 14,
+                            color: colorScheme.onPrimary,
+                          );
+                        }
+                        return null;
+                      }),
+                    ),
+                ],
+              ),
             ),
           ),
         ),

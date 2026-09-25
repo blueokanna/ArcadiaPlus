@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
 import 'package:arcadiaplus/src/providers/theme_provider.dart';
 import 'package:arcadiaplus/src/providers/locale_provider.dart';
 import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
 import 'package:arcadiaplus/src/providers/update_provider.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadiaplus/src/widgets/license_viewer.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
@@ -475,7 +475,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: colorScheme.primary,
                         ),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showAboutDialog(context),
+                        onTap: () => context.push('/about'),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
@@ -488,7 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: colorScheme.primary,
                         ),
                         trailing: const Icon(Icons.chevron_right),
-                        onTap: () => _showLicenseDialog(context),
+                        onTap: () => showBundledLicense(context),
                       ),
                     ],
                   ),
@@ -587,16 +587,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return context.read<ThemeProvider>().getThemeSeedColor(themeName);
   }
 
-  void _showLicenseDialog(BuildContext context) {
-    showLicensePage(
-      context: context,
-      applicationName: 'ArcadiaPlus',
-      applicationVersion: _packageInfo?.version ?? '1.0.0',
-      applicationLegalese:
-          '© 2026 blueokanna and HyphenTeam. PolyForm Perimeter License 1.0.1.',
-    );
-  }
-
   void _showDisclaimerDialog(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
@@ -662,204 +652,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(l10n?.understood ?? '我已了解'),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showAboutDialog(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.flash_on, color: colorScheme.primary, size: 32),
-            ),
-            const SizedBox(width: 16),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('ArcadiaPlus'),
-                Text(
-                  'v${_packageInfo?.version ?? '1.0.0'}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                l10n?.aboutDescription ??
-                    'ArcadiaPlus 是一款现代化的跨平台代理客户端，使用 Flutter 和 Rust 构建。'
-                        '它提供了精美的 Material You 界面和强大的代理功能。',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 20),
-              Text(
-                l10n?.features ?? '功能特性',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              _buildFeatureItem(
-                context,
-                Icons.speed_outlined,
-                l10n?.featureSpeed ?? '高性能 Rust 核心',
-              ),
-              _buildFeatureItem(
-                context,
-                Icons.palette_outlined,
-                l10n?.featureTheme ?? 'Material You 动态颜色',
-              ),
-              _buildFeatureItem(
-                context,
-                Icons.devices_outlined,
-                l10n?.featurePlatform ?? '跨平台支持',
-              ),
-              _buildFeatureItem(
-                context,
-                Icons.security_outlined,
-                l10n?.featureSecurity ?? '多种代理协议',
-              ),
-              _buildFeatureItem(
-                context,
-                Icons.rule_outlined,
-                l10n?.featureRules ?? '灵活的路由规则',
-              ),
-              _buildFeatureItem(
-                context,
-                Icons.dns_outlined,
-                l10n?.featureDns ?? '内置 DNS 服务器',
-              ),
-              const SizedBox(height: 20),
-              Text(
-                l10n?.supportedProtocols ?? '支持的协议',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildProtocolChip(context, 'Shadowsocks'),
-                  _buildProtocolChip(context, 'VMess'),
-                  _buildProtocolChip(context, 'Trojan'),
-                  _buildProtocolChip(context, 'SOCKS5'),
-                  _buildProtocolChip(context, 'HTTP'),
-                  _buildProtocolChip(context, 'WireGuard'),
-                  _buildProtocolChip(context, 'TUIC'),
-                  _buildProtocolChip(context, 'Hysteria2'),
-                ],
-              ),
-              const SizedBox(height: 20),
-              InkWell(
-                onTap: () async {
-                  final uri = Uri.parse(
-                    'https://github.com/blueokanna/ArcadiaPlus',
-                  );
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.code_outlined, color: colorScheme.primary),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              l10n?.openSource ?? '源码开放',
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                            Text(
-                              l10n?.openSourceDesc ?? '使用 Flutter & Rust 构建',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.open_in_new,
-                        color: colorScheme.primary,
-                        size: 18,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n?.close ?? '关闭'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureItem(BuildContext context, IconData icon, String text) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: colorScheme.primary),
-          const SizedBox(width: 12),
-          Expanded(child: Text(text)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProtocolChip(BuildContext context, String protocol) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        protocol,
-        style: TextStyle(
-          color: colorScheme.onPrimaryContainer,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
       ),
     );
   }

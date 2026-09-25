@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ffi';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -8,7 +9,15 @@ import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
 enum ProxyMode { global, rule, direct }
 
-class PlatformProxyService {
+/// Owns the platform's own proxy and tunnel state.
+///
+/// Every switch in the app is a view of these three facts, and they are only
+/// ever changed here: the app enabling the system proxy with the service, the
+/// user flipping a switch, Android reporting a VPN it started, a routing mode
+/// switch. Publishing each change is what keeps a switch from describing a
+/// state the OS is not in — which is what happened when the service enabled
+/// the system proxy on start-up and the network screen still said "off".
+class PlatformProxyService extends ChangeNotifier {
   static final PlatformProxyService instance = PlatformProxyService._();
   PlatformProxyService._() {
     _setupMethodChannel();
@@ -31,6 +40,28 @@ class PlatformProxyService {
   int get androidVpnFd => _vpnFd;
   Function(bool isRunning)? onVpnStatusChanged;
 
+  /// Records what the platform is doing now and tells the listeners.
+  ///
+  /// A no-op value does not notify: a mode switch touches the mode and the
+  /// tunnel in one step, and rebuilding the UI for a value that did not move
+  /// is exactly the kind of noise this class used to cause.
+  void _publish({bool? systemProxy, bool? tunEnabled, ProxyMode? mode}) {
+    var changed = false;
+    if (systemProxy != null && systemProxy != _systemProxyEnabled) {
+      _systemProxyEnabled = systemProxy;
+      changed = true;
+    }
+    if (tunEnabled != null && tunEnabled != _tunModeEnabled) {
+      _tunModeEnabled = tunEnabled;
+      changed = true;
+    }
+    if (mode != null && mode != _currentProxyMode) {
+      _currentProxyMode = mode;
+      changed = true;
+    }
+    if (changed) notifyListeners();
+  }
+
   static int _runtimeModeValue(ProxyMode mode) => switch (mode) {
     ProxyMode.global => 1,
     ProxyMode.direct => 2,
@@ -45,7 +76,7 @@ class PlatformProxyService {
   /// a mode switch never needs the tunnel restarted.
   Future<bool> configureProxyMode(ProxyMode mode) async {
     try {
-      _currentProxyMode = mode;
+      _publish(mode: mode);
       await rust_api.setProxyMode(mode: _runtimeModeValue(mode));
       if (!_tunModeEnabled) return true;
       return await setProxyMode(mode);
@@ -67,8 +98,8 @@ class PlatformProxyService {
             final args = call.arguments as Map;
             final isRunning = args['isRunning'] as bool? ?? false;
             final fd = (args['fd'] as num?)?.toInt() ?? -1;
-            _tunModeEnabled = isRunning;
             _vpnFd = fd;
+            _publish(tunEnabled: isRunning);
             onVpnStatusChanged?.call(isRunning);
           }
           return null;
@@ -82,8 +113,8 @@ class PlatformProxyService {
         case 'vpnStatusChanged':
           if (call.arguments is Map) {
             final args = call.arguments as Map;
-            _tunModeEnabled = args['isRunning'] as bool? ?? false;
             _vpnFd = (args['fd'] as num?)?.toInt() ?? -1;
+            _publish(tunEnabled: args['isRunning'] as bool? ?? false);
             onVpnStatusChanged?.call(_tunModeEnabled);
           }
           return null;
@@ -112,7 +143,7 @@ class PlatformProxyService {
         return false;
       }
       if (Platform.isMacOS) {
-        return await _enableMacOSSystemProxy(host, httpPort);
+        return await _enableMacOSSystemProxy(host, httpPort, bypass);
       }
       if (Platform.isLinux) {
         return await _enableLinuxSystemProxy(host, httpPort, bypass);
@@ -167,12 +198,13 @@ class PlatformProxyService {
       }
       if (Platform.isMacOS || Platform.isLinux) {
         final status = await rust_api.enableTunModeWithMode(mode: mode.name);
-        _tunModeEnabled = status.enabled;
         if (status.enabled) {
-          _currentProxyMode = mode;
-        }
-        if (status.error case final error?) {
-          debugPrint('Failed to enable TUN mode: $error');
+          _publish(tunEnabled: true, mode: mode);
+        } else {
+          _publish(tunEnabled: false);
+          if (status.error case final error?) {
+            debugPrint('Failed to enable TUN mode: $error');
+          }
         }
         return status.enabled;
       }
@@ -196,7 +228,7 @@ class PlatformProxyService {
       }
       if (Platform.isMacOS || Platform.isLinux) {
         final status = await rust_api.disableTunMode();
-        _tunModeEnabled = status.enabled;
+        _publish(tunEnabled: status.enabled);
         if (status.error case final error?) {
           debugPrint('Failed to disable TUN mode: $error');
           return false;
@@ -216,6 +248,10 @@ class PlatformProxyService {
   /// the user's own settings instead of clearing them. WinHTTP is deliberately
   /// left alone — it is machine-wide configuration that services and system
   /// components depend on, and hijacking it is not this app's business.
+  ///
+  /// The bypass list is written in WinINET's dialect, and the change is
+  /// broadcast afterwards; see [expandBypassForGlobMatching] and
+  /// [_broadcastWinInetChange] for why both are necessary.
   Future<bool> _enableWindowsSystemProxy(
     String host,
     int port,
@@ -225,19 +261,33 @@ class PlatformProxyService {
         ? '[$host]'
         : host;
     final endpoint = '$endpointHost:$port';
-    final override = <String>[...bypass, '<local>'].join(';');
+    final entries = <String>[
+      ...expandBypassForGlobMatching(bypass),
+      // WinINET's own shorthand for "any host name without a dot".
+      '<local>',
+    ];
+    final override = _uniquePreservingOrder(entries).join(';');
 
     try {
       await _snapshotWindowsProxySettings();
-      final enabled =
-          await _regAdd('ProxyEnable', 'REG_DWORD', '1') &&
-          await _regAdd('ProxyServer', 'REG_SZ', endpoint) &&
-          await _regAdd('ProxyOverride', 'REG_SZ', override);
-      _systemProxyEnabled = enabled;
+      // Written one by one rather than short-circuited: a failure on the
+      // first value must not leave the machine with a proxy enabled and no
+      // server to send it to.
+      final applied = [
+        await _regAdd('ProxyEnable', 'REG_DWORD', '1'),
+        await _regAdd('ProxyServer', 'REG_SZ', endpoint),
+        await _regAdd('ProxyOverride', 'REG_SZ', override),
+      ];
+      final enabled = applied.every((write) => write);
       if (!enabled) {
         debugPrint('Windows system proxy could not be set completely');
+        // Whatever did land, the state the OS is in is the one to report.
+        _publish(systemProxy: await _readWindowsProxyEnabled());
+        return false;
       }
-      return enabled;
+      _broadcastWinInetChange();
+      _publish(systemProxy: true);
+      return true;
     } catch (e) {
       debugPrint('Windows proxy error: $e');
       return false;
@@ -246,17 +296,25 @@ class PlatformProxyService {
 
   Future<bool> _disableWindowsSystemProxy() async {
     try {
-      final restored = await _restoreWindowsProxySettings();
-      if (!restored) {
-        // No usable snapshot: fall back to switching the proxy off rather
-        // than leaving the machine pointed at a port nobody listens on.
-        await _regAdd('ProxyEnable', 'REG_DWORD', '0');
+      if (await _restoreWindowsProxySettings()) {
+        // The user's own settings are back in force. What that leaves enabled
+        // is theirs, not ours, so the call succeeded either way.
+        _broadcastWinInetChange();
+        _publish(systemProxy: await _readWindowsProxyEnabled());
+        return true;
       }
-      _systemProxyEnabled = false;
-      return restored;
+
+      // No usable snapshot: switch the proxy off rather than leaving the
+      // machine pointed at a port nobody listens on. The user's own
+      // ProxyServer value stays in the registry, just disabled.
+      await _regAdd('ProxyEnable', 'REG_DWORD', '0');
+      _broadcastWinInetChange();
+      final enabled = await _readWindowsProxyEnabled();
+      _publish(systemProxy: enabled);
+      return !enabled;
     } catch (e) {
       debugPrint('Windows proxy disable error: $e');
-      _systemProxyEnabled = false;
+      _publish(systemProxy: false);
       return false;
     }
   }
@@ -265,13 +323,15 @@ class PlatformProxyService {
     try {
       await rust_api.ensureWintunDll();
       final status = await rust_api.enableTunModeWithMode(mode: mode.name);
-      _tunModeEnabled = status.enabled;
       if (status.enabled) {
-        _currentProxyMode = mode;
-      } else if (status.error case final error?) {
-        debugPrint('Windows TUN error: $error');
+        _publish(tunEnabled: true, mode: mode);
+      } else {
+        _publish(tunEnabled: false);
+        if (status.error case final error?) {
+          debugPrint('Windows TUN error: $error');
+        }
       }
-      return _tunModeEnabled;
+      return status.enabled;
     } catch (e) {
       debugPrint('Windows TUN error: $e');
       return false;
@@ -281,11 +341,11 @@ class PlatformProxyService {
   Future<bool> _disableWindowsTun() async {
     try {
       final status = await rust_api.disableTunMode();
-      _tunModeEnabled = status.enabled;
-      return !_tunModeEnabled;
+      _publish(tunEnabled: status.enabled);
+      return !status.enabled;
     } catch (e) {
       debugPrint('Windows TUN disable error: $e');
-      _tunModeEnabled = false;
+      _publish(tunEnabled: false);
       return true;
     }
   }
@@ -297,7 +357,7 @@ class PlatformProxyService {
     try {
       final result = await rust_api.setWindowsProxyMode(mode: mode.name);
       if (result) {
-        _currentProxyMode = mode;
+        _publish(mode: mode);
         debugPrint('Windows proxy mode set to ${mode.name}');
       }
       return result;
@@ -351,13 +411,15 @@ class PlatformProxyService {
     try {
       await rust_api.ensureWintunDll();
       final status = await rust_api.enableTunModeWithMode(mode: mode.name);
-      _tunModeEnabled = status.enabled;
       if (status.enabled) {
-        _currentProxyMode = mode;
-      } else if (status.error case final error?) {
-        debugPrint('Windows TUN error: $error');
+        _publish(tunEnabled: true, mode: mode);
+      } else {
+        _publish(tunEnabled: false);
+        if (status.error case final error?) {
+          debugPrint('Windows TUN error: $error');
+        }
       }
-      return _tunModeEnabled;
+      return status.enabled;
     } catch (e) {
       debugPrint('Windows TUN error: $e');
       return false;
@@ -387,8 +449,8 @@ class PlatformProxyService {
       }
 
       // Reset state
-      _tunModeEnabled = false;
       _vpnFd = -1;
+      _publish(tunEnabled: false);
 
       // Try to reset VPN state (for recovery after app reinstall)
       try {
@@ -508,8 +570,7 @@ class PlatformProxyService {
         return false;
       }
 
-      _tunModeEnabled = true;
-      _currentProxyMode = mode;
+      _publish(tunEnabled: true, mode: mode);
       debugPrint(
         '=== _enableAndroidVpn: VPN enabled successfully, fd=$_vpnFd, mode=$mode ===',
       );
@@ -518,14 +579,14 @@ class PlatformProxyService {
       debugPrint(
         '_enableAndroidVpn: PlatformException: ${e.code} - ${e.message}',
       );
-      _tunModeEnabled = false;
       _vpnFd = -1;
+      _publish(tunEnabled: false);
       return false;
     } catch (e, stackTrace) {
       debugPrint('_enableAndroidVpn: Unexpected error: $e');
       debugPrint('Stack trace: $stackTrace');
-      _tunModeEnabled = false;
       _vpnFd = -1;
+      _publish(tunEnabled: false);
       return false;
     }
   }
@@ -549,8 +610,8 @@ class PlatformProxyService {
       await _channel.invokeMethod('stopVpn');
       debugPrint('_disableAndroidVpn: Android VPN service stopped');
 
-      _tunModeEnabled = false;
       _vpnFd = -1;
+      _publish(tunEnabled: false);
 
       // Wait for VPN to fully disconnect
       await Future.delayed(const Duration(milliseconds: 500));
@@ -574,8 +635,8 @@ class PlatformProxyService {
       return true;
     } on PlatformException catch (e) {
       debugPrint('_disableAndroidVpn: PlatformException: ${e.message}');
-      _tunModeEnabled = false;
       _vpnFd = -1;
+      _publish(tunEnabled: false);
       return false;
     }
   }
@@ -589,8 +650,8 @@ class PlatformProxyService {
         await Future.delayed(const Duration(milliseconds: 1000));
       }
 
-      _tunModeEnabled = false;
       _vpnFd = -1;
+      _publish(tunEnabled: false);
 
       final result = await _ohosChannel.invokeMethod('startVpn', {
         'mode': mode.name,
@@ -620,13 +681,12 @@ class PlatformProxyService {
         return false;
       }
 
-      _tunModeEnabled = true;
-      _currentProxyMode = mode;
+      _publish(tunEnabled: true, mode: mode);
       return true;
     } on PlatformException catch (e) {
       debugPrint('_enableOhosVpn: PlatformException: ${e.message}');
-      _tunModeEnabled = false;
       _vpnFd = -1;
+      _publish(tunEnabled: false);
       return false;
     }
   }
@@ -634,8 +694,8 @@ class PlatformProxyService {
   Future<bool> _disableOhosVpn() async {
     try {
       await _ohosChannel.invokeMethod('stopVpn');
-      _tunModeEnabled = false;
       _vpnFd = -1;
+      _publish(tunEnabled: false);
       try {
         await rust_api.stopAndroidVpn();
         rust_api.clearAndroidVpnFd();
@@ -656,7 +716,7 @@ class PlatformProxyService {
         'mode': mode.name,
       });
       if (result == true) {
-        _currentProxyMode = mode;
+        _publish(mode: mode);
         await rust_api.setAndroidProxyMode(mode: mode.name);
       }
       return result == true;
@@ -683,7 +743,7 @@ class PlatformProxyService {
     if (Platform.isWindows) {
       return setWindowsProxyMode(mode);
     }
-    _currentProxyMode = mode;
+    _publish(mode: mode);
     return true;
   }
 
@@ -694,7 +754,7 @@ class PlatformProxyService {
         'mode': mode.name,
       });
       if (result == true) {
-        _currentProxyMode = mode;
+        _publish(mode: mode);
         await rust_api.setAndroidProxyMode(mode: mode.name);
       }
       return result == true;
@@ -704,13 +764,24 @@ class PlatformProxyService {
     }
   }
 
-  Future<bool> _enableMacOSSystemProxy(String host, int port) async {
+  /// Points every macOS network service at the local mixed port.
+  ///
+  /// The bypass list is part of the platform's proxy configuration here too,
+  /// and the previous lists are snapshotted first for the same reason they are
+  /// on Windows.
+  Future<bool> _enableMacOSSystemProxy(
+    String host,
+    int port,
+    List<String> bypass,
+  ) async {
     try {
       final services = await _macOSNetworkServices();
       if (services.isEmpty) {
         debugPrint('macOS proxy error: no network services to configure');
         return false;
       }
+      await _snapshotMacOSBypassDomains(services);
+      final entries = expandBypassForGlobMatching(bypass);
       var applied = true;
       for (final service in services) {
         applied =
@@ -737,8 +808,9 @@ class PlatformProxyService {
               '$port',
             ]) &&
             applied;
+        applied = await _macOSSetBypassDomains(service, entries) && applied;
       }
-      _systemProxyEnabled = applied;
+      _publish(systemProxy: applied);
       return applied;
     } catch (e) {
       debugPrint('macOS proxy error: $e');
@@ -769,12 +841,163 @@ class PlatformProxyService {
             ]) &&
             applied;
       }
-      _systemProxyEnabled = false;
+      // Best effort: the bypass list is secondary state, and a snapshot that
+      // cannot be replayed must not make "the proxy is off now" report as a
+      // failure the user has to act on.
+      if (!await _restoreMacOSBypassDomains()) {
+        debugPrint('macOS bypass domains: nothing recorded to restore');
+      }
+      _publish(systemProxy: await _macOSAnyProxyEnabled(services));
       return applied;
     } catch (e) {
       debugPrint('macOS proxy disable error: $e');
       return false;
     }
+  }
+
+  /// Whether any of the proxies this app configures is enabled on [service].
+  ///
+  /// Read from `networksetup` rather than remembered: a restart, or a change
+  /// made in System Settings, has to show up on the switch as what it is.
+  Future<bool> _macOSAnyProxyEnabled(List<String> services) async {
+    for (final service in services) {
+      for (final verb in const [
+        '-getwebproxy',
+        '-getsecurewebproxy',
+        '-getsocksfirewallproxy',
+      ]) {
+        final result = await Process.run('networksetup', [verb, service]);
+        if (result.exitCode != 0) continue;
+        final match = RegExp(
+          r'^Enabled:\s*(\w+)\s*$',
+          multiLine: true,
+        ).firstMatch(result.stdout.toString());
+        if (match?.group(1)?.toLowerCase() == 'yes') return true;
+      }
+    }
+    return false;
+  }
+
+  /// Whether any enabled macOS proxy targets [port].
+  Future<bool> _macOSProxyTargets(List<String> services, int port) async {
+    for (final service in services) {
+      for (final verb in const [
+        '-getwebproxy',
+        '-getsecurewebproxy',
+        '-getsocksfirewallproxy',
+      ]) {
+        final result = await Process.run('networksetup', [verb, service]);
+        if (result.exitCode != 0) continue;
+        final output = result.stdout.toString();
+        final enabled = RegExp(
+          r'^Enabled:\s*(\w+)\s*$',
+          multiLine: true,
+        ).firstMatch(output)?.group(1);
+        if (enabled?.toLowerCase() != 'yes') continue;
+        final portValue = RegExp(
+          r'^Port:\s*(\d+)\s*$',
+          multiLine: true,
+        ).firstMatch(output)?.group(1);
+        if (portValue == '$port') return true;
+      }
+    }
+    return false;
+  }
+
+  /// Writes a bypass list onto [service].
+  ///
+  /// `networksetup` takes the entries as arguments, and an empty list is not
+  /// "no arguments" — a single empty string is what clears it.
+  Future<bool> _macOSSetBypassDomains(String service, List<String> domains) {
+    return _macOSProxyCommand([
+      '-setproxybypassdomains',
+      service,
+      ...domains.isEmpty ? const [''] : domains,
+    ]);
+  }
+
+  /// The bypass domains [service] currently has. `null` when the tool could
+  /// not be asked, which is different from "none configured".
+  Future<List<String>?> _macOSBypassDomains(String service) async {
+    final result = await Process.run('networksetup', [
+      '-getproxybypassdomains',
+      service,
+    ]);
+    if (result.exitCode != 0) return null;
+
+    final domains = <String>[];
+    for (final line in result.stdout.toString().split('\n')) {
+      final entry = line.trim();
+      // Skip the `<service> bypass domains:` header and the prose
+      // `networksetup` prints instead of an empty list.
+      if (entry.isEmpty ||
+          entry.endsWith(':') ||
+          entry.toLowerCase().contains('bypass domains')) {
+        continue;
+      }
+      domains.add(entry);
+    }
+    return domains;
+  }
+
+  Future<File> _macOSProxySnapshotFile() async {
+    final support = await getApplicationSupportDirectory();
+    return File(
+      '${support.path}${Platform.pathSeparator}macos-proxy-snapshot.json',
+    );
+  }
+
+  /// Records the bypass lists before this app changes them. An existing
+  /// snapshot is kept, so a second enable cannot overwrite the user's original
+  /// lists with values this app wrote earlier.
+  Future<void> _snapshotMacOSBypassDomains(List<String> services) async {
+    final file = await _macOSProxySnapshotFile();
+    if (file.existsSync()) return;
+
+    final snapshot = <String, List<String>>{};
+    for (final service in services) {
+      final domains = await _macOSBypassDomains(service);
+      if (domains != null) snapshot[service] = domains;
+    }
+    await file.writeAsString(jsonEncode(snapshot), flush: true);
+  }
+
+  /// Puts the recorded bypass lists back and drops the snapshot. Returns false
+  /// when there was no snapshot to replay.
+  Future<bool> _restoreMacOSBypassDomains() async {
+    final file = await _macOSProxySnapshotFile();
+    if (!file.existsSync()) return false;
+
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(await file.readAsString());
+    } catch (e) {
+      debugPrint('macOS bypass snapshot is malformed; clearing it: $e');
+      await file.delete();
+      return false;
+    }
+    if (decoded is! Map) {
+      debugPrint('macOS bypass snapshot is malformed; clearing it');
+      await file.delete();
+      return false;
+    }
+
+    var restored = true;
+    for (final service in decoded.keys) {
+      final domains =
+          (decoded[service] as List<dynamic>?)
+              ?.map((entry) => entry.toString())
+              .toList() ??
+          const <String>[];
+      restored =
+          await _macOSSetBypassDomains(service.toString(), domains) && restored;
+    }
+    if (restored) {
+      await file.delete();
+    } else {
+      debugPrint('macOS bypass domains could not be fully restored');
+    }
+    return restored;
   }
 
   Future<List<String>> _macOSNetworkServices() async {
@@ -807,6 +1030,10 @@ class PlatformProxyService {
   /// Every call is checked: `gsettings` exits non-zero on a desktop without
   /// the schema (KDE, headless), and reporting success there would leave the
   /// UI claiming a system proxy that does not exist.
+  ///
+  /// `ignore-hosts` takes the canonical bypass form as it is, CIDR blocks
+  /// included — that is how GNOME spells its own default `127.0.0.0/8` — so
+  /// nothing is expanded here.
   Future<bool> _enableLinuxSystemProxy(
     String host,
     int port,
@@ -841,7 +1068,7 @@ class PlatformProxyService {
           return false;
         }
       }
-      _systemProxyEnabled = true;
+      _publish(systemProxy: true);
       return true;
     } catch (e) {
       debugPrint('Linux proxy error: $e');
@@ -857,7 +1084,7 @@ class PlatformProxyService {
         'mode',
         'none',
       ]);
-      _systemProxyEnabled = false;
+      _publish(systemProxy: !applied);
       return applied;
     } catch (e) {
       debugPrint('Linux proxy disable error: $e');
@@ -881,6 +1108,17 @@ class PlatformProxyService {
     }
   }
 
+  /// Whether GNOME's HTTP proxy port is the one this app listens on.
+  Future<bool> _linuxProxyTargets(int port) async {
+    final result = await Process.run('gsettings', [
+      'get',
+      'org.gnome.system.proxy.http',
+      'port',
+    ]);
+    if (result.exitCode != 0) return false;
+    return result.stdout.toString().trim() == '$port';
+  }
+
   /// Builds the GVariant array literal `gsettings set` expects.
   String _gvariantArray(List<String> values) {
     final escaped = values
@@ -894,25 +1132,32 @@ class PlatformProxyService {
 
   /// Reads the platform's own system-proxy state, so the UI can reflect what
   /// is actually configured rather than what this process once believed.
+  ///
+  /// Every platform answers this from its own configuration — Windows from
+  /// WinINET, macOS from each network service, Linux from GNOME — because the
+  /// state outlives this process: a restart, or a change made in the system's
+  /// own settings, must show up as what it is.
   Future<bool> checkSystemProxyStatus() async {
     try {
+      final bool enabled;
       if (Platform.isWindows) {
-        final value = await _regQuery('ProxyEnable');
-        _systemProxyEnabled = value?['value'] == '1';
-        return _systemProxyEnabled;
-      }
-      if (Platform.isLinux) {
+        enabled = await _readWindowsProxyEnabled();
+      } else if (Platform.isMacOS) {
+        enabled = await _macOSAnyProxyEnabled(await _macOSNetworkServices());
+      } else if (Platform.isLinux) {
         final result = await Process.run('gsettings', [
           'get',
           'org.gnome.system.proxy',
           'mode',
         ]);
-        _systemProxyEnabled =
+        enabled =
             result.exitCode == 0 &&
             result.stdout.toString().trim().replaceAll("'", '') == 'manual';
+      } else {
         return _systemProxyEnabled;
       }
-      return _systemProxyEnabled;
+      _publish(systemProxy: enabled);
+      return enabled;
     } catch (e) {
       debugPrint('Failed to read system proxy state: $e');
       return false;
@@ -924,22 +1169,43 @@ class PlatformProxyService {
       if (Platform.isAndroid) {
         final isRunning =
             await _channel.invokeMethod('isVpnRunning') as bool? ?? false;
-        _tunModeEnabled = isRunning;
         if (isRunning) {
           _vpnFd = await _channel.invokeMethod('getVpnFd') as int? ?? -1;
         }
-        return _tunModeEnabled;
+        _publish(tunEnabled: isRunning);
+        return isRunning;
       }
       if (PlatformUtils.isOHOS) {
         final result = await _ohosChannel.invokeMethod('isVpnRunning');
-        _tunModeEnabled = result == true;
-        return _tunModeEnabled;
+        _publish(tunEnabled: result == true);
+        return result == true;
       }
       final status = await rust_api.getTunStatus();
-      _tunModeEnabled = status.enabled;
-      return _tunModeEnabled;
+      _publish(tunEnabled: status.enabled);
+      return status.enabled;
     } catch (e) {
       debugPrint('Failed to check TUN status: $e');
+      return false;
+    }
+  }
+
+  /// Whether the platform's proxy is currently pointed at one of this app's
+  /// listening ports.
+  ///
+  /// This is what decides whether the proxy may be switched off together with
+  /// the service: one pointing at a closed port takes the machine's
+  /// networking down with it, while one somebody else configured is none of
+  /// this app's business.
+  Future<bool> isSystemProxyPointingAt(int port) async {
+    try {
+      if (Platform.isWindows) return await _windowsProxyTargets(port);
+      if (Platform.isMacOS) {
+        return await _macOSProxyTargets(await _macOSNetworkServices(), port);
+      }
+      if (Platform.isLinux) return await _linuxProxyTargets(port);
+      return false;
+    } catch (e) {
+      debugPrint('Failed to inspect the system proxy target: $e');
       return false;
     }
   }
@@ -967,6 +1233,103 @@ class PlatformProxyService {
       debugPrint('Failed to open UWP loopback utility: $e');
       return false;
     }
+  }
+
+  // ==================== Bypass list dialects ====================
+
+  /// The most wildcard patterns one IPv4 block may be expanded into.
+  ///
+  /// A private range needs a handful (`172.16.0.0/12` needs sixteen); anything
+  /// that would need more is user input the write path cannot serve, and it is
+  /// reported instead of being written as a pattern that matches the wrong
+  /// addresses.
+  static const int _maxBypassExpansion = 64;
+
+  static final RegExp _ipv4Block = RegExp(
+    r'^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})$',
+  );
+
+  /// Renders the canonical bypass list for platforms whose proxy setting
+  /// matches entries as plain strings.
+  ///
+  /// WinINET and `networksetup` have no notion of a CIDR block: written
+  /// verbatim, `192.168.0.0/16` is a string that matches nothing, which is
+  /// exactly how the private ranges end up tunnelled even though they are
+  /// configured. Host names, `*.suffix` patterns and literals like `::1` pass
+  /// through untouched; a block becomes the wildcard patterns covering the
+  /// same addresses.
+  static List<String> expandBypassForGlobMatching(List<String> canonical) {
+    final expanded = <String>[];
+    for (final rawEntry in canonical) {
+      final entry = rawEntry.trim();
+      if (entry.isEmpty) continue;
+
+      final match = _ipv4Block.firstMatch(entry);
+      if (match == null) {
+        _addUnique(expanded, entry);
+        continue;
+      }
+
+      final octets = [
+        for (var index = 1; index <= 4; index++) int.parse(match.group(index)!),
+      ];
+      final prefix = int.parse(match.group(5)!);
+      if (octets.any((octet) => octet > 255) || prefix > 32) {
+        // Not a block after all; take the entry at face value.
+        _addUnique(expanded, entry);
+        continue;
+      }
+
+      final patterns = _ipv4BlockPatterns(octets, prefix);
+      if (patterns == null) {
+        debugPrint(
+          'Bypass entry "$entry" has no wildcard equivalent and was not '
+          'applied to the platform proxy',
+        );
+        continue;
+      }
+      for (final pattern in patterns) {
+        _addUnique(expanded, pattern);
+      }
+    }
+    return expanded;
+  }
+
+  /// The wildcard patterns covering exactly the addresses of one IPv4 block,
+  /// or `null` when no exact cover exists.
+  ///
+  /// `10.0.0.0/8` and `192.168.0.0/16` fall on octet boundaries and become
+  /// `10.*` and `192.168.*`. `172.16.0.0/12` straddles one: the addresses run
+  /// from 172.16.0.0 to 172.31.255.255, which is exactly sixteen patterns of
+  /// the form `172.<16..31>.*`.
+  static List<String>? _ipv4BlockPatterns(List<int> octets, int prefix) {
+    if (prefix == 32) return [octets.join('.')];
+    if (prefix < 8 || prefix > 31) return null;
+
+    final fixedOctets = prefix ~/ 8;
+    final fixed = octets.take(fixedOctets).join('.');
+    if (prefix % 8 == 0) return ['$fixed.*'];
+
+    final count = 1 << (8 * (fixedOctets + 1) - prefix);
+    if (count > _maxBypassExpansion) return null;
+    final base = octets[fixedOctets] & ~(count - 1);
+    final moreOctetsFollow = fixedOctets + 1 < octets.length;
+    return [
+      for (var value = base; value < base + count; value++)
+        moreOctetsFollow ? '$fixed.$value.*' : '$fixed.$value',
+    ];
+  }
+
+  static void _addUnique(List<String> entries, String entry) {
+    if (!entries.contains(entry)) entries.add(entry);
+  }
+
+  static List<String> _uniquePreservingOrder(List<String> entries) {
+    final unique = <String>[];
+    for (final entry in entries) {
+      _addUnique(unique, entry);
+    }
+    return unique;
   }
 
   // ==================== Windows registry helpers ====================
@@ -1030,6 +1393,89 @@ class PlatformProxyService {
     final match = pattern.firstMatch(result.stdout.toString());
     if (match == null) return null;
     return {'type': match.group(1)!, 'value': match.group(2)!.trim()};
+  }
+
+  /// Whether WinINET currently has a proxy switched on.
+  Future<bool> _readWindowsProxyEnabled() async {
+    final value = await _regQuery('ProxyEnable');
+    return value?['value'] == '1';
+  }
+
+  // ---- Telling WinINET's clients the settings moved ------------------------
+
+  static const int _internetOptionRefresh = 37;
+  static const int _internetOptionSettingsChanged = 39;
+
+  /// Whether WinINET's proxy server points at [port] on whichever host.
+  ///
+  /// The value is either `host:port`, a bare host (default port), or one
+  /// `scheme=host:port` entry per scheme separated by semicolons.
+  Future<bool> _windowsProxyTargets(int port) async {
+    final server = (await _regQuery('ProxyServer'))?['value'];
+    if (server == null) return false;
+
+    for (final entry in server.split(';')) {
+      final endpoint = entry.contains('=')
+          ? entry.split('=').last.trim()
+          : entry.trim();
+      if (endpoint.endsWith(':$port')) return true;
+    }
+    return false;
+  }
+
+  static bool _wininetUnavailable = false;
+  static int Function(Pointer<Void>, int, Pointer<Void>, int)?
+  _internetSetOption;
+
+  /// `InternetSetOptionW(NULL, …)` is how a WinINET configuration change is
+  /// announced, and writing the registry values is only half of applying it:
+  /// every application that caches its proxy configuration — every browser —
+  /// keeps dialling the old endpoint until this notification arrives. Without
+  /// it, a proxy this app just enabled looks like it does nothing until the
+  /// browser is restarted, which is the classic "the switch is on but the
+  /// traffic is not" report.
+  void _broadcastWinInetChange() {
+    if (!Platform.isWindows) return;
+    final setOption = _loadInternetSetOption();
+    if (setOption == null) return;
+    // Documented order: SETTINGS_CHANGED makes applications re-read, REFRESH
+    // makes the proxy resolver drop its own cached answer.
+    for (final option in const [
+      _internetOptionSettingsChanged,
+      _internetOptionRefresh,
+    ]) {
+      final applied = setOption(nullptr, option, nullptr, 0);
+      if (applied == 0) {
+        debugPrint('InternetSetOption($option) reported failure');
+      }
+    }
+  }
+
+  /// Binds `wininet.dll` once, and remembers a failure so it is not retried on
+  /// every proxy change.
+  static int Function(Pointer<Void>, int, Pointer<Void>, int)?
+  _loadInternetSetOption() {
+    if (_wininetUnavailable) return null;
+    final cached = _internetSetOption;
+    if (cached != null) return cached;
+
+    try {
+      final library = DynamicLibrary.open('wininet.dll');
+      final setOption = library
+          .lookupFunction<
+            Int32 Function(Pointer<Void>, Uint32, Pointer<Void>, Uint32),
+            int Function(Pointer<Void>, int, Pointer<Void>, int)
+          >('InternetSetOptionW');
+      _internetSetOption = setOption;
+      return setOption;
+    } catch (error) {
+      _wininetUnavailable = true;
+      debugPrint(
+        'wininet.dll could not be loaded; proxy changes will not be '
+        'broadcast to running applications: $error',
+      );
+      return null;
+    }
   }
 
   Future<File> _windowsProxySnapshotFile() async {

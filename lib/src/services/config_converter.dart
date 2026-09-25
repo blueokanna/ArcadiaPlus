@@ -815,38 +815,57 @@ class ConfigConverter {
     return (outbounds, declared);
   }
 
+  /// Every Clash proxy type the engine can build, and the corduit outbound
+  /// type it becomes.
+  ///
+  /// This map is the single source of truth for the mapping — the converter
+  /// dispatches through it and [supportedProtocols] is derived from it, so a
+  /// protocol cannot be advertised on one side and dropped on the other.
+  ///
+  /// Types corduit has no way to build (shadowsocksr, hysteria v1 and
+  /// shadowquic today) are simply absent, which is what makes
+  /// [_mapProxyType] return `null` for them. Order is the order protocols are
+  /// listed in.
+  static const Map<String, String> proxyTypeMapping = {
+    'ss': 'shadowsocks',
+    'shadowsocks': 'shadowsocks',
+    'vmess': 'vmess',
+    'vless': 'vless',
+    'trojan': 'trojan',
+    'hysteria2': 'hysteria2',
+    'hy2': 'hysteria2',
+    'tuic': 'tuic',
+    'wireguard': 'wireguard',
+    'http': 'http',
+    'socks5': 'socks5',
+    'socks': 'socks5',
+  };
+
+  /// How each outbound type is written for people.
+  static const Map<String, String> _outboundDisplayNames = {
+    'shadowsocks': 'Shadowsocks',
+    'vmess': 'VMess',
+    'vless': 'VLESS',
+    'trojan': 'Trojan',
+    'hysteria2': 'Hysteria2',
+    'tuic': 'TUIC',
+    'wireguard': 'WireGuard',
+    'http': 'HTTP / HTTPS',
+    'socks5': 'SOCKS5',
+  };
+
+  /// The protocols the engine can actually build, named as users know them.
+  static List<String> get supportedProtocols => [
+    for (final outbound in proxyTypeMapping.values.toSet())
+      ?_outboundDisplayNames[outbound],
+  ];
+
   /// Maps a Clash proxy type onto a corduit outbound type.
   ///
   /// `null` means corduit has no way to build this protocol (shadowsocksr,
   /// hysteria v1 and shadowquic today); such a node is dropped from the
   /// outbound list and every reference to it is rewritten.
-  static String? _mapProxyType(String clashType) {
-    switch (clashType) {
-      case 'ss':
-      case 'shadowsocks':
-        return 'shadowsocks';
-      case 'vmess':
-        return 'vmess';
-      case 'vless':
-        return 'vless';
-      case 'trojan':
-        return 'trojan';
-      case 'http':
-        return 'http';
-      case 'socks5':
-      case 'socks':
-        return 'socks5';
-      case 'hysteria2':
-      case 'hy2':
-        return 'hysteria2';
-      case 'wireguard':
-        return 'wireguard';
-      case 'tuic':
-        return 'tuic';
-      default:
-        return null;
-    }
-  }
+  static String? _mapProxyType(String clashType) => proxyTypeMapping[clashType];
 
   static List<Map<String, dynamic>> _extractRules(
     Map<String, dynamic> clash, {

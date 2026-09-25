@@ -43,9 +43,18 @@ class UpdateService {
     : _client = client ?? http.Client(),
       _dio = dio ?? Dio();
 
-  static const _repository = 'blueokanna/ArcadiaPlus';
+  /// The GitHub repository this app is published from.
+  ///
+  /// Public because the about screen quotes the same project the updater
+  /// downloads from: two copies of the project's own address is one copy too
+  /// many.
+  static const String repositorySlug = 'blueokanna/ArcadiaPlus';
+  static const String repositoryUrl = 'https://github.com/$repositorySlug';
+  static const String releasesUrl = '$repositoryUrl/releases';
+  static const String issuesUrl = '$repositoryUrl/issues';
+
   static const _latestReleaseApi =
-      'https://api.github.com/repos/$_repository/releases/latest';
+      'https://api.github.com/repos/$repositorySlug/releases/latest';
   static const MethodChannel _installer = MethodChannel(
     'com.arcadiaplus/proxy',
   );
@@ -161,7 +170,7 @@ class UpdateService {
     if (matchingReleaseAsset == null ||
         url.scheme != 'https' ||
         url.host != 'github.com' ||
-        !url.path.startsWith('/$_repository/releases/download/$tag/')) {
+        !url.path.startsWith('/$repositorySlug/releases/download/$tag/')) {
       throw const FormatException('Update asset is not part of this release');
     }
 

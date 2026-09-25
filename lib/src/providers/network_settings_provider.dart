@@ -6,8 +6,15 @@ import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
 /// Owns the network-related switches and applies them to the platform.
 ///
+/// [PlatformProxyService] is the authority on what the platform is doing; this
+/// provider is what the screens read, and it mirrors that authority. Mirroring
+/// is what makes a switch honest in the two situations that used to leave it
+/// lying: when the app configures the platform itself (the system proxy on
+/// service start, the tunnel on mobile) and when the platform changed under it
+/// (the user flipped the setting in Windows, another VPN took the slot).
+///
 /// Every setter reports what actually happened: the platform proxy and the
-/// tunnel are operated through [PlatformProxyService] and their live state is
+/// tunnel are operated through [PlatformProxyService] and the live state is
 /// what gets stored, so a switch can never show "on" for a setting the OS
 /// refused.
 class NetworkSettingsProvider extends ChangeNotifier {
@@ -27,7 +34,57 @@ class NetworkSettingsProvider extends ChangeNotifier {
       !Platform.isAndroid && !Platform.isIOS && !PlatformUtils.isOHOS;
 
   NetworkSettingsProvider() {
+    PlatformProxyService.instance.addListener(_mirrorPlatformState);
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    PlatformProxyService.instance.removeListener(_mirrorPlatformState);
+    super.dispose();
+  }
+
+  /// Re-reads both switches from the platform.
+  ///
+  /// Cheap enough to run whenever a screen showing them appears, and the only
+  /// way a change made outside the app can reach the UI. Deliberately quiet —
+  /// no loading flag, no notification unless a value actually moved — so it is
+  /// safe to call from a screen's lifecycle callbacks.
+  Future<void> refresh() async {
+    final service = PlatformProxyService.instance;
+    try {
+      _applyLiveState(
+        systemProxy: supportsSystemProxy
+            ? await service.checkSystemProxyStatus()
+            : false,
+        tunEnabled: await service.checkTunModeStatus(),
+      );
+    } catch (e) {
+      debugPrint('Failed to refresh network settings: $e');
+    }
+  }
+
+  /// Adopts a state change the platform just made.
+  void _mirrorPlatformState() {
+    final service = PlatformProxyService.instance;
+    _applyLiveState(
+      systemProxy: supportsSystemProxy ? service.systemProxyEnabled : false,
+      tunEnabled: service.tunModeEnabled,
+    );
+  }
+
+  /// Writes the platform's own state into the settings and tells the UI about
+  /// it, but only when a value actually moved.
+  void _applyLiveState({required bool systemProxy, required bool tunEnabled}) {
+    if (_settings.systemProxy == systemProxy &&
+        _settings.tunEnabled == tunEnabled) {
+      return;
+    }
+    _settings = _settings.copyWith(
+      systemProxy: systemProxy,
+      tunEnabled: tunEnabled,
+    );
+    notifyListeners();
   }
 
   Future<void> _loadSettings() async {
@@ -36,16 +93,10 @@ class NetworkSettingsProvider extends ChangeNotifier {
 
     try {
       _settings = await StorageService.instance.getNetworkSettings();
-      // Both switches are process-scoped facts, not preferences: read what the
-      // platform reports right now so a restart cannot leave a stale "on".
-      final systemProxyLive = supportsSystemProxy
-          ? await PlatformProxyService.instance.checkSystemProxyStatus()
-          : false;
-      final tunLive = await PlatformProxyService.instance.checkTunModeStatus();
-      _settings = _settings.copyWith(
-        systemProxy: systemProxyLive,
-        tunEnabled: tunLive,
-      );
+      // The stored flags describe the last run; the platform is asked what it
+      // is doing now. A restart must not leave a stale "on" behind — the
+      // settings screen is reachable before the engine is ever started.
+      await refresh();
     } catch (e) {
       debugPrint('Failed to load network settings: $e');
     } finally {
@@ -54,6 +105,8 @@ class NetworkSettingsProvider extends ChangeNotifier {
     }
   }
 
+  /// The bypass list belongs to the platform proxy configuration, so it only
+  /// reaches the OS by writing the settings again.
   Future<void> _saveSettings() async {
     try {
       await StorageService.instance.saveNetworkSettings(_settings);
@@ -71,20 +124,21 @@ class NetworkSettingsProvider extends ChangeNotifier {
       throw UnsupportedError('This platform has no system proxy setting');
     }
 
+    final service = PlatformProxyService.instance;
     if (value) {
       final applied = await _applySystemProxy();
       if (!applied) {
         throw StateError('The platform refused the proxy settings');
       }
     } else {
-      final applied = await PlatformProxyService.instance.disableSystemProxy();
+      final applied = await service.disableSystemProxy();
       if (!applied) {
-        throw StateError('The platform refused to restore the proxy settings');
+        throw StateError('The platform refused to switch the proxy off');
       }
     }
 
     _settings = _settings.copyWith(
-      systemProxy: await PlatformProxyService.instance.checkSystemProxyStatus(),
+      systemProxy: await service.checkSystemProxyStatus(),
     );
     await _saveSettings();
     notifyListeners();
@@ -112,6 +166,21 @@ class NetworkSettingsProvider extends ChangeNotifier {
   Future<void> removeBypassDomain(String domain) async {
     final newList = List<String>.from(_settings.bypassDomains)..remove(domain);
     await setBypassDomains(newList);
+  }
+
+  /// Adds back any entry of [NetworkSettings.defaultBypassDomains] that is
+  /// missing, keeping the user's own entries and their order.
+  ///
+  /// Additive on purpose: this is the "I deleted one by accident" path, and a
+  /// reset that silently dropped someone's corporate domain would be worse
+  /// than the mistake it repairs.
+  Future<void> restoreDefaultBypassDomains() async {
+    final domains = List<String>.of(_settings.bypassDomains);
+    for (final entry in NetworkSettings.defaultBypassDomains) {
+      if (!domains.contains(entry)) domains.add(entry);
+    }
+    if (domains.length == _settings.bypassDomains.length) return;
+    await setBypassDomains(domains);
   }
 
   /// Enables or disables the tunnel, in the mode the engine is currently in.

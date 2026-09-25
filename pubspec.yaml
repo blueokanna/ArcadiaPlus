@@ -96,6 +96,9 @@ flutter:
     # app's support directory and registered with the engine at start-up.
     - assets/Country.mmdb
     - assets/fonts/LICENSE-Roboto.txt
+    # The app's own licence, shown verbatim on the about screen rather than
+    # paraphrased in Dart.
+    - LICENSE
 
   fonts:
     - family: Roboto

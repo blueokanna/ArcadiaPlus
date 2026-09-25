@@ -27,20 +27,80 @@ class AppLocalizations {
   ];
 
   static final Map<String, Map<String, String>> _localizedValues = {
-    'de': {..._deStrings, ..._deAdvancedStrings, ..._updateStrings['de']!},
-    'en': {..._enStrings, ..._updateStrings['en']!},
-    'es': {..._esStrings, ..._esAdvancedStrings, ..._updateStrings['es']!},
-    'fr': {..._frStrings, ..._frAdvancedStrings, ..._updateStrings['fr']!},
-    'it': {..._itStrings, ..._itAdvancedStrings, ..._updateStrings['it']!},
-    'ja': {..._jaStrings, ..._jaAdvancedStrings, ..._updateStrings['ja']!},
-    'ko': {..._koStrings, ..._koAdvancedStrings, ..._updateStrings['ko']!},
-    'pt': {..._ptStrings, ..._ptAdvancedStrings, ..._updateStrings['pt']!},
-    'ru': {..._ruStrings, ..._ruAdvancedStrings, ..._updateStrings['ru']!},
-    'zh_CN': {..._zhCNStrings, ..._updateStrings['zh_CN']!},
+    'de': {
+      ..._deStrings,
+      ..._deAdvancedStrings,
+      ..._updateStrings['de']!,
+      ..._networkStrings['de']!,
+      ..._aboutStrings['de']!,
+    },
+    'en': {
+      ..._enStrings,
+      ..._updateStrings['en']!,
+      ..._networkStrings['en']!,
+      ..._aboutStrings['en']!,
+    },
+    'es': {
+      ..._esStrings,
+      ..._esAdvancedStrings,
+      ..._updateStrings['es']!,
+      ..._networkStrings['es']!,
+      ..._aboutStrings['es']!,
+    },
+    'fr': {
+      ..._frStrings,
+      ..._frAdvancedStrings,
+      ..._updateStrings['fr']!,
+      ..._networkStrings['fr']!,
+      ..._aboutStrings['fr']!,
+    },
+    'it': {
+      ..._itStrings,
+      ..._itAdvancedStrings,
+      ..._updateStrings['it']!,
+      ..._networkStrings['it']!,
+      ..._aboutStrings['it']!,
+    },
+    'ja': {
+      ..._jaStrings,
+      ..._jaAdvancedStrings,
+      ..._updateStrings['ja']!,
+      ..._networkStrings['ja']!,
+      ..._aboutStrings['ja']!,
+    },
+    'ko': {
+      ..._koStrings,
+      ..._koAdvancedStrings,
+      ..._updateStrings['ko']!,
+      ..._networkStrings['ko']!,
+      ..._aboutStrings['ko']!,
+    },
+    'pt': {
+      ..._ptStrings,
+      ..._ptAdvancedStrings,
+      ..._updateStrings['pt']!,
+      ..._networkStrings['pt']!,
+      ..._aboutStrings['pt']!,
+    },
+    'ru': {
+      ..._ruStrings,
+      ..._ruAdvancedStrings,
+      ..._updateStrings['ru']!,
+      ..._networkStrings['ru']!,
+      ..._aboutStrings['ru']!,
+    },
+    'zh_CN': {
+      ..._zhCNStrings,
+      ..._updateStrings['zh_CN']!,
+      ..._networkStrings['zh_CN']!,
+      ..._aboutStrings['zh_CN']!,
+    },
     'zh_TW': {
       ..._zhTWStrings,
       ..._zhTWAdvancedStrings,
       ..._updateStrings['zh_TW']!,
+      ..._networkStrings['zh_TW']!,
+      ..._aboutStrings['zh_TW']!,
     },
   };
 
@@ -262,6 +322,32 @@ class AppLocalizations {
   String get openSourceDesc => _getLocalizedString('openSourceDesc');
   String get license => _getLocalizedString('license');
   String get licenseName => _getLocalizedString('licenseName');
+
+  // About screen
+  String get aboutTagline => _getLocalizedString('aboutTagline');
+  String get aboutRuntimeInfo => _getLocalizedString('aboutRuntimeInfo');
+  String get aboutPackageId => _getLocalizedString('aboutPackageId');
+  String get aboutEngine => _getLocalizedString('aboutEngine');
+  String get aboutBuildTarget => _getLocalizedString('aboutBuildTarget');
+  String get aboutDartRuntime => _getLocalizedString('aboutDartRuntime');
+  String get aboutOperatingSystem =>
+      _getLocalizedString('aboutOperatingSystem');
+  String get aboutFeatureTun => _getLocalizedString('aboutFeatureTun');
+  String get aboutFeatureSubscription =>
+      _getLocalizedString('aboutFeatureSubscription');
+  String get aboutCopyrightHolder =>
+      _getLocalizedString('aboutCopyrightHolder');
+  String get aboutLicenseNotice => _getLocalizedString('aboutLicenseNotice');
+  String get aboutViewLicense => _getLocalizedString('aboutViewLicense');
+  String get aboutLinks => _getLocalizedString('aboutLinks');
+  String get aboutRepository => _getLocalizedString('aboutRepository');
+  String get aboutReleases => _getLocalizedString('aboutReleases');
+  String get aboutIssues => _getLocalizedString('aboutIssues');
+
+  // Network settings screen
+  String get bypassDomainsHint => _getLocalizedString('bypassDomainsHint');
+  String get bypassDomainsRestoreDefaults =>
+      _getLocalizedString('bypassDomainsRestoreDefaults');
 
   // Logs
   String get error => _getLocalizedString('error');
@@ -585,6 +671,554 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': '正在開啟安裝程式',
     'updateFailed': '更新失敗：{error}',
     'publishedOn': '發佈於 {date}',
+  },
+};
+
+// =============================================================================
+// Network settings screen and about screen strings
+//
+// Spread last into [_localizedValues], which has two consequences worth
+// knowing: an entry here overrides the base maps (that is how the feature
+// list and the licence wording were brought up to date), and every locale has
+// to carry the same key set as `en`, because `missingTranslationKeys` compares
+// against it.
+// =============================================================================
+const Map<String, Map<String, String>> _networkStrings = {
+  'de': {
+    'bypassDomainsHint':
+        'Hostnamen, Muster wie *.suffix, Adressen und CIDR-Blöcke sind alle '
+        'erlaubt; kann eine Plattform einen Block nicht vergleichen, bekommt '
+        'sie die passenden Wildcards.',
+    'bypassDomainsRestoreDefaults': 'Standardwerte ergänzen',
+  },
+  'en': {
+    'bypassDomainsHint':
+        'Host names, *.suffix patterns, addresses and CIDR blocks are all '
+        'accepted; where a platform cannot match a block, it is given the '
+        'equivalent wildcards.',
+    'bypassDomainsRestoreDefaults': 'Add missing defaults',
+  },
+  'es': {
+    'bypassDomainsHint':
+        'Se aceptan nombres de host, patrones como *.sufijo, direcciones y '
+        'bloques CIDR; si una plataforma no sabe comparar un bloque, recibe '
+        'los comodines equivalentes.',
+    'bypassDomainsRestoreDefaults': 'Añadir valores predeterminados',
+  },
+  'fr': {
+    'bypassDomainsHint':
+        'Noms d\'hôte, motifs *.suffixe, adresses et blocs CIDR sont tous '
+        'acceptés ; si une plateforme ne sait pas comparer un bloc, elle '
+        'reçoit les jokers équivalents.',
+    'bypassDomainsRestoreDefaults': 'Ajouter les entrées par défaut',
+  },
+  'it': {
+    'bypassDomainsHint':
+        'Sono accettati nomi host, pattern *.suffisso, indirizzi e blocchi '
+        'CIDR; se una piattaforma non sa confrontare un blocco, riceve i '
+        'caratteri jolly equivalenti.',
+    'bypassDomainsRestoreDefaults': 'Aggiungi le voci predefinite',
+  },
+  'ja': {
+    'bypassDomainsHint':
+        'ホスト名、*.サフィックス、IP アドレス、CIDR 表記に対応します。'
+        'プラットフォームが CIDR を解釈できない場合は、同等のワイルドカードに'
+        '変換して書き込みます。',
+    'bypassDomainsRestoreDefaults': '既定の項目を補完',
+  },
+  'ko': {
+    'bypassDomainsHint':
+        '호스트 이름, *.접미사 패턴, IP 주소, CIDR 블록을 모두 사용할 수 '
+        '있습니다. 플랫폼이 CIDR을 해석하지 못하면 같은 의미의 와일드카드로 '
+        '변환해 기록합니다.',
+    'bypassDomainsRestoreDefaults': '기본 항목 추가',
+  },
+  'pt': {
+    'bypassDomainsHint':
+        'Aceita nomes de host, padrões como *.sufixo, endereços e blocos '
+        'CIDR; quando a plataforma não entende um bloco, recebe os curingas '
+        'equivalentes.',
+    'bypassDomainsRestoreDefaults': 'Adicionar padrões',
+  },
+  'ru': {
+    'bypassDomainsHint':
+        'Принимаются имена хостов, шаблоны вида *.суффикс, адреса и блоки '
+        'CIDR; если платформа не умеет сравнивать блок, ей передаются '
+        'эквивалентные маски.',
+    'bypassDomainsRestoreDefaults': 'Добавить стандартные записи',
+  },
+  'zh_CN': {
+    'bypassDomainsHint':
+        '支持域名、*.后缀、IP 与 CIDR 网段；平台自身无法匹配网段时，会自动'
+        '转换为等价的通配写法。',
+    'bypassDomainsRestoreDefaults': '补齐默认项',
+  },
+  'zh_TW': {
+    'bypassDomainsHint':
+        '支援網域、*.後綴、IP 與 CIDR 網段；平台本身無法比對網段時，會自動'
+        '轉換為等價的萬用字元寫法。',
+    'bypassDomainsRestoreDefaults': '補齊預設項目',
+  },
+};
+
+const Map<String, Map<String, String>> _aboutStrings = {
+  'de': {
+    'aboutTagline': 'Flutter-Oberfläche über einem Rust-Kern',
+    'aboutDescription':
+        'ArcadiaPlus ist ein plattformübergreifender Proxy-Client: Unter der '
+        'Flutter-Oberfläche arbeitet der Rust-Kern corduit, der Konfigurationen '
+        'im Clash-Format liest. Läuft auf Windows, macOS, Linux, Android und '
+        'HarmonyOS.',
+    'aboutRuntimeInfo': 'Laufzeit',
+    'aboutPackageId': 'Anwendungs-ID',
+    'aboutEngine': 'Proxy-Kern',
+    'aboutBuildTarget': 'Build-Ziel',
+    'aboutDartRuntime': 'Dart-Laufzeit',
+    'aboutOperatingSystem': 'Betriebssystem',
+    'aboutFeatureTun':
+        'Zwei Wege für den Datenverkehr: Systemproxy und TUN-Adapter, je nach '
+        'Plattform',
+    'aboutFeatureSubscription':
+        'Clash-Abos: YAML wird in die Engine-Konfiguration übersetzt, '
+        'Regelsätze liegen lokal und werden regelmäßig erneuert',
+    'aboutCopyrightHolder': 'Urheberrecht',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 ist eine Source-Available-Lizenz: Der Code '
+        'darf gelesen, gebaut und geändert werden, ist aber keine von der OSI '
+        'anerkannte Open-Source-Lizenz und erlaubt keine konkurrierende '
+        'Nutzung. Vor der Weitergabe den vollständigen Text lesen.',
+    'aboutViewLicense': 'Vollständige Lizenz lesen',
+    'aboutLinks': 'Links',
+    'aboutRepository': 'Quellcode',
+    'aboutReleases': 'Veröffentlichungen',
+    'aboutIssues': 'Fehler melden',
+    'featureSpeed':
+        'Rust-Kern: Weiterleitung mehrerer Protokolle, Verbindungsverfolgung '
+        'und laufende Verkehrszählung',
+    'featureRules':
+        'Regel-, Global- und Direktmodus; ein Wechsel startet den Tunnel nicht '
+        'neu',
+    'featureDns':
+        'DNS: konfigurierbare Upstreams, fake-IP oder redir-host, optional '
+        'lokale rekursive Auflösung',
+    'featurePlatform':
+        'Windows, macOS, Linux, Android und HarmonyOS aus einer Codebasis',
+    'featureTheme':
+        'Material 3 mit dynamischen Farben, hell und dunkel, in elf Sprachen',
+    'featureSecurity':
+        'Abos, Regelsätze und Updates werden per TLS direkt von der Quelle '
+        'geladen, ohne Zwischenstation',
+  },
+  'en': {
+    'aboutTagline': 'A Flutter interface over a Rust core',
+    'aboutDescription':
+        "ArcadiaPlus is a cross-platform proxy client: a Flutter interface "
+        'over corduit, a Rust engine that reads Clash-format profiles. It runs '
+        'on Windows, macOS, Linux, Android and HarmonyOS.',
+    'aboutRuntimeInfo': 'Runtime',
+    'aboutPackageId': 'Application ID',
+    'aboutEngine': 'Proxy engine',
+    'aboutBuildTarget': 'Build target',
+    'aboutDartRuntime': 'Dart runtime',
+    'aboutOperatingSystem': 'Operating system',
+    'aboutFeatureTun':
+        'Two ways to take over traffic: the platform proxy and a TUN adapter',
+    'aboutFeatureSubscription':
+        'Clash subscriptions: YAML converted into engine configuration, rule '
+        'sets cached locally and refreshed on a schedule',
+    'aboutCopyrightHolder': 'Copyright',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 is a source-available licence: the code may '
+        'be read, built and modified, but it is not an OSI-approved '
+        'open-source licence and it does not permit competing use. Read the '
+        'full text before redistributing.',
+    'aboutViewLicense': 'Read the full licence',
+    'aboutLinks': 'Links',
+    'aboutRepository': 'Source code',
+    'aboutReleases': 'Releases',
+    'aboutIssues': 'Issue tracker',
+    'featureSpeed':
+        'Rust core: multi-protocol forwarding, connection tracking and live '
+        'traffic accounting',
+    'featureRules':
+        'Rule, global and direct routing modes; switching never restarts the '
+        'tunnel',
+    'featureDns':
+        'DNS: configurable upstreams, fake-IP or redir-host, and an optional '
+        'local recursive resolver',
+    'featurePlatform':
+        'Windows, macOS, Linux, Android and HarmonyOS from one code base',
+    'featureTheme':
+        'Material 3 with dynamic colour, light and dark, in eleven languages',
+    'featureSecurity':
+        'Subscriptions, rule sets and updates are fetched straight from their '
+        'source over TLS, with nothing in between',
+  },
+  'es': {
+    'aboutTagline': 'Interfaz Flutter sobre un núcleo Rust',
+    'aboutDescription':
+        'ArcadiaPlus es un cliente proxy multiplataforma: una interfaz Flutter '
+        'sobre corduit, un motor Rust que lee perfiles en formato Clash. '
+        'Funciona en Windows, macOS, Linux, Android y HarmonyOS.',
+    'aboutRuntimeInfo': 'Entorno de ejecución',
+    'aboutPackageId': 'ID de la aplicación',
+    'aboutEngine': 'Motor proxy',
+    'aboutBuildTarget': 'Destino de compilación',
+    'aboutDartRuntime': 'Entorno de Dart',
+    'aboutOperatingSystem': 'Sistema operativo',
+    'aboutFeatureTun':
+        'Dos formas de capturar el tráfico: el proxy del sistema y un adaptador '
+        'TUN',
+    'aboutFeatureSubscription':
+        'Suscripciones Clash: el YAML se convierte en configuración del motor y '
+        'los conjuntos de reglas se guardan en caché y se actualizan solos',
+    'aboutCopyrightHolder': 'Derechos de autor',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 es una licencia de código disponible: el '
+        'código puede leerse, compilarse y modificarse, pero no es una licencia '
+        'de código abierto aprobada por la OSI y no permite un uso '
+        'competitivo. Lee el texto completo antes de redistribuirlo.',
+    'aboutViewLicense': 'Leer la licencia completa',
+    'aboutLinks': 'Enlaces',
+    'aboutRepository': 'Código fuente',
+    'aboutReleases': 'Versiones',
+    'aboutIssues': 'Seguimiento de errores',
+    'featureSpeed':
+        'Núcleo Rust: reenvío multiprotocolo, seguimiento de conexiones y '
+        'estadísticas de tráfico en vivo',
+    'featureRules':
+        'Modos regla, global y directo; cambiar de modo no reinicia el túnel',
+    'featureDns':
+        'DNS: servidores configurables, fake-IP o redir-host y resolución '
+        'recursiva local opcional',
+    'featurePlatform':
+        'Windows, macOS, Linux, Android y HarmonyOS desde un mismo código',
+    'featureTheme':
+        'Material 3 con color dinámico, claro y oscuro, en once idiomas',
+    'featureSecurity':
+        'Las suscripciones, los conjuntos de reglas y las actualizaciones se '
+        'descargan directamente del origen por TLS',
+  },
+  'fr': {
+    'aboutTagline': 'Une interface Flutter sur un noyau Rust',
+    'aboutDescription':
+        'ArcadiaPlus est un client proxy multiplateforme : une interface '
+        'Flutter posée sur corduit, un moteur Rust qui lit les profils au '
+        'format Clash. Il fonctionne sur Windows, macOS, Linux, Android et '
+        'HarmonyOS.',
+    'aboutRuntimeInfo': 'Environnement',
+    'aboutPackageId': 'Identifiant de l\'application',
+    'aboutEngine': 'Moteur proxy',
+    'aboutBuildTarget': 'Cible de compilation',
+    'aboutDartRuntime': 'Environnement Dart',
+    'aboutOperatingSystem': 'Système d\'exploitation',
+    'aboutFeatureTun':
+        'Deux façons de capturer le trafic : le proxy système et un adaptateur '
+        'TUN',
+    'aboutFeatureSubscription':
+        'Abonnements Clash : le YAML est converti en configuration du moteur, '
+        'les jeux de règles sont mis en cache et rafraîchis automatiquement',
+    'aboutCopyrightHolder': 'Droits d\'auteur',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 est une licence à code disponible : le code '
+        'peut être lu, compilé et modifié, mais ce n\'est pas une licence open '
+        'source approuvée par l\'OSI et elle n\'autorise pas un usage '
+        'concurrentiel. Lisez le texte complet avant toute redistribution.',
+    'aboutViewLicense': 'Lire la licence complète',
+    'aboutLinks': 'Liens',
+    'aboutRepository': 'Code source',
+    'aboutReleases': 'Versions publiées',
+    'aboutIssues': 'Suivi des problèmes',
+    'featureSpeed':
+        'Noyau Rust : relais multiprotocole, suivi des connexions et comptage '
+        'du trafic en direct',
+    'featureRules':
+        'Modes règle, global et direct ; en changer ne redémarre pas le tunnel',
+    'featureDns':
+        'DNS : serveurs configurables, fake-IP ou redir-host, résolution '
+        'récursive locale en option',
+    'featurePlatform':
+        'Windows, macOS, Linux, Android et HarmonyOS depuis une seule base de '
+        'code',
+    'featureTheme':
+        'Material 3 avec couleur dynamique, clair et sombre, en onze langues',
+    'featureSecurity':
+        'Abonnements, jeux de règles et mises à jour sont récupérés directement '
+        'à la source en TLS, sans intermédiaire',
+  },
+  'it': {
+    'aboutTagline': 'Interfaccia Flutter su un nucleo Rust',
+    'aboutDescription':
+        'ArcadiaPlus è un client proxy multipiattaforma: un\'interfaccia '
+        'Flutter sopra corduit, un motore Rust che legge i profili in formato '
+        'Clash. Funziona su Windows, macOS, Linux, Android e HarmonyOS.',
+    'aboutRuntimeInfo': 'Ambiente di esecuzione',
+    'aboutPackageId': 'ID applicazione',
+    'aboutEngine': 'Motore proxy',
+    'aboutBuildTarget': 'Destinazione di build',
+    'aboutDartRuntime': 'Runtime Dart',
+    'aboutOperatingSystem': 'Sistema operativo',
+    'aboutFeatureTun':
+        'Due modi per intercettare il traffico: il proxy di sistema e un '
+        'adattatore TUN',
+    'aboutFeatureSubscription':
+        'Abbonamenti Clash: lo YAML diventa configurazione del motore, i set di '
+        'regole restano in cache e si aggiornano da soli',
+    'aboutCopyrightHolder': 'Copyright',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 è una licenza a codice disponibile: il codice '
+        'può essere letto, compilato e modificato, ma non è una licenza open '
+        'source approvata dall\'OSI e non consente usi concorrenti. Leggi il '
+        'testo completo prima di ridistribuirlo.',
+    'aboutViewLicense': 'Leggi la licenza completa',
+    'aboutLinks': 'Collegamenti',
+    'aboutRepository': 'Codice sorgente',
+    'aboutReleases': 'Versioni',
+    'aboutIssues': 'Segnalazioni',
+    'featureSpeed':
+        'Nucleo Rust: inoltro multi-protocollo, tracciamento delle connessioni '
+        'e conteggio del traffico in tempo reale',
+    'featureRules':
+        'Modalità regola, globale e diretta; cambiare modalità non riavvia il '
+        'tunnel',
+    'featureDns':
+        'DNS: server configurabili, fake-IP o redir-host e risoluzione '
+        'ricorsiva locale opzionale',
+    'featurePlatform':
+        'Windows, macOS, Linux, Android e HarmonyOS da un\'unica base di codice',
+    'featureTheme':
+        'Material 3 con colore dinamico, chiaro e scuro, in undici lingue',
+    'featureSecurity':
+        'Abbonamenti, set di regole e aggiornamenti vengono scaricati '
+        'direttamente dalla fonte in TLS, senza intermediari',
+  },
+  'ja': {
+    'aboutTagline': 'Flutter のインターフェースと Rust コア',
+    'aboutDescription':
+        'ArcadiaPlus はクロスプラットフォームのプロキシクライアントです。'
+        'Flutter の画面の下で Clash 形式の設定を読む Rust エンジン corduit が'
+        '動作し、Windows、macOS、Linux、Android、HarmonyOS で利用できます。',
+    'aboutRuntimeInfo': '実行環境',
+    'aboutPackageId': 'アプリケーション ID',
+    'aboutEngine': 'プロキシエンジン',
+    'aboutBuildTarget': 'ビルド対象',
+    'aboutDartRuntime': 'Dart ランタイム',
+    'aboutOperatingSystem': 'オペレーティングシステム',
+    'aboutFeatureTun': '通信を引き受ける経路は2つ: システムプロキシと TUN アダプター',
+    'aboutFeatureSubscription':
+        'Clash 購読: YAML をエンジン設定に変換し、ルールセットをローカルに'
+        '保管して定期的に更新します',
+    'aboutCopyrightHolder': '著作権',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 はソース公開型のライセンスです。コードの'
+        '閲覧・ビルド・改変はできますが、OSI 承認のオープンソースライセンス'
+        'ではなく、競合する用途は許されません。再配布の前に全文をお読み'
+        'ください。',
+    'aboutViewLicense': 'ライセンス全文を表示',
+    'aboutLinks': 'リンク',
+    'aboutRepository': 'ソースコード',
+    'aboutReleases': 'リリース',
+    'aboutIssues': '不具合報告',
+    'featureSpeed': 'Rust コア: 複数プロトコルの中継、接続の追跡、通信量のリアルタイム集計',
+    'featureRules':
+        'ルール・グローバル・ダイレクトの3モード。切り替えてもトンネルは'
+        '再起動しません',
+    'featureDns': 'DNS: 上流の設定、fake-IP と redir-host、任意のローカル再帰解決',
+    'featurePlatform': 'Windows、macOS、Linux、Android、HarmonyOS を1つのコードで',
+    'featureTheme': 'Material 3 の動的カラー、ライトとダーク、11 言語',
+    'featureSecurity': '購読・ルールセット・更新はすべて TLS で取得元から直接読み込みます',
+  },
+  'ko': {
+    'aboutTagline': 'Flutter 인터페이스와 Rust 코어',
+    'aboutDescription':
+        'ArcadiaPlus는 크로스 플랫폼 프록시 클라이언트입니다. Flutter 화면 '
+        '아래에서 Clash 형식 설정을 읽는 Rust 엔진 corduit이 동작하며, '
+        'Windows, macOS, Linux, Android, HarmonyOS에서 사용할 수 있습니다.',
+    'aboutRuntimeInfo': '실행 환경',
+    'aboutPackageId': '애플리케이션 ID',
+    'aboutEngine': '프록시 엔진',
+    'aboutBuildTarget': '빌드 대상',
+    'aboutDartRuntime': 'Dart 런타임',
+    'aboutOperatingSystem': '운영체제',
+    'aboutFeatureTun': '트래픽을 넘겨받는 두 가지 경로: 시스템 프록시와 TUN 어댑터',
+    'aboutFeatureSubscription':
+        'Clash 구독: YAML을 엔진 설정으로 변환하고 규칙 세트를 로컬에 캐시해 '
+        '주기적으로 갱신합니다',
+    'aboutCopyrightHolder': '저작권',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1은 소스 공개 라이선스입니다. 코드를 읽고 '
+        '빌드하고 수정할 수 있지만 OSI가 승인한 오픈 소스 라이선스가 아니며 '
+        '경쟁 목적의 사용은 허용되지 않습니다. 재배포 전에 전문을 확인하세요.',
+    'aboutViewLicense': '라이선스 전문 보기',
+    'aboutLinks': '링크',
+    'aboutRepository': '소스 코드',
+    'aboutReleases': '릴리스',
+    'aboutIssues': '이슈 트래커',
+    'featureSpeed': 'Rust 코어: 다중 프로토콜 중계, 연결 추적, 실시간 트래픽 집계',
+    'featureRules':
+        '규칙, 글로벌, 직접 라우팅 모드. 모드를 바꿔도 터널을 다시 시작하지 '
+        '않습니다',
+    'featureDns': 'DNS: 업스트림 설정, fake-IP와 redir-host, 선택적 로컬 재귀 해석',
+    'featurePlatform': 'Windows, macOS, Linux, Android, HarmonyOS를 하나의 코드로',
+    'featureTheme': 'Material 3 동적 색상, 라이트와 다크, 11개 언어',
+    'featureSecurity': '구독, 규칙 세트, 업데이트는 모두 TLS로 원본에서 직접 가져옵니다',
+  },
+  'pt': {
+    'aboutTagline': 'Interface Flutter sobre um núcleo Rust',
+    'aboutDescription':
+        'O ArcadiaPlus é um cliente proxy multiplataforma: uma interface '
+        'Flutter sobre o corduit, um motor Rust que lê perfis no formato Clash. '
+        'Funciona em Windows, macOS, Linux, Android e HarmonyOS.',
+    'aboutRuntimeInfo': 'Ambiente',
+    'aboutPackageId': 'ID do aplicativo',
+    'aboutEngine': 'Motor proxy',
+    'aboutBuildTarget': 'Destino da compilação',
+    'aboutDartRuntime': 'Ambiente Dart',
+    'aboutOperatingSystem': 'Sistema operacional',
+    'aboutFeatureTun':
+        'Duas formas de capturar o tráfego: o proxy do sistema e um adaptador '
+        'TUN',
+    'aboutFeatureSubscription':
+        'Assinaturas Clash: o YAML vira configuração do motor, os conjuntos de '
+        'regras ficam em cache local e são atualizados periodicamente',
+    'aboutCopyrightHolder': 'Direitos autorais',
+    'aboutLicenseNotice':
+        'A PolyForm Perimeter 1.0.1 é uma licença de código disponível: o '
+        'código pode ser lido, compilado e modificado, mas não é uma licença de '
+        'código aberto aprovada pela OSI e não permite uso concorrente. Leia o '
+        'texto completo antes de redistribuir.',
+    'aboutViewLicense': 'Ler a licença completa',
+    'aboutLinks': 'Links',
+    'aboutRepository': 'Código-fonte',
+    'aboutReleases': 'Versões',
+    'aboutIssues': 'Relatar problemas',
+    'featureSpeed':
+        'Núcleo Rust: encaminhamento multiprotocolo, rastreio de conexões e '
+        'contagem de tráfego ao vivo',
+    'featureRules':
+        'Modos regra, global e direto; trocar de modo não reinicia o túnel',
+    'featureDns':
+        'DNS: servidores configuráveis, fake-IP ou redir-host e resolução '
+        'recursiva local opcional',
+    'featurePlatform':
+        'Windows, macOS, Linux, Android e HarmonyOS a partir de um só código',
+    'featureTheme':
+        'Material 3 com cor dinâmica, claro e escuro, em onze idiomas',
+    'featureSecurity':
+        'Assinaturas, conjuntos de regras e atualizações vêm direto da origem '
+        'por TLS, sem intermediários',
+  },
+  'ru': {
+    'aboutTagline': 'Интерфейс на Flutter и ядро на Rust',
+    'aboutDescription':
+        'ArcadiaPlus — кроссплатформенный прокси-клиент: интерфейс на Flutter '
+        'и ядро corduit на Rust, которое читает конфигурации формата Clash. '
+        'Работает на Windows, macOS, Linux, Android и HarmonyOS.',
+    'aboutRuntimeInfo': 'Среда выполнения',
+    'aboutPackageId': 'Идентификатор приложения',
+    'aboutEngine': 'Прокси-ядро',
+    'aboutBuildTarget': 'Цель сборки',
+    'aboutDartRuntime': 'Среда Dart',
+    'aboutOperatingSystem': 'Операционная система',
+    'aboutFeatureTun':
+        'Два способа перехвата трафика: системный прокси и адаптер TUN',
+    'aboutFeatureSubscription':
+        'Подписки Clash: YAML преобразуется в конфигурацию ядра, наборы правил '
+        'хранятся локально и обновляются по расписанию',
+    'aboutCopyrightHolder': 'Авторские права',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 — лицензия с открытым исходным текстом: код '
+        'можно читать, собирать и изменять, но она не является одобренной OSI '
+        'лицензией с открытым исходным кодом и не допускает конкурирующего '
+        'использования. Перед распространением прочитайте полный текст.',
+    'aboutViewLicense': 'Читать полную лицензию',
+    'aboutLinks': 'Ссылки',
+    'aboutRepository': 'Исходный код',
+    'aboutReleases': 'Выпуски',
+    'aboutIssues': 'Сообщить о проблеме',
+    'featureSpeed':
+        'Ядро на Rust: пересылка по многим протоколам, отслеживание соединений '
+        'и подсчёт трафика в реальном времени',
+    'featureRules':
+        'Режимы «правила», «глобальный» и «напрямую»; смена режима не '
+        'перезапускает туннель',
+    'featureDns':
+        'DNS: настраиваемые серверы, fake-IP или redir-host, необязательный '
+        'локальный рекурсивный резолвер',
+    'featurePlatform':
+        'Windows, macOS, Linux, Android и HarmonyOS на одной кодовой базе',
+    'featureTheme':
+        'Material 3 с динамическим цветом, светлая и тёмная темы, одиннадцать '
+        'языков',
+    'featureSecurity':
+        'Подписки, наборы правил и обновления загружаются напрямую из '
+        'источника по TLS',
+  },
+  'zh_CN': {
+    'aboutTagline': 'Flutter 界面，Rust 内核',
+    'aboutDescription':
+        'ArcadiaPlus 是一款跨平台代理客户端：Flutter 界面之下是 Rust 内核 '
+        'corduit，负责解析 Clash 格式配置并转发流量。支持 Windows、macOS、'
+        'Linux、Android 与 HarmonyOS。',
+    'aboutRuntimeInfo': '运行信息',
+    'aboutPackageId': '应用标识',
+    'aboutEngine': '代理内核',
+    'aboutBuildTarget': '构建目标',
+    'aboutDartRuntime': 'Dart 运行时',
+    'aboutOperatingSystem': '操作系统',
+    'aboutFeatureTun': '两条接管流量的路径：系统代理与 TUN 虚拟网卡，按平台选择',
+    'aboutFeatureSubscription': 'Clash 订阅：YAML 转换为引擎配置，规则集本地缓存并按周期自动更新',
+    'aboutCopyrightHolder': '版权',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 属于源码可见许可：可以阅读、构建与修改代码，'
+        '但它并非 OSI 认可的开源许可，也不允许用于竞争性产品。再分发前请阅读'
+        '完整条款。',
+    'aboutViewLicense': '查看完整许可证',
+    'aboutLinks': '相关链接',
+    'aboutRepository': '源码仓库',
+    'aboutReleases': '版本发布',
+    'aboutIssues': '问题反馈',
+    'featureSpeed': 'Rust 内核：多协议转发、连接跟踪与实时流量统计',
+    'featureRules': '规则、全局、直连三种分流模式，切换时不会重启隧道',
+    'featureDns': 'DNS：可配置上游、fake-IP 与 redir-host、可选的本地递归解析',
+    'featurePlatform': 'Windows、macOS、Linux、Android 与 HarmonyOS 共用一套代码',
+    'featureTheme': 'Material 3 动态取色，深浅色主题，十一种界面语言',
+    'featureSecurity': '订阅、规则集与更新均通过 TLS 直连来源，不经过任何中转',
+    'openSource': '源码可见',
+    'openSourceDesc': 'PolyForm Perimeter 1.0.1，非 OSI 开源许可',
+  },
+  'zh_TW': {
+    'aboutTagline': 'Flutter 介面，Rust 核心',
+    'aboutDescription':
+        'ArcadiaPlus 是一款跨平台代理用戶端：Flutter 介面之下是 Rust 核心 '
+        'corduit，負責解析 Clash 格式設定並轉送流量。支援 Windows、macOS、'
+        'Linux、Android 與 HarmonyOS。',
+    'aboutRuntimeInfo': '執行資訊',
+    'aboutPackageId': '應用程式識別碼',
+    'aboutEngine': '代理核心',
+    'aboutBuildTarget': '建置目標',
+    'aboutDartRuntime': 'Dart 執行環境',
+    'aboutOperatingSystem': '作業系統',
+    'aboutFeatureTun': '兩種接管流量的方式：系統代理與 TUN 虛擬網卡，依平台選擇',
+    'aboutFeatureSubscription': 'Clash 訂閱：YAML 轉換為引擎設定，規則集快取於本機並依週期自動更新',
+    'aboutCopyrightHolder': '版權',
+    'aboutLicenseNotice':
+        'PolyForm Perimeter 1.0.1 屬於原始碼可見授權：可以閱讀、建置與修改'
+        '程式碼，但它並非 OSI 認可的開源授權，也不允許用於競爭性產品。再散布'
+        '前請閱讀完整條款。',
+    'aboutViewLicense': '檢視完整授權條款',
+    'aboutLinks': '相關連結',
+    'aboutRepository': '原始碼倉庫',
+    'aboutReleases': '版本發佈',
+    'aboutIssues': '問題回報',
+    'featureSpeed': 'Rust 核心：多協定轉送、連線追蹤與即時流量統計',
+    'featureRules': '規則、全局、直連三種分流模式，切換時不會重啟隧道',
+    'featureDns': 'DNS：可設定上游、fake-IP 與 redir-host、可選的本機遞迴解析',
+    'featurePlatform': 'Windows、macOS、Linux、Android 與 HarmonyOS 共用一套程式碼',
+    'featureTheme': 'Material 3 動態取色，深淺色主題，十一種介面語言',
+    'featureSecurity': '訂閱、規則集與更新皆以 TLS 直連來源，不經過任何中轉',
+    'openSource': '原始碼可見',
+    'openSourceDesc': 'PolyForm Perimeter 1.0.1，非 OSI 開源授權',
   },
 };
 

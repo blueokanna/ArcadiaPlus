@@ -341,22 +341,61 @@ class ProfileConfig {
   }
 }
 
-/// Network settings model
+/// Network settings model.
+///
+/// [systemProxy] and [tunEnabled] are descriptions of what the platform is
+/// doing right now, not preferences: they are read back from the OS (or from
+/// the tunnel) whenever settings load, and the stored copy exists only so the
+/// record is complete on disk.
 class NetworkSettings {
+  /// The bypass entries a proxy client is expected to ship with: loopback,
+  /// link-local and the private ranges. Sending a router page, a NAS share or
+  /// a printer through a tunnel is never what anyone meant, and on most home
+  /// LANs those names only resolve locally anyway.
+  ///
+  /// Entries are in this app's canonical form — host names, `*.suffix`
+  /// patterns and CIDR blocks. Each platform renders them into the dialect its
+  /// own proxy setting understands; see `PlatformProxyService`.
+  static const List<String> defaultBypassDomains = <String>[
+    'localhost',
+    '127.0.0.1',
+    '::1',
+    '10.0.0.0/8',
+    '172.16.0.0/12',
+    '192.168.0.0/16',
+    '169.254.0.0/16',
+    '*.local',
+    '*.lan',
+  ];
+
+  /// Revision of [defaultBypassDomains] an install has been brought up to.
+  ///
+  /// Bump this when the list gains an entry existing installs should get too:
+  /// [StorageService.getNetworkSettings] then merges the missing entries once
+  /// and stamps the record, so an entry the user deletes afterwards stays gone
+  /// until the default list itself next changes.
+  static const int bypassDefaultsRevision = 1;
+
   final bool systemProxy;
   final List<String> bypassDomains;
   final bool tunEnabled;
 
+  /// Revision of [defaultBypassDomains] this record already carries. Zero for
+  /// records written before the revision was tracked.
+  final int bypassRevision;
+
   NetworkSettings({
     this.systemProxy = false,
-    this.bypassDomains = const [],
+    this.bypassDomains = defaultBypassDomains,
     this.tunEnabled = false,
+    this.bypassRevision = bypassDefaultsRevision,
   });
 
   Map<String, dynamic> toJson() => {
     'systemProxy': systemProxy,
     'bypassDomains': bypassDomains,
     'tunEnabled': tunEnabled,
+    'bypassRevision': bypassRevision,
   };
 
   factory NetworkSettings.fromJson(Map<String, dynamic> json) =>
@@ -366,19 +405,38 @@ class NetworkSettings {
             (json['bypassDomains'] as List<dynamic>?)
                 ?.map((e) => e as String)
                 .toList() ??
-            [],
+            const [],
         tunEnabled: json['tunEnabled'] as bool? ?? false,
+        // Absent means the record predates the revision field, which is
+        // exactly the case the migration in `getNetworkSettings` is for.
+        bypassRevision: json['bypassRevision'] as int? ?? 0,
       );
+
+  /// This record with every default entry it does not already carry, stamped
+  /// with [bypassDefaultsRevision]. Order is preserved so the user's own
+  /// entries stay where they put them.
+  NetworkSettings withDefaultBypassDomains() {
+    final merged = List<String>.of(bypassDomains);
+    for (final entry in defaultBypassDomains) {
+      if (!merged.contains(entry)) merged.add(entry);
+    }
+    return copyWith(
+      bypassDomains: merged,
+      bypassRevision: bypassDefaultsRevision,
+    );
+  }
 
   NetworkSettings copyWith({
     bool? systemProxy,
     List<String>? bypassDomains,
     bool? tunEnabled,
+    int? bypassRevision,
   }) {
     return NetworkSettings(
       systemProxy: systemProxy ?? this.systemProxy,
       bypassDomains: bypassDomains ?? this.bypassDomains,
       tunEnabled: tunEnabled ?? this.tunEnabled,
+      bypassRevision: bypassRevision ?? this.bypassRevision,
     );
   }
 }
@@ -486,7 +544,16 @@ class StorageService {
     if (json == null) return NetworkSettings();
 
     try {
-      return NetworkSettings.fromJson(jsonDecode(json));
+      final settings = NetworkSettings.fromJson(jsonDecode(json));
+      if (settings.bypassRevision >= NetworkSettings.bypassDefaultsRevision) {
+        return settings;
+      }
+      // The bypass list gained entries since this install last saved it. Merge
+      // them in and stamp the record, so this happens once rather than on
+      // every load.
+      final migrated = settings.withDefaultBypassDomains();
+      await saveNetworkSettings(migrated);
+      return migrated;
     } catch (e) {
       debugPrint('Failed to load network settings: $e');
       return NetworkSettings();

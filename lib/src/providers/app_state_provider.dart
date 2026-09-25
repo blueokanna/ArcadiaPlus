@@ -556,8 +556,11 @@ class AppStateProvider extends ChangeNotifier {
       // Start status timer for periodic updates
       _syncTimers();
 
-      // Windows: Auto enable system proxy if setting is enabled
-      if (Platform.isWindows && _autoSystemProxy) {
+      // Desktop: auto enable system proxy if setting is enabled. WinINET on
+      // Windows, networksetup on macOS and gsettings on Linux all back the
+      // same switch, so the setting applies to every desktop rather than only
+      // to the one platform it was first written for.
+      if (PlatformUtils.isDesktop && _autoSystemProxy) {
         final generalSettings = await StorageService.instance
             .getGeneralSettings();
         final networkSettings = await StorageService.instance
@@ -626,12 +629,26 @@ class AppStateProvider extends ChangeNotifier {
         await Future.delayed(const Duration(milliseconds: 500));
       }
 
-      // Windows: Disable system proxy if we enabled it
-      if (Platform.isWindows && _systemProxyEnabledByUs) {
-        debugPrint('Auto disabling system proxy...');
-        await PlatformProxyService.instance.disableSystemProxy();
-        _systemProxyEnabledByUs = false;
-        debugPrint('System proxy disabled automatically');
+      // Desktop: take the system proxy down with the service, on whichever
+      // platform it was set. Leaving one behind points the machine at a port
+      // nobody listens on — which is how "I stopped the client and lost the
+      // internet" happens — while a proxy this app did not configure is left
+      // exactly as its owner left it.
+      if (PlatformUtils.isDesktop) {
+        final generalSettings = await StorageService.instance
+            .getGeneralSettings();
+        final platformProxy = PlatformProxyService.instance;
+        final ours =
+            _systemProxyEnabledByUs ||
+            await platformProxy.isSystemProxyPointingAt(
+              generalSettings.mixedPort,
+            );
+        if (ours && await platformProxy.checkSystemProxyStatus()) {
+          debugPrint('Auto disabling system proxy...');
+          await platformProxy.disableSystemProxy();
+          _systemProxyEnabledByUs = false;
+          debugPrint('System proxy disabled automatically');
+        }
       }
 
       await stopCorduit();

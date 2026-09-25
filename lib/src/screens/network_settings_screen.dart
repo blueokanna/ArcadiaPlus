@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:arcadiaplus/src/providers/app_state_provider.dart';
 import 'package:arcadiaplus/src/providers/network_settings_provider.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
@@ -19,6 +20,22 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
       TextEditingController();
   bool _isLoadingUwp = false;
 
+  /// Both switches write a route to the local mixed port, and the platform can
+  /// take a moment over it. Without this a second tap would race the first one
+  /// and leave the switch showing whichever answer came back last.
+  bool _isApplyingProxy = false;
+  bool _isApplyingTun = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // The switches show what the platform is doing, and the platform can have
+    // changed while this screen was elsewhere in the stack.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<NetworkSettingsProvider>().refresh();
+    });
+  }
+
   @override
   void dispose() {
     _bypassDomainsController.dispose();
@@ -30,6 +47,13 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
+    // Only this one flag is wanted, so the screen does not rebuild on every
+    // traffic sample the provider publishes.
+    final isServiceRunning = context.select<AppStateProvider, bool>(
+      (appState) => appState.isServiceRunning,
+    );
+    final stoppedHint =
+        l10n?.serviceNotRunning ?? 'ArcadiaPlus service is not running';
 
     return Consumer<NetworkSettingsProvider>(
       builder: (context, networkSettings, child) {
@@ -62,7 +86,9 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                         subtitle: Text(
                           networkSettings.systemProxy
                               ? (l10n?.enabled ?? 'Enabled')
-                              : (l10n?.disabled ?? 'Disabled'),
+                              : isServiceRunning
+                              ? (l10n?.disabled ?? 'Disabled')
+                              : stoppedHint,
                         ),
                         leading: Container(
                           padding: const EdgeInsets.all(8),
@@ -81,7 +107,15 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                         ),
                         trailing: Switch.adaptive(
                           value: networkSettings.systemProxy,
-                          onChanged: (value) => _applySystemProxy(value),
+                          // Turning one off has to work even with the engine
+                          // stopped: that is the way back from a session that
+                          // died with the proxy still pointed at our port.
+                          onChanged:
+                              ((isServiceRunning ||
+                                      networkSettings.systemProxy) &&
+                                  !_isApplyingProxy)
+                              ? (value) => _applySystemProxy(value)
+                              : null,
                         ),
                       ),
                     ],
@@ -174,6 +208,17 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      Text(
+                        l10n?.bypassDomainsHint ??
+                            'Host names, *.suffix patterns, addresses and CIDR '
+                                'blocks are all accepted; a platform that '
+                                'cannot match a block is given the equivalent '
+                                'wildcards.',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
                       if (networkSettings.bypassDomains.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Wrap(
@@ -189,6 +234,18 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                               side: BorderSide.none,
                             );
                           }).toList(),
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton.icon(
+                            onPressed: () =>
+                                networkSettings.restoreDefaultBypassDomains(),
+                            icon: const Icon(Icons.settings_backup_restore),
+                            label: Text(
+                              l10n?.bypassDomainsRestoreDefaults ??
+                                  'Restore default entries',
+                            ),
+                          ),
                         ),
                       ],
                     ],
@@ -212,8 +269,12 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                     AdaptiveListTile(
                       title: Text(l10n?.tunMode ?? 'TUN Mode'),
                       subtitle: Text(
-                        l10n?.tunModeDesc ??
-                            'Requires administrator privileges',
+                        networkSettings.tunEnabled
+                            ? (l10n?.enabled ?? 'Enabled')
+                            : isServiceRunning
+                            ? (l10n?.tunModeDesc ??
+                                  'Requires administrator privileges')
+                            : stoppedHint,
                       ),
                       leading: Container(
                         padding: const EdgeInsets.all(8),
@@ -232,7 +293,13 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                       ),
                       trailing: Switch.adaptive(
                         value: networkSettings.tunEnabled,
-                        onChanged: (value) => _applyTun(value),
+                        // Same rule as the system proxy: down is always
+                        // available, up needs the engine.
+                        onChanged:
+                            ((isServiceRunning || networkSettings.tunEnabled) &&
+                                !_isApplyingTun)
+                            ? (value) => _applyTun(value)
+                            : null,
                       ),
                     ),
                   ],
@@ -407,6 +474,7 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
     final l10n = AppLocalizations.of(context);
     final provider = context.read<NetworkSettingsProvider>();
 
+    setState(() => _isApplyingProxy = true);
     try {
       await provider.setSystemProxy(value);
     } catch (e) {
@@ -422,6 +490,8 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isApplyingProxy = false);
     }
   }
 
@@ -431,6 +501,7 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
     final l10n = AppLocalizations.of(context);
     final provider = context.read<NetworkSettingsProvider>();
 
+    setState(() => _isApplyingTun = true);
     try {
       await provider.setTunEnabled(value);
     } catch (e) {
@@ -443,6 +514,8 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isApplyingTun = false);
     }
   }
 

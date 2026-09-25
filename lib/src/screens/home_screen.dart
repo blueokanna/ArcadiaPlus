@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
 import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
+import 'package:arcadiaplus/src/providers/network_settings_provider.dart';
 import 'package:arcadiaplus/src/providers/theme_provider.dart';
 import 'package:arcadiaplus/src/widgets/traffic_chart.dart';
 import 'package:arcadiaplus/src/widgets/status_card.dart';
@@ -87,8 +89,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     _syncClaim();
     if (onTop) {
       // Whatever is on screen is stale by however long this screen was
-      // covered, so catch up once instead of waiting for the next tick.
+      // covered, so catch up once instead of waiting for the next tick. The
+      // proxy and tunnel switches are part of that: the platform can have
+      // changed under us while they were out of sight.
       _appState?.refreshStatus();
+      unawaited(context.read<NetworkSettingsProvider>().refresh());
     }
   }
 
