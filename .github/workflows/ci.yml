@@ -228,7 +228,13 @@ jobs:
         run: bash ohos/scripts/build-rust-ohos.sh
 
       - name: Build the release HAP
-        run: flutter build hap --release --no-codesign
+        shell: bash
+        run: |
+          set -o pipefail
+          # Kept where the failure report below can still read it: the step's
+          # own log dies with the step, and the very first failure can be
+          # inside the Flutter tool, long before hvigor writes anything.
+          flutter build hap --release --no-codesign 2>&1 | tee "$RUNNER_TEMP/hap-build.log"
 
       - name: Report why the HAP build failed
         if: failure()
@@ -269,6 +275,17 @@ jobs:
           else
             echo 'hvigor never ran (no .hvigor/outputs/build-logs/build.log)'
             annotate 'HAP build failed: hvigor never ran' "stage products: ${products:-none}; ohos/har: $(ls ohos/har 2>/dev/null | head -n 5 | tr '\n' ' ')"
+          fi
+          echo '--- flutter build hap output ---'
+          if [[ -f "$RUNNER_TEMP/hap-build.log" ]]; then
+            hap_errors="$(grep -nE 'error|Error|ERROR|failed|Failed|Exception' "$RUNNER_TEMP/hap-build.log" | tail -n 40 || true)"
+            printf '%s\n' "$hap_errors"
+            echo '--- tail ---'
+            tail -n 80 "$RUNNER_TEMP/hap-build.log"
+            annotate 'HAP build failed: flutter build hap tail' "$(tail -n 60 "$RUNNER_TEMP/hap-build.log")"
+            annotate 'HAP build failed: flutter build hap error lines' "$hap_errors"
+          else
+            echo 'no hap-build.log'
           fi
 
       - name: Verify the HAP carries the Flutter runtime and the bridge

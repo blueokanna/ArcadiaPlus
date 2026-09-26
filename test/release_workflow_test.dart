@@ -239,6 +239,9 @@ void main() {
       expect(source, contains('Report why the HAP build failed'));
       expect(source, contains('if: failure()'));
       expect(source, contains('.hvigor/outputs/build-logs'));
+      // The tee'd copy of `flutter build hap`'s output is what the failure
+      // report reads when the tool dies before hvigor ever runs.
+      expect(source, contains('hap-build.log'));
       // The annotations are the one failure channel a reader without access
       // to the step log can still see, so the step must emit them.
       expect(source, contains('::error title='));

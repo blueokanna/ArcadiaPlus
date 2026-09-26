@@ -731,11 +731,12 @@ jobs:
       - name: Build the release HAP
         shell: bash
         run: |
-          set -euo pipefail
+          set -o pipefail
+          # See ci.yml: the tee'd log is what the failure report reads.
           if [[ "${HAP_NAME_SUFFIX:-unsigned}" == "signed" ]]; then
-            flutter build hap --release
+            flutter build hap --release 2>&1 | tee "$RUNNER_TEMP/hap-build.log"
           else
-            flutter build hap --release --no-codesign
+            flutter build hap --release --no-codesign 2>&1 | tee "$RUNNER_TEMP/hap-build.log"
           fi
 
       - name: Report why the HAP build failed
@@ -770,6 +771,17 @@ jobs:
           else
             echo 'hvigor never ran (no .hvigor/outputs/build-logs/build.log)'
             annotate 'HAP build failed: hvigor never ran' "stage products: ${products:-none}; ohos/har: $(ls ohos/har 2>/dev/null | head -n 5 | tr '\n' ' ')"
+          fi
+          echo '--- flutter build hap output ---'
+          if [[ -f "$RUNNER_TEMP/hap-build.log" ]]; then
+            hap_errors="$(grep -nE 'error|Error|ERROR|failed|Failed|Exception' "$RUNNER_TEMP/hap-build.log" | tail -n 40 || true)"
+            printf '%s\n' "$hap_errors"
+            echo '--- tail ---'
+            tail -n 80 "$RUNNER_TEMP/hap-build.log"
+            annotate 'HAP build failed: flutter build hap tail' "$(tail -n 60 "$RUNNER_TEMP/hap-build.log")"
+            annotate 'HAP build failed: flutter build hap error lines' "$hap_errors"
+          else
+            echo 'no hap-build.log'
           fi
 
       - name: Verify and stage the HAP
