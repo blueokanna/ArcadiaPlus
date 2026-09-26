@@ -216,16 +216,14 @@ mod tests {
 pub extern "C" fn arcadia_ohos_set_protect_callback(
     callback: Option<extern "C" fn(c_int) -> c_int>,
 ) -> c_int {
-    guarded(|| {
-        match callback {
-            Some(callback) => {
-                corduit::netstack::set_protect_callback(move |fd| callback(fd) != 0);
-                0
-            }
-            None => {
-                corduit::netstack::clear_protect_callback();
-                0
-            }
+    guarded(|| match callback {
+        Some(callback) => {
+            corduit::netstack::set_protect_callback(move |fd| callback(fd) != 0);
+            0
+        }
+        None => {
+            corduit::netstack::clear_protect_callback();
+            0
         }
     })
 }

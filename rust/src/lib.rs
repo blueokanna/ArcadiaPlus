@@ -24,9 +24,9 @@ mod logging;
 
 #[cfg(target_os = "android")]
 pub mod android_jni;
+pub mod api;
 #[cfg(target_env = "ohos")]
 pub mod ohos_ffi;
-pub mod api;
 pub mod recursive_dns;
 mod types;
 
