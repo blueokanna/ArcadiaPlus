@@ -56,6 +56,15 @@ runs:
         # must not be asked for an API level it did not provision.
         sed -i -E "s/(\"compatibleSdkVersion\": )\"[^\"]*\"/\1\"${OHOS_SDK_COMPATIBLE_VERSION}\"/" ohos/build-profile.json5
         sed -i -E "s/(\"targetSdkVersion\": )\"[^\"]*\"/\1\"${OHOS_SDK_COMPATIBLE_VERSION}\"/" ohos/build-profile.json5
+        # hvigor validates these fields as `M.S.F(api)`; a silent no-op sed
+        # would surface only as an opaque hvigor failure, so assert the write.
+        for field in compatibleSdkVersion targetSdkVersion; do
+          if ! grep -q "\"$field\": \"${OHOS_SDK_COMPATIBLE_VERSION}\"" ohos/build-profile.json5; then
+            echo "::error title=SDK binding failed::ohos/build-profile.json5 does not carry \"$field\": \"${OHOS_SDK_COMPATIBLE_VERSION}\" after the rewrite"
+            grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5 || true
+            exit 1
+          fi
+        done
         grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5
 
         # A freshly checked out Flutter OHOS fork bootstraps on its first run:

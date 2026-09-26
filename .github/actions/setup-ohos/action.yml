@@ -194,25 +194,36 @@ runs:
         cat "$sdk_pkg"
         echo
 
-        # flutter_tools discovers the SDK through this file and reads
-        # `data.apiVersion` from it; `data.version` names the HarmonyOS release
-        # the SDK belongs to. Both feed the build-profile version the workflow
-        # writes, because hvigor refuses to compile against an SDK it cannot
-        # find in $DEVECO_SDK_HOME.
-        api_version="$(jq -r '.data.apiVersion // empty' "$sdk_pkg")"
-        if [[ -z "$api_version" ]]; then
-          echo "::error title=Unreadable SDK::sdk-pkg.json contains no data.apiVersion"
-          exit 1
+        # flutter_tools discovers the SDK through sdk-pkg.json and the file's
+        # presence stays a precondition of the HAP build, but the product
+        # version hvigor validates must come from the SDK's own module
+        # manifest: in the HarmonyOS configuration mode this project uses,
+        # compatibleSdkVersion/targetSdkVersion have to be `M.S.F(api)` -- the
+        # fork's own template ships `5.0.0(12)` -- and sdk-pkg.json's fields
+        # name the command-line tools release, not the SDK line unpacked here.
+        manifest="$DEVECO_SDK_HOME/default/openharmony/ets/oh-uni-package.json"
+        if [[ ! -f "$manifest" ]]; then
+          manifest="$(find "$DEVECO_SDK_HOME/default/openharmony" -name oh-uni-package.json -print -quit)"
         fi
-        sdk_version="$(jq -r '.data.version // empty' "$sdk_pkg")"
-        if [[ -n "$sdk_version" ]]; then
-          compatible="$sdk_version($api_version)"
-        else
-          compatible="$api_version"
+        api_version=''
+        platform_version=''
+        if [[ -n "$manifest" && -f "$manifest" ]]; then
+          api_version="$(jq -r '.apiVersion // empty' "$manifest")"
+          platform_version="$(jq -r '.platformVersion // empty' "$manifest")"
+          if [[ -z "$platform_version" || "$platform_version" == "0.0.0" ]]; then
+            # Older manifests carry only the full component version
+            # (for example 5.0.0.71); the platform release is its leading trio.
+            platform_version="$(jq -r '.version // empty' "$manifest" | cut -d. -f1-3)"
+          fi
+        fi
+        compatible="$platform_version($api_version)"
+        if [[ ! "$api_version" =~ ^[0-9]+$ || ! "$platform_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          compatible="5.0.0(12)"
+          echo "::warning title=SDK metadata unreadable::no usable platformVersion/apiVersion in ${manifest:-the unpacked SDK}; falling back to ${compatible}, the pair the pinned toolchain is tested with"
         fi
 
         echo "OHOS_SDK_COMPATIBLE_VERSION=$compatible" >> "$GITHUB_ENV"
-        echo "Detected SDK: apiVersion=$api_version version=${sdk_version:-<absent>} -> compatibleSdkVersion=$compatible"
+        echo "Detected SDK: platformVersion=${platform_version:-<absent>} apiVersion=${api_version:-<absent>} -> compatibleSdkVersion=$compatible"
 
         echo '--- toolchain versions ---'
         node --version
