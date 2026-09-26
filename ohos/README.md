@@ -170,9 +170,9 @@ HarmonyOS NEXT 真机。
 
 | action | 职责 |
 |--------|------|
-| `.github/actions/setup-ohos` | 下载/校验 command-line-tools 与 OpenHarmony SDK（SHA-256 双重校验），解包成 DevEco 布局，导出 `DEVECO_SDK_HOME` / `OHOS_NDK` / `OHOS_SDK_COMPATIBLE_VERSION` |
+| `.github/actions/setup-ohos` | 下载/校验 command-line-tools 与 OpenHarmony SDK（SHA-256 双重校验），解包成 DevEco 布局，导出 `DEVECO_SDK_HOME` / `OHOS_NDK` |
 | `.github/actions/checkout-flutter-ohos` | 检出固定 tag 的 `flutter_flutter`（唯一能执行 `flutter build hap` 的 SDK） |
-| `.github/actions/prepare-ohos-build` | 把 `compatibleSdkVersion` 绑定到实际供应的 SDK、放宽 pubspec 约束到 fork 的 Dart 线、`flutter pub get` |
+| `.github/actions/prepare-ohos-build` | 防漂移校验 `compatibleSdkVersion`/`targetSdkVersion` 保持 fork 模板已验证的值对（`5.0.5(17)` / `26.0.0`）、放宽 pubspec 约束到 fork 的 Dart 线、`flutter pub get` |
 
 随后依次是 `ohos/scripts/build-rust-ohos.sh` 与 `flutter build hap --release [--no-codesign]`，
 收尾用 `unzip -l` 断言 HAP 内确实含有

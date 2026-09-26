@@ -2,7 +2,7 @@ name: Set up the HarmonyOS toolchain
 description: >-
   Provisions the HarmonyOS command-line tools (hvigor, ohpm, node) and the
   OpenHarmony SDK that `flutter build hap` and the DevEco build need, then
-  exports DEVECO_SDK_HOME, TOOL_HOME, OHOS_NDK and OHOS_SDK_COMPATIBLE_VERSION.
+  exports DEVECO_SDK_HOME, TOOL_HOME and OHOS_NDK.
 
 # Layout and sources
 # ------------------
@@ -12,6 +12,17 @@ description: >-
 # verifies against a published SHA-256 (which is pinned here as well). The
 # SDK tarball lands in `$DEVECO_SDK_HOME/default/openharmony`, the single
 # layout both hvigor and flutter_tools' HmosSdk detection understand.
+#
+# Caching
+# -------
+# The two archives (~3.4 GB combined) are cached under a key derived from
+# their published SHA-256 digests, and the entry is saved the moment both
+# digests verify -- not at the end of the job, where a failure or a
+# cancellation loses it. Fallback keys cover older entries of this
+# generation and the `ohos-downloads-v1` key the workflows used before the
+# cache moved in here, so a version bump or an eviction only re-downloads
+# what actually changed. Each archive is deleted from the runner as soon
+# as it has been unpacked: the cache is the durable copy.
 
 inputs:
   commandline-tools-url:
@@ -33,12 +44,64 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Resolve the toolchain cache key from the published digests
+      id: toolchain_key
+      shell: bash
+      env:
+        CLT_URL: ${{ inputs.commandline-tools-url }}
+        SDK_SHA256: ${{ inputs.openharmony-sdk-sha256 }}
+      run: |
+        set -euo pipefail
+
+        # Two digests identify the archives: the SDK's is pinned above, the
+        # command-line tools' is published next to the archive. Fetching the
+        # 64-character `.sha256` (not the 2 GB archive) is what makes the
+        # cache key content-addressed: an upstream re-roll under the same
+        # version misses the cache and downloads once, instead of being
+        # judged stale on every run while the stale entry shadows the save.
+        if ! clt_sha="$(curl --fail --location --silent --show-error \
+                              --retry 5 --retry-delay 5 --retry-all-errors \
+                              "$CLT_URL.sha256" | tr -d '[:space:]')"; then
+          echo "::error title=Checksum unavailable::could not download $CLT_URL.sha256"
+          exit 1
+        fi
+        if [[ ! "$clt_sha" =~ ^[0-9a-f]{64}$ ]]; then
+          echo "::error title=Checksum unreadable::the published .sha256 file does not contain a SHA-256 digest"
+          echo "$clt_sha"
+          exit 1
+        fi
+        if [[ ! "$SDK_SHA256" =~ ^[0-9a-f]{64}$ ]]; then
+          echo "::error title=Checksum unreadable::openharmony-sdk-sha256 is not a SHA-256 digest"
+          exit 1
+        fi
+
+        echo "expected-clt-sha=$clt_sha" >> "$GITHUB_OUTPUT"
+        echo "cache-key=ohos-toolchain-archives-${{ runner.os }}-clt-${clt_sha:0:16}-sdk-${SDK_SHA256:0:16}" >> "$GITHUB_OUTPUT"
+        echo "toolchain digests: clt=$clt_sha sdk=$SDK_SHA256"
+
+    - name: Restore the cached toolchain archives
+      id: toolchain_archives
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ runner.temp }}/ohos-downloads
+        key: ${{ steps.toolchain_key.outputs.cache-key }}
+        # The same-generation prefix is the version-bump case: the archive
+        # that did not change is reused and only the changed one downloads.
+        # The `ohos-downloads-v1` prefix matches the key the workflows used
+        # before the cache moved into this action, so the transition costs
+        # nothing on top.
+        restore-keys: |
+          ohos-toolchain-archives-${{ runner.os }}-
+          ohos-downloads-v1-${{ runner.os }}-
+
     - name: Download the HarmonyOS command-line tools and SDK
+      id: download
       shell: bash
       env:
         CLT_URL: ${{ inputs.commandline-tools-url }}
         SDK_URL: ${{ inputs.openharmony-sdk-url }}
         SDK_SHA256: ${{ inputs.openharmony-sdk-sha256 }}
+        EXPECTED_CLT_SHA: ${{ steps.toolchain_key.outputs.expected-clt-sha }}
       run: |
         set -euo pipefail
 
@@ -57,26 +120,15 @@ runs:
                --continue-at - --output "$destination" "$url"
         }
 
-        if ! fetch "$CLT_URL.sha256" "$downloads/clt.zip.sha256"; then
-          echo "::error title=Checksum unavailable::could not download $CLT_URL.sha256"
-          exit 1
-        fi
-        expected_clt_sha="$(tr -d '[:space:]' < "$downloads/clt.zip.sha256")"
-        if [[ ! "$expected_clt_sha" =~ ^[0-9a-f]{64}$ ]]; then
-          echo "::error title=Checksum unreadable::the published .sha256 file does not contain a SHA-256 digest"
-          cat "$downloads/clt.zip.sha256"
-          exit 1
-        fi
-
         clt_sha="$(sha256sum "$clt_archive" 2>/dev/null | cut -d' ' -f1 || true)"
-        if [[ "$clt_sha" != "$expected_clt_sha" ]]; then
+        if [[ "$clt_sha" != "$EXPECTED_CLT_SHA" ]]; then
           echo "Command-line tools archive missing or stale; downloading $CLT_URL"
           rm -f "$clt_archive"
           fetch "$CLT_URL" "$clt_archive"
           clt_sha="$(sha256sum "$clt_archive" | cut -d' ' -f1)"
         fi
-        if [[ "$clt_sha" != "$expected_clt_sha" ]]; then
-          echo "::error title=Corrupt command-line tools::sha256 mismatch: expected $expected_clt_sha, got $clt_sha"
+        if [[ "$clt_sha" != "$EXPECTED_CLT_SHA" ]]; then
+          echo "::error title=Corrupt command-line tools::sha256 mismatch: expected $EXPECTED_CLT_SHA, got $clt_sha"
           exit 1
         fi
         echo "command-line tools verified: $clt_sha"
@@ -94,8 +146,22 @@ runs:
         fi
         echo "OpenHarmony SDK verified: $sdk_sha"
 
+        echo "verified=true" >> "$GITHUB_OUTPUT"
         echo "CLT_ARCHIVE=$clt_archive" >> "$GITHUB_ENV"
         echo "SDK_ARCHIVE=$sdk_archive" >> "$GITHUB_ENV"
+
+    - name: Save the toolchain archives to the cache
+      # Saved the moment both digests verify, not at the end of the job: a
+      # build that fails, or a run that is cancelled an hour later, keeps
+      # the entry this way. Skipped on a hit; a save that loses a race with
+      # a parallel job on the same key warns without failing a build whose
+      # archives just verified.
+      if: steps.toolchain_archives.outputs.cache-hit != 'true' && steps.download.outputs.verified == 'true'
+      uses: actions/cache/save@v4
+      continue-on-error: true
+      with:
+        path: ${{ runner.temp }}/ohos-downloads
+        key: ${{ steps.toolchain_key.outputs.cache-key }}
 
     - name: Unpack the command-line tools
       shell: bash
@@ -129,6 +195,10 @@ runs:
         # "permission denied" much later, so restore it explicitly.
         find "$tool_home" -type f \
           \( -path '*/bin/*' -o -path '*/tool/node/bin/*' \) -exec chmod +x {} \;
+
+        # Unpacked, and the cache entry is the durable copy: the ~2 GB
+        # archive would otherwise sit on the runner with no reader left.
+        rm -f "$CLT_ARCHIVE"
 
         echo "TOOL_HOME=$tool_home" >> "$GITHUB_ENV"
         echo "TOOL_HOME=$tool_home"
@@ -176,6 +246,10 @@ runs:
           \( -path '*/toolchains/*' -o -path '*/native/llvm/bin/*' -o -path '*/native/build-tools/*' \) \
           -exec chmod +x {} \;
 
+        # Same as the command-line tools archive: the cache holds the
+        # durable copy of the ~1.1 GB tarball.
+        rm -f "$SDK_ARCHIVE"
+
         echo "DEVECO_SDK_HOME=$TOOL_HOME/sdk" >> "$GITHUB_ENV"
         echo "OHOS_NDK=$TOOL_HOME/sdk/default/openharmony/native" >> "$GITHUB_ENV"
 
@@ -194,36 +268,16 @@ runs:
         cat "$sdk_pkg"
         echo
 
-        # flutter_tools discovers the SDK through sdk-pkg.json and the file's
-        # presence stays a precondition of the HAP build, but the product
-        # version hvigor validates must come from the SDK's own module
-        # manifest: in the HarmonyOS configuration mode this project uses,
-        # compatibleSdkVersion/targetSdkVersion have to be `M.S.F(api)` -- the
-        # fork's own template ships `5.0.0(12)` -- and sdk-pkg.json's fields
-        # name the command-line tools release, not the SDK line unpacked here.
-        manifest="$DEVECO_SDK_HOME/default/openharmony/ets/oh-uni-package.json"
-        if [[ ! -f "$manifest" ]]; then
-          manifest="$(find "$DEVECO_SDK_HOME/default/openharmony" -name oh-uni-package.json -print -quit)"
-        fi
-        api_version=''
-        platform_version=''
-        if [[ -n "$manifest" && -f "$manifest" ]]; then
-          api_version="$(jq -r '.apiVersion // empty' "$manifest")"
-          platform_version="$(jq -r '.platformVersion // empty' "$manifest")"
-          if [[ -z "$platform_version" || "$platform_version" == "0.0.0" ]]; then
-            # Older manifests carry only the full component version
-            # (for example 5.0.0.71); the platform release is its leading trio.
-            platform_version="$(jq -r '.version // empty' "$manifest" | cut -d. -f1-3)"
-          fi
-        fi
-        compatible="$platform_version($api_version)"
-        if [[ ! "$api_version" =~ ^[0-9]+$ || ! "$platform_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          compatible="5.0.0(12)"
-          echo "::warning title=SDK metadata unreadable::no usable platformVersion/apiVersion in ${manifest:-the unpacked SDK}; falling back to ${compatible}, the pair the pinned toolchain is tested with"
-        fi
-
-        echo "OHOS_SDK_COMPATIBLE_VERSION=$compatible" >> "$GITHUB_ENV"
-        echo "Detected SDK: platformVersion=${platform_version:-<absent>} apiVersion=${api_version:-<absent>} -> compatibleSdkVersion=$compatible"
+        # The product versions the project builds with are *not* derived from
+        # this metadata or any other file here: hvigor resolves
+        # compatibleSdkVersion against the SDK Manager under
+        # $DEVECO_SDK_HOME, and both sdk-pkg.json and the SDK's own manifests
+        # name the SDK build line rather than a value the manager accepts --
+        # deriving from them produced `26.0.0(26)` and the HAP build died in
+        # 2.9 s with 00303082 ("Unable to find the compatibleSdkVersion ...
+        # in SDK Manager"). ohos/build-profile.json5 carries the pair the
+        # pinned fork template ships (5.0.5(17) / 26.0.0), and
+        # .github/actions/prepare-ohos-build refuses to build if it drifts.
 
         echo '--- toolchain versions ---'
         node --version

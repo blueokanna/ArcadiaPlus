@@ -88,6 +88,65 @@ void main() {
   );
 
   test(
+    'the OHOS toolchain archives are cached once, keyed by their digests',
+    () {
+      final setup = File('.github/actions/setup-ohos/action.yml')
+          .readAsStringSync();
+      final ci = File('.github/workflows/ci.yml').readAsStringSync();
+      final release = File('.github/workflows/release.yml').readAsStringSync();
+
+      // Restore and save live in the composite action both workflows already
+      // call: one implementation, one place to keep honest.
+      final steps =
+          (((loadYaml(setup) as YamlMap)['runs'] as YamlMap)['steps']
+                  as YamlList)
+              .cast<YamlMap>();
+      final uses = steps.map((step) => step['uses']).whereType<String>();
+      expect(uses, contains('actions/cache/restore@v4'));
+      expect(uses, contains('actions/cache/save@v4'));
+
+      // The key is derived from the published digests, so a re-rolled
+      // upstream archive misses the cache instead of being re-downloaded
+      // against a stale entry on every run.
+      expect(setup, contains('expected-clt-sha'));
+      expect(setup, contains(r'ohos-toolchain-archives-${{ runner.os }}'));
+
+      // The entry is saved as soon as the archives verify (a later failure
+      // or cancellation must not lose it), and the runner drops each
+      // archive once it has been unpacked.
+      expect(setup, contains('steps.download.outputs.verified'));
+      expect(setup, contains(r'rm -f "$CLT_ARCHIVE"'));
+      expect(setup, contains(r'rm -f "$SDK_ARCHIVE"'));
+
+      // Neither workflow carries a cache step of its own any more.
+      expect(ci, isNot(contains('ohos-downloads-v1')));
+      expect(release, isNot(contains('ohos-downloads-v1')));
+    },
+  );
+
+  test(
+    'the OHOS product keeps the fork-template SDK pair, never rewritten',
+    () {
+      final profile = File('ohos/build-profile.json5').readAsStringSync();
+      final prepare = File('.github/actions/prepare-ohos-build/action.yml')
+          .readAsStringSync();
+      final setup = File('.github/actions/setup-ohos/action.yml')
+          .readAsStringSync();
+
+      // hvigor resolves compatibleSdkVersion against the SDK Manager and
+      // aborts with 00303082 for anything the provisioned SDK does not
+      // register; this pair is what the pinned fork template ships. The
+      // values are checked in -- deriving them from SDK metadata at build
+      // time produced exactly that failure.
+      expect(profile, contains('"compatibleSdkVersion": "5.0.5(17)"'));
+      expect(profile, contains('"targetSdkVersion": "26.0.0"'));
+      expect(prepare, contains('OHOS SDK pair drifted'));
+      expect(prepare, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
+      expect(setup, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
+    },
+  );
+
+  test(
     'the OHOS hvigorfile keeps the layout the Flutter toolchain detects',
     () {
       final source = File('ohos/hvigorfile.ts').readAsStringSync();

@@ -619,12 +619,8 @@ jobs:
         with:
           toolchain: '1.97.0'
 
-      - name: Restore the HarmonyOS toolchain downloads
-        uses: actions/cache@v4
-        with:
-          path: ${{ runner.temp }}/ohos-downloads
-          key: ohos-downloads-v1-${{ runner.os }}-clt5.1.0.840-sdk50bf4602
-
+      # The action restores and saves the toolchain archives itself, keyed
+      # by their published digests and saved as soon as they verify.
       - name: Set up the HarmonyOS toolchain
         uses: ./.github/actions/setup-ohos
 

@@ -5,8 +5,12 @@
       {
         "name": "default",
         "signingConfig": "default",
+        // The pair the pinned Flutter OHOS fork template is tested with.
+        // hvigor resolves compatibleSdkVersion against the SDK Manager, so
+        // deriving or re-stamping these fails the build (00303082);
+        // .github/actions/prepare-ohos-build refuses drift.
         "compatibleSdkVersion": "5.0.5(17)",
-        "targetSdkVersion": "6.0.0(20)",
+        "targetSdkVersion": "26.0.0",
         "runtimeOS": "HarmonyOS"
       }
     ],

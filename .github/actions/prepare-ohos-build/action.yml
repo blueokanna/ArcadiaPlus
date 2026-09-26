@@ -1,9 +1,10 @@
 name: Prepare the OHOS build
 description: >-
-  Points pub at the host recorded in pubspec.lock, binds the checked-in
-  HarmonyOS build profile to the SDK this job provisioned, widens the pubspec
-  SDK bounds to the Flutter OHOS fork's Dart line, and resolves dependencies.
-  Shared by the CI and release HAP jobs so both build under identical rules.
+  Points pub at the host recorded in pubspec.lock, checks that the checked-in
+  HarmonyOS product versions still carry the SDK pair the pinned fork template
+  is tested with, widens the pubspec SDK bounds to the Flutter OHOS fork's
+  Dart line, and resolves dependencies. Shared by the CI and release HAP jobs
+  so both build under identical rules.
 
 # Why the pubspec bounds are rewritten
 # ------------------------------------
@@ -37,30 +38,27 @@ runs:
           echo "Using the default pub host (pub.dev)"
         fi
 
-    - name: Bind the build to the provisioned SDK and the fork's Dart line
+    - name: Check the product SDK pair and widen the fork's Dart line
       shell: bash
       env:
         FLUTTER_COMMAND: ${{ inputs.flutter-command }}
       run: |
         set -euo pipefail
 
-        if [[ -z "${OHOS_SDK_COMPATIBLE_VERSION:-}" ]]; then
-          echo "::error title=No HarmonyOS SDK provisioned::OHOS_SDK_COMPATIBLE_VERSION is unset; run .github/actions/setup-ohos first"
-          exit 1
-        fi
-
-        # hvigor only compiles against SDK versions installed under
-        # $DEVECO_SDK_HOME, so the product versions are derived from the SDK
-        # that was unpacked rather than trusting the checked-in values — DevEco
-        # locally stamps targetSdkVersion for the SDK it has, and the runner
-        # must not be asked for an API level it did not provision.
-        sed -i -E "s/(\"compatibleSdkVersion\": )\"[^\"]*\"/\1\"${OHOS_SDK_COMPATIBLE_VERSION}\"/" ohos/build-profile.json5
-        sed -i -E "s/(\"targetSdkVersion\": )\"[^\"]*\"/\1\"${OHOS_SDK_COMPATIBLE_VERSION}\"/" ohos/build-profile.json5
-        # hvigor validates these fields as `M.S.F(api)`; a silent no-op sed
-        # would surface only as an opaque hvigor failure, so assert the write.
-        for field in compatibleSdkVersion targetSdkVersion; do
-          if ! grep -q "\"$field\": \"${OHOS_SDK_COMPATIBLE_VERSION}\"" ohos/build-profile.json5; then
-            echo "::error title=SDK binding failed::ohos/build-profile.json5 does not carry \"$field\": \"${OHOS_SDK_COMPATIBLE_VERSION}\" after the rewrite"
+        # hvigor resolves compatibleSdkVersion against the SDK Manager under
+        # $DEVECO_SDK_HOME and aborts with `00303082 Unable to find the
+        # compatibleSdkVersion ... in SDK Manager` for any value the
+        # provisioned SDK does not register -- including values derived from
+        # the SDK's own metadata, which reports the SDK build line rather
+        # than a version the manager resolves. The pair below is what the
+        # pinned fork template (CPF-Flutter/flutter_flutter) ships and its CI
+        # builds with, so it stays checked in and this build refuses to
+        # proceed if it has drifted.
+        for pair in \
+          '"compatibleSdkVersion": "5.0.5(17)"' \
+          '"targetSdkVersion": "26.0.0"'; do
+          if ! grep -qF "$pair" ohos/build-profile.json5; then
+            echo "::error title=OHOS SDK pair drifted::ohos/build-profile.json5 no longer carries $pair -- the pair the pinned Flutter OHOS fork template is tested with; hvigor fails with 00303082 for anything else"
             grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5 || true
             exit 1
           fi

@@ -1,1 +1,65 @@
-{"version":"2.0.0","tasks":[]} 
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "ohos-cache-diag",
+			"type": "shell",
+			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File d:\\RustProject\\TempFiles\\ohos-cache-diag.ps1"
+		},
+		{
+			"label": "ohos-cache-fix-verify",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\ohos-cache-fix-verify.cmd"
+		},
+		{
+			"label": "ci-state-2",
+			"type": "shell",
+			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File d:\\RustProject\\TempFiles\\ci-state-2.ps1"
+		},
+		{
+			"label": "ci-state-3",
+			"type": "shell",
+			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File d:\\RustProject\\TempFiles\\ci-state-3.ps1"
+		},
+		{
+			"label": "hvigor-local-1",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\hvigor-local-1.cmd"
+		},
+		{
+			"label": "ci-probe-2",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\ci-probe-2.cmd"
+		},
+		{
+			"label": "extract-hvigor",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\extract-hvigor.cmd"
+		},
+		{
+			"label": "run3",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\run3.cmd"
+		},
+		{
+			"label": "dl-ohos-ci",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\dl-ohos-ci.cmd"
+		},
+		{
+			"label": "find-migration-link",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\find-migration-link.cmd"
+		},
+		{
+			"label": "sdkpair-verify",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\sdkpair-verify.cmd"
+		},
+		{
+			"label": "verify2",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\verify2.cmd"
+		}
+	]
+}
