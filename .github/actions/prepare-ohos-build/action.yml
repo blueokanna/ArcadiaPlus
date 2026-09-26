@@ -1,8 +1,9 @@
 name: Prepare the OHOS build
 description: >-
   Points pub at the host recorded in pubspec.lock, checks that the checked-in
-  HarmonyOS product versions still carry the SDK pair the pinned fork template
-  is tested with, widens the pubspec SDK bounds to the Flutter OHOS fork's
+  HarmonyOS product versions still match what the pinned fork template ships
+  for the provisioned SDK (an M.S.F(api) compatibleSdkVersion and no
+  targetSdkVersion), widens the pubspec SDK bounds to the Flutter OHOS fork's
   Dart line, and resolves dependencies. Shared by the CI and release HAP jobs
   so both build under identical rules.
 
@@ -38,32 +39,42 @@ runs:
           echo "Using the default pub host (pub.dev)"
         fi
 
-    - name: Check the product SDK pair and widen the fork's Dart line
+    - name: Check the product SDK versions and widen the fork's Dart line
       shell: bash
       env:
         FLUTTER_COMMAND: ${{ inputs.flutter-command }}
       run: |
         set -euo pipefail
 
-        # hvigor resolves compatibleSdkVersion against the SDK Manager under
-        # $DEVECO_SDK_HOME and aborts with `00303082 Unable to find the
-        # compatibleSdkVersion ... in SDK Manager` for any value the
-        # provisioned SDK does not register -- including values derived from
-        # the SDK's own metadata, which reports the SDK build line rather
-        # than a version the manager resolves. The pair below is what the
-        # pinned fork template (CPF-Flutter/flutter_flutter) ships and its CI
-        # builds with, so it stays checked in and this build refuses to
-        # proceed if it has drifted.
-        for pair in \
-          '"compatibleSdkVersion": "5.0.5(17)"' \
-          '"targetSdkVersion": "26.0.0"'; do
-          if ! grep -qF "$pair" ohos/build-profile.json5; then
-            echo "::error title=OHOS SDK pair drifted::ohos/build-profile.json5 no longer carries $pair -- the pair the pinned Flutter OHOS fork template is tested with; hvigor fails with 00303082 for anything else"
-            grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5 || true
-            exit 1
-          fi
-        done
-        grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5
+        # hvigor validates the product versions before the first build task,
+        # and two aborts bracket the only accepted shape:
+        # - the SDK Manager under $DEVECO_SDK_HOME resolves
+        #   compatibleSdkVersion, so a value the provisioned SDK does not
+        #   register dies with `00303082 Unable to find the
+        #   compatibleSdkVersion ... in SDK Manager` -- values derived from
+        #   the SDK's component manifests name the OHOS build line
+        #   (`26.0.0`, apiVersion 26), which is not what the manager resolves;
+        # - in HarmonyOS mode hvigor 5.18 accepts only the `M.S.F(api)`
+        #   spelling for compile/compatible/target SDK versions, so a bare
+        #   `M.S.F` dies with `00306042 Specification Limit Violation` in
+        #   ~1.4 s -- the `26.0.0` a previous revision pinned here failed
+        #   CI exactly that way.
+        # The profile therefore carries exactly what the pinned fork template
+        # (CPF-Flutter/flutter_flutter) ships for the SDK this workflow
+        # provisions -- `"compatibleSdkVersion": "5.1.0(18)"` and no
+        # targetSdkVersion at all -- and this build refuses to proceed if
+        # either fact has drifted.
+        if ! grep -qF '"compatibleSdkVersion": "5.1.0(18)"' ohos/build-profile.json5; then
+          echo "::error title=OHOS compatibleSdkVersion drifted::ohos/build-profile.json5 no longer carries \"compatibleSdkVersion\": \"5.1.0(18)\" -- the value the pinned Flutter OHOS fork template ships for the SDK this workflow provisions; hvigor fails with 00303082 or 00306042 for the alternatives"
+          grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5 || true
+          exit 1
+        fi
+        if grep -qF '"targetSdkVersion"' ohos/build-profile.json5; then
+          echo "::error title=OHOS targetSdkVersion reappeared::ohos/build-profile.json5 sets targetSdkVersion again -- the pinned fork template omits it, and in HarmonyOS mode hvigor 5.18 only accepts the M.S.F(api) spelling here (a bare M.S.F dies with 00306042)"
+          grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5 || true
+          exit 1
+        fi
+        grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5 || true
 
         # A freshly checked out Flutter OHOS fork bootstraps on its first run:
         # it builds flutter_tools and downloads the Dart SDK, and that progress

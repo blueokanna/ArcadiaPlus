@@ -125,7 +125,7 @@ void main() {
   );
 
   test(
-    'the OHOS product keeps the fork-template SDK pair, never rewritten',
+    'the OHOS product keeps the fork-template SDK versions, never rewritten',
     () {
       final profile = File('ohos/build-profile.json5').readAsStringSync();
       final prepare = File('.github/actions/prepare-ohos-build/action.yml')
@@ -133,14 +133,17 @@ void main() {
       final setup = File('.github/actions/setup-ohos/action.yml')
           .readAsStringSync();
 
-      // hvigor resolves compatibleSdkVersion against the SDK Manager and
-      // aborts with 00303082 for anything the provisioned SDK does not
-      // register; this pair is what the pinned fork template ships. The
-      // values are checked in -- deriving them from SDK metadata at build
-      // time produced exactly that failure.
-      expect(profile, contains('"compatibleSdkVersion": "5.0.5(17)"'));
-      expect(profile, contains('"targetSdkVersion": "26.0.0"'));
-      expect(prepare, contains('OHOS SDK pair drifted'));
+      // hvigor validates the product versions before the build starts:
+      // anything the provisioned SDK cannot resolve aborts with 00303082,
+      // and in HarmonyOS mode the bare `M.S.F` a revision here once pinned
+      // as targetSdkVersion aborts with 00306042. The profile therefore
+      // carries exactly what the pinned fork template ships -- an
+      // `M.S.F(api)` compatibleSdkVersion and no targetSdkVersion -- and
+      // the values stay checked in rather than derived at build time.
+      expect(profile, contains('"compatibleSdkVersion": "5.1.0(18)"'));
+      expect(profile, isNot(contains('"targetSdkVersion"')));
+      expect(prepare, contains('OHOS compatibleSdkVersion drifted'));
+      expect(prepare, contains('OHOS targetSdkVersion reappeared'));
       expect(prepare, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
       expect(setup, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
     },

@@ -53,7 +53,7 @@ ohos/
 
 ### 0. 前置
 
-- DevEco Studio 5.0.5+（或与 CI 相同的 command-line-tools），HarmonyOS SDK API 17+；
+- DevEco Studio 5.0.5+（或与 CI 相同的 command-line-tools），HarmonyOS SDK API 18+；
 - 可构建 HAP 的 Flutter 只有 CPF-Flutter 维护的 `flutter_flutter` 分支
   （上游 Flutter 没有 ohos 工具链）：`flutter build hap` 必须由该 SDK 执行，
   版本见 `.github/actions/checkout-flutter-ohos/action.yml` 的 `version` 默认值；
@@ -172,7 +172,7 @@ HarmonyOS NEXT 真机。
 |--------|------|
 | `.github/actions/setup-ohos` | 下载/校验 command-line-tools 与 OpenHarmony SDK（SHA-256 双重校验），解包成 DevEco 布局，导出 `DEVECO_SDK_HOME` / `OHOS_NDK` |
 | `.github/actions/checkout-flutter-ohos` | 检出固定 tag 的 `flutter_flutter`（唯一能执行 `flutter build hap` 的 SDK） |
-| `.github/actions/prepare-ohos-build` | 防漂移校验 `compatibleSdkVersion`/`targetSdkVersion` 保持 fork 模板已验证的值对（`5.0.5(17)` / `26.0.0`）、放宽 pubspec 约束到 fork 的 Dart 线、`flutter pub get` |
+| `.github/actions/prepare-ohos-build` | 防漂移校验 `compatibleSdkVersion` 保持 fork 模板为 CI SDK 提供的值（`5.1.0(18)`，且不设 `targetSdkVersion`；漂移会让 hvigor 以 00303082/00306042 提前失败）、放宽 pubspec 约束到 fork 的 Dart 线、`flutter pub get` |
 
 随后依次是 `ohos/scripts/build-rust-ohos.sh` 与 `flutter build hap --release [--no-codesign]`，
 收尾用 `unzip -l` 断言 HAP 内确实含有

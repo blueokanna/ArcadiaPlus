@@ -271,13 +271,16 @@ runs:
         # The product versions the project builds with are *not* derived from
         # this metadata or any other file here: hvigor resolves
         # compatibleSdkVersion against the SDK Manager under
-        # $DEVECO_SDK_HOME, and both sdk-pkg.json and the SDK's own manifests
-        # name the SDK build line rather than a value the manager accepts --
-        # deriving from them produced `26.0.0(26)` and the HAP build died in
-        # 2.9 s with 00303082 ("Unable to find the compatibleSdkVersion ...
-        # in SDK Manager"). ohos/build-profile.json5 carries the pair the
-        # pinned fork template ships (5.0.5(17) / 26.0.0), and
-        # .github/actions/prepare-ohos-build refuses to build if it drifts.
+        # $DEVECO_SDK_HOME, and both sdk-pkg.json and the SDK's own component
+        # manifests name the SDK build line rather than a value the manager
+        # accepts -- deriving from them produced `26.0.0(26)` and the HAP
+        # build died in 2.9 s with 00303082 ("Unable to find the
+        # compatibleSdkVersion ... in SDK Manager"). ohos/build-profile.json5
+        # carries the `M.S.F(api)` compatibleSdkVersion the pinned fork
+        # template ships for this SDK (5.1.0(18)) and no targetSdkVersion --
+        # hvigor 5.18 rejects the bare `M.S.F` spelling in HarmonyOS mode
+        # with 00306042 -- and .github/actions/prepare-ohos-build refuses to
+        # build if either fact drifts.
 
         echo '--- toolchain versions ---'
         node --version
