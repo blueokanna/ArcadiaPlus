@@ -1,4 +1,11 @@
-import { FlutterPlugin, MethodChannel, MethodCall, MethodResult } from '@ohos/flutter_ohos';
+import {
+  FlutterPlugin,
+  FlutterPluginBinding,
+  MethodCall,
+  MethodCallHandler,
+  MethodChannel,
+  MethodResult,
+} from '@ohos/flutter_ohos';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { commonEventManager } from '@kit.BasicServicesKit';
@@ -27,6 +34,21 @@ interface StartOptions {
   logPath?: string;
 }
 
+interface VpnCommandResult {
+  success: boolean;
+  error?: string;
+}
+
+interface DeviceInfoPayload {
+  brand: string;
+  manufacturer: string;
+  model: string;
+  device: string;
+  display: string;
+  osFullName: string;
+  sdkApiVersion: string;
+}
+
 /**
  * Bridges the `com.arcadiaplus/ohos_proxy` channel to the HarmonyOS VPN stack.
  *
@@ -36,7 +58,7 @@ interface StartOptions {
  * extension actually said. The tunnel, the engine and the packet path all
  * live in the extension process — see `ArcadiaPlusVpnAbility`.
  */
-export class ArcadiaPlusPlugin implements FlutterPlugin {
+export class ArcadiaPlusPlugin implements FlutterPlugin, MethodCallHandler {
   private channel: MethodChannel | null = null;
   private subscriber: commonEventManager.CommonEventSubscriber | null = null;
   private running = false;
@@ -45,20 +67,23 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
   private startTimer = -1;
   private stopTimer = -1;
 
-  onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding): void {
-    this.channel = new MethodChannel(binding.getBinaryMessenger(), 'com.arcadiaplus/ohos_proxy');
+  getUniqueClassName(): string {
+    return 'ArcadiaPlusPlugin';
+  }
 
-    this.channel.setMethodCallHandler({
-      onMethodCall: (call: MethodCall, result: MethodResult) => {
-        this.handleMethodCall(call, result);
-      },
-    });
+  onMethodCall(call: MethodCall, result: MethodResult): void {
+    this.handleMethodCall(call, result);
+  }
+
+  onAttachedToEngine(binding: FlutterPluginBinding): void {
+    this.channel = new MethodChannel(binding.getBinaryMessenger(), 'com.arcadiaplus/ohos_proxy');
+    this.channel.setMethodCallHandler(this);
 
     this.subscribeStatus();
     hilog.info(DOMAIN, TAG, 'ArcadiaPlus plugin attached to engine');
   }
 
-  onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding): void {
+  onDetachedFromEngine(binding: FlutterPluginBinding): void {
     this.channel?.setMethodCallHandler(null);
     this.channel = null;
     if (this.subscriber !== null) {
@@ -94,25 +119,28 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
 
   private startVpn(call: MethodCall, result: MethodResult): void {
     if (this.running) {
-      result.success({ success: true } as Record<string, Object>);
+      const outcome: VpnCommandResult = { success: true };
+      result.success(outcome);
       return;
     }
 
     if (this.pendingStart !== null) {
-      result.success({
+      const outcome: VpnCommandResult = {
         success: false,
         error: 'a VPN start is already in flight',
-      } as Record<string, Object>);
+      };
+      result.success(outcome);
       return;
     }
 
     const arguments_ = call.arguments as Record<string, Object> | undefined;
     const configPath = arguments_?.configPath?.toString() ?? '';
     if (configPath.length === 0) {
-      result.success({
+      const outcome: VpnCommandResult = {
         success: false,
         error: 'no engine config path was provided to the VPN start request',
-      } as Record<string, Object>);
+      };
+      result.success(outcome);
       return;
     }
 
@@ -130,7 +158,8 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
     }
 
     this.pendingStart = (success: boolean, error: string) => {
-      result.success({ success: success, error: error } as Record<string, Object>);
+      const outcome: VpnCommandResult = { success: success, error: error };
+      result.success(outcome);
     };
 
     const want: Want = {
@@ -160,20 +189,23 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
 
   private stopVpn(result: MethodResult): void {
     if (!this.running) {
-      result.success({ success: true } as Record<string, Object>);
+      const outcome: VpnCommandResult = { success: true };
+      result.success(outcome);
       return;
     }
 
     if (this.pendingStop !== null) {
-      result.success({
+      const outcome: VpnCommandResult = {
         success: false,
         error: 'a VPN stop is already in flight',
-      } as Record<string, Object>);
+      };
+      result.success(outcome);
       return;
     }
 
     this.pendingStop = (success: boolean, error: string) => {
-      result.success({ success: success, error: error } as Record<string, Object>);
+      const outcome: VpnCommandResult = { success: success, error: error };
+      result.success(outcome);
     };
 
     const want: Want = {
@@ -220,7 +252,11 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
           return;
         }
         this.subscriber = subscriber;
-        subscriber.on(STATUS_EVENT, (data: commonEventManager.CommonEventData) => {
+        commonEventManager.subscribe(subscriber, (subscribeError, data) => {
+          if (subscribeError) {
+            hilog.error(DOMAIN, TAG, 'status subscription failed: %{public}s', JSON.stringify(subscribeError));
+            return;
+          }
           const parameters = data.parameters as Record<string, Object> | undefined;
           const state = parameters?.state?.toString() ?? '';
           const detail = parameters?.error?.toString() ?? '';
@@ -266,7 +302,7 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
 
   private getDeviceInfo(result: MethodResult): void {
     try {
-      const info: Record<string, string> = {
+      const info: DeviceInfoPayload = {
         brand: deviceInfo.brand,
         manufacturer: deviceInfo.manufacture,
         model: deviceInfo.productModel,

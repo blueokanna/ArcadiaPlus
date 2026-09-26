@@ -5,5 +5,7 @@
   "main": "",
   "author": "blueokanna",
   "license": "PolyForm-Perimeter-1.0.1",
-  "dependencies": {}
+  "dependencies": {
+    "libarcadia_core.so": "file:./src/main/cpp/types/libarcadia_core"
+  }
 }

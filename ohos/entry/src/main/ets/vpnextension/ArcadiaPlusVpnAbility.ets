@@ -19,6 +19,12 @@ const TUN_V6_ADDRESS = 'fd7a:115c:a1e0:1::1';
 const TUN_V6_PREFIX = 64;
 const TUN_V6_DNS = 'fd7a:115c:a1e0:1::2';
 
+/** `protectProcessNet` exists only past the pinned API level; the probe keeps
+ * this compiling against both. */
+interface ProtectProcessNetHost {
+  protectProcessNet?: () => Promise<void>;
+}
+
 /**
  * The VPN data path for HarmonyOS.
  *
@@ -86,9 +92,9 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
 
     let processProtected = false;
     try {
-      const dynamic = connection as ESObject;
-      if (typeof dynamic.protectProcessNet === 'function') {
-        await dynamic.protectProcessNet();
+      const host = connection as ProtectProcessNetHost;
+      if (typeof host.protectProcessNet === 'function') {
+        await host.protectProcessNet();
         processProtected = true;
         hilog.info(DOMAIN, TAG, 'protectProcessNet applied');
       }
@@ -125,10 +131,7 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
             address: { address: '0.0.0.0', family: 1 },
             prefixLength: 0,
           },
-          gateway: {
-            address: { address: TUN_ADDRESS, family: 1 },
-            prefixLength: TUN_PREFIX,
-          },
+          gateway: { address: TUN_ADDRESS, family: 1 },
           hasGateway: false,
           isDefaultRoute: true,
         },
@@ -138,10 +141,7 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
             address: { address: '::', family: 2 },
             prefixLength: 0,
           },
-          gateway: {
-            address: { address: TUN_V6_ADDRESS, family: 2 },
-            prefixLength: TUN_V6_PREFIX,
-          },
+          gateway: { address: TUN_V6_ADDRESS, family: 2 },
           hasGateway: false,
           isDefaultRoute: true,
         },
@@ -179,7 +179,11 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
           return;
         }
         this.subscriber = subscriber;
-        subscriber.on(COMMAND_EVENT, (data: commonEventManager.CommonEventData) => {
+        commonEventManager.subscribe(subscriber, (subscribeError, data) => {
+          if (subscribeError) {
+            hilog.error(DOMAIN, TAG, 'command subscription failed: %{public}s', JSON.stringify(subscribeError));
+            return;
+          }
           const parameters = data.parameters as Record<string, Object> | undefined;
           const command = parameters?.command?.toString() ?? '';
           if (command === 'set-mode' && this.running) {

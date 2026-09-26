@@ -167,4 +167,63 @@ void main() {
       expect(source, contains('flutterHvigorPlugin'));
     },
   );
+
+  test('the OHOS bridge compiles its native entry points', () {
+    final lib = File('rust/src/lib.rs').readAsStringSync();
+    final ffi = File('rust/src/ohos_ffi.rs').readAsStringSync();
+    final sh = File('ohos/scripts/build-rust-ohos.sh').readAsStringSync();
+    final ps = File('ohos/scripts/build-rust-ohos.ps1').readAsStringSync();
+
+    // The OHOS target is `target_os = "linux"` with `target_env = "ohos"`;
+    // a module lib.rs never declares exports nothing, and the CMake link
+    // of libarcadia_core.so dies on undefined arcadia_ohos_* symbols.
+    expect(lib, contains('mod ohos_ffi'));
+    expect(lib, contains('target_env = "ohos"'));
+    for (final symbol in [
+      'arcadia_ohos_start',
+      'arcadia_ohos_stop',
+      'arcadia_ohos_set_proxy_mode',
+      'arcadia_ohos_set_protect_callback',
+    ]) {
+      expect(ffi, contains('fn $symbol('));
+      // Both build scripts assert the symbol in the built static library.
+      expect(sh, contains(symbol));
+      expect(ps, contains(symbol));
+    }
+  });
+
+  test('the OHOS ArkTS surface keeps the toolchain contracts', () {
+    final entryPkg = File('ohos/entry/oh-package.json5').readAsStringSync();
+    final vpn = File(
+      'ohos/entry/src/main/ets/vpnextension/ArcadiaPlusVpnAbility.ets',
+    ).readAsStringSync();
+    final plugin = File('ohos/entry/src/main/ets/plugins/ArcadiaPlusPlugin.ets')
+        .readAsStringSync();
+
+    // `import arcadiaCore from 'libarcadia_core.so'` resolves its types
+    // through this dependency; without it the module is `any` and
+    // CompileArkTS fails on `arkts-no-any-unknown`.
+    expect(entryPkg, contains('libarcadia_core.so'));
+    expect(entryPkg, contains('src/main/cpp/types/libarcadia_core'));
+
+    // `CommonEventSubscriber` has no `on` member; subscribers are wired
+    // through `commonEventManager.subscribe`.
+    expect(vpn, contains('commonEventManager.subscribe('));
+    expect(plugin, contains('commonEventManager.subscribe('));
+    expect(vpn, isNot(contains('subscriber.on(')));
+    expect(plugin, isNot(contains('subscriber.on(')));
+
+    // `RouteInfo.gateway` is a `NetAddress` (`address` is the string),
+    // not a `LinkAddress`, and `ESObject` trips `arkts-no-any-unknown`.
+    expect(vpn, contains('gateway: { address: TUN_ADDRESS, family: 1 }'));
+    expect(vpn, contains('gateway: { address: TUN_V6_ADDRESS, family: 2 }'));
+    expect(vpn, isNot(contains('as ESObject')));
+
+    // The plugin follows the fork's own plugin template, and no result
+    // object is a `Record`-cast literal.
+    expect(plugin, contains('FlutterPluginBinding'));
+    expect(plugin, contains('MethodCallHandler'));
+    expect(plugin, contains('getUniqueClassName'));
+    expect(plugin, isNot(contains('result.success({')));
+  });
 }

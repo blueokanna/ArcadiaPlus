@@ -102,6 +102,23 @@ try {
     if (-not (Test-Path $static)) { throw "$static was not produced" }
     if (-not (Test-Path $shared)) { throw "$shared was not produced" }
 
+    # The extension's NAPI wrapper links these out of the static library; a
+    # module the crate never declares still builds "successfully" without them
+    # (arcadia_ohos_* went absent exactly that way), so assert them here. This
+    # is a marker search, not a symbol-table read: the NDK's llvm-nm predates
+    # the LLVM rustc emits and refuses those object files.
+    foreach ($symbol in @(
+            'arcadia_ohos_start',
+            'arcadia_ohos_stop',
+            'arcadia_ohos_set_proxy_mode',
+            'arcadia_ohos_set_protect_callback'
+        )) {
+        & findstr /m "/c:$symbol" $static | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "$symbol is missing from $static; rust\src\lib.rs must declare the ohos_ffi module"
+        }
+    }
+
     $staticDest = Join-Path $root "ohos\entry\src\main\cpp\thirdparty\$abi"
     $sharedDest = Join-Path $root "ohos\entry\libs\$abi"
     New-Item -ItemType Directory -Force $staticDest, $sharedDest | Out-Null

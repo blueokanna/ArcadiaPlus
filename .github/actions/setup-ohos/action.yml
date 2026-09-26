@@ -4,33 +4,6 @@ description: >-
   complete HarmonyOS 5.1.0 SDK the archive bundles), then exports
   DEVECO_SDK_HOME, TOOL_HOME and OHOS_NDK.
 
-# Layout and sources
-# ------------------
-# The command-line tools archive is self-contained: it brings hvigor + ohpm +
-# node plus the full SDK under `sdk/default/` -- `openharmony` (toolchains,
-# native, ets, previewer) and `hms` (the HarmonyOS-only toolchains restool
-# loads its image transcoder from), both built as HarmonyOS 5.1.0 / API 18
-# and therefore made for each other. That self-consistency is the point: a
-# previous revision of this action unpacked an OpenHarmony test build over
-# `sdk/default/openharmony` (a 26.0.0 line), and the HAP build died in
-# `CompileResource` with `11201001 Dependency Error` because the 5.1.0-era
-# `hms/toolchains/lib/libimage_transcoder_shared.so` imports Skia symbols
-# the 26.0.0-era `restool` does not provide. The archive is used exactly as
-# unpacked -- one layout hvigor and flutter_tools' HmosSdk detection already
-# understand (`sdk/default/sdk-pkg.json` included).
-#
-# Caching
-# -------
-# The archive (~2.2 GB) is cached under a key derived from its published
-# SHA-256 digest, and the entry is saved the moment the digest verifies --
-# not at the end of the job, where a failure or a cancellation loses it.
-# Fallback keys cover older entries of the previous generation (which also
-# carried the retired OpenHarmony SDK payload) and the `ohos-downloads-v1`
-# key the workflows used before the cache moved in here, so a version bump
-# or an eviction only re-downloads what actually changed. The archive is
-# deleted from the runner as soon as it has been unpacked: the cache is the
-# durable copy.
-
 inputs:
   commandline-tools-url:
     description: URL of the HarmonyOS command-line tools archive for linux-x64.

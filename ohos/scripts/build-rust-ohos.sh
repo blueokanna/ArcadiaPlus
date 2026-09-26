@@ -93,6 +93,20 @@ if [[ ! -f "$SHARED" ]]; then
   exit 1
 fi
 
+# The extension's NAPI wrapper links these out of the static library. A module
+# the crate never declares still produces a "successful" build -- with the
+# symbols missing (exactly how arcadia_ohos_* went absent once), so assert
+# them here instead of at the ninja link that consumes the library. The check
+# is a marker search, not a symbol-table read: the NDK's llvm-nm predates the
+# LLVM rustc emits and refuses those object files.
+for symbol in arcadia_ohos_start arcadia_ohos_stop \
+              arcadia_ohos_set_proxy_mode arcadia_ohos_set_protect_callback; do
+  if ! grep -aq -- "$symbol" "$STATIC"; then
+    echo "error: $symbol is missing from $STATIC; rust/src/lib.rs must declare the ohos_ffi module" >&2
+    exit 1
+  fi
+done
+
 mkdir -p "$ROOT/ohos/entry/src/main/cpp/thirdparty/$ABI"
 cp "$STATIC" "$ROOT/ohos/entry/src/main/cpp/thirdparty/$ABI/"
 
