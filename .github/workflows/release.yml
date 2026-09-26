@@ -72,9 +72,14 @@ jobs:
             exit 1
           fi
 
-          awk -v version="$version" '
+          # The pubspec carries a Flutter build suffix (`1.0.5+2`): match the
+          # changelog section with or without it, so a `## 1.0.5+2` heading can
+          # hold the notes for tag v1.0.5. The dots are bracketed so they match
+          # literally instead of as "any character".
+          ver_esc="${version//./[.]}"
+          awk -v version="$ver_esc" '
             { sub(/\r$/, "") }
-            $0 == "## " version { found=1; next }
+            found == 0 && $0 ~ ("^## " version "([+][0-9]+)?$") { found=1; next }
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md > changelog-section.md
@@ -108,11 +113,6 @@ jobs:
 
       - name: Check out the proxy engine the bridge points at
         uses: ./.github/actions/checkout-engine
-
-      # Keep this in step with `pubspec.lock` and `environment.flutter`: the
-      # Flutter SDK ships its own copies of `test_api`, `matcher`,
-      # `vector_math`, `meta`, `intl`, so the lockfile describes exactly one SDK
-      # line. See .github/workflows/ci.yml.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -585,9 +585,207 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
+  ohos:
+    name: HarmonyOS release HAP
+    needs: [validate, quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v5
+
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
+
+      - name: Reclaim disk space this build does not need
+        run: |
+          set -euo pipefail
+          echo "free before: $(df -h / | awk 'NR==2 {print $4}')"
+          # See ci.yml: the HarmonyOS toolchain adds ~6 GB on top of the runner
+          # image, and the preinstalled NDK releases are dead weight.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL \
+                      /usr/local/lib/android/sdk/ndk
+          echo "free after:  $(df -h / | awk 'NR==2 {print $4}')"
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.97.0'
+
+      - name: Restore the HarmonyOS toolchain downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ohos-downloads
+          key: ohos-downloads-v1-${{ runner.os }}-clt5.1.0.840-sdk50bf4602
+
+      - name: Set up the HarmonyOS toolchain
+        uses: ./.github/actions/setup-ohos
+
+      - name: Check out the Flutter OHOS SDK
+        uses: ./.github/actions/checkout-flutter-ohos
+
+      - name: Prepare the OHOS build
+        uses: ./.github/actions/prepare-ohos-build
+
+      - name: Decode the HarmonyOS signing material
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ARCADIAPLUS_OHOS_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ARCADIAPLUS_OHOS_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ARCADIAPLUS_OHOS_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ARCADIAPLUS_OHOS_KEY_PASSWORD }}
+          CERT_BASE64: ${{ secrets.ARCADIAPLUS_OHOS_CERT_BASE64 }}
+          PROFILE_BASE64: ${{ secrets.ARCADIAPLUS_OHOS_PROFILE_BASE64 }}
+          SIGN_ALG: ${{ secrets.ARCADIAPLUS_OHOS_SIGN_ALG }}
+        run: |
+          set -euo pipefail
+
+          required=(KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD CERT_BASE64 PROFILE_BASE64)
+          missing=()
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              missing+=("$name")
+            fi
+          done
+          if (( ${#missing[@]} > 0 )); then
+            echo "::warning title=Unsigned release HAP::the ARCADIAPLUS_OHOS_* secrets are not all configured (missing: ${missing[*]}), so this HAP is unsigned and must be signed before a device accepts it."
+            echo "HAP_NAME_SUFFIX=unsigned" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          sign_alg="${SIGN_ALG:-SHA256withECDSA}"
+          case "$sign_alg" in
+            SHA256withECDSA|SHA256withRSA) ;;
+            *)
+              echo "::error title=Unsupported signAlg::ARCADIAPLUS_OHOS_SIGN_ALG must be SHA256withECDSA (default) or SHA256withRSA, not '$sign_alg'"
+              exit 1
+              ;;
+          esac
+
+          if [[ "$KEYSTORE_PASSWORD$KEY_PASSWORD$KEY_ALIAS" == *\\* ]]; then
+            echo "::error title=Unsupported secret::the HarmonyOS passwords and alias must not contain backslashes"
+            exit 1
+          fi
+          if [[ "$KEYSTORE_PASSWORD$KEY_PASSWORD$KEY_ALIAS" == *'"'* ]]; then
+            echo "::error title=Unsupported secret::the HarmonyOS passwords and alias must not contain double quotes"
+            exit 1
+          fi
+
+          # DevEco expects the three material files next to the project; they
+          # are written per run from secrets and never committed.
+          mkdir -p ohos/signing
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > ohos/signing/app.p12
+          printf '%s' "$CERT_BASE64" | base64 --decode > ohos/signing/app.cer
+          printf '%s' "$PROFILE_BASE64" | base64 --decode > ohos/signing/app.p7b
+
+          python3 - "$KEYSTORE_PASSWORD" "$KEY_PASSWORD" "$KEY_ALIAS" "$sign_alg" <<'PY'
+          import re
+          import sys
+
+          store_password, key_password, key_alias, sign_alg = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+          path = "ohos/build-profile.json5"
+          text = open(path, encoding="utf-8").read()
+          material = (
+              "[\n"
+              "      {\n"
+              '        "name": "default",\n'
+              '        "type": "HarmonyOS",\n'
+              '        "material": {\n'
+              '          "certpath": "./signing/app.cer",\n'
+              f'          "storePassword": "{store_password}",\n'
+              f'          "keyAlias": "{key_alias}",\n'
+              f'          "keyPassword": "{key_password}",\n'
+              '          "profile": "./signing/app.p7b",\n'
+              f'          "signAlg": "{sign_alg}",\n'
+              '          "storeFile": "./signing/app.p12"\n'
+              "        }\n"
+              "      }\n"
+              "    ]"
+          )
+          updated, hits = re.subn(
+              r'"signingConfigs"\s*:\s*\[\s*\]',
+              '"signingConfigs": ' + material,
+              text,
+              count=1,
+          )
+          if hits != 1:
+              raise SystemExit(
+                  "ohos/build-profile.json5 no longer holds an empty signingConfigs "
+                  "list -- DevEco Studio writes absolute paths and plain-text passwords "
+                  "into it when signing is configured. Run "
+                  "'git restore ohos/build-profile.json5' and commit the empty list "
+                  "before tagging."
+              )
+          open(path, "w", encoding="utf-8").write(updated)
+          PY
+          grep -n 'signingConfigs' ohos/build-profile.json5
+
+          echo "HAP_NAME_SUFFIX=signed" >> "$GITHUB_ENV"
+
+      - name: Build the Rust engine for HarmonyOS arm64
+        run: bash ohos/scripts/build-rust-ohos.sh
+
+      - name: Build the release HAP
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${HAP_NAME_SUFFIX:-unsigned}" == "signed" ]]; then
+            flutter build hap --release
+          else
+            flutter build hap --release --no-codesign
+          fi
+
+      - name: Verify and stage the HAP
+        shell: bash
+        env:
+          TAG: ${{ needs.validate.outputs.tag }}
+        run: |
+          set -euo pipefail
+          hap="$(find ohos/entry/build -name '*.hap' -print -quit)"
+          if [[ -z "$hap" ]]; then
+            echo "::error title=No HAP produced::flutter build hap left no HAP behind"
+            find ohos/entry/build -name '*.hap' -print
+            exit 1
+          fi
+          echo "HAP: $hap ($(du -h "$hap" | cut -f1))"
+
+          # The HAP is only useful if it actually carries the Flutter runtime and
+          # the Rust engine; an empty shell would otherwise sail through the
+          # upload unnoticed.
+          listing="$(unzip -l "$hap")"
+          for required in \
+            libs/arm64-v8a/libapp.so \
+            libs/arm64-v8a/librust_lib_arcadiaplus.so \
+            libs/arm64-v8a/libarcadia_core.so; do
+            if ! grep -qF "$required" <<< "$listing"; then
+              echo "::error title=Incomplete HAP::$required is not packaged in $hap"
+              printf '%s\n' "$listing" | head -n 60
+              exit 1
+            fi
+            echo "packaged: $required"
+          done
+
+          mkdir -p dist
+          cp "$hap" "dist/ArcadiaPlus-${TAG}-ohos-arm64-${HAP_NAME_SUFFIX:-unsigned}.hap"
+          ls -lh dist
+
+      - name: Upload the HarmonyOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohos
+          path: dist/*
+          if-no-files-found: error
+
   publish:
     name: Publish the stable release
-    needs: [validate, android, windows, macos, linux]
+    needs: [validate, android, windows, macos, linux, ohos]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -626,6 +824,13 @@ jobs:
               exit 1
             fi
           done
+          # The HAP is signed or unsigned depending on whether the signing
+          # secrets are configured, so it is verified by pattern rather than by
+          # exact name.
+          if [[ -z "$(find dist -maxdepth 1 -name "ArcadiaPlus-${TAG}-ohos-arm64-*.hap" -print -quit)" ]]; then
+            echo "Missing release asset: ArcadiaPlus-${TAG}-ohos-arm64-{signed,unsigned}.hap" >&2
+            exit 1
+          fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 

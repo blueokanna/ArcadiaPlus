@@ -7,25 +7,14 @@ import arcadiaCore from 'libarcadia_core.so';
 const TAG = 'ArcadiaPlusVpnAbility';
 const DOMAIN = 0x0000;
 
-/** Status events the UI process subscribes to. */
 const STATUS_EVENT = 'com.arcadiaplus.VPN_STATUS';
-/** Commands the UI process sends to the running extension. */
 const COMMAND_EVENT = 'com.arcadiaplus.VPN_COMMAND';
 
-/** Tunnel addresses. The engine answers DNS on `.2` inside the same /16. */
 const TUN_ADDRESS = '198.18.0.1';
 const TUN_PREFIX = 16;
 const TUN_DNS = '198.18.0.2';
 const TUN_MTU = 1500;
-/**
- * IPv6 side of the same tunnel, in unique-local space.
- *
- * Both stacks are captured: `isIPv6Accepted: false` used to leave v6 traffic
- * outside the tunnel, which on a v6-first carrier means apps reach the
- * network unproxied (and by a route the rules can never see). The engine
- * handles v6 packets natively — TCP and UDP alike — so the v6 default route
- * belongs to the tunnel just like the v4 one.
- */
+
 const TUN_V6_ADDRESS = 'fd7a:115c:a1e0:1::1';
 const TUN_V6_PREFIX = 64;
 const TUN_V6_DNS = 'fd7a:115c:a1e0:1::2';
@@ -65,6 +54,7 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
     hilog.info(DOMAIN, TAG, 'VPN extension destroyed');
     try {
       arcadiaCore.stopVpn();
+      arcadiaCore.setProtectCallback();
     } catch (error) {
       hilog.error(DOMAIN, TAG, 'Engine stop failed: %{public}s', JSON.stringify(error));
     }
@@ -94,10 +84,6 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
     const connection = vpnExtension.createVpnConnection(this.context);
     this.vpnConnection = connection;
 
-    // The process-wide exemption covers every socket the engine will ever
-    // open, including ones created before the first callback could land.
-    // API 22+ only; older devices fall back to the per-fd protect callback
-    // registered below, which is asynchronous by construction.
     let processProtected = false;
     try {
       const dynamic = connection as ESObject;
@@ -131,9 +117,7 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
           prefixLength: TUN_V6_PREFIX,
         },
       ],
-      // One default route per family captures everything; loopback never
-      // traverses the tun, so the engine's own inbound stays on the loopback
-      // route.
+
       routes: [
         {
           interface: 'vpn-tun',
@@ -163,8 +147,6 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
         },
       ],
       mtu: TUN_MTU,
-      // Both families are resolved through the tunnel: the v4 address keeps
-      // the A path, the v6 one covers stacks that only speak v6 DNS.
       dnsAddresses: [TUN_DNS, TUN_V6_DNS],
       isIPv4Accepted: true,
       isIPv6Accepted: true,

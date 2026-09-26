@@ -30,8 +30,12 @@
 ```
 ohos/
 ├── entry/
+│   ├── build-profile.json5                             # externalNativeOptions → CMake 链接引擎静态库
+│   ├── libs/arm64-v8a/                                 # build-rust-ohos.sh 落位的 UI 进程 .so（不提交）
 │   └── src/main/
 │       ├── ets/
+│       │   ├── entryability/EntryAbility.ets           # FlutterAbility 子类：创建引擎并注册插件
+│       │   ├── pages/Index.ets                         # FlutterPage 宿主页
 │       │   ├── plugins/ArcadiaPlusPlugin.ets           # UI 进程：通道 + 状态镜像
 │       │   └── vpnextension/ArcadiaPlusVpnAbility.ets  # 扩展进程：隧道 + 引擎宿主
 │       ├── cpp/
@@ -39,17 +43,22 @@ ohos/
 │       │   ├── CMakeLists.txt
 │       │   └── types/libarcadia_core/                  # ArkTS 侧类型声明
 │       └── module.json5                                # extensionAbilities(type: vpn) + 权限
+├── hvigor/hvigor-config.json5                          # hvigor 模型版本（5.1.0）
+├── hvigorfile.ts                                       # flutter-hvigor-plugin：接管 Flutter 产物注入
 ├── scripts/build-rust-ohos.sh                          # Rust 引擎交叉编译与产物落位
-└── har/                                                # flutter build har 产物 + UI 进程用的 .so
+└── har/                                                # flutter build hap 产出的 HAR（不提交）
 ```
 
 ## 构建步骤
 
 ### 0. 前置
 
-- DevEco Studio 5.0+，HarmonyOS SDK API 12+；
+- DevEco Studio 5.0.5+（或与 CI 相同的 command-line-tools），HarmonyOS SDK API 17+；
+- 可构建 HAP 的 Flutter 只有 CPF-Flutter 维护的 `flutter_flutter` 分支
+  （上游 Flutter 没有 ohos 工具链）：`flutter build hap` 必须由该 SDK 执行，
+  版本见 `.github/actions/checkout-flutter-ohos/action.yml` 的 `version` 默认值；
 - Rust 1.97（rustup，仓库 `rust-toolchain.toml` 已固定）：
-  `rustup target add aarch64-unknown-linux-ohos`
+  `rustup target add aarch64-unknown-linux-ohos`（脚本也会自行确保）；
 - 设置 `OHOS_NDK` 指向 SDK 的 `native` 目录（如 `…/sdk/default/openharmony/native`），
   或让脚本自行探测常见安装路径。
 
@@ -59,23 +68,38 @@ ohos/
 bash ohos/scripts/build-rust-ohos.sh
 ```
 
+Windows（无 bash 环境）用产物路径完全一致的 PowerShell 版；DevEco Studio 的 NDK
+会被自动探测（也可 `-Ndk <…\sdk\default\openharmony\native>` 或设 `OHOS_NDK`），
+路径含空格时会自动用目录联接（junction，`%LOCALAPPDATA%\ohos-ndk-native`）
+映射出无空格路径再喂给 clang/cc：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File ohos/scripts/build-rust-ohos.ps1
+```
+
 - `ohos/entry/src/main/cpp/thirdparty/arm64-v8a/librust_lib_arcadiaplus.a`
   —— 静态链接进 `libarcadia_core.so`（扩展进程的引擎）。
-- `ohos/har/arm64-v8a/librust_lib_arcadiaplus.so`
-  —— UI 进程的 Flutter 插件库（FRB）。
+- `ohos/entry/libs/arm64-v8a/librust_lib_arcadiaplus.so`
+  —— UI 进程的 Flutter 插件库（FRB）。`entry/libs` 是模块的本地库目录，
+  hvigor 会把其中的所有 `.so` 与 `libapp.so` 一起打进 HAP；
+  flutter_rust_bridge 在 `Platform.operatingSystem == 'ohos'` 时按
+  `lib$stem.so` 裸名加载，不需要额外配置路径。
 
 脚本在编译前会删除旧产物并以 cargo 退出码判定成败，避免「文件存在即成功」的假绿；
 同时给 `dart-sys` 这类带 C shim 的依赖导出 NDK 的 CC/AR/CFLAGS 交叉编译环境。
 
-### 2. 构建 Flutter HAR 与 HAP
+### 2. 构建 HAP
 
 ```bash
-flutter build har --release        # 生成 ohos/har/flutter*.har
+flutter build hap --release --no-codesign   # 未签名（CI 默认，产物 entry-default-unsigned.hap）
+flutter build hap --release                 # 已配置 signingConfigs 时输出签名 HAP
 ```
 
-随后用 DevEco Studio 打开 `ohos/` 目录构建 HAP。`ohos/entry/build-profile.json5`
-已配置 `externalNativeOptions`，CMake 会把 `napi_init.cpp` 与上述 `.a` 链接为
-`libarcadia_core.so`。
+工程采用 **flutter-hvigor-plugin 模式**：根 `hvigorfile.ts` 注册
+`flutterHvigorPlugin`，由它在 hvigor 构建阶段注入 `flutter.har`、`libapp.so`、
+`flutter_assets` 与模块依赖，不再需要手工 `flutter build har` 或维护
+`overrides`/`flutter_module` 模块。调试与真机安装依旧可以用 DevEco Studio 打开
+`ohos/` 目录完成。
 
 ### 3. 签名与安装
 
@@ -129,11 +153,108 @@ HarmonyOS NEXT 真机。
   隧道，而不是泄漏到隧道之外。
 - **分应用代理未暴露**：`trustedApplications / blockedApplications` 能力系统侧具备，
   但尚未在 UI 上提供入口，配置序列不做无据声明。
-- **插件注册**：`ArcadiaPlusPlugin` 采用标准 `FlutterPlugin` 生命周期实现。
-  使用 `flutter build har` 生成的注册器时走常规 GeneratedPluginRegistrant 路径；
-  手工嵌入 Flutter 引擎时，需要在引擎创建处调用其 `onAttachedToEngine`
-  （binding 提供 `getBinaryMessenger()`），否则 Dart 侧会收到
-  `MissingPluginException` —— 这是唯一尚未由本仓库代码闭环的对接点。
+- **插件注册**：`ArcadiaPlusPlugin` 采用标准 `FlutterPlugin` 生命周期实现，
+  由 `EntryAbility.configureFlutterEngine` 在引擎创建后注册
+  （`flutterEngine.getPlugins()?.add(...)`）。UI 进程侧不存在需要手工接线的
+  对接点；若后续引入带 ohos 平台的 pub 插件，生成器会走常规
+  GeneratedPluginRegistrant 路径。
+- **CI 上的 Dart 版本差**：`flutter_flutter` 落后上游（3.41.9），其 Dart 早于
+  `pubspec.yaml` 里 3.47.x 线的约束。CI 在作业内把 `environment.sdk/flutter`
+  放宽到检出 SDK 实际报告的版本，改动只存在于 runner 工作区并打印 `git diff`，
+  不提交；`pubspec.lock` 同理不参与 OHOS 作业的 `--enforce-lockfile`。
+
+## CI（GitHub Actions）
+
+`.github/workflows/ci.yml` 的 `ohos` 作业与 `release.yml` 的 `ohos` 作业共用三个
+复合 action：
+
+| action | 职责 |
+|--------|------|
+| `.github/actions/setup-ohos` | 下载/校验 command-line-tools 与 OpenHarmony SDK（SHA-256 双重校验），解包成 DevEco 布局，导出 `DEVECO_SDK_HOME` / `OHOS_NDK` / `OHOS_SDK_COMPATIBLE_VERSION` |
+| `.github/actions/checkout-flutter-ohos` | 检出固定 tag 的 `flutter_flutter`（唯一能执行 `flutter build hap` 的 SDK） |
+| `.github/actions/prepare-ohos-build` | 把 `compatibleSdkVersion` 绑定到实际供应的 SDK、放宽 pubspec 约束到 fork 的 Dart 线、`flutter pub get` |
+
+随后依次是 `ohos/scripts/build-rust-ohos.sh` 与 `flutter build hap --release [--no-codesign]`，
+收尾用 `unzip -l` 断言 HAP 内确实含有
+`libs/arm64-v8a/{libapp.so,librust_lib_arcadiaplus.so,libarcadia_core.so}`，
+避免出现「构建绿但包是空壳」。发布作业在配置了 `ARCADIAPLUS_OHOS_*` secrets 时输出**签名** HAP
+（`app.p12` / `app.cer` / `app.p7b` + 口令），未配置时输出 `-unsigned.hap` 并给出告警：
+未签名 HAP 无法安装到真机，这是可预期的中间态。
+
+两个作业都把两个下载缓存到 `$RUNNER_TEMP/ohos-downloads`；缓存键包含版本与 SDK
+校验和，命中即免下载（命中后仍会再次校验 SHA-256）。
+
+### 签名材料（`ARCADIAPLUS_OHOS_*` secrets）
+
+发布作业需要三件套与三枚凭据，全部来自 DevEco 的签名配置，以 base64 形式存进仓库 Secrets：
+
+| Secret | 内容 |
+|--------|------|
+| `ARCADIAPLUS_OHOS_KEYSTORE_BASE64` | `.p12` 密钥库 |
+| `ARCADIAPLUS_OHOS_KEYSTORE_PASSWORD` / `ARCADIAPLUS_OHOS_KEY_ALIAS` / `ARCADIAPLUS_OHOS_KEY_PASSWORD` | 密钥库口令 / 别名 / 密钥口令 |
+| `ARCADIAPLUS_OHOS_CERT_BASE64` / `ARCADIAPLUS_OHOS_PROFILE_BASE64` | `.cer` 证书 / `.p7b` Profile |
+| `ARCADIAPLUS_OHOS_SIGN_ALG`（可选） | 仅手动创建的 RSA 密钥需要，填 `SHA256withRSA`；缺省按 `SHA256withECDSA` 处理 |
+
+生成一次即可（自动签名链；不需要本地能构建 HAP）：
+
+1. DevEco Studio（与本仓库 CI 同代，5.1.x）登录**已实名认证**的华为开发者账号，打开本仓库的 `ohos/` 目录；
+2. `File → Project Structure → Signing Configs` 勾选自动生成签名并等待完成——它会在 AGC 侧为
+   `com.blueokanna.arcadiaplus` 登记调试证书与 Profile，并把 `material` 写进工程的
+   `build-profile.json5`：`storeFile`/`certpath`/`profile` 三个路径与
+   `storePassword`/`keyAlias`/`keyPassword` 三个凭据（材料文件位于 `%USERPROFILE%\.ohos\config\`）；
+3. 一键导出——脚本读取 `build-profile.json5` 中 DevEco 写入的三个路径与三枚凭据，把
+   `.p12`/`.cer`/`.p7b` 转成 `%TEMP%\ohos-signing-secrets\<Secret 名>.txt`
+   （ASCII、无 BOM、无换行），并用 DevEco 自带 keytool 验证密钥库可打开、配置的别名
+   存在，同时给出 `signAlg`（即 `ARCADIAPLUS_OHOS_SIGN_ALG` 应填的值）：
+
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File ohos/scripts/export-signing-secrets.ps1
+   ```
+
+4. 打开 GitHub 仓库 → **Settings → Secrets and variables → Actions → New repository
+   secret**，逐个新增：三个 `.txt` 的全文（文件名去掉 `.txt` 即 Secret 名，见上表）、
+   脚本打印的三枚明文凭据、以及按需的 `SIGN_ALG`（缺省 `SHA256withECDSA`，只有
+   手动创建的 RSA 密钥才需要填）；
+5. `git restore ohos/build-profile.json5` **还原**该文件——它此刻含明文口令与本机绝对路径，
+   绝不能提交；CI 也依赖其中 `"signingConfigs": []` 作为注入占位。
+
+自动签名产出的是**调试**证书与 Profile：可侧载装机，不能上架 AppGallery。上架需要在 AGC
+申请发布证书与发布 Profile（同一 bundle name），用 DevEco「生成密钥与 CSR」换取 `.cer`
+并下载配对的 `.p7b`，然后换成发布三件套与口令即可——工作流只负责把材料注入签名配置，
+不区分签名类型；密钥算法不是 ECDSA 时用 `ARCADIAPLUS_OHOS_SIGN_ALG` 声明。
+
+调试 Profile 是一份**设备白名单**：清单内的设备都能安装（设备可以多选，上限以「设备管理」
+页面显示的额度为准），清单外的装不了。要把 CI 产物装到更多设备：把设备 UDID 注册进
+「设备管理」→ 编辑该 Profile 勾上新设备 → 重新下载 `.p7b` → 更新 GitHub 的
+`ARCADIAPLUS_OHOS_PROFILE_BASE64`（代码与工作流不用动）。要让**不限设备的任何人**安装，
+唯一官方途径是**应用市场分发**——HarmonyOS 从系统层面关闭了任意侧载（设备只信任华为
+签发、经市场或白名单授权的安装；把 HAP 文件直接发给别人会被系统拦截），这不是本工程的
+构建或签名方式能改变的；调试白名单是唯一"侧载"形态，但只覆盖登记过的设备。上架流程：
+在 AGC 用同一 bundle name 创建应用，申请**发布证书 + 发布 Profile**
+（发布 Profile 没有设备列表），把三个 `*_BASE64` secrets 换成发布三件套（工作流不用改，
+它只负责注入材料、不区分证书类型），上架物料是 App Pack（DevEco `Build → Build App(s)`
+产出），通过审核后用户即可在应用市场安装；还没有准备好公开上架时，可以先走 AGC 内测/
+邀请测试渠道（测试用户同样经应用市场安装）。网络代理类应用的上架审核通常更严格，能否
+过审以华为审核结果为准。
+
+未签名 HAP 有两个现成来源（不必在本地准备 Flutter-OHOS 工具链）：**CI**——每次 push 后，
+Actions 的 `ohos` 作业会把 `ArcadiaPlus-ci-ohos-arm64-unsigned.hap` 作为产物上传；
+**Release**——未配置 `ARCADIAPLUS_OHOS_*` secrets 时，发布会直接附带
+`ArcadiaPlus-<tag>-ohos-arm64-unsigned.hap`。未签名的 HAP 任何设备都装不了，先用签名材料
+（DevEco **自动签名**即可产出，见上文）和 SDK 的 `hap-sign-tool.jar` 在本地签一次：
+
+```powershell
+java -jar "<DevEco SDK>\default\openharmony\toolchains\lib\hap-sign-tool.jar" sign-app `
+  -mode localSign -signAlg SHA256withECDSA `
+  -keystoreFile app.p12 -keystorePwd <storePassword> -keyAlias <keyAlias> -keyPwd <keyPassword> `
+  -appCertFile app.cer -profileFile app.p7b `
+  -inFile ArcadiaPlus-ci-ohos-arm64-unsigned.hap -outFile ArcadiaPlus-signed.hap
+```
+
+`hap-sign-tool.jar` 在 DevEco SDK 的 `toolchains/lib` 下（找不到时就在 toolchains 目录里
+搜这个文件名）；`java` 用 DevEco 自带的 JBR（`<DevEco 安装目录>\jbr\bin\java.exe`）。
+试签通过说明材料与口令自洽，随后 `hdc install ArcadiaPlus-signed.hap` 即可装机
+（调试 Profile 只接受其登记过的设备——自动签名时连接设备即自动登记）。
 
 ## 常见问题
 
@@ -147,3 +268,18 @@ A：引擎出站 socket 未获豁免。检查日志中是否出现 `protectProce
 
 **Q：想看扩展进程的引擎日志？**
 A：`<沙箱>/engine/engine.log`（应用的 `files` 目录下，`hdc file recv` 可取）。
+
+**Q：DevEco 打开工程报 `Cannot find module 'flutter-hvigor-plugin'`？**
+A：该 npm 包由 Flutter-OHOS 工具链准备（`flutter build hap` 会先写
+`ohos/package.json` 再 `npm install`，把 fork SDK 里的
+`packages/flutter_tools/hvigor` 装进 `node_modules/`）。没跑过工具链的检出里
+没有它，`hvigorfile.ts` 因此改成「插件在则加载、不在则跳过」：CI 构建时插件必然
+就位，本机 DevEco 不开工具链也能正常 sync（做签名配置、浏览代码）。若要在本机
+跑完整 HAP 构建，先按「构建步骤」备好 fork SDK 并执行一次 `flutter build hap`，
+插件才会就位。
+
+**Q：DevEco 报 `The Rust engine for arm64-v8a has not been built`？**
+A：这是 `CMakeLists.txt` 的守卫，不是环境问题：先运行
+`powershell -ExecutionPolicy Bypass -File ohos/scripts/build-rust-ohos.ps1`
+（Windows）或 bash 版脚本把两份产物就位，再回 DevEco 构建。系统 PATH 里的
+clang（LLVM/Swift）与本工程无关——DevEco 的 CMake 一直用 SDK 自带的 clang。

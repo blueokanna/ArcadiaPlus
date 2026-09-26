@@ -3,6 +3,10 @@
 /oh_modules/
 /.preview/
 
+# Native build cache (CMake/NDK) written by DevEco
+/.cxx/
+/entry/.cxx/
+
 # Local configuration
 local.properties
 
@@ -10,12 +14,24 @@ local.properties
 /.idea/
 *.iml
 
-# Hvigor
+# Hvigor caches (hvigor/hvigor-config.json5 itself is tracked)
 /.hvigor/
-/hvigor/
+/hvigor/.hvigor/
 
 # HAR outputs
 /har/*.har
+
+# Signing material (decoded from secrets during a release build)
+/signing/
+
+# Native libraries staged by ohos/scripts/build-rust-ohos.sh
+/entry/libs/
+
+# hvigor plugin install (the Flutter toolchain writes package.json and runs
+# npm install here during `flutter build hap`)
+/node_modules/
+/package.json
+/package-lock.json
 
 # Temporary files
 *.log

@@ -14,4 +14,4 @@ export const startVpn: (
 ) => number;
 export const stopVpn: () => number;
 export const setProxyMode: (mode: string) => number;
-export const setProtectCallback: (callback: (fd: number) => void) => number;
+export const setProtectCallback: (callback?: (fd: number) => void) => number;

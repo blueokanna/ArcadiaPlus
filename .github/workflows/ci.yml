@@ -48,12 +48,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # The Flutter SDK ships its own copies of `test_api`, `matcher`,
-      # `vector_math`, `meta`, `intl` and their exact versions move with the
-      # SDK line, so `pubspec.lock` only ever describes one SDK line. This value
-      # must match both the lockfile and `environment.flutter` in pubspec.yaml;
-      # a mismatch makes `--enforce-lockfile` report those pinned packages as
-      # changes.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -184,3 +178,98 @@ jobs:
 
       - name: Test Rust workspace
         run: cargo test --workspace --all-targets --all-features --locked
+
+  ohos:
+    name: HarmonyOS release HAP (unsigned)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v5
+
+      - name: Check out the proxy engine the bridge points at
+        uses: ./.github/actions/checkout-engine
+
+      - name: Reclaim disk space this build does not need
+        run: |
+          set -euo pipefail
+          echo "free before: $(df -h / | awk 'NR==2 {print $4}')"
+          # See the flutter job: the pinned NDK is installed explicitly, so the
+          # preinstalled releases are dead weight on a build that fills the disk.
+          # The HarmonyOS toolchain itself adds ~6 GB on top.
+          sudo rm -rf /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL \
+                      /usr/local/lib/android/sdk/ndk
+          echo "free after:  $(df -h / | awk 'NR==2 {print $4}')"
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.97.0'
+
+      - name: Restore the HarmonyOS toolchain downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/ohos-downloads
+          key: ohos-downloads-v1-${{ runner.os }}-clt5.1.0.840-sdk50bf4602
+
+      - name: Set up the HarmonyOS toolchain
+        uses: ./.github/actions/setup-ohos
+
+      - name: Check out the Flutter OHOS SDK
+        uses: ./.github/actions/checkout-flutter-ohos
+
+      - name: Prepare the OHOS build
+        uses: ./.github/actions/prepare-ohos-build
+
+      - name: Build the Rust engine for HarmonyOS arm64
+        run: bash ohos/scripts/build-rust-ohos.sh
+
+      - name: Build the release HAP
+        run: flutter build hap --release --no-codesign
+
+      - name: Verify the HAP carries the Flutter runtime and the bridge
+        shell: bash
+        run: |
+          set -euo pipefail
+          hap="$(find ohos/entry/build -name 'entry-default-unsigned.hap' -print -quit)"
+          if [[ -z "$hap" ]]; then
+            echo "::error title=No HAP produced::flutter build hap left no entry-default-unsigned.hap behind"
+            find ohos/entry/build -name '*.hap' -print
+            exit 1
+          fi
+          echo "HAP: $hap ($(du -h "$hap" | cut -f1))"
+          listing="$(unzip -l "$hap")"
+          for required in \
+            libs/arm64-v8a/libapp.so \
+            libs/arm64-v8a/librust_lib_arcadiaplus.so \
+            libs/arm64-v8a/libarcadia_core.so; do
+            if ! grep -qF "$required" <<< "$listing"; then
+              echo "::error title=Incomplete HAP::$required is not packaged in $hap"
+              printf '%s\n' "$listing" | head -n 60
+              exit 1
+            fi
+            echo "packaged: $required"
+          done
+
+      - name: Stage the HAP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp "$(find ohos/entry/build -name 'entry-default-unsigned.hap' -print -quit)" \
+             dist/ArcadiaPlus-ci-ohos-arm64-unsigned.hap
+          ls -lh dist
+
+      - name: Upload the HAP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ohos
+          path: dist/*
+          if-no-files-found: error

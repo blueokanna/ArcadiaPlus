@@ -1,0 +1,262 @@
+name: Set up the HarmonyOS toolchain
+description: >-
+  Provisions the HarmonyOS command-line tools (hvigor, ohpm, node) and the
+  OpenHarmony SDK that `flutter build hap` and the DevEco build need, then
+  exports DEVECO_SDK_HOME, TOOL_HOME, OHOS_NDK and OHOS_SDK_COMPATIBLE_VERSION.
+
+# Layout and sources
+# ------------------
+# This mirrors the tool layout Huawei's own flutter_flutter CI provisions in
+# .ci_ohos.yaml: the command-line tools bring hvigor + ohpm + node and a
+# `sdk/default/sdk-pkg.json`, and the SDK payload is the tarball the same CI
+# verifies against a published SHA-256 (which is pinned here as well). The
+# SDK tarball lands in `$DEVECO_SDK_HOME/default/openharmony`, the single
+# layout both hvigor and flutter_tools' HmosSdk detection understand.
+
+inputs:
+  commandline-tools-url:
+    description: URL of the HarmonyOS command-line tools archive for linux-x64.
+    required: false
+    default: https://repo.huaweicloud.com/harmonyos/ohpm/5.1.0/commandline-tools-linux-x64-5.1.0.840.zip
+  openharmony-sdk-url:
+    description: URL of the OpenHarmony SDK payload (the archive Huawei's flutter CI uses).
+    required: false
+    default: https://flutter-ohos-test.obs.cn-south-1.myhuaweicloud.com/tools/sdk_openharmony.tar.gz
+  openharmony-sdk-sha256:
+    description: >-
+      SHA-256 of the OpenHarmony SDK archive. The default is the checksum
+      Huawei's flutter_flutter CI pins in .ci_ohos.yaml; updating the SDK means
+      updating this value in the same commit.
+    required: false
+    default: 50bf46025db540a55bd6189164967446d1a76c3b4a9aaaf788915268959f1a16
+
+runs:
+  using: composite
+  steps:
+    - name: Download the HarmonyOS command-line tools and SDK
+      shell: bash
+      env:
+        CLT_URL: ${{ inputs.commandline-tools-url }}
+        SDK_URL: ${{ inputs.openharmony-sdk-url }}
+        SDK_SHA256: ${{ inputs.openharmony-sdk-sha256 }}
+      run: |
+        set -euo pipefail
+
+        downloads="$RUNNER_TEMP/ohos-downloads"
+        mkdir -p "$downloads"
+        clt_archive="$downloads/$(basename "$CLT_URL")"
+        sdk_archive="$downloads/$(basename "$SDK_URL")"
+
+        # `--retry-all-errors` also covers the connection resets that a 2 GiB
+        # cross-border download from a shared runner does hit; `--continue-at -`
+        # resumes an interrupted transfer instead of restarting it.
+        fetch() {
+          local url="$1" destination="$2"
+          curl --fail --location --silent --show-error \
+               --retry 5 --retry-delay 5 --retry-all-errors \
+               --continue-at - --output "$destination" "$url"
+        }
+
+        if ! fetch "$CLT_URL.sha256" "$downloads/clt.zip.sha256"; then
+          echo "::error title=Checksum unavailable::could not download $CLT_URL.sha256"
+          exit 1
+        fi
+        expected_clt_sha="$(tr -d '[:space:]' < "$downloads/clt.zip.sha256")"
+        if [[ ! "$expected_clt_sha" =~ ^[0-9a-f]{64}$ ]]; then
+          echo "::error title=Checksum unreadable::the published .sha256 file does not contain a SHA-256 digest"
+          cat "$downloads/clt.zip.sha256"
+          exit 1
+        fi
+
+        clt_sha="$(sha256sum "$clt_archive" 2>/dev/null | cut -d' ' -f1 || true)"
+        if [[ "$clt_sha" != "$expected_clt_sha" ]]; then
+          echo "Command-line tools archive missing or stale; downloading $CLT_URL"
+          rm -f "$clt_archive"
+          fetch "$CLT_URL" "$clt_archive"
+          clt_sha="$(sha256sum "$clt_archive" | cut -d' ' -f1)"
+        fi
+        if [[ "$clt_sha" != "$expected_clt_sha" ]]; then
+          echo "::error title=Corrupt command-line tools::sha256 mismatch: expected $expected_clt_sha, got $clt_sha"
+          exit 1
+        fi
+        echo "command-line tools verified: $clt_sha"
+
+        sdk_sha="$(sha256sum "$sdk_archive" 2>/dev/null | cut -d' ' -f1 || true)"
+        if [[ "$sdk_sha" != "$SDK_SHA256" ]]; then
+          echo "OpenHarmony SDK archive missing or stale; downloading $SDK_URL"
+          rm -f "$sdk_archive"
+          fetch "$SDK_URL" "$sdk_archive"
+          sdk_sha="$(sha256sum "$sdk_archive" | cut -d' ' -f1)"
+        fi
+        if [[ "$sdk_sha" != "$SDK_SHA256" ]]; then
+          echo "::error title=Corrupt OpenHarmony SDK::sha256 mismatch: expected $SDK_SHA256, got $sdk_sha"
+          exit 1
+        fi
+        echo "OpenHarmony SDK verified: $sdk_sha"
+
+        echo "CLT_ARCHIVE=$clt_archive" >> "$GITHUB_ENV"
+        echo "SDK_ARCHIVE=$sdk_archive" >> "$GITHUB_ENV"
+
+    - name: Unpack the command-line tools
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        tools_root="$RUNNER_TEMP/ohos-clt"
+        rm -rf "$tools_root"
+        mkdir -p "$tools_root"
+        unzip -q "$CLT_ARCHIVE" -d "$tools_root"
+
+        # The archive unpacks into a single top-level directory; the layout is
+        # `command-line-tools/{bin,hvigor,ohpm,sdk,tool}`.
+        tool_home="$(find "$tools_root" -maxdepth 1 -mindepth 1 -type d -name 'command-line-tools' -print -quit)"
+        if [[ -z "$tool_home" ]]; then
+          echo "::error title=Unexpected command-line tools layout::no command-line-tools directory in the archive"
+          find "$tools_root" -maxdepth 2 | head -n 40
+          exit 1
+        fi
+
+        for required in hvigor/bin/hvigorw ohpm/bin/ohpm tool/node/bin/node; do
+          if [[ ! -e "$tool_home/$required" ]]; then
+            echo "::error title=Unexpected command-line tools layout::$required is missing from the archive"
+            exit 1
+          fi
+        done
+
+        chmod -R u+rwX "$tool_home"
+        # The zips are built on Linux and normally carry their modes, but a
+        # silently dropped executable bit would only surface as a confusing
+        # "permission denied" much later, so restore it explicitly.
+        find "$tool_home" -type f \
+          \( -path '*/bin/*' -o -path '*/tool/node/bin/*' \) -exec chmod +x {} \;
+
+        echo "TOOL_HOME=$tool_home" >> "$GITHUB_ENV"
+        echo "TOOL_HOME=$tool_home"
+
+    - name: Unpack the OpenHarmony SDK into the DevEco layout
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        sdk_dir="$TOOL_HOME/sdk/default"
+        mkdir -p "$sdk_dir"
+        rm -rf "$sdk_dir/openharmony" "$sdk_dir/download"
+        mkdir -p "$sdk_dir/download"
+
+        tar -xzf "$SDK_ARCHIVE" -C "$sdk_dir/download"
+
+        if [[ ! -d "$sdk_dir/download/linux" ]]; then
+          echo "::error title=Unexpected SDK payload::the archive has no linux/ directory"
+          find "$sdk_dir/download" -maxdepth 2 | head -n 40
+          exit 1
+        fi
+
+        # The payload is a directory of nested zips (ets, js, native,
+        # previewer, toolchains); unpacking them in place and renaming `linux`
+        # to `openharmony` produces the layout hvigor and flutter_tools expect.
+        cd "$sdk_dir/download/linux"
+        shopt -s nullglob
+        zips=( *.zip )
+        if (( ${#zips[@]} == 0 )); then
+          echo "::error title=Unexpected SDK payload::linux/ contains no zips"
+          exit 1
+        fi
+        for zip in "${zips[@]}"; do
+          unzip -qo "$zip"
+          rm -f "$zip"
+        done
+        shopt -u nullglob
+
+        cd "$sdk_dir"
+        mv download/linux openharmony
+        rm -rf download
+
+        chmod -R u+rwX openharmony
+        find openharmony -type f \
+          \( -path '*/toolchains/*' -o -path '*/native/llvm/bin/*' -o -path '*/native/build-tools/*' \) \
+          -exec chmod +x {} \;
+
+        echo "DEVECO_SDK_HOME=$TOOL_HOME/sdk" >> "$GITHUB_ENV"
+        echo "OHOS_NDK=$TOOL_HOME/sdk/default/openharmony/native" >> "$GITHUB_ENV"
+
+    - name: Describe the installed SDK
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        sdk_pkg="$TOOL_HOME/sdk/default/sdk-pkg.json"
+        if [[ ! -f "$sdk_pkg" ]]; then
+          echo "::error title=Missing SDK metadata::$sdk_pkg does not exist; flutter_tools discovers the HarmonyOS SDK through it"
+          find "${DEVECO_SDK_HOME:-$TOOL_HOME/sdk}" -maxdepth 3 | head -n 60 || true
+          exit 1
+        fi
+        echo '--- sdk-pkg.json ---'
+        cat "$sdk_pkg"
+        echo
+
+        # flutter_tools discovers the SDK through this file and reads
+        # `data.apiVersion` from it; `data.version` names the HarmonyOS release
+        # the SDK belongs to. Both feed the build-profile version the workflow
+        # writes, because hvigor refuses to compile against an SDK it cannot
+        # find in $DEVECO_SDK_HOME.
+        api_version="$(jq -r '.data.apiVersion // empty' "$sdk_pkg")"
+        if [[ -z "$api_version" ]]; then
+          echo "::error title=Unreadable SDK::sdk-pkg.json contains no data.apiVersion"
+          exit 1
+        fi
+        sdk_version="$(jq -r '.data.version // empty' "$sdk_pkg")"
+        if [[ -n "$sdk_version" ]]; then
+          compatible="$sdk_version($api_version)"
+        else
+          compatible="$api_version"
+        fi
+
+        echo "OHOS_SDK_COMPATIBLE_VERSION=$compatible" >> "$GITHUB_ENV"
+        echo "Detected SDK: apiVersion=$api_version version=${sdk_version:-<absent>} -> compatibleSdkVersion=$compatible"
+
+        echo '--- toolchain versions ---'
+        node --version
+        java -version
+        "$TOOL_HOME/ohpm/bin/ohpm" --version || true
+        hvigorw --version --no-daemon || true
+
+        echo '--- PATH additions ---'
+        for entry in \
+          "$TOOL_HOME/sdk/default/openharmony/toolchains" \
+          "$TOOL_HOME/ohpm/bin" \
+          "$TOOL_HOME/hvigor/bin" \
+          "$TOOL_HOME/tool/node/bin" \
+          "$TOOL_HOME/sdk/default/openharmony/native/llvm/bin"; do
+          echo "  $entry"
+        done
+
+    - name: Expose the toolchain on PATH
+      shell: bash
+      run: |
+        set -euo pipefail
+        # Same ordering as Huawei's .ci_ohos.yaml: the SDK's own toolchains
+        # first, then ohpm, hvigor and the bundled node.
+        {
+          echo "$TOOL_HOME/sdk/default/openharmony/toolchains"
+          echo "$TOOL_HOME/ohpm/bin"
+          echo "$TOOL_HOME/hvigor/bin"
+          echo "$TOOL_HOME/tool/node/bin"
+          echo "$TOOL_HOME/sdk/default/openharmony/native/llvm/bin"
+        } >> "$GITHUB_PATH"
+
+    - name: Point npm at registries the hvigor plugin tree is published to
+      shell: bash
+      run: |
+        set -euo pipefail
+        # `flutter build hap` installs the flutter-hvigor-plugin and its
+        # @ohos/* hvigor dependencies with npm; the @ohos scope only exists on
+        # Huawei's registry.
+        {
+          printf '%s\n' \
+            'registry=https://repo.huaweicloud.com/repository/npm/' \
+            '@ohos:registry=https://repo.harmonyos.com/npm/' \
+            'fetch-retries=5' \
+            'fetch-retry-mintimeout=20000' \
+            'fetch-retry-maxtimeout=120000'
+        } >> "$HOME/.npmrc"
+        cat "$HOME/.npmrc"

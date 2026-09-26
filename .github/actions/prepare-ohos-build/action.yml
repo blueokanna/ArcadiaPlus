@@ -1,0 +1,110 @@
+name: Prepare the OHOS build
+description: >-
+  Points pub at the host recorded in pubspec.lock, binds the checked-in
+  HarmonyOS build profile to the SDK this job provisioned, widens the pubspec
+  SDK bounds to the Flutter OHOS fork's Dart line, and resolves dependencies.
+  Shared by the CI and release HAP jobs so both build under identical rules.
+
+# Why the pubspec bounds are rewritten
+# ------------------------------------
+# `environment.sdk`/`environment.flutter` describe the stable Flutter line this
+# repository develops against (3.47.x). The only toolchain that can build a HAP
+# is the Flutter OHOS fork, whose releases trail upstream, so its Dart SDK is
+# older than what those bounds allow. The rewrite happens in the runner's
+# working tree, is printed with `git diff`, and is never committed.
+
+inputs:
+  flutter-command:
+    description: Flutter entry point to inspect (allows an absolute path in tests).
+    required: false
+    default: flutter
+
+runs:
+  using: composite
+  steps:
+    - name: Use the pub host recorded in pubspec.lock
+      shell: bash
+      run: |
+        set -euo pipefail
+        # `pubspec.lock` records the host that produced it; resolving against a
+        # different host makes `--enforce-lockfile` report every package as
+        # changed. Follow the lockfile instead of hard-coding a mirror.
+        host="$(sed -nE 's|^ *url: *"(https?://[^"]+)"$|\1|p' pubspec.lock | head -n1)"
+        if [[ -n "$host" ]]; then
+          echo "PUB_HOSTED_URL=$host" >> "$GITHUB_ENV"
+          echo "Using the pub host from pubspec.lock: $host"
+        else
+          echo "Using the default pub host (pub.dev)"
+        fi
+
+    - name: Bind the build to the provisioned SDK and the fork's Dart line
+      shell: bash
+      env:
+        FLUTTER_COMMAND: ${{ inputs.flutter-command }}
+      run: |
+        set -euo pipefail
+
+        if [[ -z "${OHOS_SDK_COMPATIBLE_VERSION:-}" ]]; then
+          echo "::error title=No HarmonyOS SDK provisioned::OHOS_SDK_COMPATIBLE_VERSION is unset; run .github/actions/setup-ohos first"
+          exit 1
+        fi
+
+        # hvigor only compiles against SDK versions installed under
+        # $DEVECO_SDK_HOME, so the product versions are derived from the SDK
+        # that was unpacked rather than trusting the checked-in values — DevEco
+        # locally stamps targetSdkVersion for the SDK it has, and the runner
+        # must not be asked for an API level it did not provision.
+        sed -i -E "s/(\"compatibleSdkVersion\": )\"[^\"]*\"/\1\"${OHOS_SDK_COMPATIBLE_VERSION}\"/" ohos/build-profile.json5
+        sed -i -E "s/(\"targetSdkVersion\": )\"[^\"]*\"/\1\"${OHOS_SDK_COMPATIBLE_VERSION}\"/" ohos/build-profile.json5
+        grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5
+
+        info="$("$FLUTTER_COMMAND" --version --machine)"
+        dart="$(jq -r '.dartSdkVersion' <<< "$info")"
+        framework="$(jq -r '.frameworkVersion' <<< "$info")"
+        if [[ -z "$dart" || -z "$framework" ]]; then
+          echo "::error title=Unreadable Flutter version::flutter --version --machine did not report dartSdkVersion/frameworkVersion"
+          printf '%s\n' "$info"
+          exit 1
+        fi
+        echo "Flutter OHOS fork reports Flutter $framework / Dart $dart"
+
+        python3 - "$dart" "$framework" <<'PY'
+        import re
+        import sys
+
+        dart, framework = sys.argv[1], sys.argv[2]
+        path = "pubspec.yaml"
+        text = open(path, encoding="utf-8").read()
+        text, sdk_hits = re.subn(
+            r"^  sdk:.*$",
+            f"  sdk: '>={dart} <4.0.0'",
+            text,
+            count=1,
+            flags=re.M,
+        )
+        text, flutter_hits = re.subn(
+            r"^  flutter: '[^']*'.*$",
+            f"  flutter: '>={framework}'",
+            text,
+            count=1,
+            flags=re.M,
+        )
+        if sdk_hits != 1 or flutter_hits != 1:
+            raise SystemExit(
+                f"pubspec.yaml did not look as expected (sdk={sdk_hits}, flutter={flutter_hits})"
+            )
+        open(path, "w", encoding="utf-8").write(text)
+        PY
+        git --no-pager diff -- pubspec.yaml
+
+    - name: Resolve dependencies for the OHOS SDK line
+      shell: bash
+      env:
+        FLUTTER_COMMAND: ${{ inputs.flutter-command }}
+      run: |
+        set -euo pipefail
+        # Deliberately without --enforce-lockfile: pubspec.lock is produced by
+        # the 3.47.x stable SDK and pins packages whose SDK constraints the
+        # fork's older Dart cannot satisfy. pub re-resolves in the working tree
+        # only; nothing here is committed.
+        "$FLUTTER_COMMAND" pub get

@@ -2,17 +2,10 @@ name: arcadiaplus
 description: "A modern cross-platform proxy client built with Flutter and Rust."
 publish_to: 'none'
 
-version: 1.0.5+1
+version: 1.0.5+2
 
 environment:
   sdk: ^3.13.0
-  # Pinned to the Flutter line the project is built and tested on (3.47.x,
-  # which ships Dart 3.13). The Flutter SDK ships its own copies of `test_api`,
-  # `matcher`, `vector_math`, `meta`, `intl`, and their exact versions move with
-  # the SDK line, so a stale pin here is not cosmetic: `flutter pub get` fails
-  # outright on any other SDK, and `--enforce-lockfile` (what CI runs) fails
-  # too. Keep this, `pubspec.lock`, and the `flutter-version` inputs in
-  # `.github/workflows/{ci,release}.yml` in step with each other.
   flutter: '>=3.47.0 <3.48.0'
 
 dependencies:
@@ -28,18 +21,13 @@ dependencies:
 
   # Material Design 3 and UI components
   material_design_icons_flutter: ^7.0.7296
-  # 2.x pulls material_ui; this line stays on the 1.x series.
   dynamic_color: ^1.9.0
 
   # State management
   provider: ^6.1.5
 
-  # Navigation and routing
-  # Pinned to the newest 17.x; bump together with the SDK.
   go_router: ^17.5.0
 
-  # Utilities
-  # `flutter_localizations` pins intl, so follow the SDK rather than the range.
   intl: ^0.20.2
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
@@ -47,9 +35,6 @@ dependencies:
   package_info_plus: ^10.2.1
   device_info_plus: ^13.2.0
 
-  # Networking and HTTP
-  # Rust 侧的网络与哈希已经全部走自有 crate；这两项服务的是 Dart 侧自己的
-  # 界面需求（订阅预览、更新安装包校验）。
   http: ^1.4.0
   dio: ^5.11.1
   crypto: ^3.0.6
@@ -100,19 +85,10 @@ flutter:
   
   assets:
     - assets/arcadiaplus.png
-    # GeoIP country database for `GEOIP` routing rules; installed into the
-    # app's support directory and registered with the engine at start-up.
     - assets/Country.mmdb
     - assets/fonts/LICENSE-Roboto.txt
-    # Wintun is how TUN mode talks to the Windows kernel, and it is not part
-    # of Windows: the prebuilt DLL is redistributed alongside this app (the
-    # licence text travels with it) and copied next to the executable — or
-    # into the per-user application directory — before the engine looks for
-    # it, so TUN works on a machine that has never seen wintun.net.
     - assets/wintun/wintun.dll
     - assets/wintun/LICENSE.txt
-    # The app's own licence, shown verbatim on the about screen rather than
-    # paraphrased in Dart.
     - LICENSE
 
   fonts:

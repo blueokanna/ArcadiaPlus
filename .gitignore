@@ -48,8 +48,9 @@ app.*.map.json
 android/.kotlin/
 
 # HarmonyOS build products: the Rust artifacts under thirdparty/ are staged by
-# ohos/scripts/build-rust-ohos.sh before every DevEco build, and the HARs are
-# produced by `flutter build har` — neither belongs in the repository.
+# ohos/scripts/build-rust-ohos.sh (or .ps1 on Windows) before every DevEco
+# build, and the HARs are produced by `flutter build har` — neither belongs in
+# the repository.
 /ohos/entry/src/main/cpp/thirdparty/
 /ohos/har/*.har
 /ohos/har/*/

@@ -1,28 +1,27 @@
-import { FlutterPage, FlutterEntry } from '@aspect/flutter_ohos';
+import common from '@ohos.app.ability.common';
+import { FlutterPage } from '@ohos/flutter_ohos';
+
+let storage = LocalStorage.getShared();
+const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
 
 /**
- * Main entry page for ArcadiaPlus on HarmonyOS NEXT
- * 
- * This page hosts the Flutter application.
+ * Hosts the Flutter surface. The view id is published by FlutterAbility into
+ * the shared LocalStorage, so the page renders the engine that ability owns.
  */
-@Entry
+@Entry(storage)
 @Component
 struct Index {
-  private flutterEntry: FlutterEntry = new FlutterEntry();
-
-  aboutToAppear(): void {
-    this.flutterEntry.aboutToAppear();
-  }
-
-  aboutToDisappear(): void {
-    this.flutterEntry.aboutToDisappear();
-  }
+  private context = getContext(this) as common.UIAbilityContext;
+  @LocalStorageLink('viewId') viewId: string = '';
 
   build() {
     Column() {
-      FlutterPage({ viewId: this.flutterEntry.getViewId() })
+      FlutterPage({ viewId: this.viewId })
     }
-    .width('100%')
-    .height('100%')
+  }
+
+  onBackPress(): boolean {
+    this.context.eventHub.emit(EVENT_BACK_PRESS);
+    return true;
   }
 }

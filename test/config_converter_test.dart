@@ -241,6 +241,157 @@ rules: []
     });
   });
 
+  test('hysteria v1 nodes reach the engine in its own option spelling', () {
+    const yaml = '''
+proxies:
+  - name: hy1
+    type: hysteria
+    server: example.com
+    port: 8443
+    auth_str: s3cret
+    up: "50 Mbps"
+    down: "200 Mbps"
+    obfs: xplus
+    obfs-password: hunter2
+    sni: cdn.example.com
+    skip-cert-verify: true
+rules: []
+''';
+
+    final outbounds = convert(yaml)['outbounds'] as List<dynamic>;
+    final node = outbounds.firstWhere((o) => (o as Map)['tag'] == 'hy1') as Map;
+
+    expect(node['outbound_type'], 'hysteria');
+    expect(node['server'], 'example.com');
+    expect(node['port'], 8443);
+    expect(optionsOf(node['options']), {
+      'auth-str': 's3cret',
+      'up': 50,
+      'down': 200,
+      'obfs': 'hunter2',
+      'sni': 'cdn.example.com',
+      'skip-cert-verify': true,
+    });
+  });
+
+  test("SSR nodes move obfs-param onto the engine's obfs-host", () {
+    const yaml = '''
+proxies:
+  - name: ssr1
+    type: ssr
+    server: example.com
+    port: 8388
+    cipher: aes-256-cfb
+    password: secret
+    protocol: auth_sha1_v4
+    protocol-param: "user:pass"
+    obfs: http_simple
+    obfs-param: bing.com
+rules: []
+''';
+
+    final outbounds = convert(yaml)['outbounds'] as List<dynamic>;
+    final node =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'ssr1') as Map;
+
+    expect(node['outbound_type'], 'ssr');
+    expect(optionsOf(node['options']), {
+      'cipher': 'aes-256-cfb',
+      'password': 'secret',
+      'protocol': 'auth_sha1_v4',
+      'protocol-param': 'user:pass',
+      'obfs': 'http_simple',
+      'obfs-host': 'bing.com',
+    });
+  });
+
+  test('snell nodes unwrap obfs-opts into mode and host', () {
+    const yaml = '''
+proxies:
+  - name: snell1
+    type: snell
+    server: example.com
+    port: 443
+    psk: secret
+    version: 4
+    obfs-opts:
+      mode: http
+      host: bing.com
+rules: []
+''';
+
+    final outbounds = convert(yaml)['outbounds'] as List<dynamic>;
+    final node =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'snell1') as Map;
+
+    expect(node['outbound_type'], 'snell');
+    expect(optionsOf(node['options']), {
+      'psk': 'secret',
+      'version': 4,
+      'obfs': 'http',
+      'obfs-host': 'bing.com',
+    });
+  });
+
+  test('a Shadowsocks node carrying a plugin is refused, plugin named', () {
+    const yaml = '''
+proxies:
+  - name: st-node
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: shadow-tls
+    plugin-opts:
+      host: www.bing.com
+      password: tls-secret
+      version: 3
+  - name: ok-node
+    type: ss
+    server: example.com
+    port: 8389
+    cipher: aes-128-gcm
+    password: secret
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [st-node, ok-node]
+rules: []
+''';
+
+    final warnings = <String>[];
+    final converted = convert(yaml, onWarning: warnings.add);
+    final outbounds = converted['outbounds'] as List<dynamic>;
+
+    expect(outbounds.where((o) => (o as Map)['tag'] == 'st-node'), isEmpty);
+    expect(warnings.any((w) => w.contains('shadow-tls')), isTrue);
+
+    final group =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'PROXY') as Map;
+    expect(optionsOf(group['options'])['outbounds'], ['ok-node']);
+  });
+
+  test('the advertised protocol list covers every mapped outbound', () {
+    expect(
+      ConfigConverter.supportedProtocols,
+      containsAll(<String>[
+        'Shadowsocks',
+        'ShadowsocksR',
+        'VMess',
+        'VLESS',
+        'Trojan',
+        'Hysteria',
+        'Hysteria2',
+        'TUIC',
+        'Snell',
+        'WireGuard',
+        'HTTP / HTTPS',
+        'SOCKS5',
+      ]),
+    );
+  });
+
   test(
     'protocols corduit cannot build are dropped and references rewritten',
     () {

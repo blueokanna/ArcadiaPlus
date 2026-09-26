@@ -1,0 +1,24 @@
+# Line endings are part of the build contract on a mixed Windows/Linux
+# project: CI runs on Linux, and the HarmonyOS toolchain (hvigor, the NDK's
+# clang) is a Linux toolchain. A CRLF shebang script fails with
+# "bad interpreter: /bin/bash^M", and a CRLF .nsh/.sh wrapper confuses hvigor.
+#
+# Keep everything that runs under a Unix shell as LF, keep Windows-only
+# scripts as CRLF, and leave binaries untouched.
+*.sh text eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.ets text eol=lf
+*.ts text eol=lf
+*.json5 text eol=lf
+
+*.png binary
+*.jpg binary
+*.jar binary
+*.so binary
+*.a binary
+*.keystore binary
+*.jks binary

@@ -1,40 +1,17 @@
-import { AbilityConstant, UIAbility, Want } from '@kit.AbilityKit';
-import { hilog } from '@kit.PerformanceAnalysisKit';
-import { window } from '@kit.ArkUI';
+import { FlutterAbility, FlutterEngine } from '@ohos/flutter_ohos';
+import { ArcadiaPlusPlugin } from '../plugins/ArcadiaPlusPlugin';
 
-const TAG = 'ArcadiaPlus';
-const DOMAIN = 0x0000;
-
-export default class EntryAbility extends UIAbility {
-  onCreate(want: Want, launchParam: AbilityConstant.LaunchParam): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onCreate');
-  }
-
-  onDestroy(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onDestroy');
-  }
-
-  onWindowStageCreate(windowStage: window.WindowStage): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onWindowStageCreate');
-
-    windowStage.loadContent('pages/Index', (err) => {
-      if (err.code) {
-        hilog.error(DOMAIN, TAG, 'Failed to load content. Cause: %{public}s', JSON.stringify(err) ?? '');
-        return;
-      }
-      hilog.info(DOMAIN, TAG, 'Succeeded in loading content.');
-    });
-  }
-
-  onWindowStageDestroy(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onWindowStageDestroy');
-  }
-
-  onForeground(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onForeground');
-  }
-
-  onBackground(): void {
-    hilog.info(DOMAIN, TAG, '%{public}s', 'Ability onBackground');
+/**
+ * UI-process entry point.
+ *
+ * FlutterAbility owns the engine and the page it renders. The one thing this
+ * subclass adds is the bridge plugin: without registration the
+ * `com.arcadiaplus/ohos_proxy` channel has no handler and every VPN request
+ * from Dart is answered with "not implemented".
+ */
+export default class EntryAbility extends FlutterAbility {
+  configureFlutterEngine(flutterEngine: FlutterEngine): void {
+    super.configureFlutterEngine(flutterEngine);
+    flutterEngine.getPlugins()?.add(new ArcadiaPlusPlugin());
   }
 }

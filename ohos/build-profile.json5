@@ -5,19 +5,17 @@
       {
         "name": "default",
         "signingConfig": "default",
-        "compatibleSdkVersion": "5.0.0(12)",
-        "runtimeOS": "HarmonyOS",
-        "buildOption": {
-          "strictMode": {
-            "caseSensitiveCheck": true,
-            "useNormalizedOHMUrl": true
-          }
-        }
+        "compatibleSdkVersion": "5.0.5(17)",
+        "targetSdkVersion": "6.0.0(20)",
+        "runtimeOS": "HarmonyOS"
       }
     ],
     "buildModeSet": [
       {
         "name": "debug"
+      },
+      {
+        "name": "profile"
       },
       {
         "name": "release"
@@ -36,10 +34,6 @@
           ]
         }
       ]
-    },
-    {
-      "name": "flutter_module",
-      "srcPath": "./flutter_module"
     }
   ]
 }

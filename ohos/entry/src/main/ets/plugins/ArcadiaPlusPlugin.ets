@@ -1,4 +1,4 @@
-import { FlutterPlugin, MethodChannel, MethodCall, MethodResult } from '@aspect/flutter_ohos';
+import { FlutterPlugin, MethodChannel, MethodCall, MethodResult } from '@ohos/flutter_ohos';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { deviceInfo } from '@kit.BasicServicesKit';
 import { commonEventManager } from '@kit.BasicServicesKit';
@@ -42,6 +42,8 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
   private running = false;
   private pendingStart: ((success: boolean, error: string) => void) | null = null;
   private pendingStop: ((success: boolean, error: string) => void) | null = null;
+  private startTimer = -1;
+  private stopTimer = -1;
 
   onAttachedToEngine(binding: FlutterPlugin.FlutterPluginBinding): void {
     this.channel = new MethodChannel(binding.getBinaryMessenger(), 'com.arcadiaplus/ohos_proxy');
@@ -96,6 +98,14 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
       return;
     }
 
+    if (this.pendingStart !== null) {
+      result.success({
+        success: false,
+        error: 'a VPN start is already in flight',
+      } as Record<string, Object>);
+      return;
+    }
+
     const arguments_ = call.arguments as Record<string, Object> | undefined;
     const configPath = arguments_?.configPath?.toString() ?? '';
     if (configPath.length === 0) {
@@ -142,7 +152,8 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
       this.settleStart(false, `the system refused the VPN start: ${error.message}`);
     });
 
-    setTimeout(() => {
+    this.startTimer = setTimeout(() => {
+      this.startTimer = -1;
       this.settleStart(false, 'timed out waiting for the VPN extension to report ready');
     }, START_TIMEOUT_MS);
   }
@@ -150,6 +161,14 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
   private stopVpn(result: MethodResult): void {
     if (!this.running) {
       result.success({ success: true } as Record<string, Object>);
+      return;
+    }
+
+    if (this.pendingStop !== null) {
+      result.success({
+        success: false,
+        error: 'a VPN stop is already in flight',
+      } as Record<string, Object>);
       return;
     }
 
@@ -169,7 +188,8 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
       this.settleStop(false, `the system refused the VPN stop: ${error.message}`);
     });
 
-    setTimeout(() => {
+    this.stopTimer = setTimeout(() => {
+      this.stopTimer = -1;
       this.settleStop(false, 'timed out waiting for the VPN extension to stop');
     }, STOP_TIMEOUT_MS);
   }
@@ -221,6 +241,10 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
   }
 
   private settleStart(success: boolean, error: string): void {
+    if (this.startTimer !== -1) {
+      clearTimeout(this.startTimer);
+      this.startTimer = -1;
+    }
     const pending = this.pendingStart;
     this.pendingStart = null;
     if (pending !== null) {
@@ -229,6 +253,10 @@ export class ArcadiaPlusPlugin implements FlutterPlugin {
   }
 
   private settleStop(success: boolean, error: string): void {
+    if (this.stopTimer !== -1) {
+      clearTimeout(this.stopTimer);
+      this.stopTimer = -1;
+    }
     const pending = this.pendingStop;
     this.pendingStop = null;
     if (pending !== null) {

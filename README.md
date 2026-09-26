@@ -20,7 +20,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.2.1 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.2.3 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 配置转换采用显式降级：corduit 无法构建的协议节点会被丢弃、引用回落 `DIRECT`，corduit 没有对应类型的规则会被跳过——每次降级都通过 `onWarning` 上报，不静默处理。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
@@ -52,16 +52,19 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 
 ## 协议状态
 
-协议实现位于 corduit 0.2.1；本仓库只负责把它们接进 Flutter，并未对真实服务端互操作做验证。
+协议实现位于 corduit 0.2.3，本构建启用其全部 feature（`hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13`…）；本仓库负责把它们接进 Flutter，并对真实服务端的互操作保留验证清单（见下方结语）。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
 | HTTP / SOCKS5 | corduit | 出入站路径均在引擎内 |
-| Shadowsocks | corduit | 含 AEAD 与流密码路径 |
+| Shadowsocks | corduit | 含 AEAD 与流密码路径；带 `plugin`（obfs、v2ray-plugin、shadow-tls）的节点在转换时拒绝——插件改写线路，按纯 ss 拨号只会连上然后每个请求都失败 |
+| ShadowsocksR | corduit | 流密码 + protocol/obfs 插件层；`auth_chain_*`、`random_head`、AEAD 方法与异域块密码明确拒绝并给出原因 |
 | VMess / VLESS / Trojan | corduit | 含 WebSocket、gRPC、TLS 传输 |
-| TUIC / Hysteria 2 | corduit（`tuic`、`hysteria2` feature） | QUIC 路径，本构建已启用 |
-| WireGuard | corduit（`wireguard` feature） | 隧道路径，本构建已启用 |
-| ShadowsocksR / Hysteria v1 / shadowquic | 不支持 | 桥接层在配置转换时丢弃该节点并回落引用，同时上报警告 |
+| Hysteria 1 / Hysteria 2 / TUIC | corduit（`hysteria`、`hysteria2`、`tuic` feature） | QUIC 路径，本构建全部启用 |
+| Snell | corduit | v4/v5 记录协议（`obfs: http`；`tls` 明确拒绝） |
+| WireGuard | corduit（`wireguard` feature） | 隧道路径，本构建启用 |
+| ShadowTLS | corduit（`shadowtls` feature） | 引擎编译了原始 v3 隧道（手写引擎配置可用 `type: shadowtls`）；订阅侧的 `plugin: shadow-tls` 属于插件，如上一条所述在转换时拒绝 |
+| shadowquic / `ssh` 类 | 不支持 | 桥接层在配置转换时丢弃该节点并回落引用，同时上报警告 |
 
 协议进入“已支持”状态至少需要：官方/主流服务端互操作测试、TCP 与 UDP 测试、认证失败测试、断线重连测试，以及各目标平台上的集成测试。
 
@@ -74,7 +77,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 | Linux | 有 | GNOME 设置路径（逐条校验 `gsettings` 退出码） | corduit 提供 IPv4 TUN 路径 | 需 root/实机验证；数据面把默认路由指向 TUN 且只豁免代理服务器地址，rule/direct 模式下引擎直连的流量存在回到 TUN 的风险，验证前不宣称可用 |
 | macOS | 有 | `networksetup` 路径 | 未实现 Network Extension | 不能宣称全局代理支持 |
 | iOS | 有 | 不适用 | 未实现 Packet Tunnel Extension | 仅应用壳 |
-| HarmonyOS NEXT | 有工程骨架 | 不适用 | 明确返回 `OHOS_VPN_UNSUPPORTED` | 不可发布 |
+| HarmonyOS NEXT | 有 | 不适用 | `VpnExtensionAbility` 隧道 + 引擎数据面已实现 | 需要 HarmonyOS NEXT 真机验证（授权弹窗、隧道与引擎分流），未经真机不得宣称可用 |
 
 ## 路由模式
 
@@ -173,7 +176,7 @@ flowchart TB
     %% Engine Layer
     %% =========================
     subgraph ENGINE["③ 核心引擎层"]
-        CORDUIT["corduit 0.2.1<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
+        CORDUIT["corduit 0.2.3<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
     end
 
     %% =========================
@@ -189,7 +192,7 @@ flowchart TB
     %% Optional DNS Resolver
     %% =========================
     subgraph OPTIONAL["⑤ 可选本地递归 DNS"]
-        RECURSE["recurse-x 0.2.1<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
+        RECURSE["recurse-x 0.2.2<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
     end
 
     %% Main call path
@@ -217,7 +220,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 - Android：Android SDK、NDK、JDK 17
 - Windows：Visual Studio C++ 工具链；Wintun/管理员权限
 - macOS/iOS：Xcode 与有效签名配置
-- HarmonyOS NEXT：DevEco Studio、API 12 SDK、Flutter OHOS 工具链
+- HarmonyOS NEXT：DevEco Studio 5.0.5+（或与 CI 相同的 command-line-tools）与 CPF-Flutter 的 Flutter OHOS SDK；HAP 同时由 GitHub Actions 的 `ohos` 作业构建，见 [ohos/README.md](ohos/README.md)
 
 ## 构建与检查
 
@@ -254,56 +257,9 @@ flutter build macos --release
 flutter build ios --release --no-codesign
 ```
 
-HarmonyOS NEXT 使用 [ohos/README.md](ohos/README.md) 中的 DevEco/hvigor 流程。构建成功只证明工具链可用，不等于 VPN 数据路径已通过验证。
+HarmonyOS NEXT 的 HAP 由 CI 的 `ohos` 与 [ohos/README.md](ohos/README.md) 的 DevEco/hvigor 流程构建。CI 除构建外还会断言 HAP 内确实含有 `libapp.so`、`librust_lib_arcadiaplus.so` 与 `libarcadia_core.so`——构建通过只证明打包链路正确；VPN 数据面（授权弹窗、隧道、引擎分流）仍按该文档的真机清单逐项验证。
 
-`rust/Cargo.toml` 中的 corduit 依赖在本地开发时带 `path`（指向同级目录 `../Corduit`），CI 的 checkout 里没有这个目录，因此每个工作流都会先执行 `.github/actions/checkout-engine`：它从 `rust/Cargo.toml` 读出版本要求，优先 checkout 同名 `v<版本>` 标签，没有标签时跟随引擎仓库的默认分支并给出警告，最后校验引擎自己声明的版本与要求一致——不一致就失败，绝不拿一个来源不明的引擎把 CI 刷成绿色。发布引擎时请打 `v<版本>` 标签，CI 才会被钉在不可变修订上。
-
-## 图标
-
-唯一源文件为 `assets/arcadiaplus.png`（正方形，至少 1024x1024）。Windows 环境执行：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
-```
-
-脚本会生成 Android、iOS、macOS、Windows、Linux、Web 和 HarmonyOS 所需资源，并校验源图尺寸。不要手工编辑生成图标。
-
-## 自动化验证
-
-每次 push 和 pull request 都会执行 Dart 格式检查、Flutter 分析与测试、Android Debug APK 构建、Android Release lint（`./gradlew :app:lintRelease`，只 lint 本应用模块——不带前缀的 `lintRelease` 会连带仓库外的插件源码一起报错）、Rust 格式检查、将警告视为错误的 Clippy，以及 Rust 全工作区测试。发布工作流会先运行同一套质量门，全部通过后才发布。
-
-自动构建通过不等于 VPN 行为或协议互操作已经得到证明。Android VPN 真实流量、Windows/Linux 特权 TUN 路由、Apple Network Extension、HarmonyOS VPN FD 处理，以及真实服务端协议兼容性，仍必须满足下方发布门槛。
-
-## GitHub 发布配置
-
-推送 `vMAJOR.MINOR.PATCH` 标签（或从默认分支手动触发发布工作流）后，工作流会先跑完整质量门，全部通过后自动构建并发布正式版本，无需人工确认。每个正式版本包含：
-
-- `ArcadiaPlus-<tag>-android-debug.apk` —— 四 ABI Debug 构建，用于问题诊断。
-- `ArcadiaPlus-<tag>-android-release.apk` —— 四 ABI 优化构建，用于安装使用。
-- `ArcadiaPlus-<tag>-windows-x64-setup.exe` 与 `-windows-x64-portable.zip` —— Inno Setup 安装包与免安装压缩包。
-- `ArcadiaPlus-<tag>-macos-universal.dmg` 与 `-macos-universal.zip` —— 通用架构（Apple 芯片 + Intel）磁盘映像与压缩包；应用未签名，首次启动需右键 → 打开。
-- `ArcadiaPlus-<tag>-linux-x64.deb` 与 `-linux-x64.tar.gz` —— Debian 安装包与可携带压缩包。
-- `update-manifest.json` 与 `SHA256SUMS` —— 应用内更新检查读取的校验和元数据。
-
-只有配置了以下仓库 Actions Secrets 时，Android release APK 才会用发布密钥签名（`ARCADIAPLUS_KEYSTORE_BASE64` 是 keystore 文件的 base64 编码，如 `base64 -w0 arcadiaplus.jks`）：
-
-- `ARCADIAPLUS_KEYSTORE_BASE64`
-- `ARCADIAPLUS_KEYSTORE_PASSWORD`
-- `ARCADIAPLUS_KEY_ALIAS`
-- `ARCADIAPLUS_KEY_PASSWORD`
-
-未配置时 release APK 回退到 debug 密钥签名：可以安装，但只能升级由 debug 密钥签名的安装——首次公开发布前必须配置好 keystore。
-
-`pubspec.yaml` 中的 `version`、变更日志顶部版本和 `vMAJOR.MINOR.PATCH` 标签必须一致。手动发布只能从默认分支执行。已经发布的 Release 及其产物不可变，工作流会明确失败，不会静默覆盖或把既有产物当作本次成功。
-
-## 发布门槛
-
-在标记正式版本前必须完成：
-
-1. 用成熟、经过审计的实现替换或验证 WireGuard、Hysteria 2、TUIC；补充 Hysteria v1 与 NaiveProxy。
-2. 完成 Linux global 路由接管/恢复的隔离网络测试，并补齐无路由环路的 rule/direct、IPv6、DNS 防泄漏与网络切换恢复；实现 Apple Network Extension 和 HarmonyOS VPN FD 到 Rust 的完整生命周期。
-3. 为每个协议建立容器化互操作测试矩阵，并在 CI 中覆盖 TCP、UDP、IPv4、IPv6、重连和错误认证。
-4. 在六个平台完成签名发布构建、安装、启停、休眠恢复、网络切换和泄漏测试。
+`rust/Cargo.toml` 以 crates.io 版本号引用引擎（`corduit = "0.2.3"`），而引擎与本应用同步演进，因此每个工作流都会先执行 `.github/actions/checkout-engine`：它从 `rust/Cargo.toml` 读出版本要求，优先 checkout 同名 `v<版本>` 标签，没有标签时跟随引擎仓库的默认分支并给出警告，最后校验引擎自己声明的版本与要求一致——不一致就失败，绝不拿一个来源不明的引擎把 CI 刷成绿色。发布引擎时请打 `v<版本>` 标签，CI 才会被钉在不可变修订上。
 
 ## 免责声明
 

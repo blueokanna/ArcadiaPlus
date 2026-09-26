@@ -20,7 +20,7 @@ The sections below state what the current build actually does, including the pla
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
-- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.2.1, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
+- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.2.3, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
 - Explicit configuration downgrades: a node whose protocol corduit cannot build is dropped and its references fall back to `DIRECT`, and a rule type corduit has no rule for is skipped — every downgrade is reported through `onWarning`, never silent.
 - Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
 - Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
@@ -52,16 +52,19 @@ The Rules entry in settings (`/rules`) shows the engine's table with each rule's
 
 ## Protocol Status
 
-The protocol implementations live in corduit 0.2.1. This repository wires them into Flutter and has not run real-server interoperability tests itself.
+The protocol implementations live in corduit 0.2.3, and this build enables every feature it defines (`hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic`, `tls13`, …). This repository wires them into Flutter and keeps the real-server interoperability checklist below open.
 
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
 | HTTP / SOCKS5 | corduit | Inbound and outbound paths inside the engine |
-| Shadowsocks | corduit | AEAD and stream ciphers |
-| VMess / VLESS / Trojan | corduit | WebSocket, gRPC, and TLS transports |
-| TUIC / Hysteria 2 | corduit (`tuic`, `hysteria2` features) | QUIC paths, enabled in this build |
+| Shadowsocks | corduit | AEAD and stream ciphers; a node carrying a `plugin` (obfs, v2ray-plugin, shadow-tls) is refused at conversion — the plugin changes the wire, and dialling it as plain ss only yields a node that connects and then fails every request |
+| ShadowsocksR | corduit | Stream ciphers plus the protocol/obfs plugin layers; `auth_chain_*`, `random_head`, AEAD methods and the exotic block ciphers are refused by name with the reason |
+| VMess / VLESS / Trojan | corduit | WebSocket, gRPC and TLS transports |
+| Hysteria 1 / Hysteria 2 / TUIC | corduit (`hysteria`, `hysteria2`, `tuic` features) | QUIC paths, all enabled in this build |
+| Snell | corduit | v4/v5 record protocol (`obfs: http`; `tls` is refused by name) |
 | WireGuard | corduit (`wireguard` feature) | Tunnel path, enabled in this build |
-| ShadowsocksR / Hysteria v1 / shadowquic | Unsupported | The bridge drops such nodes during conversion, rewrites references, and raises a warning |
+| ShadowTLS | corduit (`shadowtls` feature) | The raw v3 tunnel is compiled (a hand-written engine config can use `type: shadowtls`); the subscription-side `plugin: shadow-tls` is a plugin and is refused at conversion, as above |
+| shadowquic / `ssh`-style types | Unsupported | The bridge drops such nodes during conversion, rewrites references, and raises a warning |
 
 A protocol can move to “supported” only after interoperability tests against mainstream servers, TCP and UDP coverage, authentication failure tests, reconnect tests, and target-platform integration tests.
 
@@ -74,7 +77,7 @@ A protocol can move to “supported” only after interoperability tests against
 | Linux | Present | GNOME settings path (every `gsettings` exit code is checked) | IPv4 TUN path provided by corduit | Needs root/device testing; the data path points the default route at the TUN and exempts only proxy server addresses, so engine-dialled direct traffic can loop back into the tunnel — rule/direct modes are not claimed until that is verified on hardware |
 | macOS | Present | `networksetup` path | No Network Extension | Full-tunnel support cannot be claimed |
 | iOS | Present | N/A | No Packet Tunnel Extension | Application shell only |
-| HarmonyOS NEXT | Project skeleton | N/A | Explicitly returns `OHOS_VPN_UNSUPPORTED` | Not releasable |
+| HarmonyOS NEXT | Present | N/A | `VpnExtensionAbility` tunnel with the engine data path implemented | Requires a HarmonyOS NEXT device (authorization prompt, tunnel, engine routing); not claimed before that verification |
 
 ## Routing Modes
 
@@ -160,10 +163,10 @@ Flutter Rust Bridge (generated bindings)
         |
 lib-arcadiaplus (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
-corduit 0.2.1 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
+corduit 0.2.3 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
         +-- nextjson / rustbinary (config and binary codecs)
-recurse-x 0.2.1 (optional local recursion: the resolver, plus the client-facing UDP/TCP DNS server whose lifecycle the bridge owns)
+recurse-x 0.2.2 (optional local recursion: the resolver, plus the client-facing UDP/TCP DNS server whose lifecycle the bridge owns)
 ```
 
 corduit is synchronous while the Dart surface stays `Future`-based, so the bridge dispatches every engine call onto a blocking worker (`run`). Starting the proxy, probing latency, or toggling TUN therefore never stalls the Flutter isolate.
@@ -177,7 +180,7 @@ Clear ownership boundaries matter more than adding macros, generics, or complex 
 - Android: Android SDK, NDK, and JDK 17
 - Windows: Visual Studio C++ toolchain, Wintun, and elevation
 - macOS/iOS: Xcode and valid signing configuration
-- HarmonyOS NEXT: DevEco Studio, API 12 SDK, and Flutter OHOS toolchain
+- HarmonyOS NEXT: DevEco Studio 5.0.5+ (or the same command-line tools CI uses) and the CPF-Flutter Flutter OHOS SDK; the HAP is also built by the `ohos` job in GitHub Actions — see [ohos/README.md](ohos/README.md)
 
 ## Build and Check
 
@@ -214,54 +217,9 @@ flutter build macos --release
 flutter build ios --release --no-codesign
 ```
 
-Use the DevEco/hvigor workflow in [ohos/README.md](ohos/README.md) for HarmonyOS NEXT. A successful build validates the toolchain, not the unfinished VPN data path.
+HarmonyOS NEXT HAPs are built by the `ohos` job in CI and by the DevEco/hvigor workflow in [ohos/README.md](ohos/README.md). CI additionally asserts that the HAP really contains `libapp.so`, `librust_lib_arcadiaplus.so` and `libarcadia_core.so`: a successful build proves the packaging chain, and the VPN data path (authorization prompt, tunnel, engine routing) is still verified device-by-device against that document's checklist.
 
-The corduit dependency in `rust/Cargo.toml` carries a `path` (a sibling `../Corduit`) during local development, which a CI checkout does not have, so every workflow starts with `.github/actions/checkout-engine`: it reads the version requirement from `rust/Cargo.toml`, checks out the matching `v<version>` tag when one exists, otherwise follows the engine repository's default branch with a warning, and finally verifies that the engine reports the required version — a mismatch fails the job rather than letting an unknown engine turn CI green. Tag engine releases as `v<version>` to pin CI to an immutable revision.
-
-## Icons
-
-The single source is `assets/arcadiaplus.png` and must be square and at least 1024x1024. On Windows run:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
-```
-
-The script generates and validates Android, iOS, macOS, Windows, Linux, Web, and HarmonyOS assets. Generated icons should not be edited manually.
-
-## Automated Verification
-
-Every push and pull request runs Dart formatting, Flutter analysis and tests, an Android debug APK build, Android release lint (`./gradlew :app:lintRelease`, scoped to this app module — an unqualified `lintRelease` also lints plugin sources that live outside this repository), Rust formatting, Clippy with warnings denied, and all workspace tests. The release workflow runs the same gates first and only publishes when every one of them passes.
-
-An automated build is not evidence of VPN behavior or protocol interoperability. Android VPN traffic, privileged Windows/Linux TUN routing, Apple Network Extension, HarmonyOS VPN FD handling, and real-server protocol compatibility remain subject to the release gates below.
-
-## GitHub Release Configuration
-
-Pushing a `vMAJOR.MINOR.PATCH` tag — or dispatching the release workflow from the default branch — runs the full quality gate first, then builds and publishes the stable release without further manual steps. A release carries:
-
-- `ArcadiaPlus-<tag>-android-debug.apk` — four-ABI debug build for diagnosis.
-- `ArcadiaPlus-<tag>-android-release.apk` — four-ABI optimized build for installation.
-- `ArcadiaPlus-<tag>-windows-x64-setup.exe` and `-windows-x64-portable.zip` — Inno Setup installer and a no-installation archive.
-- `ArcadiaPlus-<tag>-macos-universal.dmg` and `-macos-universal.zip` — universal (Apple silicon + Intel) disk image and archive; the app is unsigned, so the first launch is right-click → Open.
-- `ArcadiaPlus-<tag>-linux-x64.deb` and `-linux-x64.tar.gz` — Debian package and relocatable bundle.
-- `update-manifest.json` and `SHA256SUMS` — the checksum-verified metadata the in-app updater reads.
-
-The Android release APK is signed with the project's release key only when these repository Actions secrets are configured (`ARCADIAPLUS_KEYSTORE_BASE64` is the base64 encoding of the keystore file, e.g. `base64 -w0 arcadiaplus.jks`):
-
-- `ARCADIAPLUS_KEYSTORE_BASE64`
-- `ARCADIAPLUS_KEYSTORE_PASSWORD`
-- `ARCADIAPLUS_KEY_ALIAS`
-- `ARCADIAPLUS_KEY_PASSWORD`
-
-Without them the release APK falls back to the debug key: it installs, but it can only upgrade installs that the debug key signed — configure the keystore before the first public stable release.
-
-The `version` in `pubspec.yaml`, the top changelog section, and the `vMAJOR.MINOR.PATCH` tag must match. Manual releases can run only from the default branch. Existing releases are immutable, so the workflow fails instead of silently replacing or accepting existing assets.
-
-## Release Gates
-
-1. Replace or validate WireGuard, Hysteria 2, and TUIC with mature audited implementations; add Hysteria v1 and NaiveProxy.
-2. Validate Linux global route takeover/restoration in an isolated network and add loop-free rule/direct modes, IPv6, DNS leak protection, and network-change recovery; implement Apple Network Extension and the complete HarmonyOS VPN FD lifecycle into Rust.
-3. Add a containerized interoperability matrix for every protocol, covering TCP, UDP, IPv4, IPv6, reconnects, and authentication failures.
-4. Complete signed release builds and installation, start/stop, sleep/resume, network-switch, and leak tests on all six platforms.
+`rust/Cargo.toml` references the engine by its crates.io version (`corduit = "0.2.3"`), and the engine moves in lockstep with this app, so every workflow starts with `.github/actions/checkout-engine`: it reads the version requirement from `rust/Cargo.toml`, checks out the matching `v<version>` tag when one exists (otherwise it follows the engine repository's default branch with a warning), and finally verifies that the checked-out engine reports the required version — a mismatch fails the job rather than letting an unknown engine turn CI green. Tag engine releases as `v<version>` to pin CI to an immutable revision.
 
 ## Disclaimer
 

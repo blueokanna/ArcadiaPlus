@@ -7,12 +7,6 @@
     "icon": "$media:app_icon",
     "label": "$string:app_name",
     "distributedNotificationEnabled": true,
-    "keepAlive": true,
-    "minAPIVersion": 12,
-    "targetAPIVersion": 12,
-    "car": {
-      "apiCompatibleVersion": 12,
-      "singleUser": false
-    }
+    "keepAlive": true
   }
 }

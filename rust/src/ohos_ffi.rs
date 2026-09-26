@@ -101,6 +101,10 @@ pub extern "C" fn arcadia_ohos_start(
     protect_process: c_int,
 ) -> c_int {
     guarded(|| {
+        if tun_fd < 0 {
+            error!("arcadia_ohos_start: negative tun descriptor {tun_fd}");
+            return -2;
+        }
         let Some(config_path) = read_cstr(config_path) else {
             error!("arcadia_ohos_start: no config path");
             return -2;
@@ -171,6 +175,32 @@ pub extern "C" fn arcadia_ohos_stop() -> c_int {
     })
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::CString;
+
+    #[test]
+    fn an_unknown_proxy_mode_is_refused_without_touching_the_engine() {
+        let mode = CString::new("globel").expect("no interior nul");
+        assert_eq!(arcadia_ohos_set_proxy_mode(mode.as_ptr()), -2);
+    }
+
+    #[test]
+    fn a_null_proxy_mode_is_refused() {
+        assert_eq!(arcadia_ohos_set_proxy_mode(std::ptr::null()), -2);
+    }
+
+    #[test]
+    fn a_negative_descriptor_is_refused_before_anything_else() {
+        let config = CString::new("").expect("no interior nul");
+        assert_eq!(
+            arcadia_ohos_start(config.as_ptr(), std::ptr::null(), std::ptr::null(), -1, 0),
+            -2
+        );
+    }
+}
+
 /// Register (or clear, with a null pointer) the per-fd tunnel exemption.
 ///
 /// The callback reaches `vpnConnection.protect` through the NAPI thread-safe
@@ -202,6 +232,10 @@ pub extern "C" fn arcadia_ohos_set_protect_callback(
 
 /// Apply a routing mode (`rule`/`global`/`direct`) to the running engine.
 ///
+/// An unrecognised mode is refused (`-2`) instead of being folded into some
+/// default: the caller asked for behaviour this build does not have, and
+/// switching to a mode nobody requested is worse than saying so.
+///
 /// # Safety
 ///
 /// `mode` must be a NUL-terminated UTF-8 string or null.
@@ -215,7 +249,10 @@ pub extern "C" fn arcadia_ohos_set_proxy_mode(mode: *const c_char) -> c_int {
             "global" => 1,
             "direct" => 2,
             "rule" => 3,
-            _ => 0,
+            other => {
+                error!("arcadia_ohos_set_proxy_mode: unknown mode '{other}'");
+                return -2;
+            }
         };
         match corduit::api::set_proxy_mode(mode_int) {
             Ok(()) => 0,

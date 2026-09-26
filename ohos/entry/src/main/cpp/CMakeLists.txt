@@ -13,7 +13,8 @@ set(RUST_STATIC_LIB
 if(NOT EXISTS ${RUST_STATIC_LIB})
     message(FATAL_ERROR
         "The Rust engine for ${OHOS_ARCH} has not been built. "
-        "Run ohos/scripts/build-rust-ohos.sh before building the HAP.")
+        "Run ohos/scripts/build-rust-ohos.sh (Windows: build-rust-ohos.ps1) "
+        "before building the HAP.")
 endif()
 
 add_library(arcadia_core SHARED napi_init.cpp)

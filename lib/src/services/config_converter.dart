@@ -875,12 +875,32 @@ class ConfigConverter {
           continue;
         }
 
+        // A Shadowsocks node whose `plugin` is set speaks a different wire
+        // than plain ss: obfs, v2ray-plugin and shadow-tls all shape the
+        // stream the server expects to receive. The engine has no plugin
+        // transport, and dialling such a node as plain Shadowsocks produces
+        // one that connects and then fails every request — refusing it here,
+        // with the plugin named, is the only honest option.
+        if (mappedType == 'shadowsocks') {
+          final plugin = proxyMap['plugin']?.toString().trim() ?? '';
+          if (plugin.isNotEmpty) {
+            dropped.add(name);
+            onWarning?.call(
+              'Proxy "$name" requests the Shadowsocks plugin "$plugin"; the '
+              'engine does not implement plugin transports, so the node was '
+              'dropped instead of being dialled as plain Shadowsocks.',
+            );
+            continue;
+          }
+        }
+
         // Remove common fields for options
         final options = Map<String, dynamic>.from(proxyMap);
         options.remove('name');
         options.remove('type');
         options.remove('server');
         options.remove('port');
+        _normaliseProtocolOptions(mappedType, options);
 
         outbounds.add({
           'outbound_type': mappedType,
@@ -989,19 +1009,25 @@ class ConfigConverter {
   /// dispatches through it and [supportedProtocols] is derived from it, so a
   /// protocol cannot be advertised on one side and dropped on the other.
   ///
-  /// Types corduit has no way to build (shadowsocksr, hysteria v1 and
-  /// shadowquic today) are simply absent, which is what makes
-  /// [_mapProxyType] return `null` for them. Order is the order protocols are
+  /// Types corduit has no way to build (`ssh`, `shadowquic`, `naive`, ...)
+  /// are simply absent, which is what makes [_mapProxyType] return `null`.
+  /// A Shadowsocks node carrying a `plugin` is a separate case: the type maps,
+  /// but the wire does not, and [_extractOutbounds] refuses it by name rather
+  /// than dialling it as plain Shadowsocks. Order is the order protocols are
   /// listed in.
   static const Map<String, String> proxyTypeMapping = {
     'ss': 'shadowsocks',
     'shadowsocks': 'shadowsocks',
+    'ssr': 'ssr',
+    'shadowsocksr': 'ssr',
     'vmess': 'vmess',
     'vless': 'vless',
     'trojan': 'trojan',
+    'hysteria': 'hysteria',
     'hysteria2': 'hysteria2',
     'hy2': 'hysteria2',
     'tuic': 'tuic',
+    'snell': 'snell',
     'wireguard': 'wireguard',
     'http': 'http',
     'socks5': 'socks5',
@@ -1011,11 +1037,14 @@ class ConfigConverter {
   /// How each outbound type is written for people.
   static const Map<String, String> _outboundDisplayNames = {
     'shadowsocks': 'Shadowsocks',
+    'ssr': 'ShadowsocksR',
     'vmess': 'VMess',
     'vless': 'VLESS',
     'trojan': 'Trojan',
+    'hysteria': 'Hysteria',
     'hysteria2': 'Hysteria2',
     'tuic': 'TUIC',
+    'snell': 'Snell',
     'wireguard': 'WireGuard',
     'http': 'HTTP / HTTPS',
     'socks5': 'SOCKS5',
@@ -1029,10 +1058,101 @@ class ConfigConverter {
 
   /// Maps a Clash proxy type onto a corduit outbound type.
   ///
-  /// `null` means corduit has no way to build this protocol (shadowsocksr,
-  /// hysteria v1 and shadowquic today); such a node is dropped from the
-  /// outbound list and every reference to it is rewritten.
+  /// `null` means corduit has no way to build this protocol (`ssh`,
+  /// `shadowquic`, `naive`, ...); such a node is dropped from the outbound
+  /// list and every reference to it is rewritten.
   static String? _mapProxyType(String clashType) => proxyTypeMapping[clashType];
+
+  /// Folds the option spellings that differ between profiles and the engine.
+  ///
+  /// Only field names that actually disagree are touched; the values travel
+  /// as written, because the engine's own validation is the authority and a
+  /// value it cannot use is reported there with the protocol's own wording.
+  static void _normaliseProtocolOptions(
+    String outboundType,
+    Map<String, dynamic> options,
+  ) {
+    if (outboundType == 'ssr') {
+      // mihomo puts the obfs host in `obfs-param`; the engine calls it
+      // `obfs-host`. The underscore spelling occurs in the wild too.
+      _moveAlias(options, const ['obfs_param', 'obfs-param'], 'obfs-host');
+      return;
+    }
+    if (outboundType == 'snell') {
+      // mihomo writes `obfs-opts: {mode, host}`; the engine reads a mode
+      // string plus a host, and nothing else would reach it.
+      final obfsOpts = options['obfs-opts'];
+      if (obfsOpts is Map) {
+        final mode = obfsOpts['mode']?.toString().trim() ?? '';
+        final host = obfsOpts['host']?.toString().trim() ?? '';
+        if (mode.isNotEmpty && !options.containsKey('obfs')) {
+          options['obfs'] = mode;
+        }
+        if (host.isNotEmpty && !options.containsKey('obfs-host')) {
+          options['obfs-host'] = host;
+        }
+        options.remove('obfs-opts');
+      }
+      return;
+    }
+    if (outboundType == 'hysteria') {
+      _moveAlias(options, const ['auth_str'], 'auth-str');
+      // Hysteria 1's `obfs` carries the XPlus password itself. Profiles
+      // written against the hysteria2 spelling put the method name there and
+      // the password beside it, so that pair is folded back onto the password
+      // (and refusing modes like faketcp stays the engine's call, message and
+      // all).
+      final method = options['obfs']?.toString().trim().toLowerCase() ?? '';
+      if (method == 'xplus') {
+        final password = options['obfs-password']?.toString().trim() ?? '';
+        if (password.isNotEmpty) {
+          options['obfs'] = password;
+        }
+      }
+      options.remove('obfs-password');
+      // `up`/`down` are written with a unit (“50 Mbps”). They are advisory
+      // (the server accounts, this client does not shape), so the number is
+      // extracted and the unit dropped rather than the field being lost.
+      for (final key in const ['up', 'down']) {
+        final normalised = _bandwidthToMbps(options[key]);
+        if (normalised != null) {
+          options[key] = normalised;
+        }
+      }
+    }
+  }
+
+  /// `50`, `50 Mbps`, `50mbps` → `50`; null when there is nothing numeric.
+  static int? _bandwidthToMbps(Object? value) {
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.round();
+    }
+    final match = RegExp(r'^\s*(\d+)').firstMatch('${value ?? ''}');
+    return match == null ? null : int.tryParse(match.group(1)!);
+  }
+
+  /// Moves the first present alias onto [canonical], removing them all.
+  static void _moveAlias(
+    Map<String, dynamic> options,
+    List<String> aliases,
+    String canonical,
+  ) {
+    if (options.containsKey(canonical)) {
+      for (final alias in aliases) {
+        options.remove(alias);
+      }
+      return;
+    }
+    for (final alias in aliases) {
+      if (options.containsKey(alias)) {
+        options[canonical] = options.remove(alias);
+        return;
+      }
+    }
+  }
 
   static List<Map<String, dynamic>> _extractRules(
     Map<String, dynamic> clash, {

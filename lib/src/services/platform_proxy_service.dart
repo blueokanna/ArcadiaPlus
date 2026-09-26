@@ -832,11 +832,18 @@ class PlatformProxyService extends ChangeNotifier {
       final result = await _ohosChannel.invokeMethod('setProxyMode', {
         'mode': mode.name,
       });
-      if (result == true) {
-        _publish(mode: mode);
+      final accepted = result == true;
+      // The extension owns the tunnel's mode; this process' engine mirrors it
+      // so the UI keeps answering stats and rules from the mode it displays.
+      // A failure of that local mirror is reported but must not mask a switch
+      // the extension already accepted.
+      try {
         await rust_api.setAndroidProxyMode(mode: mode.name);
+      } catch (e) {
+        debugPrint('OHOS: the local engine did not take mode $mode: $e');
       }
-      return result == true;
+      _publish(mode: mode);
+      return accepted;
     } catch (e) {
       debugPrint('Failed to set OHOS proxy mode: $e');
       return false;
@@ -871,8 +878,10 @@ class PlatformProxyService extends ChangeNotifier {
         'mode': mode.name,
       });
       if (result == true) {
-        _publish(mode: mode);
+        // The engine first, then the published state: a mode the engine
+        // refused must not be shown as applied.
         await rust_api.setAndroidProxyMode(mode: mode.name);
+        _publish(mode: mode);
       }
       return result == true;
     } catch (e) {

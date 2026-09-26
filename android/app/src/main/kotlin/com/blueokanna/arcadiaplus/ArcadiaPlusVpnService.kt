@@ -762,6 +762,12 @@ class ArcadiaPlusVpnService : VpnService() {
         isStarting.set(false)
         instance = null
 
+        // Release anyone parked in startVpnAndGetFd(): the service is gone, so
+        // waiting for the full ten-second timeout would report a failure long
+        // after it already happened.
+        startLatch?.countDown()
+        startLatch = null
+
         // Unregister network callback
         unregisterNetworkCallback()
 
