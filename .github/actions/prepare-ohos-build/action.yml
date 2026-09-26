@@ -58,7 +58,17 @@ runs:
         sed -i -E "s/(\"targetSdkVersion\": )\"[^\"]*\"/\1\"${OHOS_SDK_COMPATIBLE_VERSION}\"/" ohos/build-profile.json5
         grep -nE '"compatibleSdkVersion"|"targetSdkVersion"' ohos/build-profile.json5
 
+        # A freshly checked out Flutter OHOS fork bootstraps on its first run:
+        # it builds flutter_tools and downloads the Dart SDK, and that progress
+        # output shares stdout with the command being captured. When it lands
+        # inside `--version --machine` the capture starts with a progress line
+        # instead of JSON and jq dies with "Invalid numeric literal". Warm the
+        # tool up once with the output discarded, and keep only the JSON object
+        # from the first line that starts with `{` in case anything still
+        # bleeds into the capture.
+        "$FLUTTER_COMMAND" --version > /dev/null 2>&1 || true
         info="$("$FLUTTER_COMMAND" --version --machine)"
+        info="$(sed -n '/^{/,$p' <<< "$info")"
         dart="$(jq -r '.dartSdkVersion' <<< "$info")"
         framework="$(jq -r '.frameworkVersion' <<< "$info")"
         if [[ -z "$dart" || -z "$framework" ]]; then
