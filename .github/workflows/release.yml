@@ -738,6 +738,40 @@ jobs:
             flutter build hap --release --no-codesign
           fi
 
+      - name: Report why the HAP build failed
+        if: failure()
+        shell: bash
+        run: |
+          set -uo pipefail
+          # See ci.yml: `flutter build hap`'s output dies with its step, and
+          # which artifacts survived says how far the build got.
+          annotate() {
+            local title="$1" text="$2" encoded
+            encoded="$(printf '%s' "$text" | sed -e 's/%/%25/g' -e 's/\r//g' | awk 'BEGIN { ORS = "%0A" } { print }')"
+            echo "::error title=${title}::${encoded:0:8000}"
+          }
+
+          echo '--- stage products ---'
+          products="$(find ohos -maxdepth 4 \( -name 'libapp.so' -o -name 'flutter_assets' \) -print 2>/dev/null | head -n 10 | tr '\n' ' ')"
+          echo "stage products: ${products:-none}"
+          ls -la ohos/har 2>/dev/null || echo 'no ohos/har'
+          ls -la ohos/entry/oh_modules 2>/dev/null | head -n 10 || echo 'no entry/oh_modules'
+          echo '--- project-level oh-package.json5 (rewritten by the tool) ---'
+          cat ohos/oh-package.json5 2>/dev/null || true
+          echo '--- hvigor build log ---'
+          log="$(find ohos/.hvigor/outputs/build-logs -name 'build.log' -print -quit 2>/dev/null || true)"
+          if [[ -n "$log" ]]; then
+            errors="$(grep -nE 'ERROR|Error|Failed|error' "$log" | tail -n 40 || true)"
+            printf '%s\n' "$errors"
+            echo '--- tail ---'
+            tail -n 80 "$log"
+            annotate 'HAP build failed: hvigor log tail' "$(tail -n 60 "$log")"
+            annotate 'HAP build failed: hvigor error lines' "$errors"
+          else
+            echo 'hvigor never ran (no .hvigor/outputs/build-logs/build.log)'
+            annotate 'HAP build failed: hvigor never ran' "stage products: ${products:-none}; ohos/har: $(ls ohos/har 2>/dev/null | head -n 5 | tr '\n' ' ')"
+          fi
+
       - name: Verify and stage the HAP
         shell: bash
         env:

@@ -60,6 +60,31 @@
 			"label": "verify2",
 			"type": "shell",
 			"command": "d:\\RustProject\\TempFiles\\verify2.cmd"
+		},
+		{
+			"label": "wsl-verify-60",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\wsl-verify-60.cmd"
+		},
+		{
+			"label": "wsl-clean-61",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\wsl-clean-61.cmd"
+		},
+		{
+			"label": "rust-ohos-62",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\rust-ohos-62.cmd"
+		},
+		{
+			"label": "hvigor-logs-63",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\hvigor-logs-63.cmd"
+		},
+		{
+			"label": "hvigor-log-64",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\hvigor-log-64.cmd"
 		}
 	]
 }

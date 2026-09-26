@@ -230,6 +230,47 @@ jobs:
       - name: Build the release HAP
         run: flutter build hap --release --no-codesign
 
+      - name: Report why the HAP build failed
+        if: failure()
+        shell: bash
+        run: |
+          set -uo pipefail
+          # `flutter build hap`'s own output dies with its step, so bring the
+          # state forward. Which of these exists also says how far the build
+          # got: no .hvigor at all means the failure was before hvigor (pub,
+          # ohpm, precache); ohos/har without flutter.har means the toolchain
+          # never staged the embedding; a build-log tail names the failing
+          # hvigor task. The annotations are for readers who cannot open the
+          # step log at all.
+          annotate() {
+            # Newlines travel as %0A and percent as %25; everything else in
+            # the message is free text.
+            local title="$1" text="$2" encoded
+            encoded="$(printf '%s' "$text" | sed -e 's/%/%25/g' -e 's/\r//g' | awk 'BEGIN { ORS = "%0A" } { print }')"
+            echo "::error title=${title}::${encoded:0:8000}"
+          }
+
+          echo '--- stage products ---'
+          products="$(find ohos -maxdepth 4 \( -name 'libapp.so' -o -name 'flutter_assets' \) -print 2>/dev/null | head -n 10 | tr '\n' ' ')"
+          echo "stage products: ${products:-none}"
+          ls -la ohos/har 2>/dev/null || echo 'no ohos/har'
+          ls -la ohos/entry/oh_modules 2>/dev/null | head -n 10 || echo 'no entry/oh_modules'
+          echo '--- project-level oh-package.json5 (rewritten by the tool) ---'
+          cat ohos/oh-package.json5 2>/dev/null || true
+          echo '--- hvigor build log ---'
+          log="$(find ohos/.hvigor/outputs/build-logs -name 'build.log' -print -quit 2>/dev/null || true)"
+          if [[ -n "$log" ]]; then
+            errors="$(grep -nE 'ERROR|Error|Failed|error' "$log" | tail -n 40 || true)"
+            printf '%s\n' "$errors"
+            echo '--- tail ---'
+            tail -n 80 "$log"
+            annotate 'HAP build failed: hvigor log tail' "$(tail -n 60 "$log")"
+            annotate 'HAP build failed: hvigor error lines' "$errors"
+          else
+            echo 'hvigor never ran (no .hvigor/outputs/build-logs/build.log)'
+            annotate 'HAP build failed: hvigor never ran' "stage products: ${products:-none}; ohos/har: $(ls ohos/har 2>/dev/null | head -n 5 | tr '\n' ' ')"
+          fi
+
       - name: Verify the HAP carries the Flutter runtime and the bridge
         shell: bash
         run: |

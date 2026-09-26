@@ -226,4 +226,22 @@ void main() {
     expect(plugin, contains('getUniqueClassName'));
     expect(plugin, isNot(contains('result.success({')));
   });
+
+  test('the HAP jobs bring the hvigor log forward when the build fails', () {
+    for (final path in [
+      '.github/workflows/ci.yml',
+      '.github/workflows/release.yml',
+    ]) {
+      final source = File(path).readAsStringSync();
+      // `flutter build hap`'s own output dies with its step; the on-disk
+      // hvigor log and the stage products are what survives, so a failure
+      // report has to surface them explicitly.
+      expect(source, contains('Report why the HAP build failed'));
+      expect(source, contains('if: failure()'));
+      expect(source, contains('.hvigor/outputs/build-logs'));
+      // The annotations are the one failure channel a reader without access
+      // to the step log can still see, so the step must emit them.
+      expect(source, contains('::error title='));
+    }
+  });
 }
