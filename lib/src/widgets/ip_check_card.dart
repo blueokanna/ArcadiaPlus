@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
@@ -207,12 +208,14 @@ class _IpCheckCardState extends State<IpCheckCard>
   ///
   /// 代理运行时请求走本地混合入站端口，这样显示的是出口 IP；
   /// 绕过代理的 IP 检测只会回答用户没问的那个问题。
+  /// `Connection: close` 让探测本身不留 keep-alive 连接：引擎按真实连接
+  /// 计数，探测结束后还挂着的 socket 会被计入并把连接列表撑住。
   Dio _httpClient() {
     final dio = Dio(
       BaseOptions(
         connectTimeout: const Duration(seconds: 8),
         receiveTimeout: const Duration(seconds: 8),
-        headers: const {'User-Agent': 'ArcadiaPlus/1.0'},
+        headers: const {'User-Agent': 'ArcadiaPlus/1.0', 'Connection': 'close'},
       ),
     );
 

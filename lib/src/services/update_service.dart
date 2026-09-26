@@ -92,9 +92,8 @@ class UpdateService {
     final version = _SemanticVersion.parse(tag.substring(1));
     if (version.compareTo(currentVersion) <= 0) return null;
 
-    final releaseDate = DateTime.parse(
-      release['published_at'] as String,
-    ).toUtc();
+    final releaseDate = DateTime.parse(release['published_at'] as String)
+        .toUtc();
     final releaseAssets = (release['assets'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>();
     final manifestReleaseAsset = releaseAssets
@@ -127,9 +126,8 @@ class UpdateService {
       throw const FormatException('Update manifest version mismatch');
     }
 
-    final manifestDate = DateTime.parse(
-      manifest['published_at'] as String,
-    ).toUtc();
+    final manifestDate = DateTime.parse(manifest['published_at'] as String)
+        .toUtc();
     if (manifestDate.difference(releaseDate).abs() >
         const Duration(minutes: 10)) {
       throw const FormatException('Update publication date mismatch');

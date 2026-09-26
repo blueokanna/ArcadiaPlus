@@ -9,10 +9,18 @@
   <a href="README_EN.md">English</a>
 </p>
 
+## 这是什么
+
+ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平台接管，Rust 侧只保留一层 FFI，代理引擎、DNS、TUN 数据面与协议实现全部来自 [corduit](https://crates.io/crates/corduit)。
+
+它读 Clash 形态的配置（`proxies`、`proxy-groups`、`rules`、`rule-providers`、`dns`），把配置翻译成引擎执行的规则表，并把执行情况显示出来：规则表本身、每条规则的命中次数、转换时丢了什么、规则集上次刷新是什么时候。它不提供服务器、节点或订阅——配置由你准备，合法性由你负责。
+
+下面把当前版本的实际能力写清楚了，包括哪些平台还不能宣称可用。
+
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.2.0 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.2.1 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 配置转换采用显式降级：corduit 无法构建的协议节点会被丢弃、引用回落 `DIRECT`，corduit 没有对应类型的规则会被跳过——每次降级都通过 `onWarning` 上报，不静默处理。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
@@ -20,9 +28,31 @@
 - Android、Windows、Linux 共用 Rust TUN 数据包处理器，各平台独立管理设备生命周期。
 - Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/arcadiaplus.png` 统一生成。
 
+## 规则
+
+规则表由配置转换逐条翻译给引擎，支持的类型与语义：
+
+| 类型 | 语义 |
+| --- | --- |
+| `DOMAIN` / `DOMAIN-SUFFIX` / `DOMAIN-KEYWORD` / `DOMAIN-REGEX` | 域名匹配；正则原样交给引擎编译，`(?-i)` 之类内联标志按 Clash 语义生效 |
+| `GEOIP` | 国家码匹配；`LAN` / `PRIVATE` 不需要数据库，其余需要 `Country.mmdb`（随包分发，缺失时记录原因，规则不会命中） |
+| `IP-CIDR` / `IP-CIDR6` / `SRC-IP-CIDR` | 地址段匹配；`no-resolve` 原样透传，带该标志的规则只看客户端给的地址，不触发解析 |
+| `DST-PORT` / `SRC-PORT` / `IN-PORT` | 端口与端口区间（`80,443,1000-2000`） |
+| `IN-TYPE` / `IN-NAME` / `IN-USER` | 连接从哪个 inbound 进来、用什么协议、以哪个用户通过认证（比较时忽略大小写） |
+| `PROCESS-NAME` / `PROCESS-PATH` | 进程匹配 |
+| `NETWORK` | `tcp` / `udp` |
+| `RULE-SET` | 引用 `rule-providers`；引擎只读本地文件，下载、校验、缓存与刷新都在 Dart 侧完成 |
+| `GEOSITE` | 引擎不带 v2ray geosite 数据库；存在同名 provider 时按 provider 匹配，否则跳过并给出警告 |
+| `AND` / `OR` / `NOT` | 逻辑组合，支持括号嵌套，如 `AND,((DOMAIN-SUFFIX,a.com),(NETWORK,tcp)),PROXY` |
+| `MATCH` / `FINAL` | 兜底规则 |
+
+转换是**显式降级**：引擎没有对应类型的规则（`SCRIPT`、`PROCESS-PATH-REGEX`、`SUB-RULE`、`IP-SUFFIX` 等）会被跳过，并通过 `onWarning` 上报原因；`mrs` 格式或内容为二进制的规则集不会被半装载。跳过而不近似，是因为近似会把本该被规则保护的流量送出去。
+
+设置页的「规则」入口（`/rules`）显示引擎里的规则表与每条规则的**实时命中次数**、本次转换的全部警告，以及每个规则集的就绪状态、条目数与上次刷新时间。命中次数是这套界面存在的理由：一条从未命中、或命中了一切的规则，可以直接看出来。
+
 ## 协议状态
 
-协议实现位于 corduit 0.2.0；本仓库只负责把它们接进 Flutter，并未对真实服务端互操作做验证。
+协议实现位于 corduit 0.2.1；本仓库只负责把它们接进 Flutter，并未对真实服务端互操作做验证。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
@@ -143,7 +173,7 @@ flowchart TB
     %% Engine Layer
     %% =========================
     subgraph ENGINE["③ 核心引擎层"]
-        CORDUIT["corduit 0.2.0<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
+        CORDUIT["corduit 0.2.1<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
     end
 
     %% =========================
@@ -182,7 +212,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 
 ## 环境要求
 
-- Flutter SDK（Dart `^3.12.0`，Flutter `>=3.44.0 <3.45.0`；CI 与发布流程固定使用 3.44.6）
+- Flutter SDK（Dart `^3.13.0`，Flutter `>=3.47.0 <3.48.0`；CI 与发布流程固定使用 3.47.2，与本机开发环境同一版本线）
 - Rust ≥ 1.88（edition 2021；`rust-toolchain.toml` 固定 1.97.0，本地与 CI 使用同一编译器跑 rustfmt/clippy）
 - Android：Android SDK、NDK、JDK 17
 - Windows：Visual Studio C++ 工具链；Wintun/管理员权限
@@ -202,7 +232,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-`pubspec.lock` 只对一条 Flutter 版本线成立：Flutter SDK 会钉死它自带包（`test_api`、`matcher`、`vector_math`、`meta`、`intl` 等）的版本。换一条版本线跑 `flutter pub get` 不会报错，但会把这个 lockfile 静默改写成那条线的解析结果，CI 上的 `flutter pub get --enforce-lockfile` 随后必然失败。提交前请确认本机 Flutter 落在 `environment.flutter` 声明的区间内，并用 `--enforce-lockfile` 确认 lockfile 没被动过：
+`pubspec.lock` 只对一条 Flutter 版本线成立：Flutter SDK 自带 `test_api`、`matcher`、`vector_math`、`meta`、`intl` 等包，而它们的版本跟着 SDK 走。锁定文件里的这几个包一旦与本机 SDK 不匹配，`flutter pub get` 会直接失败，或不声不响地把 lockfile 改写成当前 SDK 的解析结果，随后 CI 上的 `flutter pub get --enforce-lockfile` 必然失败。本仓库锁在 Flutter 3.47.x（Dart 3.13）这条线上，提交前请确认本机版本落在 `environment.flutter` 声明的区间内，并用 `--enforce-lockfile` 确认 lockfile 没被动过：
 
 ```bash
 flutter pub get --enforce-lockfile
@@ -226,7 +256,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT 使用 [ohos/README.md](ohos/README.md) 中的 DevEco/hvigor 流程。构建成功只证明工具链可用，不等于 VPN 数据路径已通过验证。
 
-`rust/Cargo.toml` 中的 corduit 依赖在本地开发时带有 `path`（指向同级目录 `../Corduit`）。CI 的 checkout 里没有该目录，因此提交前需要确认 CI 使用的是 crates.io 上的版本：去掉 `path`，或让 workflow 先 checkout 对应仓库。否则 CI 会在解析依赖阶段失败，而不是在编译阶段给出可读的错误。
+`rust/Cargo.toml` 中的 corduit 依赖在本地开发时带 `path`（指向同级目录 `../Corduit`），CI 的 checkout 里没有这个目录，因此每个工作流都会先执行 `.github/actions/checkout-engine`：它从 `rust/Cargo.toml` 读出版本要求，优先 checkout 同名 `v<版本>` 标签，没有标签时跟随引擎仓库的默认分支并给出警告，最后校验引擎自己声明的版本与要求一致——不一致就失败，绝不拿一个来源不明的引擎把 CI 刷成绿色。发布引擎时请打 `v<版本>` 标签，CI 才会被钉在不可变修订上。
 
 ## 图标
 
@@ -294,5 +324,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate_icons.ps1
   [Noncompete](https://polyformproject.org/licenses/perimeter/1.0.1/#noncompete) 与
   [Competition](https://polyformproject.org/licenses/perimeter/1.0.1/#competition)）。
 - **不是 OSI 认可的开源许可**，而是 *source-available（源码可获取）* 许可：源码可以按上面的条款阅读和修改，而且你转发出去的副本，接收方也同时得到这份条款。
-- **必须保留署名通知。** 分发本软件或其任何部分时，必须随附 `LICENSE` 全文（或上述官方链接），以及其中的 `Required Notice: Copyright 2026 blueokanna and HyphenTeam (https://github.com/blueokanna/Courierust)`（见 *Notices*）。
+- **必须保留署名通知。** 分发本软件或其任何部分时，必须随附 `LICENSE` 全文（或上述官方链接），以及其中的 `Required Notice: Copyright 2026 blueokanna and HyphenTeam (https://github.com/blueokanna/ArcadiaPlus)`（见 *Notices*）。
 - **无担保、无责任**（在法律允许范围内），并且末尾那段附加条款把同样的限制延伸到「他人用本软件（或其改动/衍生作品）从事违法行为」的情形（见 `LICENSE` 末尾 *Additional Term Adopted by the Licensor*）。

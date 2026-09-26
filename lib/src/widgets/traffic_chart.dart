@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
@@ -309,7 +310,13 @@ class _TrafficChartState extends State<TrafficChart>
       BaseOptions(
         connectTimeout: const Duration(seconds: 8),
         receiveTimeout: const Duration(seconds: 8),
-        headers: {'User-Agent': 'ArcadiaPlus/1.0'},
+        headers: {
+          'User-Agent': 'ArcadiaPlus/1.0',
+          // A one-shot probe must not park a keep-alive socket: the engine
+          // counts live connections, and a socket the server would keep open
+          // shows up in that count long after the check finished.
+          'Connection': 'close',
+        },
       ),
     );
 
@@ -327,10 +334,31 @@ class _TrafficChartState extends State<TrafficChart>
     return dio;
   }
 
+  /// Run a one-shot request on a client that is always torn down.
+  ///
+  /// `close(force: true)` closes the adapter's `HttpClient` — sockets
+  /// included — rather than only detaching Dio from it, and it runs even when
+  /// the request throws. Both properties matter here: a probe that times out
+  /// or fails must not leave a socket behind, and `close()` without `force`
+  /// leaves exactly that behind.
+  Future<T> _oneShot<T>(
+    bool useProxy,
+    Future<T> Function(Dio dio) request,
+  ) async {
+    final dio = _createDioClient(useProxy: useProxy);
+    try {
+      return await request(dio);
+    } finally {
+      dio.close(force: true);
+    }
+  }
+
   Future<void> _fetchIpv4Info() async {
     try {
-      final dio = _createDioClient(useProxy: widget.isProxyRunning);
-      final response = await dio.get('https://api.ip.sb/geoip');
+      final response = await _oneShot(
+        widget.isProxyRunning,
+        (dio) => dio.get('https://api.ip.sb/geoip'),
+      );
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
@@ -350,7 +378,6 @@ class _TrafficChartState extends State<TrafficChart>
           });
         }
       }
-      dio.close();
     } on DioException catch (e) {
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||
@@ -363,8 +390,10 @@ class _TrafficChartState extends State<TrafficChart>
         return;
       }
       try {
-        final dio = _createDioClient(useProxy: widget.isProxyRunning);
-        final response = await dio.get('https://api.ip.sb/ip');
+        final response = await _oneShot(
+          widget.isProxyRunning,
+          (dio) => dio.get('https://api.ip.sb/ip'),
+        );
         if (response.statusCode == 200) {
           final body = response.data.toString().trim();
           if (mounted) {
@@ -374,7 +403,6 @@ class _TrafficChartState extends State<TrafficChart>
             });
           }
         }
-        dio.close();
       } on DioException catch (e2) {
         if (e2.type == DioExceptionType.connectionTimeout ||
             e2.type == DioExceptionType.receiveTimeout ||
@@ -392,8 +420,8 @@ class _TrafficChartState extends State<TrafficChart>
             });
           }
         }
-      } catch (_) {
-        debugPrint('Failed to fetch IPv4 info: $e');
+      } catch (fallbackError) {
+        debugPrint('Failed to fetch IPv4 info: $fallbackError');
       }
     } catch (e) {
       debugPrint('Failed to fetch IPv4 info: $e');
@@ -407,8 +435,10 @@ class _TrafficChartState extends State<TrafficChart>
 
   Future<void> _fetchIpv6Info() async {
     try {
-      final dio = _createDioClient(useProxy: widget.isProxyRunning);
-      final response = await dio.get('https://api-ipv6.ip.sb/geoip');
+      final response = await _oneShot(
+        widget.isProxyRunning,
+        (dio) => dio.get('https://api-ipv6.ip.sb/geoip'),
+      );
 
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
@@ -428,7 +458,6 @@ class _TrafficChartState extends State<TrafficChart>
           });
         }
       }
-      dio.close();
     } catch (e) {
       debugPrint('IPv6 not available: $e');
     }

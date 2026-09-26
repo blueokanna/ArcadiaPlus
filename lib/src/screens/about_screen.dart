@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -342,15 +343,11 @@ class _AboutScreenState extends State<AboutScreen> {
   List<({IconData icon, String text})> _features(AppLocalizations? l10n) => [
     (
       icon: Icons.speed_outlined,
-      text:
-          l10n?.featureSpeed ??
-          'Rust proxy core: multi-protocol forwarding, connection tracking and live traffic accounting',
+      text: l10n?.featureSpeed ?? 'Rust proxy core: multi-protocol forwarding, connection tracking and live traffic accounting',
     ),
     (
       icon: Icons.rule_outlined,
-      text:
-          l10n?.featureRules ??
-          'Rule, global and direct routing modes; switching never restarts the tunnel',
+      text: l10n?.featureRules ?? 'Rule, global and direct routing modes; switching never restarts the tunnel',
     ),
     (
       icon: Icons.vpn_lock_outlined,
@@ -360,15 +357,11 @@ class _AboutScreenState extends State<AboutScreen> {
     ),
     (
       icon: Icons.cloud_download_outlined,
-      text:
-          l10n?.aboutFeatureSubscription ??
-          'Clash subscriptions: YAML conversion, local rule-set cache and scheduled refresh',
+      text: l10n?.aboutFeatureSubscription ?? 'Clash subscriptions: YAML conversion, local rule-set cache and scheduled refresh',
     ),
     (
       icon: Icons.dns_outlined,
-      text:
-          l10n?.featureDns ??
-          'Built-in DNS: configurable upstreams, fake-IP and an optional local recursive resolver',
+      text: l10n?.featureDns ?? 'Built-in DNS: configurable upstreams, fake-IP and an optional local recursive resolver',
     ),
     (
       icon: Icons.devices_outlined,
@@ -384,9 +377,7 @@ class _AboutScreenState extends State<AboutScreen> {
     ),
     (
       icon: Icons.security_outlined,
-      text:
-          l10n?.featureSecurity ??
-          'Subscriptions, rule sets and updates are fetched straight from their source over TLS',
+      text: l10n?.featureSecurity ?? 'Subscriptions, rule sets and updates are fetched straight from their source over TLS',
     ),
   ];
 
@@ -452,9 +443,8 @@ class _AboutScreenState extends State<AboutScreen> {
   /// here, so the row is never wrong and never empty.
   static String _dartRuntime() {
     final version = Platform.version;
-    final match = RegExp(
-      r'^(\S+)\s+\((\w+)\).*?on\s+"?([\w\-]+)"?$',
-    ).firstMatch(version);
+    final match = RegExp(r'^(\S+)\s+\((\w+)\).*?on\s+"?([\w\-]+)"?$')
+        .firstMatch(version);
     if (match == null) return version;
     return '${match.group(1)} (${match.group(2)}) · ${match.group(3)}';
   }
@@ -510,9 +500,8 @@ class _AboutScreenState extends State<AboutScreen> {
           Expanded(
             child: Text(
               feature.text,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(height: 1.5),
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(height: 1.5),
             ),
           ),
         ],

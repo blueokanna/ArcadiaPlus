@@ -9,10 +9,18 @@
   <a href="README.md">中文</a>
 </p>
 
+## What This Is
+
+ArcadiaPlus is a cross-platform proxy client: Flutter owns the interface and the per-platform takeover, and the Rust side is a single FFI bridge — the proxy engine, DNS, the TUN data path, and every protocol come from [corduit](https://crates.io/crates/corduit).
+
+It reads Clash-shaped profiles (`proxies`, `proxy-groups`, `rules`, `rule-providers`, `dns`), translates them into the rule table the engine executes, and shows what that engine is doing: the table itself, per-rule hit counts, what conversion dropped, and when each rule set last refreshed. It ships no servers, nodes, or subscriptions — you supply the configuration, and lawful use is on you.
+
+The sections below state what the current build actually does, including the platforms where support cannot yet be claimed.
+
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
-- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.2.0, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
+- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.2.1, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
 - Explicit configuration downgrades: a node whose protocol corduit cannot build is dropped and its references fall back to `DIRECT`, and a rule type corduit has no rule for is skipped — every downgrade is reported through `onWarning`, never silent.
 - Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
 - Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
@@ -20,9 +28,31 @@
 - Shared Rust TUN packet processing for Android, Windows, and Linux, with platform-owned device lifecycles.
 - Generated app icons for Windows, macOS, Linux, Android, iOS, and HarmonyOS NEXT from `assets/arcadiaplus.png`.
 
+## Rules
+
+Conversion translates the profile rule by rule. The vocabulary it can express:
+
+| Type | Semantics |
+| --- | --- |
+| `DOMAIN` / `DOMAIN-SUFFIX` / `DOMAIN-KEYWORD` / `DOMAIN-REGEX` | Domain matching; the regular expression is compiled by the engine as written, so inline flags such as `(?-i)` behave the way Clash makes them behave |
+| `GEOIP` | Country matching; `LAN` / `PRIVATE` need no database, and every other code needs `Country.mmdb` (shipped with the installer; when it is missing the reason is recorded and the rules never match) |
+| `IP-CIDR` / `IP-CIDR6` / `SRC-IP-CIDR` | Address ranges; `no-resolve` travels with the rule, so it only ever sees the address the client supplied and forces no lookup |
+| `DST-PORT` / `SRC-PORT` / `IN-PORT` | Ports and port ranges (`80,443,1000-2000`) |
+| `IN-TYPE` / `IN-NAME` / `IN-USER` | Which inbound the connection arrived on, which protocol it spoke, and which user it authenticated as (compared case-insensitively) |
+| `PROCESS-NAME` / `PROCESS-PATH` | Process matching |
+| `NETWORK` | `tcp` / `udp` |
+| `RULE-SET` | References a `rule-providers` entry; the engine only reads local files, so downloading, validating, caching, and refreshing happen on the Dart side |
+| `GEOSITE` | The engine ships no v2ray geosite database; with a provider of that name it matches through the provider, and without one the rule is skipped with a warning |
+| `AND` / `OR` / `NOT` | Logical composition with nested conditions, as in `AND,((DOMAIN-SUFFIX,a.com),(NETWORK,tcp)),PROXY` |
+| `MATCH` / `FINAL` | Catch-all rule |
+
+Conversion downgrades explicitly: a rule type the engine cannot evaluate (`SCRIPT`, `PROCESS-PATH-REGEX`, `SUB-RULE`, `IP-SUFFIX`, and the like) is skipped with the reason reported through `onWarning`, and a rule set in `mrs` format or with binary content is refused rather than half-loaded. Skipping beats approximating here, because an approximation sends the traffic the rule was written to protect.
+
+The Rules entry in settings (`/rules`) shows the engine's table with each rule's **live hit count**, every conversion warning from the current profile, and each rule set's readiness, entry count, and last refresh. Hit counts are why this screen exists: a rule that never fires, or one that fires for everything, is visible instead of inferred.
+
 ## Protocol Status
 
-The protocol implementations live in corduit 0.2.0. This repository wires them into Flutter and has not run real-server interoperability tests itself.
+The protocol implementations live in corduit 0.2.1. This repository wires them into Flutter and has not run real-server interoperability tests itself.
 
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
@@ -130,7 +160,7 @@ Flutter Rust Bridge (generated bindings)
         |
 lib-arcadiaplus (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
-corduit 0.2.0 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
+corduit 0.2.1 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
         +-- nextjson / rustbinary (config and binary codecs)
 recurse-x 0.2.1 (optional local recursion: the resolver, plus the client-facing UDP/TCP DNS server whose lifecycle the bridge owns)
@@ -142,7 +172,7 @@ Clear ownership boundaries matter more than adding macros, generics, or complex 
 
 ## Prerequisites
 
-- Flutter SDK (Dart `^3.12.0`, Flutter `>=3.44.0 <3.45.0`; CI and the release workflow pin 3.44.6)
+- Flutter SDK (Dart `^3.13.0`, Flutter `>=3.47.0 <3.48.0`; CI and the release workflow pin 3.47.2, the same line local development uses)
 - Rust ≥ 1.88 (edition 2021; `rust-toolchain.toml` pins 1.97.0 so local and CI lint with the same compiler)
 - Android: Android SDK, NDK, and JDK 17
 - Windows: Visual Studio C++ toolchain, Wintun, and elevation
@@ -162,7 +192,7 @@ cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 ```
 
-`pubspec.lock` is valid for exactly one Flutter version line: the SDK pins the versions of the packages it ships (`test_api`, `matcher`, `vector_math`, `meta`, `intl`, ...). Resolving that lockfile with a different line does not error — it silently rewrites the lock for the line you ran, and the `flutter pub get --enforce-lockfile` step in CI then fails. Check that your local Flutter falls inside `environment.flutter` and that the lockfile is untouched before pushing:
+`pubspec.lock` is valid for exactly one Flutter version line: the SDK ships `test_api`, `matcher`, `vector_math`, `meta`, `intl`, and their versions move with the SDK line. A lockfile recorded on another line either fails `flutter pub get` outright or gets silently rewritten to the version you ran — and then the `flutter pub get --enforce-lockfile` step in CI fails. This repository is locked to Flutter 3.47.x (Dart 3.13), so check that your local Flutter falls inside `environment.flutter` and that the lockfile is untouched before pushing:
 
 ```bash
 flutter pub get --enforce-lockfile
@@ -186,7 +216,7 @@ flutter build ios --release --no-codesign
 
 Use the DevEco/hvigor workflow in [ohos/README.md](ohos/README.md) for HarmonyOS NEXT. A successful build validates the toolchain, not the unfinished VPN data path.
 
-The corduit dependency in `rust/Cargo.toml` carries a `path` (a sibling `../Corduit`) during local development. A CI checkout has no such directory, so before pushing, confirm CI resolves the crates.io version: drop the `path`, or have the workflow check that repository out first. Otherwise CI fails while resolving dependencies instead of failing later with a readable compile error.
+The corduit dependency in `rust/Cargo.toml` carries a `path` (a sibling `../Corduit`) during local development, which a CI checkout does not have, so every workflow starts with `.github/actions/checkout-engine`: it reads the version requirement from `rust/Cargo.toml`, checks out the matching `v<version>` tag when one exists, otherwise follows the engine repository's default branch with a warning, and finally verifies that the engine reports the required version — a mismatch fails the job rather than letting an unknown engine turn CI green. Tag engine releases as `v<version>` to pin CI to an immutable revision.
 
 ## Icons
 
@@ -249,5 +279,5 @@ What that means in practice:
 
 - **Free for any purpose except competing products.** Reading, building, modifying, self-hosting, embedding in internal or customer systems, teaching, and shipping alongside non-competing software are all allowed. What is not allowed is providing others a product that substitutes for this software's functionality or value — including as a service interface, and including a port to another language (see [Noncompete](https://polyformproject.org/licenses/perimeter/1.0.1/#noncompete) and [Competition](https://polyformproject.org/licenses/perimeter/1.0.1/#competition)).
 - **Not an OSI-approved open-source license**, but a *source-available* license: you can read and modify the source under the terms above, and anyone you pass a copy to receives these same terms.
-- **Keep the required notice.** When you distribute the software or any part of it, pass along the full `LICENSE` text (or the official link above) and the `Required Notice: Copyright 2026 blueokanna and HyphenTeam (https://github.com/blueokanna/Courierust)` line it carries (see *Notices*).
+- **Keep the required notice.** When you distribute the software or any part of it, pass along the full `LICENSE` text (or the official link above) and the `Required Notice: Copyright 2026 blueokanna and HyphenTeam (https://github.com/blueokanna/ArcadiaPlus)` line it carries (see *Notices*).
 - **No warranty, no liability** (as far as the law allows), and the appended term extends the same limit to anyone using this software, or a work based on it, to break the law (see *Additional Term Adopted by the Licensor* at the end of `LICENSE`).

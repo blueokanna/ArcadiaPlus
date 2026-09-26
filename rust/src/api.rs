@@ -348,11 +348,20 @@ pub async fn get_dns_config() -> std::result::Result<DnsConfigDto, String> {
 /// and the bound address is returned. Queries are answered by iterative
 /// resolution from the root — no upstream forwarder is involved.
 ///
+/// `cachePath` turns on the persistent L3 cache: the resolver loads that
+/// file when it starts and snapshots to it on an interval, so a restart
+/// resumes with the answers the previous run had already learned instead of
+/// walking from the roots again. Pass `null` (or an empty string) to keep
+/// the cache in memory only.
+///
 /// Calling this while an instance is already running returns the existing
 /// address instead of rebinding.
 #[frb]
-pub async fn start_recursive_dns(listen: String) -> std::result::Result<String, String> {
-    run(move || recursive_dns::start(&listen)).await
+pub async fn start_recursive_dns(
+    listen: String,
+    cache_path: Option<String>,
+) -> std::result::Result<String, String> {
+    run(move || recursive_dns::start_checked(&listen, cache_path.as_deref())).await
 }
 
 /// Stop the recursive resolver front-end.

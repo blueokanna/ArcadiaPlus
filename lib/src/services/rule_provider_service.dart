@@ -69,6 +69,7 @@ class RuleProviderSpec {
           .toLowerCase();
       final url = value['url']?.toString();
       final path = value['path']?.toString();
+      final format = (value['format']?.toString() ?? '').trim().toLowerCase();
 
       if (type != 'http' && type != 'file') {
         onWarning?.call(
@@ -79,6 +80,28 @@ class RuleProviderSpec {
       if (!supportedBehaviors.contains(behavior)) {
         onWarning?.call(
           'Rule provider "$name" has unsupported behavior "$behavior"; it was dropped.',
+        );
+        continue;
+      }
+      // MRS is mihomo's binary rule-set format. Decoding it is not something
+      // this engine implements, and guessing would be worse than saying so:
+      // the set is dropped with a reason instead of silently contributing
+      // nothing. A profile can point the same provider at a YAML or text
+      // source and get the rules it intended.
+      final source = (url ?? path ?? '').toLowerCase();
+      final isMrs =
+          format == 'mrs' || (format.isEmpty && source.endsWith('.mrs'));
+      if (isMrs) {
+        onWarning?.call(
+          'Rule provider "$name" is a MRS (binary) rule set, which this build '
+          'cannot decode; it was dropped. Point it at a YAML or text rule set.',
+        );
+        continue;
+      }
+      if (format.isNotEmpty && format != 'yaml' && format != 'text') {
+        onWarning?.call(
+          'Rule provider "$name" declares format "$format", which is not '
+          'supported; it was dropped.',
         );
         continue;
       }
@@ -385,7 +408,15 @@ class RuleProviderService extends ChangeNotifier {
     }
 
     try {
-      final raw = await source.readAsString();
+      // Bytes, not `readAsString`: a packed (binary) rule set would make the
+      // strict UTF-8 decoder throw before the binary guard could explain it.
+      // The size bound matches the network path for the same reason — a rule
+      // set is read into memory, so it needs a ceiling either way.
+      final size = await source.length();
+      if (size > _maxPayloadBytes) {
+        throw const FormatException('rule set exceeds the 32 MiB limit');
+      }
+      final raw = utf8.decode(await source.readAsBytes(), allowMalformed: true);
       return await _storeNormalised(
         spec,
         directory,
@@ -577,6 +608,22 @@ class RuleProviderService extends ChangeNotifier {
     String raw, {
     required DateTime updatedAt,
   }) async {
+    if (_looksBinary(raw)) {
+      // A binary payload reached the normaliser — an MRS set whose URL did
+      // not announce itself, or some other packed format. Writing the
+      // "rules" from it would produce a file of mojibake that matches
+      // nothing and looks like it loaded; reporting is the honest outcome.
+      return RuleProviderState(
+        name: spec.name,
+        behavior: spec.behavior,
+        entries: 0,
+        skipped: 0,
+        updatedAt: null,
+        error:
+            'the rule set is a binary payload this build cannot decode '
+            '(MRS?); use a YAML or text source',
+      );
+    }
     final normalised = _normalise(raw, spec.behavior);
     if (normalised.entries == 0) {
       // The engine rejects a rule set with no usable entries, which would
@@ -625,6 +672,23 @@ class RuleProviderService extends ChangeNotifier {
       updatedAt: updatedAt,
       path: file.path,
     );
+  }
+
+  /// Whether decoded text is actually a binary payload.
+  ///
+  /// `utf8.decode(allowMalformed: true)` turns a binary set into replacement
+  /// characters rather than failing, so the check has to look at the bytes
+  /// that arrived: a NUL or a dense run of replacement characters is a
+  /// packed format, not a rule list.
+  static bool _looksBinary(String raw) {
+    if (raw.contains('\u0000')) return true;
+    if (raw.isEmpty) return false;
+    final head = raw.length > 2048 ? raw.substring(0, 2048) : raw;
+    var replacement = 0;
+    for (final unit in head.codeUnits) {
+      if (unit == 0xFFFD) replacement++;
+    }
+    return replacement * 10 > head.length;
   }
 
   ({String content, int entries, int skipped}) _normalise(

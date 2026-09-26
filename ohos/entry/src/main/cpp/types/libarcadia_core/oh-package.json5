@@ -1,0 +1,6 @@
+{
+  "name": "libarcadia_core.so",
+  "types": "./index.d.ts",
+  "version": "1.0.0",
+  "description": "Rust engine entry points for the ArcadiaPlus VPN extension (HarmonyOS)"
+}

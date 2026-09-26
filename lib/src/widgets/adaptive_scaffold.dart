@@ -144,9 +144,8 @@ class AdaptiveScaffold extends StatelessWidget {
         // 添加顶部分隔线
         border: Border(
           top: BorderSide(
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withValues(alpha: 0.3),
+            color: Theme.of(context).colorScheme.outlineVariant
+                .withValues(alpha: 0.3),
             width: 0.5,
           ),
         ),

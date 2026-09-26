@@ -51,9 +51,8 @@ void main() {
 
     test("the user's own list is stamped, not extended", () {
       const own = ['tls://1.1.1.1', 'https://dns.quad9.net/dns-query'];
-      final migrated = DnsSettings.fromJson(
-        legacyRecord(own),
-      ).withCurrentNameserverDefaults();
+      final migrated = DnsSettings.fromJson(legacyRecord(own))
+          .withCurrentNameserverDefaults();
 
       expect(migrated.nameservers, own);
       expect(
@@ -63,9 +62,8 @@ void main() {
     });
 
     test('an emptied list stays empty', () {
-      final migrated = DnsSettings.fromJson(
-        legacyRecord(const []),
-      ).withCurrentNameserverDefaults();
+      final migrated = DnsSettings.fromJson(legacyRecord(const []))
+          .withCurrentNameserverDefaults();
 
       expect(migrated.nameservers, isEmpty);
     });

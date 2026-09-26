@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
@@ -270,18 +271,29 @@ class PlatformProxyService extends ChangeNotifier {
 
     try {
       await _snapshotWindowsProxySettings();
-      // Written one by one rather than short-circuited: a failure on the
-      // first value must not leave the machine with a proxy enabled and no
-      // server to send it to.
-      final applied = [
-        await _regAdd('ProxyEnable', 'REG_DWORD', '1'),
+      // Order is the contract: the server and the bypass list land *before*
+      // the switch is thrown. Written the other way round, a failure between
+      // the writes leaves WinINET "enabled" with no server behind it —
+      // Windows Settings then shows a switch that promises browsing and an
+      // address box that cannot deliver it, which is exactly the
+      // "the proxy is on but nothing works" report this ordering prevents.
+      final serverApplied = [
         await _regAdd('ProxyServer', 'REG_SZ', endpoint),
         await _regAdd('ProxyOverride', 'REG_SZ', override),
       ];
-      final enabled = applied.every((write) => write);
-      if (!enabled) {
-        debugPrint('Windows system proxy could not be set completely');
-        // Whatever did land, the state the OS is in is the one to report.
+      if (!serverApplied.every((write) => write)) {
+        debugPrint('Windows system proxy server could not be written');
+        _publish(systemProxy: await _readWindowsProxyEnabled());
+        return false;
+      }
+
+      // Remembered so a refused switch write restores the machine instead of
+      // leaving a half-applied configuration behind.
+      final previousEnable =
+          (await _regQuery('ProxyEnable'))?['value'] ?? '0x0';
+      if (!await _regAdd('ProxyEnable', 'REG_DWORD', '1')) {
+        debugPrint('Windows system proxy could not be switched on');
+        await _regAdd('ProxyEnable', 'REG_DWORD', previousEnable);
         _publish(systemProxy: await _readWindowsProxyEnabled());
         return false;
       }
@@ -319,13 +331,29 @@ class PlatformProxyService extends ChangeNotifier {
     }
   }
 
+  /// Creates the adapter only when the process can actually do it.
+  ///
+  /// Wintun creates a kernel adapter, which needs an elevated token. The check
+  /// happens here so a refusal becomes an instruction — "restart as
+  /// administrator" — instead of an `Access is denied` code relayed from
+  /// `Adapter::create`.
   Future<bool> _enableWindowsTun(ProxyMode mode) async {
     try {
+      if (!await isProcessElevated()) {
+        _lastTunError =
+            'Administrator privileges are required to create the network '
+            'adapter. Restart ArcadiaPlus as administrator and try again.';
+        debugPrint('Windows TUN error: $_lastTunError');
+        _publish(tunEnabled: false);
+        return false;
+      }
       await rust_api.ensureWintunDll();
       final status = await rust_api.enableTunModeWithMode(mode: mode.name);
       if (status.enabled) {
+        _lastTunError = null;
         _publish(tunEnabled: true, mode: mode);
       } else {
+        _lastTunError = status.error;
         _publish(tunEnabled: false);
         if (status.error case final error?) {
           debugPrint('Windows TUN error: $error');
@@ -333,6 +361,7 @@ class PlatformProxyService extends ChangeNotifier {
       }
       return status.enabled;
     } catch (e) {
+      _lastTunError = '$e';
       debugPrint('Windows TUN error: $e');
       return false;
     }
@@ -641,6 +670,90 @@ class PlatformProxyService extends ChangeNotifier {
     }
   }
 
+  /// The reason the last TUN switch attempt reported failure, or `null` when
+  /// the last attempt succeeded. The network screen shows it instead of a
+  /// generic "failed", because "restart as administrator" is actionable and
+  /// "could not be started" is not.
+  String? get lastTunError => _lastTunError;
+  String? _lastTunError;
+
+  String? _ohosConfigPath;
+  String? _ohosGeoipPath;
+  String? _ohosLogPath;
+
+  /// Records the paths the HarmonyOS extension reads when it runs the engine.
+  ///
+  /// The extension lives in its own process — only the sandbox is shared — so
+  /// the generated config, the unpacked GeoIP database and the engine log
+  /// reach it as paths carried in the start request, not as objects in memory.
+  void prepareOhosEngine({
+    required String configPath,
+    String? geoipPath,
+    String? logPath,
+  }) {
+    _ohosConfigPath = configPath;
+    _ohosGeoipPath = geoipPath;
+    _ohosLogPath = logPath;
+  }
+
+  bool? _processElevated;
+
+  /// Whether this process holds an elevated (administrator) token.
+  ///
+  /// Asked at most once: the answer cannot change while the process lives, and
+  /// the answer is a `powershell` round-trip. Always `false` off Windows.
+  Future<bool> isProcessElevated() async {
+    if (!Platform.isWindows) return false;
+    final cached = _processElevated;
+    if (cached != null) return cached;
+    try {
+      final result = await Process.run('powershell', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        '([Security.Principal.WindowsPrincipal]'
+            '[Security.Principal.WindowsIdentity]::GetCurrent())'
+            '.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)',
+      ]);
+      final elevated =
+          result.exitCode == 0 &&
+          result.stdout.toString().trim().toLowerCase() == 'true';
+      _processElevated = elevated;
+      return elevated;
+    } catch (e) {
+      debugPrint('Failed to read the elevation state: $e');
+      return false;
+    }
+  }
+
+  /// Relaunch the app with an elevated token so the user can retry the TUN
+  /// switch.
+  ///
+  /// Returns false when the launch was refused (a declined UAC prompt or a
+  /// policy block); the caller reports that rather than pretending a new
+  /// instance is coming up.
+  Future<bool> relaunchAsAdministrator() async {
+    if (!Platform.isWindows) return false;
+    try {
+      final executable = Platform.resolvedExecutable.replaceAll("'", "''");
+      final result = await Process.run('powershell', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        "Start-Process -FilePath '$executable' -Verb RunAs",
+      ]);
+      if (result.exitCode != 0) {
+        debugPrint('Elevation was refused: ${result.stderr}');
+        return false;
+      }
+      _processElevated = true;
+      return true;
+    } catch (e) {
+      debugPrint('Failed to relaunch as administrator: $e');
+      return false;
+    }
+  }
+
   Future<bool> _enableOhosVpn({ProxyMode mode = ProxyMode.rule}) async {
     try {
       debugPrint('_enableOhosVpn: Starting with mode=$mode');
@@ -653,38 +766,41 @@ class PlatformProxyService extends ChangeNotifier {
       _vpnFd = -1;
       _publish(tunEnabled: false);
 
-      final result = await _ohosChannel.invokeMethod('startVpn', {
-        'mode': mode.name,
-      });
-
-      if (result is Map) {
-        final success = result['success'] as bool? ?? false;
-        final fd = (result['fd'] as num?)?.toInt() ?? -1;
-
-        if (!success || fd < 0) {
-          return false;
-        }
-        _vpnFd = fd;
-      } else if (result != true) {
+      // The tunnel lives in the VpnExtensionAbility process: it is the only
+      // place allowed to create the adapter and the tun fd the engine reads,
+      // and it is where the packet path runs. The request carries the routing
+      // mode plus the paths of the staged config, GeoIP database and log —
+      // the extension shares the sandbox but not this process's memory.
+      final configPath = _ohosConfigPath;
+      if (configPath == null) {
+        debugPrint(
+          '_enableOhosVpn: no engine config was staged for the extension',
+        );
         return false;
       }
-
-      try {
-        rust_api.setAndroidVpnFd(fd: _vpnFd);
-        rust_api.setAndroidProxyMode(mode: mode.name);
-        final vpnStarted = await rust_api.startAndroidVpn();
-        if (!vpnStarted) {
-          return false;
+      final result = await _ohosChannel.invokeMethod<Map<Object?, Object?>>(
+        'startVpn',
+        {
+          'mode': mode.name,
+          'configPath': configPath,
+          if (_ohosGeoipPath != null) 'geoipPath': _ohosGeoipPath,
+          if (_ohosLogPath != null) 'logPath': _ohosLogPath,
+        },
+      );
+      final success = result?['success'] == true;
+      if (!success) {
+        final error = result?['error']?.toString();
+        if (error != null && error.isNotEmpty) {
+          debugPrint('_enableOhosVpn: $error');
         }
-      } catch (e) {
-        debugPrint('_enableOhosVpn: Failed to start Rust VPN: $e');
         return false;
       }
 
       _publish(tunEnabled: true, mode: mode);
+      debugPrint('_enableOhosVpn: VPN enabled successfully');
       return true;
     } on PlatformException catch (e) {
-      debugPrint('_enableOhosVpn: PlatformException: ${e.message}');
+      debugPrint('_enableOhosVpn: ${e.code}: ${e.message}');
       _vpnFd = -1;
       _publish(tunEnabled: false);
       return false;
@@ -693,16 +809,17 @@ class PlatformProxyService extends ChangeNotifier {
 
   Future<bool> _disableOhosVpn() async {
     try {
-      await _ohosChannel.invokeMethod('stopVpn');
+      final result = await _ohosChannel.invokeMethod<Map<Object?, Object?>>(
+        'stopVpn',
+      );
       _vpnFd = -1;
       _publish(tunEnabled: false);
-      try {
-        await rust_api.stopAndroidVpn();
-        rust_api.clearAndroidVpnFd();
-      } catch (e) {
-        debugPrint('Failed to cleanup Rust VPN state on OHOS: $e');
+      final success = result?['success'] == true;
+      if (!success) {
+        final error = result?['error']?.toString();
+        debugPrint('OHOS VPN stop reported: $error');
       }
-      return true;
+      return success;
     } on PlatformException catch (e) {
       debugPrint('OHOS VPN disable error: ${e.message}');
       return false;
@@ -1395,10 +1512,18 @@ class PlatformProxyService extends ChangeNotifier {
     return {'type': match.group(1)!, 'value': match.group(2)!.trim()};
   }
 
-  /// Whether WinINET currently has a proxy switched on.
+  /// Whether WinINET currently has a **usable** proxy switched on.
+  ///
+  /// `ProxyEnable=1` with no `ProxyServer` is a half-written setting: Windows
+  /// Settings shows the switch on and the address empty, and applications
+  /// still reach the network directly. Reporting that as "off" keeps this
+  /// app's own switch aligned with its promise — the registry state is what
+  /// it is, but "on" must mean "traffic goes through a proxy".
   Future<bool> _readWindowsProxyEnabled() async {
-    final value = await _regQuery('ProxyEnable');
-    return value?['value'] == '1';
+    final enable = await _regQuery('ProxyEnable');
+    if (enable?['value'] != '1') return false;
+    final server = (await _regQuery('ProxyServer'))?['value'];
+    return server != null && server.trim().isNotEmpty;
   }
 
   // ---- Telling WinINET's clients the settings moved ------------------------

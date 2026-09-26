@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:arcadiaplus/src/rust/api.dart';
 import 'package:arcadiaplus/src/rust/types.dart';
@@ -381,7 +383,18 @@ class AppStateProvider extends ChangeNotifier {
 
       // Port 0 asks the OS for a free port, so the resolver never fights
       // with a system DNS service for 53.
-      _recursiveDnsAddress = await startRecursiveDns(listen: '127.0.0.1:0');
+      //
+      // The cache snapshot lives in the app's own support directory: the
+      // resolver loads it when it starts and rewrites it on an interval, so
+      // a restart resumes with the answers the last run already learned
+      // instead of walking from the roots for every name again.
+      final support = await getApplicationSupportDirectory();
+      final cachePath =
+          '${support.path}${Platform.pathSeparator}recursion-cache.rxc';
+      _recursiveDnsAddress = await startRecursiveDns(
+        listen: '127.0.0.1:0',
+        cachePath: cachePath,
+      );
       debugPrint(
         'RecurseX recursive resolver listening on $_recursiveDnsAddress',
       );
@@ -594,12 +607,27 @@ class AppStateProvider extends ChangeNotifier {
       }
 
       // Android: the proxy alone does not capture any traffic, the VPN has to
-      // be up before the route to the proxy means anything.
+      // be up before the route to the proxy means anything. HarmonyOS works
+      // the same way, with the tunnel owned by the VpnExtension process.
       if (Platform.isAndroid) {
         if (!await _enableAndroidVpnWithRetry()) {
           debugPrint(
             'Failed to enable the VPN; the proxy stays up so the user can '
             'retry without restarting the service',
+          );
+        }
+      }
+      if (PlatformUtils.isOHOS) {
+        await _prepareOhosEngine();
+        final allowLan =
+            (await StorageService.instance.getGeneralSettings()).allowLan;
+        if (!await PlatformProxyService.instance.enableTunMode(
+          mode: _proxyMode,
+          allowLan: allowLan,
+        )) {
+          debugPrint(
+            'Failed to enable the HarmonyOS VPN; the proxy stays up so the '
+            'user can retry without restarting the service',
           );
         }
       }
@@ -702,6 +730,39 @@ class AppStateProvider extends ChangeNotifier {
     await Future.delayed(const Duration(seconds: 2));
 
     await startService();
+  }
+
+  /// Materialise what the HarmonyOS extension process needs to run the engine.
+  ///
+  /// The extension shares the app's sandbox but not this process's memory:
+  /// the generated config and the unpacked GeoIP database reach it as files
+  /// and paths, carried in the tunnel-start request. The engine log lands
+  /// beside them, which is also where the settings screen looks when a start
+  /// fails.
+  Future<void> _prepareOhosEngine() async {
+    final config = _appliedConfigJson;
+    if (config == null) {
+      debugPrint('Cannot prepare the HarmonyOS engine: no applied config');
+      return;
+    }
+    try {
+      final support = await getApplicationSupportDirectory();
+      final directory = Directory(
+        '${support.path}${Platform.pathSeparator}engine',
+      );
+      await directory.create(recursive: true);
+      final file = File(
+        '${directory.path}${Platform.pathSeparator}config.json',
+      );
+      await file.writeAsString(config, flush: true);
+      PlatformProxyService.instance.prepareOhosEngine(
+        configPath: file.path,
+        geoipPath: NativeCoreService.instance.geoIpDatabasePath,
+        logPath: '${directory.path}${Platform.pathSeparator}engine.log',
+      );
+    } catch (e) {
+      debugPrint('Failed to prepare the HarmonyOS engine files: $e');
+    }
   }
 
   /// Brings the Android VPN up, retrying briefly: the platform needs a moment

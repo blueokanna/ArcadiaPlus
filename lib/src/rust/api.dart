@@ -4,7 +4,9 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import 'frb_generated.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
 import 'types.dart';
 
 // These functions are ignored because they are not marked as `pub`: `run`
@@ -216,10 +218,19 @@ Future<DnsConfigDto> getDnsConfig() =>
 /// and the bound address is returned. Queries are answered by iterative
 /// resolution from the root — no upstream forwarder is involved.
 ///
+/// `cachePath` turns on the persistent L3 cache: the resolver loads that
+/// file when it starts and snapshots to it on an interval, so a restart
+/// resumes with the answers the previous run had already learned instead of
+/// walking from the roots again. Pass `null` (or an empty string) to keep
+/// the cache in memory only.
+///
 /// Calling this while an instance is already running returns the existing
 /// address instead of rebinding.
-Future<String> startRecursiveDns({required String listen}) =>
-    RustLib.instance.api.crateApiStartRecursiveDns(listen: listen);
+Future<String> startRecursiveDns({required String listen, String? cachePath}) =>
+    RustLib.instance.api.crateApiStartRecursiveDns(
+      listen: listen,
+      cachePath: cachePath,
+    );
 
 /// Stop the recursive resolver front-end.
 Future<void> stopRecursiveDns() =>

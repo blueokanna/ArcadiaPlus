@@ -4,11 +4,15 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
+
 import 'frb_generated.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
+
 import 'types.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
@@ -2398,8 +2402,9 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__start_recursive_dns(
     int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> listen,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> cache_path,
   ) {
-    return _wire__crate__api__start_recursive_dns(port_, listen);
+    return _wire__crate__api__start_recursive_dns(port_, listen, cache_path);
   }
 
   late final _wire__crate__api__start_recursive_dnsPtr =
@@ -2408,13 +2413,18 @@ class RustLibWire implements BaseWire {
           ffi.Void Function(
             ffi.Int64,
             ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
           )
         >
       >('frbgen_arcadiaplus_wire__crate__api__start_recursive_dns');
   late final _wire__crate__api__start_recursive_dns =
       _wire__crate__api__start_recursive_dnsPtr
           .asFunction<
-            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
+            void Function(
+              int,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+              ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            )
           >();
 
   void wire__crate__api__start_rpc_server(
@@ -2817,10 +2827,14 @@ typedef DartPort = ffi.Int64;
 typedef DartDartPort = int;
 typedef DartPostCObjectFnType =
     ffi.Pointer<ffi.NativeFunction<DartPostCObjectFnTypeFunction>>;
-typedef DartPostCObjectFnTypeFunction =
-    ffi.Bool Function(DartPort port_id, ffi.Pointer<ffi.Void> message);
-typedef DartDartPostCObjectFnTypeFunction =
-    bool Function(DartDartPort port_id, ffi.Pointer<ffi.Void> message);
+typedef DartPostCObjectFnTypeFunction = ffi.Bool Function(
+  DartPort port_id,
+  ffi.Pointer<ffi.Void> message,
+);
+typedef DartDartPostCObjectFnTypeFunction = bool Function(
+  DartDartPort port_id,
+  ffi.Pointer<ffi.Void> message,
+);
 
 final class wire_cst_active_connection extends ffi.Struct {
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> id;

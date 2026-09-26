@@ -20,10 +20,12 @@ class NativeCoreService extends ChangeNotifier {
   );
 
   static const String _geoIpAsset = 'assets/Country.mmdb';
+  static const String _wintunAsset = 'assets/wintun/wintun.dll';
 
   NativeCoreStatus _status = NativeCoreStatus.idle;
   String? _lastError;
   String? _geoIpError;
+  String? _geoIpDatabasePath;
   Future<bool>? _pendingInitialization;
 
   NativeCoreStatus get status => _status;
@@ -31,6 +33,13 @@ class NativeCoreService extends ChangeNotifier {
   bool get isInitializing => _status == NativeCoreStatus.initializing;
   String? get lastError => _lastError;
   String? get geoIpError => _geoIpError;
+
+  /// The unpacked `Country.mmdb` path, or `null` before installation.
+  ///
+  /// The HarmonyOS extension process runs its own engine and must be told
+  /// where the database is: paths, not objects, are what crosses between the
+  /// app's processes.
+  String? get geoIpDatabasePath => _geoIpDatabasePath;
 
   Future<bool> initialize({int maxAttempts = 3}) {
     if (maxAttempts < 1) {
@@ -71,6 +80,7 @@ class NativeCoreService extends ChangeNotifier {
         await RustLib.init();
         _lastError = null;
         await _installGeoIpDatabase();
+        await _installWintunLibrary();
         _setStatus(NativeCoreStatus.ready);
         debugPrint('Native core initialized on attempt $attempt.');
         return true;
@@ -167,6 +177,7 @@ class NativeCoreService extends ChangeNotifier {
       }
 
       await setGeoipDatabasePath(path: target.path);
+      _geoIpDatabasePath = target.path;
       _geoIpError = null;
     } catch (error) {
       _geoIpError = error.toString();
@@ -180,6 +191,89 @@ class NativeCoreService extends ChangeNotifier {
     } on FileSystemException {
       return null;
     }
+  }
+
+  /// Places the bundled Wintun driver where the engine looks for it.
+  ///
+  /// TUN mode on Windows needs `wintun.dll`, which is not part of Windows:
+  /// the engine searches beside the executable and in the per-user
+  /// application directory. The executable directory is tried first so a
+  /// portable build stays self-contained; an installed build whose directory
+  /// is read-only falls back to `%LOCALAPPDATA%`. A failure here is logged
+  /// rather than fatal — the engine can still download the DLL — but it is
+  /// what makes TUN work on a machine with no route to wintun.net.
+  Future<void> _installWintunLibrary() async {
+    if (!Platform.isWindows) return;
+    try {
+      final data = await rootBundle.load(_wintunAsset);
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      if (bytes.isEmpty) {
+        throw const FormatException('bundled wintun.dll is empty');
+      }
+
+      final executableDirectory = File(Platform.resolvedExecutable).parent;
+      final beside = File(
+        '${executableDirectory.path}${Platform.pathSeparator}wintun.dll',
+      );
+      if (await _writeIfChanged(beside, bytes)) {
+        debugPrint('wintun.dll staged at ${beside.path}');
+        return;
+      }
+
+      final localAppData = Platform.environment['LOCALAPPDATA'];
+      if (localAppData == null || localAppData.isEmpty) {
+        debugPrint('wintun.dll could not be staged: LOCALAPPDATA is unset');
+        return;
+      }
+      final fallbackDirectory = Directory(
+        '$localAppData${Platform.pathSeparator}ArcadiaPlus',
+      );
+      await fallbackDirectory.create(recursive: true);
+      final fallback = File(
+        '${fallbackDirectory.path}${Platform.pathSeparator}wintun.dll',
+      );
+      if (await _writeIfChanged(fallback, bytes)) {
+        debugPrint('wintun.dll staged at ${fallback.path}');
+      }
+    } catch (error) {
+      debugPrint(
+        'wintun.dll staging failed; the engine may download it instead: $error',
+      );
+    }
+  }
+
+  /// Writes [bytes] only when the target is absent or different.
+  ///
+  /// The comparison is content-based rather than length-based so a driver
+  /// upgrade that happens to keep its size still lands, and an unchanged
+  /// binary is not rewritten on every start (which anti-virus suites read as
+  /// suspicious behaviour). Returns whether the target now holds [bytes].
+  Future<bool> _writeIfChanged(File target, Uint8List bytes) async {
+    try {
+      if (target.existsSync()) {
+        final existing = await target.readAsBytes();
+        if (existing.length == bytes.length && _bytesEqual(existing, bytes)) {
+          return true;
+        }
+      }
+      final temporary = File('${target.path}.tmp');
+      await temporary.writeAsBytes(bytes, flush: true);
+      await temporary.rename(target.path);
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool _bytesEqual(List<int> left, List<int> right) {
+    if (left.length != right.length) return false;
+    for (var index = 0; index < left.length; index++) {
+      if (left[index] != right[index]) return false;
+    }
+    return true;
   }
 
   static int _fingerprint(Uint8List bytes) {

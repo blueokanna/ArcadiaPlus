@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -90,9 +91,8 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
           const SizedBox(height: 16),
           Text(
             l10n?.noProfiles ?? 'No profiles',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
+            style: Theme.of(context).textTheme.headlineSmall
+                ?.copyWith(color: colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 8),
           Text(
@@ -404,9 +404,8 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 const SizedBox(height: 20),
                 Text(
                   l10n?.addProfile ?? 'Add Profile',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(context).textTheme.headlineSmall
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 24),
 
@@ -788,9 +787,8 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   IconData _getProfileTypeIcon(String type) {
@@ -906,9 +904,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
 
   Future<void> _handleSave() async {
     if (_nameController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('名称不能为空')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('名称不能为空')));
       return;
     }
 
@@ -956,9 +953,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
       if (success) {
         await _loadConfigSize();
         if (!mounted) return;
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('配置已更新')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('配置已更新')));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('更新失败: ${widget.provider.error ?? "未知错误"}')),
@@ -1037,9 +1033,8 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     if (saved == true && mounted) {
       await _loadConfigSize();
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Configuration saved')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Configuration saved')));
     }
   }
 

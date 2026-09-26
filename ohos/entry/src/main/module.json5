@@ -33,6 +33,16 @@
         ]
       }
     ],
+    "extensionAbilities": [
+      {
+        "name": "ArcadiaPlusVpnAbility",
+        "srcEntry": "./ets/vpnextension/ArcadiaPlusVpnAbility.ets",
+        "type": "vpn",
+        "description": "$string:module_desc",
+        "label": "$string:EntryAbility_label",
+        "exported": false
+      }
+    ],
     "requestPermissions": [
       {
         "name": "ohos.permission.INTERNET",

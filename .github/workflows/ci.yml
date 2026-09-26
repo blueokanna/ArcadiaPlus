@@ -48,15 +48,16 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # The Flutter SDK pins the versions of the packages it ships
-      # (`test_api`, `matcher`, `vector_math`, `meta`, `intl`, ...), so
-      # `pubspec.lock` only ever describes one SDK line. This value must match
-      # both the lockfile and `environment.flutter` in pubspec.yaml; a mismatch
-      # makes `--enforce-lockfile` report those pinned packages as changes.
+      # The Flutter SDK ships its own copies of `test_api`, `matcher`,
+      # `vector_math`, `meta`, `intl` and their exact versions move with the
+      # SDK line, so `pubspec.lock` only ever describes one SDK line. This value
+      # must match both the lockfile and `environment.flutter` in pubspec.yaml;
+      # a mismatch makes `--enforce-lockfile` report those pinned packages as
+      # changes.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.6'
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
 

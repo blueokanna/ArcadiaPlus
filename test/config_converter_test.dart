@@ -11,14 +11,13 @@ Map<String, dynamic> convert(
   Map<String, String>? ruleProviderPaths,
 }) {
   return jsonDecode(
-        ConfigConverter.convertClashYamlToJson(
-          yaml,
-          onWarning: onWarning,
-          recursiveDnsAddress: recursiveDnsAddress,
-          ruleProviderPaths: ruleProviderPaths,
-        ),
-      )
-      as Map<String, dynamic>;
+    ConfigConverter.convertClashYamlToJson(
+      yaml,
+      onWarning: onWarning,
+      recursiveDnsAddress: recursiveDnsAddress,
+      ruleProviderPaths: ruleProviderPaths,
+    ),
+  ) as Map<String, dynamic>;
 }
 
 /// The FFI contract carries protocol options as a JSON string.
@@ -103,20 +102,33 @@ rules:
     expect(warnings.join('\n'), contains('proxy'));
   });
 
-  test('Clash rule modifiers do not corrupt payload or outbound', () {
+  test('Clash rule modifiers keep no-resolve and never corrupt payload', () {
     const yaml = '''
 proxies: []
 proxy-groups: []
 rules:
   - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - DOMAIN-SUFFIX,example.com,DIRECT,some-future-flag
   - MATCH,DIRECT
 ''';
 
     final rules = convert(yaml)['rules'] as List<dynamic>;
 
-    expect(rules.first, {
+    // `no-resolve` is part of the rule's meaning — an IP rule carrying it may
+    // only see an address the client supplied, and it is what lets the router
+    // skip the lookup entirely — so it travels with the rule.
+    expect(rules[0], {
       'rule_type': 'ip_cidr',
       'payload': '10.0.0.0/8',
+      'outbound': 'DIRECT',
+      'process_name': null,
+      'no_resolve': true,
+    });
+    // A modifier this layer does not know must not leak into payload or
+    // outbound: it is dropped, and the rule still means what it said.
+    expect(rules[1], {
+      'rule_type': 'domain_suffix',
+      'payload': 'example.com',
       'outbound': 'DIRECT',
       'process_name': null,
     });
@@ -491,7 +503,94 @@ proxy-groups: []
 rules: []
 ''';
 
-    expect((convert(yaml)['dns'] as Map)['enhanced_mode'], 'redir-host');
+    // mihomo's default behaviour is real answers, which this engine spells
+    // `normal`. The engine knows nothing of `redir-host`, and a value it cannot
+    // read fails the whole config — so the vocabulary is translated here.
+    expect((convert(yaml)['dns'] as Map)['enhanced_mode'], 'normal');
+  });
+
+  test('every spelling of the DNS mode lands on the engine word', () {
+    Map<String, dynamic> dnsOf(String mode) {
+      final yaml =
+          '''
+dns:
+  enhanced-mode: $mode
+proxies: []
+proxy-groups: []
+rules: []
+''';
+      return convert(yaml)['dns'] as Map<String, dynamic>;
+    }
+
+    for (final mode in ['redir-host', 'REDIR-HOST', 'redir_host', 'redir']) {
+      expect(dnsOf(mode)['enhanced_mode'], 'normal', reason: mode);
+    }
+    for (final mode in ['fake-ip', 'fakeip', 'FAKE-IP']) {
+      expect(dnsOf(mode)['enhanced_mode'], 'fake-ip', reason: mode);
+    }
+
+    final warnings = <String>[];
+    const unknown = '''
+dns:
+  enhanced-mode: host-redirect
+proxies: []
+proxy-groups: []
+rules: []
+''';
+    final dns =
+        convert(unknown, onWarning: warnings.add)['dns']
+            as Map<String, dynamic>;
+    expect(dns['enhanced_mode'], 'normal');
+    expect(warnings, hasLength(1));
+    expect(warnings.single, contains('host-redirect'));
+  });
+
+  test('the routing mode is folded to the engine vocabulary', () {
+    Map<String, dynamic> generalOf(String mode) {
+      final yaml =
+          '''
+mode: $mode
+proxies: []
+proxy-groups: []
+rules: []
+''';
+      return convert(yaml)['general'] as Map<String, dynamic>;
+    }
+
+    // Subscriptions write `Rule`, `GLOBAL`, and the like; the engine's
+    // vocabulary is exact and it rejects the whole document over one word.
+    expect(generalOf('Rule')['mode'], 'rule');
+    expect(generalOf('GLOBAL')['mode'], 'global');
+    expect(generalOf('direct')['mode'], 'direct');
+
+    final warnings = <String>[];
+    final general =
+        convert('''
+mode: script
+proxies: []
+proxy-groups: []
+rules: []
+''', onWarning: warnings.add)['general']
+            as Map<String, dynamic>;
+    expect(general['mode'], 'rule');
+    expect(warnings.any((w) => w.contains('script')), isTrue);
+  });
+
+  test('the log level is folded to the engine vocabulary', () {
+    Map<String, dynamic> generalOf(String level) {
+      final yaml =
+          '''
+log-level: $level
+proxies: []
+proxy-groups: []
+rules: []
+''';
+      return convert(yaml)['general'] as Map<String, dynamic>;
+    }
+
+    expect(generalOf('INFO')['log_level'], 'info');
+    expect(generalOf('warn')['log_level'], 'warning');
+    expect(generalOf('Debug')['log_level'], 'debug');
   });
 
   test('an explicit mode still wins over the default', () {
@@ -527,5 +626,230 @@ rules: []
       (convert(zeroTtl)['dns'] as Map).containsKey('fake_ip_ttl'),
       isFalse,
     );
+  });
+
+  test('default-nameserver and fallback-filter travel with the profile', () {
+    const yaml = '''
+dns:
+  default-nameserver: [223.5.5.5]
+  fallback:
+    - tls://1.1.1.1
+  fallback-filter:
+    geoip: true
+    geoip-code: US
+    ipcidr: [240.0.0.0/4]
+    domain: [example.com]
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns = convert(yaml)['dns'] as Map;
+
+    // `default-nameserver` bootstraps an upstream named by hostname, and the
+    // filter decides when an answer is suspect; both are profile knowledge the
+    // app's own DNS screen cannot express, so both pass through unchanged.
+    expect(dns['default_nameserver'], ['223.5.5.5']);
+    expect(dns['fallback'], ['tls://1.1.1.1']);
+    expect(dns['fallback_filter'], {
+      'geoip': true,
+      'geoip_code': 'US',
+      'ipcidr': ['240.0.0.0/4'],
+      'domain': ['example.com'],
+    });
+  });
+
+  test('use-hosts: false keeps the hosts table out of the config', () {
+    const yaml = '''
+dns:
+  use-hosts: false
+  hosts:
+    static.example: 203.0.113.9
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns = convert(yaml)['dns'] as Map;
+    expect(dns['use_hosts'], false);
+    expect(dns.containsKey('hosts'), isFalse);
+  });
+
+  test(
+    'GEOSITE works through a provider of that name, and is skipped without one',
+    () {
+      const yaml = '''
+proxies: []
+proxy-groups: []
+rule-providers:
+  cn:
+    type: http
+    behavior: domain
+    url: https://example.com/cn.txt
+rules:
+  - GEOSITE,cn,DIRECT
+  - GEOSITE,geolocation-!cn,REJECT
+  - MATCH,DIRECT
+''';
+
+      final warnings = <String>[];
+      final rules =
+          convert(
+                yaml,
+                onWarning: warnings.add,
+                ruleProviderPaths: const {'cn': '/data/rules/cn.txt'},
+              )['rules']
+              as List<dynamic>;
+
+      // The engine reads a geosite category as a rule-provider name: the entry
+      // is usable when the profile itself defines a provider under that name...
+      expect(rules[0], {
+        'rule_type': 'geosite',
+        'payload': 'cn',
+        'outbound': 'DIRECT',
+        'process_name': null,
+      });
+      // ...and must be skipped, loudly, when nothing can answer for it.
+      expect(
+        rules.where((rule) => (rule as Map)['rule_type'] == 'geosite'),
+        hasLength(1),
+      );
+      expect(warnings.join('\n'), contains('geolocation-!cn'));
+    },
+  );
+
+  test('inbound rules carry their payload and target through', () {
+    const yaml = '''
+proxies: []
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [DIRECT]
+rules:
+  - IN-PORT,7897,PROXY
+  - IN-TYPE,SOCKS5,PROXY
+  - IN-USER,alice,PROXY
+  - IN-NAME,mixed,PROXY
+  - MATCH,DIRECT
+''';
+
+    final rules = convert(yaml)['rules'] as List<dynamic>;
+
+    // The engine matches these case-insensitively and against the inbound's
+    // own identity, so the payload travels as written and the target is the
+    // group the profile named.
+    expect((rules[0] as Map)['rule_type'], 'in_port');
+    expect((rules[0] as Map)['payload'], '7897');
+    expect((rules[0] as Map)['outbound'], 'PROXY');
+    expect((rules[1] as Map)['rule_type'], 'in_type');
+    expect((rules[1] as Map)['payload'], 'SOCKS5');
+    expect((rules[2] as Map)['rule_type'], 'in_user');
+    expect((rules[2] as Map)['payload'], 'alice');
+    expect((rules[3] as Map)['rule_type'], 'in_name');
+    expect((rules[3] as Map)['payload'], 'mixed');
+  });
+
+  test('logical rules become nested conditions instead of being dropped', () {
+    const yaml = '''
+proxies: []
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [DIRECT]
+rules:
+  - AND,((DOMAIN-SUFFIX,google.com),(NETWORK,tcp)),PROXY
+  - OR,((DST-PORT,80,443),(NOT,((DOMAIN-KEYWORD,ads)))),PROXY
+  - MATCH,DIRECT
+''';
+
+    final warnings = <String>[];
+    final rules =
+        convert(yaml, onWarning: warnings.add)['rules'] as List<dynamic>;
+
+    expect(warnings, isEmpty);
+
+    // The condition keeps its bracket structure: an AND of a domain and a
+    // network child, each with the type the engine knows and the target the
+    // profile named.
+    final logical = rules[0] as Map;
+    expect(logical['rule_type'], 'and');
+    expect(logical['payload'], '');
+    expect(logical['outbound'], 'PROXY');
+    final children = (logical['rules'] as List).cast<Map>();
+    expect(children, hasLength(2));
+    expect(children[0]['type'], 'domain_suffix');
+    expect(children[0]['payload'], 'google.com');
+    expect(children[1]['type'], 'network');
+    expect(children[1]['payload'], 'tcp');
+    expect(children.every((child) => child['outbound'] == 'PROXY'), isTrue);
+
+    // A port list inside one condition stays in that condition, and a nested
+    // NOT is converted in place.
+    final or = rules[1] as Map;
+    expect(or['rule_type'], 'or');
+    final orChildren = (or['rules'] as List).cast<Map>();
+    expect(orChildren[0]['type'], 'dst_port');
+    expect(orChildren[0]['payload'], '80,443');
+    final negated = orChildren[1];
+    expect(negated['type'], 'not');
+    expect((negated['rules'] as List).single['payload'], 'ads');
+  });
+
+  test(
+    'a logical rule with an unreadable condition is skipped, not half-kept',
+    () {
+      const yaml = '''
+proxies: []
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [DIRECT]
+rules:
+  - AND,((DOMAIN-SUFFIX,google.com),(SCRIPT,whatever)),PROXY
+  - AND,((DOMAIN-SUFFIX,google.com),(NETWORK,tcp),PROXY
+  - NOT,((DOMAIN-SUFFIX,a.com),(DOMAIN-SUFFIX,b.com)),PROXY
+  - MATCH,DIRECT
+''';
+
+      final warnings = <String>[];
+      final rules =
+          convert(yaml, onWarning: warnings.add)['rules'] as List<dynamic>;
+
+      // Only the catch-all survives: a condition with an unknown sub-rule, one
+      // whose brackets do not close, and a NOT over two conditions would all
+      // match traffic the profile meant to protect.
+      expect(rules, hasLength(1));
+      expect((rules.single as Map)['rule_type'], 'match');
+      expect(warnings, hasLength(3));
+    },
+  );
+
+  test('nesting past the engine limit is refused, not walked', () {
+    // Nine nested AND conditions: the engine compiles at most eight, so the
+    // converter stops on the same line instead of recursing through a
+    // profile-written recursion.
+    var condition = '(DOMAIN-SUFFIX,a.com)';
+    for (var i = 0; i < 9; i++) {
+      condition = '((AND,$condition))';
+    }
+    final yaml =
+        '''
+proxies: []
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [DIRECT]
+rules:
+  - AND,$condition,PROXY
+  - MATCH,DIRECT
+''';
+
+    final warnings = <String>[];
+    final rules =
+        convert(yaml, onWarning: warnings.add)['rules'] as List<dynamic>;
+
+    expect(rules, hasLength(1));
+    expect((rules.single as Map)['rule_type'], 'match');
+    expect(warnings, hasLength(1));
   });
 }

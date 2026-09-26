@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/theme/app_shapes.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 class AppTheme {
   static const String _fontFamily = 'Roboto';
@@ -227,6 +228,8 @@ class AppTheme {
       colorScheme: colorScheme,
       fontFamily: _fontFamily,
       textTheme: _createTextTheme(colorScheme),
+      pageTransitionsTheme: _createPageTransitionsTheme(),
+      splashFactory: _splashFactory(),
       appBarTheme: _createAppBarTheme(colorScheme),
       cardTheme: _createCardTheme(colorScheme),
       listTileTheme: _createListTileTheme(colorScheme),
@@ -268,6 +271,35 @@ class AppTheme {
         waitDuration: const Duration(milliseconds: 500),
       ),
     );
+  }
+
+  /// Material 3's fade-forwards transition wherever the framework drives the
+  /// route. The app's own screens ride go_router's expressive page builder
+  /// (`_buildExpressivePage`); this covers everything else — a
+  /// `MaterialPageRoute`, a full-screen dialog route, a platform default.
+  ///
+  /// Apple platforms keep their own builders: the interactive back-swipe and
+  /// the parallax are platform behaviour, not a theme choice.
+  static PageTransitionsTheme _createPageTransitionsTheme() {
+    return const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.fuchsia: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
+      },
+    );
+  }
+
+  /// M3's expressive ripple on the platform that renders it.
+  ///
+  /// `InkSparkle` is an Android-only shader; everywhere else the classic
+  /// ripple is the correct fallback.
+  static InteractiveInkFeatureFactory _splashFactory() {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return InkSparkle.splashFactory;
+    }
+    return InkRipple.splashFactory;
   }
 
   static TextTheme _createTextTheme(ColorScheme colorScheme) {

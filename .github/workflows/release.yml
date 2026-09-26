@@ -109,13 +109,14 @@ jobs:
       - name: Check out the proxy engine the bridge points at
         uses: ./.github/actions/checkout-engine
 
-      # Keep this in step with `pubspec.lock` and `environment.flutter`:
-      # the Flutter SDK pins the versions of the packages it ships, so the
-      # lockfile describes exactly one SDK line. See .github/workflows/ci.yml.
+      # Keep this in step with `pubspec.lock` and `environment.flutter`: the
+      # Flutter SDK ships its own copies of `test_api`, `matcher`,
+      # `vector_math`, `meta`, `intl`, so the lockfile describes exactly one SDK
+      # line. See .github/workflows/ci.yml.
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.6'
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
 
@@ -185,7 +186,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.6'
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
 
@@ -231,10 +232,10 @@ jobs:
       - name: Decode the Android release keystore
         shell: bash
         env:
-          KEYSTORE_BASE64: ${{ secrets.VELOGUARD_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.VELOGUARD_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.VELOGUARD_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.VELOGUARD_KEY_PASSWORD }}
+          KEYSTORE_BASE64: ${{ secrets.ARCADIAPLUS_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ARCADIAPLUS_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ARCADIAPLUS_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ARCADIAPLUS_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           if [[ -z "$KEYSTORE_BASE64" ]]; then
@@ -322,7 +323,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.6'
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
 
@@ -429,7 +430,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.6'
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
 
@@ -501,7 +502,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.6'
+          flutter-version: '3.47.2'
           channel: stable
           cache: true
 

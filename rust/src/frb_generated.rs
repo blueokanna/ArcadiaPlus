@@ -1479,6 +1479,7 @@ fn wire__crate__api__start_proxy_from_yaml_impl(
 fn wire__crate__api__start_recursive_dns_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     listen: impl CstDecode<String>,
+    cache_path: impl CstDecode<Option<String>>,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
@@ -1488,10 +1489,12 @@ fn wire__crate__api__start_recursive_dns_impl(
         },
         move || {
             let api_listen = listen.cst_decode();
+            let api_cache_path = cache_path.cst_decode();
             move |context| async move {
                 transform_result_dco::<_, _, String>(
                     (move || async move {
-                        let output_ok = crate::api::start_recursive_dns(api_listen).await?;
+                        let output_ok =
+                            crate::api::start_recursive_dns(api_listen, api_cache_path).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -4894,8 +4897,9 @@ mod io {
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__start_recursive_dns(
         port_: i64,
         listen: *mut wire_cst_list_prim_u_8_strict,
+        cache_path: *mut wire_cst_list_prim_u_8_strict,
     ) {
-        wire__crate__api__start_recursive_dns_impl(port_, listen)
+        wire__crate__api__start_recursive_dns_impl(port_, listen, cache_path)
     }
 
     #[unsafe(no_mangle)]
@@ -6748,8 +6752,9 @@ mod web {
     pub fn wire__crate__api__start_recursive_dns(
         port_: flutter_rust_bridge::for_generated::MessagePort,
         listen: String,
+        cache_path: Option<String>,
     ) {
-        wire__crate__api__start_recursive_dns_impl(port_, listen)
+        wire__crate__api__start_recursive_dns_impl(port_, listen, cache_path)
     }
 
     #[wasm_bindgen]

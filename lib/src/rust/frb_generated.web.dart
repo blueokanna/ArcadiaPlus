@@ -7,10 +7,14 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api.dart';
+
 import 'dart:async';
 import 'dart:convert';
+
 import 'frb_generated.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_web.dart';
+
 import 'types.dart';
 
 abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
@@ -1349,7 +1353,12 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__start_recursive_dns(
     NativePortType port_,
     String listen,
-  ) => wasmModule.wire__crate__api__start_recursive_dns(port_, listen);
+    String? cache_path,
+  ) => wasmModule.wire__crate__api__start_recursive_dns(
+    port_,
+    listen,
+    cache_path,
+  );
 
   void wire__crate__api__start_rpc_server(
     NativePortType port_,
@@ -1691,6 +1700,7 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__api__start_recursive_dns(
     NativePortType port_,
     String listen,
+    String? cache_path,
   );
 
   external void wire__crate__api__start_rpc_server(

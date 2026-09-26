@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
@@ -353,9 +354,8 @@ void _showThemeSelector(BuildContext context, ThemeProvider themeProvider) {
           children: [
             Text(
               l10n?.chooseTheme ?? 'Choose Theme',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 16),
             Expanded(

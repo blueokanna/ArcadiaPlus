@@ -4,12 +4,16 @@
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
 import 'api.dart';
+
 import 'dart:async';
 import 'dart:convert';
+
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
+
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+
 import 'types.dart';
 
 /// Main entrypoint of the Rust API
@@ -215,7 +219,10 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiStartProxyFromYaml({required String yamlConfig});
 
-  Future<String> crateApiStartRecursiveDns({required String listen});
+  Future<String> crateApiStartRecursiveDns({
+    required String listen,
+    String? cachePath,
+  });
 
   Future<void> crateApiStartRpcServer({required int port, String? token});
 
@@ -1725,19 +1732,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
-  Future<String> crateApiStartRecursiveDns({required String listen}) {
+  Future<String> crateApiStartRecursiveDns({
+    required String listen,
+    String? cachePath,
+  }) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
           var arg0 = cst_encode_String(listen);
-          return wire.wire__crate__api__start_recursive_dns(port_, arg0);
+          var arg1 = cst_encode_opt_String(cachePath);
+          return wire.wire__crate__api__start_recursive_dns(port_, arg0, arg1);
         },
         codec: DcoCodec(
           decodeSuccessData: dco_decode_String,
           decodeErrorData: dco_decode_String,
         ),
         constMeta: kCrateApiStartRecursiveDnsConstMeta,
-        argValues: [listen],
+        argValues: [listen, cachePath],
         apiImpl: this,
       ),
     );
@@ -1745,7 +1756,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiStartRecursiveDnsConstMeta => const TaskConstMeta(
     debugName: "start_recursive_dns",
-    argNames: ["listen"],
+    argNames: ["listen", "cachePath"],
   );
 
   @override
@@ -2221,9 +2232,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return Map.fromEntries(
-      dco_decode_list_record_string_list_string(
-        raw,
-      ).map((e) => MapEntry(e.$1, e.$2)),
+      dco_decode_list_record_string_list_string(raw)
+          .map((e) => MapEntry(e.$1, e.$2)),
     );
   }
 

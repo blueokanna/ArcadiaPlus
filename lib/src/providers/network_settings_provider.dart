@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
@@ -198,8 +199,9 @@ class NetworkSettingsProvider extends ChangeNotifier {
     if (!applied) {
       throw StateError(
         value
-            ? 'The tunnel could not be started (privileges missing or another '
-                  'VPN holds the slot)'
+            ? (service.lastTunError ??
+                  'The tunnel could not be started (privileges missing or '
+                      'another VPN holds the slot)')
             : 'The tunnel could not be stopped',
       );
     }

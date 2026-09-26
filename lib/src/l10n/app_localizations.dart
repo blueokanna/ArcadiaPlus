@@ -36,6 +36,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['de']!,
       ..._wallpaperStrings['de']!,
       ..._settingsActionStrings['de']!,
+      ..._rulesScreenStrings['de']!,
     },
     'en': {
       ..._enStrings,
@@ -45,6 +46,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['en']!,
       ..._wallpaperStrings['en']!,
       ..._settingsActionStrings['en']!,
+      ..._rulesScreenStrings['en']!,
     },
     'es': {
       ..._esStrings,
@@ -55,6 +57,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['es']!,
       ..._wallpaperStrings['es']!,
       ..._settingsActionStrings['es']!,
+      ..._rulesScreenStrings['es']!,
     },
     'fr': {
       ..._frStrings,
@@ -65,6 +68,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['fr']!,
       ..._wallpaperStrings['fr']!,
       ..._settingsActionStrings['fr']!,
+      ..._rulesScreenStrings['fr']!,
     },
     'it': {
       ..._itStrings,
@@ -75,6 +79,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['it']!,
       ..._wallpaperStrings['it']!,
       ..._settingsActionStrings['it']!,
+      ..._rulesScreenStrings['it']!,
     },
     'ja': {
       ..._jaStrings,
@@ -85,6 +90,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['ja']!,
       ..._wallpaperStrings['ja']!,
       ..._settingsActionStrings['ja']!,
+      ..._rulesScreenStrings['ja']!,
     },
     'ko': {
       ..._koStrings,
@@ -95,6 +101,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['ko']!,
       ..._wallpaperStrings['ko']!,
       ..._settingsActionStrings['ko']!,
+      ..._rulesScreenStrings['ko']!,
     },
     'pt': {
       ..._ptStrings,
@@ -105,6 +112,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['pt']!,
       ..._wallpaperStrings['pt']!,
       ..._settingsActionStrings['pt']!,
+      ..._rulesScreenStrings['pt']!,
     },
     'ru': {
       ..._ruStrings,
@@ -115,6 +123,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['ru']!,
       ..._wallpaperStrings['ru']!,
       ..._settingsActionStrings['ru']!,
+      ..._rulesScreenStrings['ru']!,
     },
     'zh_CN': {
       ..._zhCNStrings,
@@ -124,6 +133,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['zh_CN']!,
       ..._wallpaperStrings['zh_CN']!,
       ..._settingsActionStrings['zh_CN']!,
+      ..._rulesScreenStrings['zh_CN']!,
     },
     'zh_TW': {
       ..._zhTWStrings,
@@ -134,6 +144,7 @@ class AppLocalizations {
       ..._dnsScreenStrings['zh_TW']!,
       ..._wallpaperStrings['zh_TW']!,
       ..._settingsActionStrings['zh_TW']!,
+      ..._rulesScreenStrings['zh_TW']!,
     },
   };
 
@@ -231,9 +242,9 @@ class AppLocalizations {
   String updateAvailable(String version) =>
       _getLocalizedString('updateAvailable').replaceAll('{version}', version);
 
-  String downloadingProgress(int progress) => _getLocalizedString(
-    'downloadingProgress',
-  ).replaceAll('{progress}', '$progress');
+  String downloadingProgress(int progress) =>
+      _getLocalizedString('downloadingProgress')
+          .replaceAll('{progress}', '$progress');
 
   String updateFailed(String error) =>
       _getLocalizedString('updateFailed').replaceAll('{error}', error);
@@ -521,6 +532,28 @@ class AppLocalizations {
   String get findProcess => _getLocalizedString('findProcess');
   String get findProcessDesc => _getLocalizedString('findProcessDesc');
   String get seconds => _getLocalizedString('seconds');
+
+  // Rules Screen
+  String get rulesOpen => _getLocalizedString('rulesOpen');
+  String get rulesOpenDesc => _getLocalizedString('rulesOpenDesc');
+  String get rulesTitle => _getLocalizedString('rulesTitle');
+  String get rulesSubtitle => _getLocalizedString('rulesSubtitle');
+  String get rulesSummaryRules => _getLocalizedString('rulesSummaryRules');
+  String get rulesSummaryHits => _getLocalizedString('rulesSummaryHits');
+  String get rulesSummaryRuleSets =>
+      _getLocalizedString('rulesSummaryRuleSets');
+  String get rulesWarningsTitle => _getLocalizedString('rulesWarningsTitle');
+  String get rulesWarningsEmpty => _getLocalizedString('rulesWarningsEmpty');
+  String get rulesRulesEmpty => _getLocalizedString('rulesRulesEmpty');
+  String get rulesEngineOff => _getLocalizedString('rulesEngineOff');
+  String get rulesRuleSetsEmpty => _getLocalizedString('rulesRuleSetsEmpty');
+  String get rulesEntries => _getLocalizedString('rulesEntries');
+  String get rulesSkipped => _getLocalizedString('rulesSkipped');
+  String get rulesUpdated => _getLocalizedString('rulesUpdated');
+  String get rulesNever => _getLocalizedString('rulesNever');
+  String get rulesReady => _getLocalizedString('rulesReady');
+  String get rulesFailed => _getLocalizedString('rulesFailed');
+  String get rulesBehavior => _getLocalizedString('rulesBehavior');
 
   // DNS Settings Screen
   String get basicSettings => _getLocalizedString('basicSettings');
@@ -1064,8 +1097,7 @@ const Map<String, Map<String, String>> _aboutStrings = {
     'featureDns':
         'DNS: server configurabili, fake-IP o redir-host e risoluzione '
         'ricorsiva locale opzionale',
-    'featurePlatform':
-        'Windows, macOS, Linux, Android e HarmonyOS da un\'unica base di codice',
+    'featurePlatform': 'Windows, macOS, Linux, Android e HarmonyOS da un\'unica base di codice',
     'featureTheme':
         'Material 3 con colore dinamico, chiaro e scuro, in undici lingue',
     'featureSecurity':
@@ -1389,8 +1421,7 @@ const Map<String, String> _deStrings = {
   'uwpLoopbackTool': 'UWP-Loopback-Tool',
   'uwpLoopbackToolDesc': 'AppContainer-Loopback-Ausnahme-Tool öffnen',
   'aboutUwpLoopback': 'Über UWP-Loopback',
-  'uwpLoopbackExplain':
-      'Windows UWP-Apps können standardmäßig nicht auf lokale Proxys zugreifen.',
+  'uwpLoopbackExplain': 'Windows UWP-Apps können standardmäßig nicht auf lokale Proxys zugreifen.',
   'requiresAdmin': 'Dieser Vorgang erfordert Administratorrechte',
   'uwpToolOpened': 'UWP-Loopback-Tool geöffnet',
   'uwpToolFailed': 'UWP-Loopback-Tool konnte nicht geöffnet werden',
@@ -1404,8 +1435,7 @@ const Map<String, String> _deStrings = {
   'startServiceToViewConnections2':
       'Starten Sie den ArcadiaPlus-Dienst, um aktive Verbindungen anzuzeigen',
   'noActiveConnectionsTitle': 'Keine aktiven Verbindungen',
-  'connectionsWillAppear2':
-      'Aktive Verbindungen werden hier angezeigt, wenn Daten durch den Proxy fließen',
+  'connectionsWillAppear2': 'Aktive Verbindungen werden hier angezeigt, wenn Daten durch den Proxy fließen',
   'totalUploadShort': 'Gesamt-Upload',
   'totalDownloadShort': 'Gesamt-Download',
   'cancel': 'Abbrechen',
@@ -1441,8 +1471,7 @@ const Map<String, String> _deStrings = {
   'understood': 'Verstanden',
   'aboutArcadiaPlus': 'Über ArcadiaPlus',
   'aboutArcadiaPlusDesc': 'Erfahren Sie mehr über diese App',
-  'aboutDescription':
-      'ArcadiaPlus ist ein moderner plattformübergreifender Proxy-Client, der mit Flutter und Rust entwickelt wurde.',
+  'aboutDescription': 'ArcadiaPlus ist ein moderner plattformübergreifender Proxy-Client, der mit Flutter und Rust entwickelt wurde.',
   'features': 'Funktionen',
   'featureSpeed': 'Hochleistungs-Rust-Kern',
   'featureTheme': 'Material You dynamische Farben',
@@ -1570,8 +1599,7 @@ const Map<String, String> _deStrings = {
   'allProxy': 'Alles Proxy',
   'recommended': 'Empfohlen',
   'rustInitErrorTitle': 'Initialisierungsfehler',
-  'rustInitErrorMessage':
-      'Die native Kernbibliothek konnte nicht geladen werden. ArcadiaPlus kann ohne sie nicht gestartet werden.',
+  'rustInitErrorMessage': 'Die native Kernbibliothek konnte nicht geladen werden. ArcadiaPlus kann ohne sie nicht gestartet werden.',
   'rustInitErrorDetails': 'Fehlerdetails',
   'rustInitErrorAffectedFeatures': 'Betroffene Funktionen',
   'rustInitErrorFeatureVpn': '• VPN-Verbindung',
@@ -1671,8 +1699,7 @@ const Map<String, String> _enStrings = {
   'uwpLoopbackTool': 'UWP Loopback Tool',
   'uwpLoopbackToolDesc': 'Open AppContainer loopback exemption tool',
   'aboutUwpLoopback': 'About UWP Loopback',
-  'uwpLoopbackExplain':
-      'Windows UWP apps cannot access local proxy by default. After enabling UWP loopback exemption, these apps can access network through local proxy.',
+  'uwpLoopbackExplain': 'Windows UWP apps cannot access local proxy by default. After enabling UWP loopback exemption, these apps can access network through local proxy.',
   'requiresAdmin': 'This operation requires administrator privileges',
   'uwpToolOpened': 'UWP loopback tool opened',
   'uwpToolFailed':
@@ -1723,8 +1750,7 @@ const Map<String, String> _enStrings = {
   'understood': 'Understood',
   'aboutArcadiaPlus': 'About ArcadiaPlus',
   'aboutArcadiaPlusDesc': 'Learn more about this app',
-  'aboutDescription':
-      'ArcadiaPlus is a modern cross-platform proxy client built with Flutter and Rust. It provides a beautiful Material You interface and powerful proxy features.',
+  'aboutDescription': 'ArcadiaPlus is a modern cross-platform proxy client built with Flutter and Rust. It provides a beautiful Material You interface and powerful proxy features.',
   'features': 'Features',
   'featureSpeed': 'High-performance Rust core',
   'featureTheme': 'Material You dynamic colors',
@@ -1991,8 +2017,7 @@ const Map<String, String> _esStrings = {
   'uwpLoopbackToolDesc':
       'Abrir herramienta de exención de loopback AppContainer',
   'aboutUwpLoopback': 'Acerca del loopback UWP',
-  'uwpLoopbackExplain':
-      'Las aplicaciones UWP de Windows no pueden acceder al proxy local por defecto.',
+  'uwpLoopbackExplain': 'Las aplicaciones UWP de Windows no pueden acceder al proxy local por defecto.',
   'requiresAdmin': 'Esta operación requiere privilegios de administrador',
   'uwpToolOpened': 'Herramienta de loopback UWP abierta',
   'uwpToolFailed': 'Error al abrir la herramienta de loopback UWP',
@@ -2006,8 +2031,7 @@ const Map<String, String> _esStrings = {
   'startServiceToViewConnections2':
       'Inicie el servicio ArcadiaPlus para ver las conexiones activas',
   'noActiveConnectionsTitle': 'Sin conexiones activas',
-  'connectionsWillAppear2':
-      'Las conexiones activas aparecerán aquí cuando los datos fluyan a través del proxy',
+  'connectionsWillAppear2': 'Las conexiones activas aparecerán aquí cuando los datos fluyan a través del proxy',
   'totalUploadShort': 'Subida total',
   'totalDownloadShort': 'Descarga total',
   'cancel': 'Cancelar',
@@ -2044,8 +2068,7 @@ const Map<String, String> _esStrings = {
   'understood': 'Entendido',
   'aboutArcadiaPlus': 'Acerca de ArcadiaPlus',
   'aboutArcadiaPlusDesc': 'Más información sobre esta aplicación',
-  'aboutDescription':
-      'ArcadiaPlus es un cliente proxy multiplataforma moderno construido con Flutter y Rust.',
+  'aboutDescription': 'ArcadiaPlus es un cliente proxy multiplataforma moderno construido con Flutter y Rust.',
   'features': 'Características',
   'featureSpeed': 'Núcleo Rust de alto rendimiento',
   'featureTheme': 'Colores dinámicos Material You',
@@ -2174,8 +2197,7 @@ const Map<String, String> _esStrings = {
   'allProxy': 'Todo proxy',
   'recommended': 'Recomendado',
   'rustInitErrorTitle': 'Error de inicialización',
-  'rustInitErrorMessage':
-      'No se pudo cargar el núcleo nativo. ArcadiaPlus no puede iniciarse sin él.',
+  'rustInitErrorMessage': 'No se pudo cargar el núcleo nativo. ArcadiaPlus no puede iniciarse sin él.',
   'rustInitErrorDetails': 'Detalles del error',
   'rustInitErrorAffectedFeatures': 'Funciones afectadas',
   'rustInitErrorFeatureVpn': '• Conexión VPN',
@@ -2279,8 +2301,7 @@ const Map<String, String> _frStrings = {
   'uwpLoopbackToolDesc':
       'Ouvrir l\'outil d\'exemption de loopback AppContainer',
   'aboutUwpLoopback': 'À propos du loopback UWP',
-  'uwpLoopbackExplain':
-      'Les applications UWP Windows ne peuvent pas accéder au proxy local par défaut.',
+  'uwpLoopbackExplain': 'Les applications UWP Windows ne peuvent pas accéder au proxy local par défaut.',
   'requiresAdmin': 'Cette opération nécessite des privilèges administrateur',
   'uwpToolOpened': 'Outil de loopback UWP ouvert',
   'uwpToolFailed': 'Échec de l\'ouverture de l\'outil de loopback UWP',
@@ -2294,8 +2315,7 @@ const Map<String, String> _frStrings = {
   'startServiceToViewConnections2':
       'Démarrez le service ArcadiaPlus pour voir les connexions actives',
   'noActiveConnectionsTitle': 'Aucune connexion active',
-  'connectionsWillAppear2':
-      'Les connexions actives apparaîtront ici lorsque les données passeront par le proxy',
+  'connectionsWillAppear2': 'Les connexions actives apparaîtront ici lorsque les données passeront par le proxy',
   'totalUploadShort': 'Envoi total',
   'totalDownloadShort': 'Téléchargement total',
   'cancel': 'Annuler',
@@ -2332,8 +2352,7 @@ const Map<String, String> _frStrings = {
   'understood': 'Compris',
   'aboutArcadiaPlus': 'À propos d\'ArcadiaPlus',
   'aboutArcadiaPlusDesc': 'En savoir plus sur cette application',
-  'aboutDescription':
-      'ArcadiaPlus est un client proxy multiplateforme moderne construit avec Flutter et Rust.',
+  'aboutDescription': 'ArcadiaPlus est un client proxy multiplateforme moderne construit avec Flutter et Rust.',
   'features': 'Fonctionnalités',
   'featureSpeed': 'Noyau Rust haute performance',
   'featureTheme': 'Couleurs dynamiques Material You',
@@ -2462,8 +2481,7 @@ const Map<String, String> _frStrings = {
   'allProxy': 'Tout proxy',
   'recommended': 'Recommandé',
   'rustInitErrorTitle': "Erreur d'initialisation",
-  'rustInitErrorMessage':
-      'Le cœur natif n’a pas pu être chargé. ArcadiaPlus ne peut pas démarrer sans lui.',
+  'rustInitErrorMessage': 'Le cœur natif n’a pas pu être chargé. ArcadiaPlus ne peut pas démarrer sans lui.',
   'rustInitErrorDetails': "Détails de l'erreur",
   'rustInitErrorAffectedFeatures': 'Fonctions affectées',
   'rustInitErrorFeatureVpn': '• Connexion VPN',
@@ -2564,8 +2582,7 @@ const Map<String, String> _itStrings = {
   'uwpLoopbackTool': 'Strumento loopback UWP',
   'uwpLoopbackToolDesc': 'Apri strumento di esenzione loopback AppContainer',
   'aboutUwpLoopback': 'Info su loopback UWP',
-  'uwpLoopbackExplain':
-      'Le app UWP di Windows non possono accedere al proxy locale per impostazione predefinita.',
+  'uwpLoopbackExplain': 'Le app UWP di Windows non possono accedere al proxy locale per impostazione predefinita.',
   'requiresAdmin': 'Questa operazione richiede privilegi di amministratore',
   'uwpToolOpened': 'Strumento loopback UWP aperto',
   'uwpToolFailed': 'Impossibile aprire lo strumento loopback UWP',
@@ -2579,8 +2596,7 @@ const Map<String, String> _itStrings = {
   'startServiceToViewConnections2':
       'Avvia il servizio ArcadiaPlus per visualizzare le connessioni attive',
   'noActiveConnectionsTitle': 'Nessuna connessione attiva',
-  'connectionsWillAppear2':
-      'Le connessioni attive appariranno qui quando i dati passeranno attraverso il proxy',
+  'connectionsWillAppear2': 'Le connessioni attive appariranno qui quando i dati passeranno attraverso il proxy',
   'totalUploadShort': 'Upload totale',
   'totalDownloadShort': 'Download totale',
   'cancel': 'Annulla',
@@ -2616,8 +2632,7 @@ const Map<String, String> _itStrings = {
   'understood': 'Capito',
   'aboutArcadiaPlus': 'Info su ArcadiaPlus',
   'aboutArcadiaPlusDesc': 'Scopri di più su questa app',
-  'aboutDescription':
-      'ArcadiaPlus è un client proxy multipiattaforma moderno costruito con Flutter e Rust.',
+  'aboutDescription': 'ArcadiaPlus è un client proxy multipiattaforma moderno costruito con Flutter e Rust.',
   'features': 'Funzionalità',
   'featureSpeed': 'Core Rust ad alte prestazioni',
   'featureTheme': 'Colori dinamici Material You',
@@ -2746,8 +2761,7 @@ const Map<String, String> _itStrings = {
   'allProxy': 'Tutto proxy',
   'recommended': 'Consigliato',
   'rustInitErrorTitle': 'Errore di inizializzazione',
-  'rustInitErrorMessage':
-      'Impossibile caricare il core nativo. ArcadiaPlus non può avviarsi senza di esso.',
+  'rustInitErrorMessage': 'Impossibile caricare il core nativo. ArcadiaPlus non può avviarsi senza di esso.',
   'rustInitErrorDetails': "Dettagli dell'errore",
   'rustInitErrorAffectedFeatures': 'Funzioni interessate',
   'rustInitErrorFeatureVpn': '• Connessione VPN',
@@ -3443,8 +3457,7 @@ const Map<String, String> _ptStrings = {
   'understood': 'Entendido',
   'aboutArcadiaPlus': 'Sobre ArcadiaPlus',
   'aboutArcadiaPlusDesc': 'Saiba mais sobre este app',
-  'aboutDescription':
-      'ArcadiaPlus é um cliente proxy multiplataforma moderno construído com Flutter e Rust.',
+  'aboutDescription': 'ArcadiaPlus é um cliente proxy multiplataforma moderno construído com Flutter e Rust.',
   'features': 'Recursos',
   'featureSpeed': 'Núcleo Rust de alto desempenho',
   'featureTheme': 'Cores dinâmicas Material You',
@@ -3573,8 +3586,7 @@ const Map<String, String> _ptStrings = {
   'allProxy': 'Tudo proxy',
   'recommended': 'Recomendado',
   'rustInitErrorTitle': 'Erro de inicialização',
-  'rustInitErrorMessage':
-      'Não foi possível carregar o núcleo nativo. O ArcadiaPlus não pode iniciar sem ele.',
+  'rustInitErrorMessage': 'Não foi possível carregar o núcleo nativo. O ArcadiaPlus não pode iniciar sem ele.',
   'rustInitErrorDetails': 'Detalhes do erro',
   'rustInitErrorAffectedFeatures': 'Funções afetadas',
   'rustInitErrorFeatureVpn': '• Conexão VPN',
@@ -3675,8 +3687,7 @@ const Map<String, String> _ruStrings = {
   'uwpLoopbackTool': 'Инструмент UWP Loopback',
   'uwpLoopbackToolDesc': 'Открыть инструмент исключения loopback AppContainer',
   'aboutUwpLoopback': 'О UWP Loopback',
-  'uwpLoopbackExplain':
-      'Приложения Windows UWP по умолчанию не могут получить доступ к локальному прокси.',
+  'uwpLoopbackExplain': 'Приложения Windows UWP по умолчанию не могут получить доступ к локальному прокси.',
   'requiresAdmin': 'Эта операция требует прав администратора',
   'uwpToolOpened': 'Инструмент UWP loopback открыт',
   'uwpToolFailed': 'Не удалось открыть инструмент UWP loopback',
@@ -3727,8 +3738,7 @@ const Map<String, String> _ruStrings = {
   'understood': 'Понятно',
   'aboutArcadiaPlus': 'О ArcadiaPlus',
   'aboutArcadiaPlusDesc': 'Узнать больше об этом приложении',
-  'aboutDescription':
-      'ArcadiaPlus - современный кроссплатформенный прокси-клиент, созданный на Flutter и Rust.',
+  'aboutDescription': 'ArcadiaPlus - современный кроссплатформенный прокси-клиент, созданный на Flutter и Rust.',
   'features': 'Функции',
   'featureSpeed': 'Высокопроизводительное ядро Rust',
   'featureTheme': 'Динамические цвета Material You',
@@ -3856,8 +3866,7 @@ const Map<String, String> _ruStrings = {
   'allProxy': 'Всё через прокси',
   'recommended': 'Рекомендуется',
   'rustInitErrorTitle': 'Ошибка инициализации',
-  'rustInitErrorMessage':
-      'Не удалось загрузить нативное ядро. Без него ArcadiaPlus не может запуститься.',
+  'rustInitErrorMessage': 'Не удалось загрузить нативное ядро. Без него ArcadiaPlus не может запуститься.',
   'rustInitErrorDetails': 'Сведения об ошибке',
   'rustInitErrorAffectedFeatures': 'Затронутые функции',
   'rustInitErrorFeatureVpn': '• VPN-подключение',
@@ -4000,8 +4009,7 @@ const Map<String, String> _zhCNStrings = {
   'understood': '我已了解',
   'aboutArcadiaPlus': '关于 ArcadiaPlus',
   'aboutArcadiaPlusDesc': '了解更多关于此应用',
-  'aboutDescription':
-      'ArcadiaPlus 是一款现代化的跨平台代理客户端，使用 Flutter 和 Rust 构建。它提供了精美的 Material You 界面和强大的代理功能。',
+  'aboutDescription': 'ArcadiaPlus 是一款现代化的跨平台代理客户端，使用 Flutter 和 Rust 构建。它提供了精美的 Material You 界面和强大的代理功能。',
   'features': '功能特性',
   'featureSpeed': '高性能 Rust 核心',
   'featureTheme': 'Material You 动态颜色',
@@ -4305,8 +4313,7 @@ const Map<String, String> _zhTWStrings = {
   'understood': '我已了解',
   'aboutArcadiaPlus': '關於 ArcadiaPlus',
   'aboutArcadiaPlusDesc': '了解更多關於此應用程式',
-  'aboutDescription':
-      'ArcadiaPlus 是一款現代化的跨平台代理用戶端，使用 Flutter 和 Rust 建置。它提供了精美的 Material You 介面和強大的代理功能。',
+  'aboutDescription': 'ArcadiaPlus 是一款現代化的跨平台代理用戶端，使用 Flutter 和 Rust 建置。它提供了精美的 Material You 介面和強大的代理功能。',
   'features': '功能特性',
   'featureSpeed': '高效能 Rust 核心',
   'featureTheme': 'Material You 動態顏色',
@@ -5288,8 +5295,7 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'restartServiceConfirm':
         'Redémarrer le service ArcadiaPlus ? Toutes les connexions actives '
         'seront coupées.',
-    'resetSettingsConfirm':
-        'Rétablir tous les réglages par défaut ? Cette action est irréversible.',
+    'resetSettingsConfirm': 'Rétablir tous les réglages par défaut ? Cette action est irréversible.',
     'resetSettingsDone': 'Réglages rétablis',
     'reset': 'Rétablir',
     'appearancePreview': 'Aperçu des couleurs du thème',
@@ -5366,5 +5372,255 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': '設定已重設',
     'reset': '重設',
     'appearancePreview': '主題配色預覽',
+  },
+};
+
+// =============================================================================
+// Rule diagnostics screen.
+//
+// Every locale carries the same key set as `en`, because
+// `missingTranslationKeys` compares against it.
+// =============================================================================
+const Map<String, Map<String, String>> _rulesScreenStrings = {
+  'de': {
+    'rulesOpen': 'Regeldiagnose',
+    'rulesOpenDesc': 'Treffer pro Regel und Status der Regelsätze',
+    'rulesTitle': 'Regeln',
+    'rulesSubtitle':
+        'Von oben nach unten geprüft; der erste Treffer bestimmt den Ausgang',
+    'rulesSummaryRules': 'Regeln',
+    'rulesSummaryHits': 'Treffer',
+    'rulesSummaryRuleSets': 'Regelsätze',
+    'rulesWarningsTitle': 'Konvertierungswarnungen',
+    'rulesWarningsEmpty': 'Nichts wurde verworfen oder umgeschrieben',
+    'rulesRulesEmpty': 'Die Engine hat keine Regeln geladen',
+    'rulesEngineOff':
+        'Die Engine läuft nicht, Trefferzahlen sind nicht verfügbar',
+    'rulesRuleSetsEmpty': 'Dieses Profil deklariert keine Regelsätze',
+    'rulesEntries': 'Einträge',
+    'rulesSkipped': 'übersprungen',
+    'rulesUpdated': 'aktualisiert',
+    'rulesNever': 'nie',
+    'rulesReady': 'bereit',
+    'rulesFailed': 'fehlgeschlagen',
+    'rulesBehavior': 'Verhalten',
+  },
+  'en': {
+    'rulesOpen': 'Rule diagnostics',
+    'rulesOpenDesc': 'Per-rule hit counts and rule set status',
+    'rulesTitle': 'Rules',
+    'rulesSubtitle':
+        'Evaluated top to bottom; the first match decides the outbound',
+    'rulesSummaryRules': 'Rules',
+    'rulesSummaryHits': 'Matches',
+    'rulesSummaryRuleSets': 'Rule sets',
+    'rulesWarningsTitle': 'Conversion warnings',
+    'rulesWarningsEmpty': 'Nothing was dropped or rewritten',
+    'rulesRulesEmpty': 'The engine has no rules loaded',
+    'rulesEngineOff':
+        'The engine is not running, so hit counts are unavailable',
+    'rulesRuleSetsEmpty': 'This profile declares no rule sets',
+    'rulesEntries': 'entries',
+    'rulesSkipped': 'skipped',
+    'rulesUpdated': 'updated',
+    'rulesNever': 'never',
+    'rulesReady': 'ready',
+    'rulesFailed': 'failed',
+    'rulesBehavior': 'behavior',
+  },
+  'es': {
+    'rulesOpen': 'Diagnóstico de reglas',
+    'rulesOpenDesc': 'Coincidencias por regla y estado de los conjuntos',
+    'rulesTitle': 'Reglas',
+    'rulesSubtitle':
+        'Se evalúan de arriba abajo; la primera coincidencia decide la salida',
+    'rulesSummaryRules': 'Reglas',
+    'rulesSummaryHits': 'Coincidencias',
+    'rulesSummaryRuleSets': 'Conjuntos',
+    'rulesWarningsTitle': 'Avisos de conversión',
+    'rulesWarningsEmpty': 'No se descartó ni reescribió nada',
+    'rulesRulesEmpty': 'El motor no tiene reglas cargadas',
+    'rulesEngineOff':
+        'El motor no está en ejecución; no hay recuento de coincidencias',
+    'rulesRuleSetsEmpty': 'Este perfil no declara conjuntos de reglas',
+    'rulesEntries': 'entradas',
+    'rulesSkipped': 'omitidas',
+    'rulesUpdated': 'actualizado',
+    'rulesNever': 'nunca',
+    'rulesReady': 'listo',
+    'rulesFailed': 'fallido',
+    'rulesBehavior': 'comportamiento',
+  },
+  'fr': {
+    'rulesOpen': 'Diagnostic des règles',
+    'rulesOpenDesc': 'Correspondances par règle et état des jeux de règles',
+    'rulesTitle': 'Règles',
+    'rulesSubtitle':
+        'Évaluées de haut en bas ; la première correspondance décide la sortie',
+    'rulesSummaryRules': 'Règles',
+    'rulesSummaryHits': 'Correspondances',
+    'rulesSummaryRuleSets': 'Jeux de règles',
+    'rulesWarningsTitle': 'Avertissements de conversion',
+    'rulesWarningsEmpty': "Rien n'a été écarté ni réécrit",
+    'rulesRulesEmpty': "Le moteur n'a chargé aucune règle",
+    'rulesEngineOff':
+        'Le moteur ne tourne pas, les compteurs sont indisponibles',
+    'rulesRuleSetsEmpty': 'Ce profil ne déclare aucun jeu de règles',
+    'rulesEntries': 'entrées',
+    'rulesSkipped': 'ignorées',
+    'rulesUpdated': 'mis à jour',
+    'rulesNever': 'jamais',
+    'rulesReady': 'prêt',
+    'rulesFailed': 'échec',
+    'rulesBehavior': 'comportement',
+  },
+  'it': {
+    'rulesOpen': 'Diagnostica delle regole',
+    'rulesOpenDesc': 'Conteggio dei match per regola e stato dei set',
+    'rulesTitle': 'Regole',
+    'rulesSubtitle':
+        "Valutate dall'alto verso il basso; il primo match decide l'uscita",
+    'rulesSummaryRules': 'Regole',
+    'rulesSummaryHits': 'Match',
+    'rulesSummaryRuleSets': 'Set di regole',
+    'rulesWarningsTitle': 'Avvisi di conversione',
+    'rulesWarningsEmpty': 'Nulla è stato scartato o riscritto',
+    'rulesRulesEmpty': 'Il motore non ha regole caricate',
+    'rulesEngineOff': 'Il motore non è in esecuzione: conteggi non disponibili',
+    'rulesRuleSetsEmpty': 'Questo profilo non dichiara set di regole',
+    'rulesEntries': 'voci',
+    'rulesSkipped': 'saltate',
+    'rulesUpdated': 'aggiornato',
+    'rulesNever': 'mai',
+    'rulesReady': 'pronto',
+    'rulesFailed': 'non riuscito',
+    'rulesBehavior': 'comportamento',
+  },
+  'ja': {
+    'rulesOpen': 'ルール診断',
+    'rulesOpenDesc': 'ルールごとのヒット数とルールセットの状態',
+    'rulesTitle': 'ルール',
+    'rulesSubtitle': '上から順に評価し、最初の一致が出口を決めます',
+    'rulesSummaryRules': 'ルール',
+    'rulesSummaryHits': 'ヒット',
+    'rulesSummaryRuleSets': 'ルールセット',
+    'rulesWarningsTitle': '変換の警告',
+    'rulesWarningsEmpty': '破棄・書き換えられた項目はありません',
+    'rulesRulesEmpty': 'エンジンはルールを読み込んでいません',
+    'rulesEngineOff': 'エンジンが動作していないため、ヒット数は取得できません',
+    'rulesRuleSetsEmpty': 'このプロファイルにはルールセットがありません',
+    'rulesEntries': 'エントリ',
+    'rulesSkipped': 'スキップ',
+    'rulesUpdated': '更新',
+    'rulesNever': 'なし',
+    'rulesReady': '有効',
+    'rulesFailed': '失敗',
+    'rulesBehavior': '動作',
+  },
+  'ko': {
+    'rulesOpen': '규칙 진단',
+    'rulesOpenDesc': '규칙별 적중 수와 규칙 세트 상태',
+    'rulesTitle': '규칙',
+    'rulesSubtitle': '위에서 아래로 평가하며 첫 일치가 출구를 결정합니다',
+    'rulesSummaryRules': '규칙',
+    'rulesSummaryHits': '적중',
+    'rulesSummaryRuleSets': '규칙 세트',
+    'rulesWarningsTitle': '변환 경고',
+    'rulesWarningsEmpty': '버려지거나 다시 쓰인 항목이 없습니다',
+    'rulesRulesEmpty': '엔진에 로드된 규칙이 없습니다',
+    'rulesEngineOff': '엔진이 실행 중이 아니어서 적중 수를 가져올 수 없습니다',
+    'rulesRuleSetsEmpty': '이 프로필은 규칙 세트를 선언하지 않습니다',
+    'rulesEntries': '항목',
+    'rulesSkipped': '건너뜀',
+    'rulesUpdated': '업데이트',
+    'rulesNever': '없음',
+    'rulesReady': '준비됨',
+    'rulesFailed': '실패',
+    'rulesBehavior': '동작',
+  },
+  'pt': {
+    'rulesOpen': 'Diagnóstico de regras',
+    'rulesOpenDesc':
+        'Contagem de correspondências por regra e estado dos conjuntos',
+    'rulesTitle': 'Regras',
+    'rulesSubtitle': 'Avaliadas de cima para baixo; a primeira correspondência decide a saída',
+    'rulesSummaryRules': 'Regras',
+    'rulesSummaryHits': 'Correspondências',
+    'rulesSummaryRuleSets': 'Conjuntos de regras',
+    'rulesWarningsTitle': 'Avisos de conversão',
+    'rulesWarningsEmpty': 'Nada foi descartado nem reescrito',
+    'rulesRulesEmpty': 'O motor não tem regras carregadas',
+    'rulesEngineOff': 'O motor não está em execução; contagens indisponíveis',
+    'rulesRuleSetsEmpty': 'Este perfil não declara conjuntos de regras',
+    'rulesEntries': 'entradas',
+    'rulesSkipped': 'ignoradas',
+    'rulesUpdated': 'atualizado',
+    'rulesNever': 'nunca',
+    'rulesReady': 'pronto',
+    'rulesFailed': 'falhou',
+    'rulesBehavior': 'comportamento',
+  },
+  'ru': {
+    'rulesOpen': 'Диагностика правил',
+    'rulesOpenDesc': 'Совпадения по каждому правилу и состояние наборов',
+    'rulesTitle': 'Правила',
+    'rulesSubtitle': 'Проверяются сверху вниз; первое совпадение задаёт выход',
+    'rulesSummaryRules': 'Правила',
+    'rulesSummaryHits': 'Совпадения',
+    'rulesSummaryRuleSets': 'Наборы правил',
+    'rulesWarningsTitle': 'Предупреждения преобразования',
+    'rulesWarningsEmpty': 'Ничего не отброшено и не переписано',
+    'rulesRulesEmpty': 'Движок не загрузил ни одного правила',
+    'rulesEngineOff': 'Движок не запущен — счётчики недоступны',
+    'rulesRuleSetsEmpty': 'В этом профиле нет наборов правил',
+    'rulesEntries': 'записей',
+    'rulesSkipped': 'пропущено',
+    'rulesUpdated': 'обновлено',
+    'rulesNever': 'никогда',
+    'rulesReady': 'готов',
+    'rulesFailed': 'сбой',
+    'rulesBehavior': 'поведение',
+  },
+  'zh_CN': {
+    'rulesOpen': '规则诊断',
+    'rulesOpenDesc': '查看每条规则的命中情况与规则集状态',
+    'rulesTitle': '规则',
+    'rulesSubtitle': '自上而下逐条求值，首个命中决定出口',
+    'rulesSummaryRules': '规则',
+    'rulesSummaryHits': '命中',
+    'rulesSummaryRuleSets': '规则集',
+    'rulesWarningsTitle': '转换警告',
+    'rulesWarningsEmpty': '没有条目被丢弃或改写',
+    'rulesRulesEmpty': '引擎尚未加载规则',
+    'rulesEngineOff': '引擎未运行，命中数不可用',
+    'rulesRuleSetsEmpty': '此配置没有声明规则集',
+    'rulesEntries': '条目',
+    'rulesSkipped': '跳过',
+    'rulesUpdated': '更新于',
+    'rulesNever': '从未',
+    'rulesReady': '可用',
+    'rulesFailed': '失败',
+    'rulesBehavior': '行为',
+  },
+  'zh_TW': {
+    'rulesOpen': '規則診斷',
+    'rulesOpenDesc': '檢視每條規則的命中情形與規則集狀態',
+    'rulesTitle': '規則',
+    'rulesSubtitle': '由上而下逐條求值，首個命中決定出口',
+    'rulesSummaryRules': '規則',
+    'rulesSummaryHits': '命中',
+    'rulesSummaryRuleSets': '規則集',
+    'rulesWarningsTitle': '轉換警告',
+    'rulesWarningsEmpty': '沒有任何條目被捨棄或改寫',
+    'rulesRulesEmpty': '引擎尚未載入規則',
+    'rulesEngineOff': '引擎未執行，命中數無法取得',
+    'rulesRuleSetsEmpty': '此設定未宣告規則集',
+    'rulesEntries': '條目',
+    'rulesSkipped': '略過',
+    'rulesUpdated': '更新於',
+    'rulesNever': '從未',
+    'rulesReady': '可用',
+    'rulesFailed': '失敗',
+    'rulesBehavior': '行為',
   },
 };

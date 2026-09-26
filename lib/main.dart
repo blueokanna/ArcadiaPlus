@@ -23,6 +23,7 @@ import 'package:arcadiaplus/src/screens/network_settings_screen.dart';
 import 'package:arcadiaplus/src/screens/dns_settings_screen.dart';
 import 'package:arcadiaplus/src/screens/basic_config_screen.dart';
 import 'package:arcadiaplus/src/screens/advanced_config_screen.dart';
+import 'package:arcadiaplus/src/screens/rules_screen.dart';
 import 'package:arcadiaplus/src/screens/proxies_screen.dart';
 import 'package:arcadiaplus/src/screens/about_screen.dart';
 import 'package:arcadiaplus/src/screens/wallpaper_screen.dart';
@@ -349,6 +350,14 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
                                 ? AppTheme.withTranslucentSurfaces(darkTheme)
                                 : darkTheme,
                             themeMode: themeMode,
+                            // Light/dark switches cross-fade instead of
+                            // snapping; the emphasized curve is the Material 3
+                            // motion for a transition the user watches.
+                            themeAnimationDuration: const Duration(
+                              milliseconds: 350,
+                            ),
+                            themeAnimationCurve:
+                                Curves.easeInOutCubicEmphasized,
                             locale: localeProvider.currentLocale,
                             localizationsDelegates: const [
                               AppLocalizations.delegate,
@@ -437,6 +446,11 @@ final GoRouter _router = GoRouter(
           path: '/advanced-config',
           pageBuilder: (context, state) =>
               _buildExpressivePage(state, const AdvancedConfigScreen()),
+        ),
+        GoRoute(
+          path: '/rules',
+          pageBuilder: (context, state) =>
+              _buildExpressivePage(state, const RulesScreen()),
         ),
         GoRoute(
           path: '/wallpaper',

@@ -90,9 +90,8 @@ class AdaptiveDialog extends StatelessWidget {
                         PlatformUtils.isDesktop ? 16 : 12,
                       ),
                   child: DefaultTextStyle(
-                    style: Theme.of(context).textTheme.headlineSmall!.copyWith(
-                      fontSize: PlatformUtils.isDesktop ? 20 : 18,
-                    ),
+                    style: Theme.of(context).textTheme.headlineSmall!
+                        .copyWith(fontSize: PlatformUtils.isDesktop ? 20 : 18),
                     child: title!,
                   ),
                 ),

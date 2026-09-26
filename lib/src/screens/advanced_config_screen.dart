@@ -166,6 +166,36 @@ class _AdvancedConfigScreenState extends State<AdvancedConfigScreen> {
 
               const SizedBox(height: 24),
 
+              // 规则诊断
+              _buildSectionHeader(
+                context,
+                l10n?.rulesTitle ?? 'Rules',
+                Icons.rule_outlined,
+              ),
+              Card(
+                elevation: 0,
+                color: colorScheme.surfaceContainerLow,
+                child: Column(
+                  children: [
+                    AdaptiveListTile(
+                      title: Text(l10n?.rulesOpen ?? 'Rule diagnostics'),
+                      subtitle: Text(
+                        l10n?.rulesOpenDesc ??
+                            'Per-rule hit counts and rule set status',
+                      ),
+                      leading: Icon(
+                        Icons.rule_outlined,
+                        color: colorScheme.primary,
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => context.go('/rules'),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
               // 信息卡片
               _buildInfoCard(context, l10n),
 

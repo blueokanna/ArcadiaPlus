@@ -1,9 +1,11 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
 import 'package:arcadiaplus/src/providers/network_settings_provider.dart';
+import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
 import 'package:arcadiaplus/src/rust/api.dart' as api;
@@ -157,8 +159,7 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                l10n?.bypassDomainsDesc ??
-                                    'Only effective when system proxy is enabled',
+                                l10n?.bypassDomainsDesc ?? 'Only effective when system proxy is enabled',
                                 style: textTheme.bodySmall?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                 ),
@@ -426,8 +427,7 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            l10n?.uwpLoopbackExplain ??
-                'Windows UWP apps (like Microsoft Edge, Microsoft Store) cannot access local proxy by default. After enabling UWP loopback exemption, these apps can access network through local proxy.',
+            l10n?.uwpLoopbackExplain ?? 'Windows UWP apps (like Microsoft Edge, Microsoft Store) cannot access local proxy by default. After enabling UWP loopback exemption, these apps can access network through local proxy.',
             style: textTheme.bodySmall?.copyWith(
               color: colorScheme.onSurfaceVariant,
               height: 1.5,
@@ -512,6 +512,17 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
           behavior: SnackBarBehavior.floating,
           backgroundColor: errorColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          // A refused adapter creation is the one TUN failure with a real
+          // user action behind it: the same app with an elevated token can
+          // create the adapter, so the refusal is answered with the way to
+          // get one instead of only the cause.
+          action: value && Platform.isWindows
+              ? SnackBarAction(
+                  label: 'Restart as administrator',
+                  onPressed: () =>
+                      PlatformProxyService.instance.relaunchAsAdministrator(),
+                )
+              : null,
         ),
       );
     } finally {
@@ -542,8 +553,7 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
           scaffoldMessenger.showSnackBar(
             SnackBar(
               content: Text(
-                l10n?.uwpToolFailed ??
-                    'Failed to open UWP loopback tool, please try running as administrator',
+                l10n?.uwpToolFailed ?? 'Failed to open UWP loopback tool, please try running as administrator',
               ),
               behavior: SnackBarBehavior.floating,
               backgroundColor: errorColor,

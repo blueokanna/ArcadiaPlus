@@ -32,10 +32,8 @@ Future<void> showBundledLicense(BuildContext context) async {
             child: SingleChildScrollView(
               child: SelectableText(
                 text,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  height: 1.5,
-                  fontFamily: 'monospace',
-                ),
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(height: 1.5, fontFamily: 'monospace'),
               ),
             ),
           ),

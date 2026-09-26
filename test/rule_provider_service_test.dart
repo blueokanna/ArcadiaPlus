@@ -61,9 +61,8 @@ void main() {
       );
     });
 
-    final report = await serviceWith(
-      client,
-    ).prepare('profile-1', httpProfile());
+    final report = await serviceWith(client)
+        .prepare('profile-1', httpProfile());
 
     expect(report.states, hasLength(1));
     final state = report.states.single;
@@ -98,9 +97,8 @@ void main() {
         );
       });
 
-      final report = await serviceWith(
-        client,
-      ).prepare('profile-1', httpProfile(behavior: 'ipcidr'));
+      final report = await serviceWith(client)
+          .prepare('profile-1', httpProfile(behavior: 'ipcidr'));
 
       final state = report.states.single;
       expect(state.ready, isTrue, reason: state.error ?? '');
@@ -175,9 +173,8 @@ void main() {
     () async {
       final client = MockClient((request) async => http.Response('nope', 404));
 
-      final report = await serviceWith(
-        client,
-      ).prepare('profile-1', httpProfile());
+      final report = await serviceWith(client)
+          .prepare('profile-1', httpProfile());
 
       final state = report.states.single;
       expect(state.ready, isFalse);
@@ -256,4 +253,69 @@ void main() {
     expect(specs, hasLength(2));
     expect(warnings, hasLength(4));
   });
+
+  test('MRS rule sets are dropped with a reason instead of half-loading', () {
+    final warnings = <String>[];
+    final specs = RuleProviderSpec.parse({
+      // Declared explicitly...
+      'declared': {
+        'type': 'http',
+        'behavior': 'domain',
+        'url': 'https://a/b',
+        'format': 'mrs',
+      },
+      // ...and by the extension alone, which is how most profiles write it.
+      'by-extension': {
+        'type': 'http',
+        'behavior': 'domain',
+        'url': 'https://cdn.example.com/geosite/cn.mrs',
+      },
+      'text-is-fine': {
+        'type': 'http',
+        'behavior': 'domain',
+        'url': 'https://cdn.example.com/geosite/cn.txt',
+        'format': 'text',
+      },
+      'unknown-format': {
+        'type': 'http',
+        'behavior': 'domain',
+        'url': 'https://a/b',
+        'format': 'sing-box',
+      },
+    }, onWarning: warnings.add);
+
+    expect(specs.map((spec) => spec.name), contains('text-is-fine'));
+    expect(specs, hasLength(1));
+    expect(
+      warnings.where((warning) => warning.contains('MRS')),
+      hasLength(2),
+      reason: 'both the explicit format and the .mrs extension are reported',
+    );
+    expect(warnings.join('\n'), contains('sing-box'));
+  });
+
+  test(
+    'a binary payload that arrives anyway is reported, not written',
+    () async {
+      // A packed rule set that did not announce itself (no `format`, no .mrs
+      // in the URL): the raw bytes are a NUL-bearing blob. The service must
+      // report it instead of writing a file of mojibake that matches nothing.
+      final file = File('${sandbox.path}/packed.rules');
+      file.writeAsBytesSync(<int>[0x4D, 0x52, 0x53, 0x00, 0x01, 0x80, 0xFF]);
+
+      final report =
+          await serviceWith(
+            MockClient((request) async => http.Response('unused', 500)),
+          ).prepare(
+            'profile-1',
+            fileProfile(file.path.replaceAll(r'\', '/'), behavior: 'domain'),
+          );
+
+      final state = report.states.single;
+      expect(state.ready, isFalse);
+      expect(state.entries, 0);
+      expect(state.error, contains('binary'));
+      expect(report.paths, isEmpty);
+    },
+  );
 }

@@ -25,11 +25,9 @@ void main() {
       final migrated = stored.withDefaultBypassDomains();
 
       expect(migrated.bypassRevision, NetworkSettings.bypassDefaultsRevision);
-      expect(
-        migrated.bypassDomains.take(1),
-        ['example.com'],
-        reason: 'the user\'s own entries keep their place',
-      );
+      expect(migrated.bypassDomains.take(1), [
+        'example.com',
+      ], reason: 'the user\'s own entries keep their place');
       for (final entry in NetworkSettings.defaultBypassDomains) {
         expect(migrated.bypassDomains, contains(entry));
       }
