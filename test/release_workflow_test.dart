@@ -87,42 +87,52 @@ void main() {
     },
   );
 
-  test(
-    'the OHOS toolchain archives are cached once, keyed by their digests',
-    () {
-      final setup = File('.github/actions/setup-ohos/action.yml')
-          .readAsStringSync();
-      final ci = File('.github/workflows/ci.yml').readAsStringSync();
-      final release = File('.github/workflows/release.yml').readAsStringSync();
+  test('the OHOS toolchain archive is cached once, keyed by its digest', () {
+    final setup = File('.github/actions/setup-ohos/action.yml')
+        .readAsStringSync();
+    final ci = File('.github/workflows/ci.yml').readAsStringSync();
+    final release = File('.github/workflows/release.yml').readAsStringSync();
 
-      // Restore and save live in the composite action both workflows already
-      // call: one implementation, one place to keep honest.
-      final steps =
-          (((loadYaml(setup) as YamlMap)['runs'] as YamlMap)['steps']
-                  as YamlList)
-              .cast<YamlMap>();
-      final uses = steps.map((step) => step['uses']).whereType<String>();
-      expect(uses, contains('actions/cache/restore@v4'));
-      expect(uses, contains('actions/cache/save@v4'));
+    // Restore and save live in the composite action both workflows already
+    // call: one implementation, one place to keep honest.
+    final steps =
+        (((loadYaml(setup) as YamlMap)['runs'] as YamlMap)['steps'] as YamlList)
+            .cast<YamlMap>();
+    final uses = steps.map((step) => step['uses']).whereType<String>();
+    expect(uses, contains('actions/cache/restore@v4'));
+    expect(uses, contains('actions/cache/save@v4'));
 
-      // The key is derived from the published digests, so a re-rolled
-      // upstream archive misses the cache instead of being re-downloaded
-      // against a stale entry on every run.
-      expect(setup, contains('expected-clt-sha'));
-      expect(setup, contains(r'ohos-toolchain-archives-${{ runner.os }}'));
+    // The key is derived from the published digest, so a re-rolled
+    // upstream archive misses the cache instead of being re-downloaded
+    // against a stale entry on every run. The older prefixes stay as
+    // fallbacks so the retired two-archive entries are still reusable.
+    expect(setup, contains('expected-clt-sha'));
+    expect(setup, contains(r'ohos-clt-${{ runner.os }}'));
+    expect(setup, contains(r'ohos-toolchain-archives-${{ runner.os }}'));
 
-      // The entry is saved as soon as the archives verify (a later failure
-      // or cancellation must not lose it), and the runner drops each
-      // archive once it has been unpacked.
-      expect(setup, contains('steps.download.outputs.verified'));
-      expect(setup, contains(r'rm -f "$CLT_ARCHIVE"'));
-      expect(setup, contains(r'rm -f "$SDK_ARCHIVE"'));
+    // The entry is saved as soon as the archive verifies (a later failure
+    // or cancellation must not lose it), and the runner drops it once it
+    // has been unpacked.
+    expect(setup, contains('steps.download.outputs.verified'));
+    expect(setup, contains(r'rm -f "$CLT_ARCHIVE"'));
 
-      // Neither workflow carries a cache step of its own any more.
-      expect(ci, isNot(contains('ohos-downloads-v1')));
-      expect(release, isNot(contains('ohos-downloads-v1')));
-    },
-  );
+    // The SDK travels inside the command-line tools archive -- the action
+    // must not download the retired OpenHarmony test payload again (its
+    // 26.0.0 half broke `CompileResource` with 11201001), and the unpack
+    // step checks the bundled SDK's halves by name.
+    expect(setup, isNot(contains('openharmony-sdk')));
+    expect(setup, isNot(contains('SDK_ARCHIVE')));
+    expect(setup, isNot(contains('SDK_URL')));
+    expect(setup, contains('sdk/default/openharmony/toolchains/restool'));
+    expect(
+      setup,
+      contains('sdk/default/hms/toolchains/lib/libimage_transcoder_shared.so'),
+    );
+
+    // Neither workflow carries a cache step of its own any more.
+    expect(ci, isNot(contains('ohos-downloads-v1')));
+    expect(release, isNot(contains('ohos-downloads-v1')));
+  });
 
   test(
     'the OHOS product keeps the fork-template SDK versions, never rewritten',

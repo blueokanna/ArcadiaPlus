@@ -170,7 +170,7 @@ HarmonyOS NEXT 真机。
 
 | action | 职责 |
 |--------|------|
-| `.github/actions/setup-ohos` | 下载/校验 command-line-tools 与 OpenHarmony SDK（SHA-256 双重校验），解包成 DevEco 布局，导出 `DEVECO_SDK_HOME` / `OHOS_NDK` |
+| `.github/actions/setup-ohos` | 下载/校验 command-line-tools（SHA-256；内含完整且自洽的 HarmonyOS 5.1.0 SDK：`openharmony` + `hms`），按原样解包并断言 SDK 两半齐备，导出 `DEVECO_SDK_HOME` / `OHOS_NDK` |
 | `.github/actions/checkout-flutter-ohos` | 检出固定 tag 的 `flutter_flutter`（唯一能执行 `flutter build hap` 的 SDK） |
 | `.github/actions/prepare-ohos-build` | 防漂移校验 `compatibleSdkVersion` 保持 fork 模板为 CI SDK 提供的值（`5.1.0(18)`，且不设 `targetSdkVersion`；漂移会让 hvigor 以 00303082/00306042 提前失败）、放宽 pubspec 约束到 fork 的 Dart 线、`flutter pub get` |
 
