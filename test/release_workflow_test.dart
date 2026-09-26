@@ -247,4 +247,18 @@ void main() {
       expect(source, contains('::error title='));
     }
   });
+
+  test('the OHOS build warms and patches the embedding har', () {
+    final prepare = File('.github/actions/prepare-ohos-build/action.yml')
+        .readAsStringSync();
+    final script = File('ohos/scripts/patch-flutter-ohos-har.py')
+        .readAsStringSync();
+    // The pinned SDK's KeyEvent has no isCapsLockOn/isNumLockOn, so the
+    // embedding har must be patched after precache or CompileArkTS rejects
+    // the embedding and the HAP build fails.
+    expect(prepare, contains('precache --ohos --ohos_internal_build'));
+    expect(prepare, contains('patch-flutter-ohos-har.py'));
+    expect(script, contains('isCapsLockOn'));
+    expect(script, contains('isNumLockOn'));
+  });
 }

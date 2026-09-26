@@ -136,3 +136,32 @@ runs:
         # fork's older Dart cannot satisfy. pub re-resolves in the working tree
         # only; nothing here is committed.
         "$FLUTTER_COMMAND" pub get
+
+    - name: Warm and patch the OHOS embedding har
+      shell: bash
+      env:
+        FLUTTER_COMMAND: ${{ inputs.flutter-command }}
+      run: |
+        set -euo pipefail
+
+        # The engine artifacts carry `flutter.har`, the ohos embedding the HAP
+        # compiles against. Materialize them before the patch below: the cache
+        # stamps by version and never re-reads contents, so the archives
+        # patched here are the ones the later build consumes instead of
+        # re-downloading.
+        "$FLUTTER_COMMAND" precache --ohos --ohos_internal_build
+
+        # The har's `KeyEventHandler.ets` gates CapsLock/NumLock on the
+        # `KeyEvent` properties `isCapsLockOn`/`isNumLockOn`, which the pinned
+        # SDK (5.1.0 / API 18) does not declare -- it has the older
+        # `capsLock`/`numLock` booleans -- and ArkTS fails the file at compile
+        # time, so the `!== undefined` guards never run. The patch rewrites
+        # both expressions to the constants those guards produce, which is the
+        # code's own stated behaviour on a SDK without the properties; without
+        # it CompileArkTS fails the whole HAP build.
+        cache="$FLUTTER_OHOS_ROOT/bin/cache/artifacts/engine"
+        if [[ ! -d "$cache" ]]; then
+          echo "::error title=OHOS engine cache missing::$cache does not exist after precache; the embedding har cannot be patched"
+          exit 1
+        fi
+        python3 ohos/scripts/patch-flutter-ohos-har.py "$cache"
