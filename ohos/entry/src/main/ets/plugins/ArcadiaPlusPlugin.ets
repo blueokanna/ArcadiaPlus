@@ -133,8 +133,7 @@ export class ArcadiaPlusPlugin implements FlutterPlugin, MethodCallHandler {
       return;
     }
 
-    const arguments_ = call.arguments as Record<string, Object> | undefined;
-    const configPath = arguments_?.configPath?.toString() ?? '';
+    const configPath = (call.argument('configPath') as string | undefined) ?? '';
     if (configPath.length === 0) {
       const outcome: VpnCommandResult = {
         success: false,
@@ -145,14 +144,14 @@ export class ArcadiaPlusPlugin implements FlutterPlugin, MethodCallHandler {
     }
 
     const options: StartOptions = {
-      mode: arguments_?.mode?.toString() ?? 'rule',
+      mode: (call.argument('mode') as string | undefined) ?? 'rule',
       configPath: configPath,
     };
-    const geoipPath = arguments_?.geoipPath?.toString();
+    const geoipPath = call.argument('geoipPath') as string | undefined;
     if (geoipPath !== undefined && geoipPath.length > 0) {
       options.geoipPath = geoipPath;
     }
-    const logPath = arguments_?.logPath?.toString();
+    const logPath = call.argument('logPath') as string | undefined;
     if (logPath !== undefined && logPath.length > 0) {
       options.logPath = logPath;
     }
@@ -227,8 +226,7 @@ export class ArcadiaPlusPlugin implements FlutterPlugin, MethodCallHandler {
   }
 
   private setProxyMode(call: MethodCall, result: MethodResult): void {
-    const arguments_ = call.arguments as Record<string, Object> | undefined;
-    const mode = arguments_?.mode?.toString() ?? 'rule';
+    const mode = (call.argument('mode') as string | undefined) ?? 'rule';
     commonEventManager.publish(
       COMMAND_EVENT,
       { parameters: { command: 'set-mode', mode: mode } },

@@ -260,5 +260,9 @@ void main() {
     expect(prepare, contains('patch-flutter-ohos-har.py'));
     expect(script, contains('isCapsLockOn'));
     expect(script, contains('isNumLockOn'));
+    // The same har's PiP bridge calls the process-level
+    // window.getGlobalWindowMode(), which this SDK does not expose either,
+    // so it is rewritten to the answer its own catch block already gave.
+    expect(script, contains('getGlobalWindowMode'));
   });
 }

@@ -14,6 +14,13 @@ Both expressions fall back to a constant when the property is absent, and on
 this SDK it always is. Rewriting them to those constants therefore preserves
 the code's own stated behaviour exactly while removing the type error.
 
+The same har also carries `PiPVisibilityBridge.ets`, whose `queryPipMode()`
+calls the process-level `window.getGlobalWindowMode()` and reads
+`window.GlobalWindowMode.PIP` -- neither exists in this SDK either. The whole
+call is rewritten to the `false` its own `catch` block already returned, which
+is the same behaviour a SDK without the API produces: PiP is never reported
+visible and the bridge keeps its conservative "not visible" answer.
+
 The script rewrites the har archives in place, streaming each member and
 rebuilding the archive so order and attributes survive. It prints what it
 patched and exits non-zero when nothing matched -- an unpatched tree fails the
@@ -21,6 +28,7 @@ HAP build in CompileArkTS, so silence would be worse than an error.
 """
 
 import io
+import re
 import sys
 import tarfile
 from pathlib import Path
@@ -30,7 +38,18 @@ REPLACEMENTS = (
     ("event.isNumLockOn !== undefined ? event.isNumLockOn : true", "true"),
 )
 
-MARKERS = (b"isCapsLockOn", b"isNumLockOn")
+RE_REPLACEMENTS = (
+    (
+        re.compile(
+            r"const mode = await window\.getGlobalWindowMode\(\);\s*"
+            r"return \(mode & window\.GlobalWindowMode\.PIP\) !== 0;",
+            re.DOTALL,
+        ),
+        "return false;",
+    ),
+)
+
+MARKERS = (b"isCapsLockOn", b"isNumLockOn", b"getGlobalWindowMode")
 
 
 def patch_payload(payload: bytes) -> tuple[bytes, int]:
@@ -40,6 +59,9 @@ def patch_payload(payload: bytes) -> tuple[bytes, int]:
         if old in text:
             hits += text.count(old)
             text = text.replace(old, new)
+    for pattern, replacement in RE_REPLACEMENTS:
+        text, count = pattern.subn(replacement, text)
+        hits += count
     return text.encode("utf-8"), hits
 
 
