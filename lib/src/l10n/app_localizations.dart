@@ -252,6 +252,21 @@ class AppLocalizations {
   String publishedOn(String date) =>
       _getLocalizedString('publishedOn').replaceAll('{date}', date);
 
+  String get updateUpToDate => _getLocalizedString('updateUpToDate');
+
+  String updateSameVersion(int apk, int installed) =>
+      _getLocalizedString('updateSameVersion')
+          .replaceAll('{apk}', '$apk')
+          .replaceAll('{installed}', '$installed');
+
+  String get updateSignatureMismatch =>
+      _getLocalizedString('updateSignatureMismatch');
+
+  String get updatePermissionRequired =>
+      _getLocalizedString('updatePermissionRequired');
+
+  String get openReleasesPage => _getLocalizedString('openReleasesPage');
+
   // Appearance
   String get appearance => _getLocalizedString('appearance');
   String get themeMode => _getLocalizedString('themeMode');
@@ -554,6 +569,22 @@ class AppLocalizations {
   String get rulesReady => _getLocalizedString('rulesReady');
   String get rulesFailed => _getLocalizedString('rulesFailed');
   String get rulesBehavior => _getLocalizedString('rulesBehavior');
+  String get rulesSearchHint => _getLocalizedString('rulesSearchHint');
+  String get rulesSearchEmpty => _getLocalizedString('rulesSearchEmpty');
+
+  String rulesSearchSummary(int matched, int shown) =>
+      _getLocalizedString('rulesSearchSummary')
+          .replaceAll('{matched}', '$matched')
+          .replaceAll('{shown}', '$shown');
+
+  String rulesSearchTruncated(int shown) =>
+      _getLocalizedString('rulesSearchTruncated')
+          .replaceAll('{shown}', '$shown');
+
+  String rulesLoadLimitReached(int loaded, int total) =>
+      _getLocalizedString('rulesLoadLimitReached')
+          .replaceAll('{loaded}', '$loaded')
+          .replaceAll('{total}', '$total');
 
   // DNS Settings Screen
   String get basicSettings => _getLocalizedString('basicSettings');
@@ -590,6 +621,10 @@ class AppLocalizations {
   String get dnsPresetAdded => _getLocalizedString('dnsPresetAdded');
   String get dnsUpstreamHint => _getLocalizedString('dnsUpstreamHint');
   String get dnsUpstreamUnknown => _getLocalizedString('dnsUpstreamUnknown');
+  String get dnsBootstrap => _getLocalizedString('dnsBootstrap');
+  String get dnsBootstrapDesc => _getLocalizedString('dnsBootstrapDesc');
+  String get dnsBootstrapLiteralOnly =>
+      _getLocalizedString('dnsBootstrapLiteralOnly');
 
   // Wallpaper and appearance
   String get wallpaper => _getLocalizedString('wallpaper');
@@ -609,6 +644,11 @@ class AppLocalizations {
   String get wallpaperFailed => _getLocalizedString('wallpaperFailed');
   String get wallpaperRemoveConfirm =>
       _getLocalizedString('wallpaperRemoveConfirm');
+  String get wallpaperZoom => _getLocalizedString('wallpaperZoom');
+  String get wallpaperRepositionHint =>
+      _getLocalizedString('wallpaperRepositionHint');
+  String get wallpaperResetFraming =>
+      _getLocalizedString('wallpaperResetFraming');
 
   // Settings actions
   String get autoSystemProxy => _getLocalizedString('autoSystemProxy');
@@ -620,6 +660,8 @@ class AppLocalizations {
   String get resetSettingsDone => _getLocalizedString('resetSettingsDone');
   String get reset => _getLocalizedString('reset');
   String get appearancePreview => _getLocalizedString('appearancePreview');
+  String get dynamicColorUnavailable =>
+      _getLocalizedString('dynamicColorUnavailable');
   String get ruleModeDesc => _getLocalizedString('ruleModeDesc');
   String get globalModeDesc => _getLocalizedString('globalModeDesc');
   String get vpnProxy => _getLocalizedString('vpnProxy');
@@ -694,6 +736,11 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': 'Installationsprogramm wird geöffnet',
     'updateFailed': 'Update fehlgeschlagen: {error}',
     'publishedOn': 'Veröffentlicht am {date}',
+    'updateUpToDate': 'ArcadiaPlus ist aktuell',
+    'updateSameVersion': 'Dieses Paket hat den Versionscode {apk}, installiert ist {installed}; Android ersetzt es nicht. Die installierte App zuerst deinstallieren oder auf ein Release mit höherem Code warten.',
+    'updateSignatureMismatch': 'Das Paket ist mit einem anderen Schlüssel signiert als die installierte App. Die installierte App zuerst deinstallieren oder das Release von der GitHub-Seite installieren.',
+    'updatePermissionRequired': 'Erlaube ArcadiaPlus in den Systemeinstellungen das Installieren von Apps und versuche es erneut.',
+    'openReleasesPage': 'Release-Seite öffnen',
   },
   'en': {
     'checkForUpdates': 'Check for updates',
@@ -703,6 +750,11 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': 'Opening installer',
     'updateFailed': 'Update failed: {error}',
     'publishedOn': 'Published {date}',
+    'updateUpToDate': 'ArcadiaPlus is up to date',
+    'updateSameVersion': 'This build carries version code {apk}, which is not newer than the installed {installed}; Android will not replace it. Uninstall the installed build first, or wait for a release with a higher version code.',
+    'updateSignatureMismatch': 'The download is signed with a different key than the installed app. Uninstall the installed app first, or install the release from its GitHub page.',
+    'updatePermissionRequired': 'Allow ArcadiaPlus to install apps in the system settings, then try again.',
+    'openReleasesPage': 'Open the releases page',
   },
   'es': {
     'checkForUpdates': 'Buscar actualizaciones',
@@ -712,6 +764,11 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': 'Abriendo el instalador',
     'updateFailed': 'Error de actualización: {error}',
     'publishedOn': 'Publicado el {date}',
+    'updateUpToDate': 'ArcadiaPlus está actualizado',
+    'updateSameVersion': 'Este paquete usa el código {apk} y la app instalada usa {installed}; Android no lo reemplazará. Desinstala primero la app instalada o espera una versión con un código mayor.',
+    'updateSignatureMismatch': 'La descarga está firmada con una clave distinta a la de la app instalada. Desinstala primero la app instalada o instala la versión desde su página de GitHub.',
+    'updatePermissionRequired': 'Permite que ArcadiaPlus instale apps en los ajustes del sistema y vuelve a intentarlo.',
+    'openReleasesPage': 'Abrir la página de versiones',
   },
   'fr': {
     'checkForUpdates': 'Rechercher des mises à jour',
@@ -721,6 +778,11 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': 'Ouverture du programme d’installation',
     'updateFailed': 'Échec de la mise à jour : {error}',
     'publishedOn': 'Publié le {date}',
+    'updateUpToDate': 'ArcadiaPlus est à jour',
+    'updateSameVersion': 'Ce paquet porte le code {apk} alors que {installed} est installé ; Android ne le remplacera pas. Désinstallez d’abord l’application installée ou attendez une version avec un code plus élevé.',
+    'updateSignatureMismatch': 'Le téléchargement est signé avec une clé différente de celle de l’application installée. Désinstallez d’abord l’application installée ou installez la version depuis sa page GitHub.',
+    'updatePermissionRequired': 'Autorisez ArcadiaPlus à installer des applications dans les réglages système, puis réessayez.',
+    'openReleasesPage': 'Ouvrir la page des versions',
   },
   'it': {
     'checkForUpdates': 'Controlla aggiornamenti',
@@ -730,6 +792,11 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': 'Apertura del programma di installazione',
     'updateFailed': 'Aggiornamento non riuscito: {error}',
     'publishedOn': 'Pubblicato il {date}',
+    'updateUpToDate': 'ArcadiaPlus è aggiornato',
+    'updateSameVersion': 'Questo pacchetto ha codice {apk} mentre è installato {installed}; Android non lo sostituirà. Disinstalla prima l’app installata o attendi una versione con un codice più alto.',
+    'updateSignatureMismatch': 'Il download è firmato con una chiave diversa dall’app installata. Disinstalla prima l’app installata oppure installa la versione dalla sua pagina GitHub.',
+    'updatePermissionRequired': 'Consenti ad ArcadiaPlus di installare app nelle impostazioni di sistema, poi riprova.',
+    'openReleasesPage': 'Apri la pagina delle versioni',
   },
   'ja': {
     'checkForUpdates': 'アップデートを確認',
@@ -739,6 +806,12 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': 'インストーラーを開いています',
     'updateFailed': 'アップデートに失敗しました: {error}',
     'publishedOn': '{date} に公開',
+    'updateUpToDate': 'ArcadiaPlus は最新です',
+    'updateSameVersion': 'このパッケージのバージョンコードは {apk} で、インストール済みは {installed} です。Android は置き換えません。先にインストール済みアプリを削除するか、より大きいコードのリリースをお待ちください。',
+    'updateSignatureMismatch': 'ダウンロードはインストール済みアプリと異なる鍵で署名されています。先にインストール済みアプリを削除するか、GitHub のリリースページからインストールしてください。',
+    'updatePermissionRequired':
+        'システム設定で ArcadiaPlus にアプリのインストールを許可してから、もう一度お試しください。',
+    'openReleasesPage': 'リリースページを開く',
   },
   'ko': {
     'checkForUpdates': '업데이트 확인',
@@ -748,6 +821,12 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': '설치 프로그램 여는 중',
     'updateFailed': '업데이트 실패: {error}',
     'publishedOn': '{date} 게시',
+    'updateUpToDate': 'ArcadiaPlus가 최신입니다',
+    'updateSameVersion': '이 패키지의 버전 코드는 {apk}이고 설치된 버전은 {installed}입니다. Android는 교체하지 않습니다. 설치된 앱을 먼저 삭제하거나 더 높은 코드의 릴리스를 기다리세요.',
+    'updateSignatureMismatch':
+        '다운로드가 설치된 앱과 다른 키로 서명되었습니다. 설치된 앱을 먼저 삭제하거나 GitHub 릴리스 페이지에서 설치하세요.',
+    'updatePermissionRequired': '시스템 설정에서 ArcadiaPlus의 앱 설치를 허용한 뒤 다시 시도하세요.',
+    'openReleasesPage': '릴리스 페이지 열기',
   },
   'pt': {
     'checkForUpdates': 'Procurar atualizações',
@@ -757,6 +836,11 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': 'Abrindo o instalador',
     'updateFailed': 'Falha na atualização: {error}',
     'publishedOn': 'Publicado em {date}',
+    'updateUpToDate': 'O ArcadiaPlus está atualizado',
+    'updateSameVersion': 'Este pacote tem código {apk} enquanto {installed} está instalado; o Android não o substituirá. Desinstale o aplicativo instalado primeiro ou aguarde uma versão com código maior.',
+    'updateSignatureMismatch': 'O download está assinado com uma chave diferente da do aplicativo instalado. Desinstale o aplicativo instalado primeiro ou instale a versão pela página do GitHub.',
+    'updatePermissionRequired': 'Permita que o ArcadiaPlus instale aplicativos nas configurações do sistema e tente de novo.',
+    'openReleasesPage': 'Abrir a página de versões',
   },
   'ru': {
     'checkForUpdates': 'Проверить обновления',
@@ -766,6 +850,11 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': 'Открытие установщика',
     'updateFailed': 'Ошибка обновления: {error}',
     'publishedOn': 'Опубликовано {date}',
+    'updateUpToDate': 'ArcadiaPlus обновлён',
+    'updateSameVersion': 'В этом пакете код версии {apk}, а установлен {installed}; Android не заменит его. Сначала удалите установленное приложение или дождитесь выпуска с более высоким кодом.',
+    'updateSignatureMismatch': 'Загрузка подписана другим ключом, чем установленное приложение. Сначала удалите установленное приложение или установите выпуск со страницы GitHub.',
+    'updatePermissionRequired': 'Разрешите ArcadiaPlus установку приложений в системных настройках и повторите попытку.',
+    'openReleasesPage': 'Открыть страницу выпусков',
   },
   'zh_CN': {
     'checkForUpdates': '检查更新',
@@ -775,6 +864,12 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': '正在打开安装程序',
     'updateFailed': '更新失败：{error}',
     'publishedOn': '发布于 {date}',
+    'updateUpToDate': 'ArcadiaPlus 已是最新版本',
+    'updateSameVersion': '此安装包的版本代码是 {apk}，不低于已安装的 {installed}，系统不允许覆盖安装。请先卸载已安装版本，或等待版本代码更高的发行版。',
+    'updateSignatureMismatch':
+        '下载的安装包与已安装应用签名不一致。请先卸载已安装应用，或从 GitHub 发布页手动安装此版本。',
+    'updatePermissionRequired': '请在系统设置中允许 ArcadiaPlus 安装应用，然后重试。',
+    'openReleasesPage': '打开发布页',
   },
   'zh_TW': {
     'checkForUpdates': '檢查更新',
@@ -784,6 +879,12 @@ const Map<String, Map<String, String>> _updateStrings = {
     'openingInstaller': '正在開啟安裝程式',
     'updateFailed': '更新失敗：{error}',
     'publishedOn': '發佈於 {date}',
+    'updateUpToDate': 'ArcadiaPlus 已是最新版本',
+    'updateSameVersion': '此安裝包的版本代碼是 {apk}，不低於已安裝的 {installed}，系統不允許覆蓋安裝。請先解除安裝已安裝版本，或等待版本代碼更高的發行版。',
+    'updateSignatureMismatch':
+        '下載的安裝包與已安裝應用簽章不一致。請先解除安裝已安裝應用，或從 GitHub 發佈頁手動安裝此版本。',
+    'updatePermissionRequired': '請在系統設定中允許 ArcadiaPlus 安裝應用，然後重試。',
+    'openReleasesPage': '開啟發佈頁',
   },
 };
 
@@ -4801,6 +4902,13 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamUnknown':
         'Unbekanntes Format: wird unverändert gespeichert und an die Engine '
         'übergeben, die entscheidet, was sie akzeptiert.',
+    'dnsBootstrap': 'Bootstrap-Resolver',
+    'dnsBootstrapDesc':
+        'Resolver mit reiner IP-Adresse, die die Hostnamen der übrigen Server '
+        'auflösen',
+    'dnsBootstrapLiteralOnly':
+        'Ein Bootstrap-Resolver muss eine reine IP-Adresse sein: er muss '
+        'antworten, bevor irgendein Name aufgelöst werden kann',
   },
   'en': {
     'dnsBehaviour': 'DNS Behaviour',
@@ -4828,6 +4936,13 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamUnknown':
         'Unrecognised format: kept exactly as typed and passed to the engine, '
         'which has the final say on what it accepts.',
+    'dnsBootstrap': 'Bootstrap resolvers',
+    'dnsBootstrapDesc':
+        'Plain-IP resolvers used to look up the host names of the other '
+        'servers',
+    'dnsBootstrapLiteralOnly':
+        'A bootstrap resolver must be a plain IP address: it has to answer '
+        'before any name can be resolved',
   },
   'es': {
     'dnsBehaviour': 'Comportamiento de DNS',
@@ -4856,6 +4971,13 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamUnknown':
         'Formato no reconocido: se guarda tal cual y se entrega al motor, que '
         'decide qué acepta.',
+    'dnsBootstrap': 'Resolutores de arranque',
+    'dnsBootstrapDesc':
+        'Resolutores con IP simple para resolver los nombres de los demás '
+        'servidores',
+    'dnsBootstrapLiteralOnly':
+        'Un resolutor de arranque debe ser una IP simple: tiene que responder '
+        'antes de que se resuelva cualquier nombre',
   },
   'fr': {
     'dnsBehaviour': 'Comportement DNS',
@@ -4884,6 +5006,12 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamUnknown':
         'Format non reconnu : conservé tel quel et transmis au moteur, qui '
         'décide de ce qu’il accepte.',
+    'dnsBootstrap': 'Résolveurs d’amorçage',
+    'dnsBootstrapDesc':
+        'Résolveurs en IP simple pour résoudre les noms des autres serveurs',
+    'dnsBootstrapLiteralOnly':
+        'Un résolveur d’amorçage doit être une IP simple : il doit répondre '
+        'avant que tout nom puisse être résolu',
   },
   'it': {
     'dnsBehaviour': 'Comportamento DNS',
@@ -4912,6 +5040,12 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamUnknown':
         'Formato non riconosciuto: viene salvato così com’è e passato al '
         'motore, che decide cosa accettare.',
+    'dnsBootstrap': 'Resolver di bootstrap',
+    'dnsBootstrapDesc':
+        'Resolver con IP semplice per risolvere i nomi degli altri server',
+    'dnsBootstrapLiteralOnly':
+        'Un resolver di bootstrap deve essere un IP semplice: deve rispondere '
+        'prima che qualsiasi nome sia risolto',
   },
   'ja': {
     'dnsBehaviour': 'DNS の動作',
@@ -4934,6 +5068,10 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamHint':
         '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
     'dnsUpstreamUnknown': '形式を判別できません。入力どおりに保存してエンジンに渡し、採用可否はエンジンが判断します。',
+    'dnsBootstrap': 'ブートストラップリゾルバー',
+    'dnsBootstrapDesc': '他のサーバーのホスト名を解決するための IP 直指定リゾルバー',
+    'dnsBootstrapLiteralOnly':
+        'ブートストラップリゾルバーは IP 直指定である必要があります。名前を解決する前に応答しなければならないためです',
   },
   'ko': {
     'dnsBehaviour': 'DNS 동작',
@@ -4957,6 +5095,10 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
         '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
     'dnsUpstreamUnknown':
         '형식을 인식하지 못했습니다. 입력한 그대로 저장해 엔진에 전달하며, 허용 여부는 엔진이 판단합니다.',
+    'dnsBootstrap': '부트스트랩 리졸버',
+    'dnsBootstrapDesc': '다른 서버의 호스트 이름을 조회하는 IP 기반 리졸버',
+    'dnsBootstrapLiteralOnly':
+        '부트스트랩 리졸버는 IP 주소여야 합니다. 어떤 이름이든 해석되기 전에 응답해야 하기 때문입니다',
   },
   'pt': {
     'dnsBehaviour': 'Comportamento do DNS',
@@ -4985,6 +5127,13 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamUnknown':
         'Formato não reconhecido: é guardado tal como escrito e entregue ao '
         'motor, que decide o que aceita.',
+    'dnsBootstrap': 'Resolvedores de bootstrap',
+    'dnsBootstrapDesc':
+        'Resolvedores de IP simples para resolver os nomes dos outros '
+        'servidores',
+    'dnsBootstrapLiteralOnly':
+        'Um resolvedor de bootstrap tem de ser um IP simples: tem de responder '
+        'antes de qualquer nome ser resolvido',
   },
   'ru': {
     'dnsBehaviour': 'Поведение DNS',
@@ -5012,6 +5161,11 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamUnknown':
         'Формат не распознан: значение сохраняется как есть и передаётся '
         'движку — он решает, что принимает.',
+    'dnsBootstrap': 'Bootstrap-резолверы',
+    'dnsBootstrapDesc': 'Резолверы по чистому IP для имён остальных серверов',
+    'dnsBootstrapLiteralOnly':
+        'Bootstrap-резолвер должен быть чистым IP: он обязан ответить раньше, '
+        'чем разрешится любое имя',
   },
   'zh_CN': {
     'dnsBehaviour': 'DNS 行为',
@@ -5029,6 +5183,9 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamHint':
         '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
     'dnsUpstreamUnknown': '格式无法识别：按原样保存并交给引擎，由引擎判断是否接受。',
+    'dnsBootstrap': '引导解析器',
+    'dnsBootstrapDesc': '用纯 IP 解析其他服务器的域名（例如 DoH 地址）',
+    'dnsBootstrapLiteralOnly': '引导解析器必须是纯 IP 地址：它要在任何域名被解析之前就能响应',
   },
   'zh_TW': {
     'dnsBehaviour': 'DNS 行為',
@@ -5046,6 +5203,9 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsUpstreamHint':
         '1.1.1.1 · 1.1.1.1:53 · tls://1.1.1.1 · https://dns.example/dns-query',
     'dnsUpstreamUnknown': '格式無法識別：依原樣保存並交給引擎，由引擎判斷是否接受。',
+    'dnsBootstrap': '引導解析器',
+    'dnsBootstrapDesc': '用純 IP 解析其他伺服器的網域（例如 DoH 位址）',
+    'dnsBootstrapLiteralOnly': '引導解析器必須是純 IP 位址：它要在任何網域被解析之前就能回應',
   },
 };
 
@@ -5069,6 +5229,11 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperRemoveConfirm':
         'Die gespeicherte Kopie des Bildes wird gelöscht. Die von dir gewählte '
         'Datei bleibt, wo sie ist.',
+    'wallpaperZoom': 'Zoom',
+    'wallpaperRepositionHint':
+        'Ziehe die Vorschau, um den Ausschnitt zu verschieben; mit zwei Fingern '
+        'zoomen',
+    'wallpaperResetFraming': 'Ausschnitt zurücksetzen',
   },
   'en': {
     'wallpaper': 'Wallpaper',
@@ -5087,6 +5252,9 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperRemoveConfirm':
         'The app’s stored copy of the picture is deleted. The file you picked '
         'is left where it is.',
+    'wallpaperZoom': 'Zoom',
+    'wallpaperRepositionHint': 'Drag the preview to reposition; pinch to zoom',
+    'wallpaperResetFraming': 'Reset framing',
   },
   'es': {
     'wallpaper': 'Fondo de pantalla',
@@ -5105,6 +5273,10 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperRemoveConfirm':
         'Se elimina la copia guardada de la imagen. El archivo que elegiste no '
         'se toca.',
+    'wallpaperZoom': 'Zoom',
+    'wallpaperRepositionHint':
+        'Arrastra la vista previa para recolocar; pellizca para ampliar',
+    'wallpaperResetFraming': 'Restablecer encuadre',
   },
   'fr': {
     'wallpaper': 'Fond d’écran',
@@ -5125,6 +5297,10 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperRemoveConfirm':
         'La copie enregistrée de l’image est supprimée. Le fichier que vous '
         'avez choisi reste où il est.',
+    'wallpaperZoom': 'Zoom',
+    'wallpaperRepositionHint':
+        'Faites glisser l’aperçu pour repositionner ; pincez pour zoomer',
+    'wallpaperResetFraming': 'Réinitialiser le cadrage',
   },
   'it': {
     'wallpaper': 'Sfondo',
@@ -5144,6 +5320,10 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperRemoveConfirm':
         'La copia salvata dell’immagine viene eliminata. Il file che hai scelto '
         'resta dov’è.',
+    'wallpaperZoom': 'Zoom',
+    'wallpaperRepositionHint':
+        'Trascina l’anteprima per riposizionare; pizzica per zoomare',
+    'wallpaperResetFraming': 'Reimposta inquadratura',
   },
   'ja': {
     'wallpaper': '壁紙',
@@ -5160,6 +5340,9 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperUnsupported': 'このプラットフォームでは壁紙を利用できません',
     'wallpaperFailed': '画像を読み込めませんでした。別のファイルを選んでください。',
     'wallpaperRemoveConfirm': '保存した画像のコピーを削除します。選択した元のファイルはそのまま残ります。',
+    'wallpaperZoom': 'ズーム',
+    'wallpaperRepositionHint': 'プレビューをドラッグして位置を調整、ピンチで拡大',
+    'wallpaperResetFraming': '構図をリセット',
   },
   'ko': {
     'wallpaper': '배경 화면',
@@ -5176,6 +5359,9 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperUnsupported': '이 플랫폼에서는 배경 화면을 지원하지 않습니다',
     'wallpaperFailed': '이미지를 읽을 수 없습니다. 다른 파일을 선택하세요.',
     'wallpaperRemoveConfirm': '저장된 이미지 복사본을 삭제합니다. 선택한 원본 파일은 그대로 남습니다.',
+    'wallpaperZoom': '확대/축소',
+    'wallpaperRepositionHint': '미리보기를 드래그해 위치를 조정하고, 핀치로 확대하세요',
+    'wallpaperResetFraming': '구도 초기화',
   },
   'pt': {
     'wallpaper': 'Papel de parede',
@@ -5195,6 +5381,11 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperRemoveConfirm':
         'A cópia guardada da imagem é eliminada. O ficheiro que escolheu fica '
         'onde está.',
+    'wallpaperZoom': 'Zoom',
+    'wallpaperRepositionHint':
+        'Arraste a pré-visualização para reposicionar; use o gesto de pinça '
+        'para ampliar',
+    'wallpaperResetFraming': 'Redefinir enquadramento',
   },
   'ru': {
     'wallpaper': 'Обои',
@@ -5214,6 +5405,11 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperRemoveConfirm':
         'Сохранённая копия изображения будет удалена. Выбранный вами файл '
         'останется на месте.',
+    'wallpaperZoom': 'Масштаб',
+    'wallpaperRepositionHint':
+        'Перетаскивайте предпросмотр для смещения; сведите пальцы для '
+        'масштаба',
+    'wallpaperResetFraming': 'Сбросить кадрирование',
   },
   'zh_CN': {
     'wallpaper': '壁纸',
@@ -5230,6 +5426,9 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperUnsupported': '当前平台不支持自定义壁纸',
     'wallpaperFailed': '无法读取该图片，请换一个文件。',
     'wallpaperRemoveConfirm': '会删除应用保存的那份图片副本，你选择的原文件不受影响。',
+    'wallpaperZoom': '缩放',
+    'wallpaperRepositionHint': '拖动预览调整位置，双指缩放',
+    'wallpaperResetFraming': '重置构图',
   },
   'zh_TW': {
     'wallpaper': '桌布',
@@ -5246,6 +5445,9 @@ const Map<String, Map<String, String>> _wallpaperStrings = {
     'wallpaperUnsupported': '目前平台不支援自訂桌布',
     'wallpaperFailed': '無法讀取該圖片，請換一個檔案。',
     'wallpaperRemoveConfirm': '會刪除應用程式保存的圖片副本，你選擇的原始檔案不受影響。',
+    'wallpaperZoom': '縮放',
+    'wallpaperRepositionHint': '拖曳預覽調整位置，雙指縮放',
+    'wallpaperResetFraming': '重設構圖',
   },
 };
 
@@ -5262,6 +5464,9 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': 'Einstellungen zurückgesetzt',
     'reset': 'Zurücksetzen',
     'appearancePreview': 'Farbvorschau des Themas',
+    'dynamicColorUnavailable':
+        'Dynamische Farben sind auf dieser Plattform nicht verfügbar; es gilt '
+        'die gewählte Themenfarbe',
   },
   'en': {
     'autoSystemProxy': 'Automatic system proxy',
@@ -5274,6 +5479,9 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': 'Settings reset',
     'reset': 'Reset',
     'appearancePreview': 'Theme colour preview',
+    'dynamicColorUnavailable':
+        'Dynamic colours are not available on this platform; the selected '
+        'theme colour is used instead',
   },
   'es': {
     'autoSystemProxy': 'Proxy del sistema automático',
@@ -5288,6 +5496,9 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': 'Ajustes restablecidos',
     'reset': 'Restablecer',
     'appearancePreview': 'Vista previa de colores del tema',
+    'dynamicColorUnavailable':
+        'Los colores dinámicos no están disponibles en esta plataforma; se '
+        'usa el tema seleccionado',
   },
   'fr': {
     'autoSystemProxy': 'Proxy système automatique',
@@ -5299,6 +5510,9 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': 'Réglages rétablis',
     'reset': 'Rétablir',
     'appearancePreview': 'Aperçu des couleurs du thème',
+    'dynamicColorUnavailable':
+        'Les couleurs dynamiques ne sont pas disponibles sur cette '
+        'plateforme ; le thème sélectionné est utilisé',
   },
   'it': {
     'autoSystemProxy': 'Proxy di sistema automatico',
@@ -5312,6 +5526,9 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': 'Impostazioni ripristinate',
     'reset': 'Ripristina',
     'appearancePreview': 'Anteprima colori del tema',
+    'dynamicColorUnavailable':
+        'I colori dinamici non sono disponibili su questa piattaforma; viene '
+        'usato il tema selezionato',
   },
   'ja': {
     'autoSystemProxy': 'システムプロキシの自動設定',
@@ -5321,6 +5538,7 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': '設定をリセットしました',
     'reset': 'リセット',
     'appearancePreview': 'テーマの配色プレビュー',
+    'dynamicColorUnavailable': 'このプラットフォームではダイナミックカラーを利用できません。選択したテーマ色を使用します',
   },
   'ko': {
     'autoSystemProxy': '시스템 프록시 자동 설정',
@@ -5330,6 +5548,7 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': '설정을 초기화했습니다',
     'reset': '초기화',
     'appearancePreview': '테마 색상 미리보기',
+    'dynamicColorUnavailable': '이 플랫폼에서는 동적 색상을 사용할 수 없습니다. 선택한 테마 색을 사용합니다',
   },
   'pt': {
     'autoSystemProxy': 'Proxy de sistema automático',
@@ -5343,6 +5562,9 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': 'Definições repostas',
     'reset': 'Repor',
     'appearancePreview': 'Pré-visualização das cores do tema',
+    'dynamicColorUnavailable':
+        'As cores dinâmicas não estão disponíveis nesta plataforma; é usado o '
+        'tema selecionado',
   },
   'ru': {
     'autoSystemProxy': 'Автоматический системный прокси',
@@ -5354,6 +5576,9 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': 'Настройки сброшены',
     'reset': 'Сбросить',
     'appearancePreview': 'Предпросмотр цветов темы',
+    'dynamicColorUnavailable':
+        'Динамические цвета недоступны на этой платформе; используется '
+        'выбранная тема',
   },
   'zh_CN': {
     'autoSystemProxy': '自动系统代理',
@@ -5363,6 +5588,7 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': '设置已重置',
     'reset': '重置',
     'appearancePreview': '主题配色预览',
+    'dynamicColorUnavailable': '当前平台不支持动态取色；将使用所选主题色',
   },
   'zh_TW': {
     'autoSystemProxy': '自動系統代理',
@@ -5372,6 +5598,7 @@ const Map<String, Map<String, String>> _settingsActionStrings = {
     'resetSettingsDone': '設定已重設',
     'reset': '重設',
     'appearancePreview': '主題配色預覽',
+    'dynamicColorUnavailable': '目前平台不支援動態取色；將使用所選主題色',
   },
 };
 
@@ -5404,6 +5631,13 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': 'bereit',
     'rulesFailed': 'fehlgeschlagen',
     'rulesBehavior': 'Verhalten',
+    'rulesSearchHint': 'Typ, Inhalt oder Ausgang durchsuchen',
+    'rulesSearchEmpty': 'Keine Regel passt zu dieser Suche',
+    'rulesSearchSummary': '{matched} Treffer · {shown} angezeigt',
+    'rulesSearchTruncated': 'Nur die ersten {shown} Treffer werden angezeigt',
+    'rulesLoadLimitReached':
+        'Nach {loaded} von {total} Regeln gestoppt; grenze die Suche ein, um '
+        'weiterzukommen',
   },
   'en': {
     'rulesOpen': 'Rule diagnostics',
@@ -5427,6 +5661,13 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': 'ready',
     'rulesFailed': 'failed',
     'rulesBehavior': 'behavior',
+    'rulesSearchHint': 'Search type, payload or outbound',
+    'rulesSearchEmpty': 'No rule matches that query',
+    'rulesSearchSummary': '{matched} matches · showing {shown}',
+    'rulesSearchTruncated': 'Showing only the first {shown} matches',
+    'rulesLoadLimitReached':
+        'Stopped after {loaded} of {total} rules; narrow the search to reach '
+        'the rest',
   },
   'es': {
     'rulesOpen': 'Diagnóstico de reglas',
@@ -5450,6 +5691,14 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': 'listo',
     'rulesFailed': 'fallido',
     'rulesBehavior': 'comportamiento',
+    'rulesSearchHint': 'Buscar por tipo, contenido o salida',
+    'rulesSearchEmpty': 'Ninguna regla coincide con esa búsqueda',
+    'rulesSearchSummary': '{matched} coincidencias · mostrando {shown}',
+    'rulesSearchTruncated':
+        'Solo se muestran las primeras {shown} coincidencias',
+    'rulesLoadLimitReached':
+        'Detenido tras {loaded} de {total} reglas; acota la búsqueda para '
+        'llegar al resto',
   },
   'fr': {
     'rulesOpen': 'Diagnostic des règles',
@@ -5473,6 +5722,14 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': 'prêt',
     'rulesFailed': 'échec',
     'rulesBehavior': 'comportement',
+    'rulesSearchHint': 'Rechercher par type, contenu ou sortie',
+    'rulesSearchEmpty': 'Aucune règle ne correspond à cette recherche',
+    'rulesSearchSummary': '{matched} correspondances · {shown} affichées',
+    'rulesSearchTruncated':
+        'Seules les {shown} premières correspondances sont affichées',
+    'rulesLoadLimitReached':
+        'Arrêt après {loaded} règles sur {total} ; affinez la recherche pour '
+        'atteindre le reste',
   },
   'it': {
     'rulesOpen': 'Diagnostica delle regole',
@@ -5495,6 +5752,13 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': 'pronto',
     'rulesFailed': 'non riuscito',
     'rulesBehavior': 'comportamento',
+    'rulesSearchHint': 'Cerca tipo, contenuto o uscita',
+    'rulesSearchEmpty': 'Nessuna regola corrisponde a questa ricerca',
+    'rulesSearchSummary': '{matched} corrispondenze · {shown} mostrate',
+    'rulesSearchTruncated': 'Mostrate solo le prime {shown} corrispondenze',
+    'rulesLoadLimitReached':
+        'Interrotto dopo {loaded} regole su {total}; restringi la ricerca per '
+        'raggiungere il resto',
   },
   'ja': {
     'rulesOpen': 'ルール診断',
@@ -5516,6 +5780,11 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': '有効',
     'rulesFailed': '失敗',
     'rulesBehavior': '動作',
+    'rulesSearchHint': 'タイプ・内容・出口で検索',
+    'rulesSearchEmpty': 'この検索に一致するルールはありません',
+    'rulesSearchSummary': '{matched} 件一致 · {shown} 件表示',
+    'rulesSearchTruncated': '最初の {shown} 件のみ表示しています',
+    'rulesLoadLimitReached': '{loaded}/{total} 件で読み込みを停止しました。残りは検索で絞り込んでください',
   },
   'ko': {
     'rulesOpen': '규칙 진단',
@@ -5537,6 +5806,12 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': '준비됨',
     'rulesFailed': '실패',
     'rulesBehavior': '동작',
+    'rulesSearchHint': '유형, 내용 또는 출구 검색',
+    'rulesSearchEmpty': '이 검색과 일치하는 규칙이 없습니다',
+    'rulesSearchSummary': '{matched}개 일치 · {shown}개 표시',
+    'rulesSearchTruncated': '처음 {shown}개 일치만 표시합니다',
+    'rulesLoadLimitReached':
+        '{total}개 중 {loaded}개에서 로드를 중단했습니다. 나머지는 검색으로 좁히세요',
   },
   'pt': {
     'rulesOpen': 'Diagnóstico de regras',
@@ -5559,6 +5834,14 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': 'pronto',
     'rulesFailed': 'falhou',
     'rulesBehavior': 'comportamento',
+    'rulesSearchHint': 'Pesquisar tipo, conteúdo ou saída',
+    'rulesSearchEmpty': 'Nenhuma regra corresponde a essa pesquisa',
+    'rulesSearchSummary': '{matched} correspondências · a mostrar {shown}',
+    'rulesSearchTruncated':
+        'A mostrar apenas as primeiras {shown} correspondências',
+    'rulesLoadLimitReached':
+        'Parou após {loaded} de {total} regras; refine a pesquisa para '
+        'alcançar o resto',
   },
   'ru': {
     'rulesOpen': 'Диагностика правил',
@@ -5580,6 +5863,12 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': 'готов',
     'rulesFailed': 'сбой',
     'rulesBehavior': 'поведение',
+    'rulesSearchHint': 'Искать по типу, содержимому или выходу',
+    'rulesSearchEmpty': 'Ни одна правила не соответствует запросу',
+    'rulesSearchSummary': '{matched} совпадений · показано {shown}',
+    'rulesSearchTruncated': 'Показаны только первые {shown} совпадений',
+    'rulesLoadLimitReached':
+        'Загрузка остановлена после {loaded} из {total} правил; уточните поиск',
   },
   'zh_CN': {
     'rulesOpen': '规则诊断',
@@ -5601,6 +5890,11 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': '可用',
     'rulesFailed': '失败',
     'rulesBehavior': '行为',
+    'rulesSearchHint': '搜索类型、内容或出口',
+    'rulesSearchEmpty': '没有规则匹配该搜索',
+    'rulesSearchSummary': '{matched} 条命中 · 显示 {shown} 条',
+    'rulesSearchTruncated': '仅显示前 {shown} 条命中',
+    'rulesLoadLimitReached': '已加载 {loaded}/{total} 条规则后停止；用搜索定位其余规则',
   },
   'zh_TW': {
     'rulesOpen': '規則診斷',
@@ -5622,5 +5916,10 @@ const Map<String, Map<String, String>> _rulesScreenStrings = {
     'rulesReady': '可用',
     'rulesFailed': '失敗',
     'rulesBehavior': '行為',
+    'rulesSearchHint': '搜尋類型、內容或出口',
+    'rulesSearchEmpty': '沒有規則符合此搜尋',
+    'rulesSearchSummary': '{matched} 筆命中 · 顯示 {shown} 筆',
+    'rulesSearchTruncated': '僅顯示前 {shown} 筆命中',
+    'rulesLoadLimitReached': '已載入 {loaded}/{total} 條規則後停止；用搜尋定位其餘規則',
   },
 };

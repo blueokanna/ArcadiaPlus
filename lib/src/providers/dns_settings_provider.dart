@@ -24,6 +24,7 @@ class DnsSettingsProvider extends ChangeNotifier {
   String get dnsMode => _settings.dnsMode;
   List<String> get nameservers => _settings.nameservers;
   List<String> get fallback => _settings.fallback;
+  List<String> get bootstrap => _settings.bootstrap;
 
   DnsSettingsProvider() {
     _loadSettings();
@@ -139,6 +140,31 @@ class DnsSettingsProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> setBootstrap(List<String> value) async {
+    await _update((s) => s.copyWith(bootstrap: List.unmodifiable(value)));
+  }
+
+  /// Adds every entry of [servers] that is not already in the bootstrap list.
+  Future<void> addBootstrap(Iterable<String> servers) async {
+    final additions = <String>[];
+    for (final server in servers) {
+      final trimmed = server.trim();
+      if (trimmed.isEmpty) continue;
+      if (_settings.bootstrap.contains(trimmed)) continue;
+      if (additions.contains(trimmed)) continue;
+      additions.add(trimmed);
+    }
+    if (additions.isEmpty) return;
+    await setBootstrap([..._settings.bootstrap, ...additions]);
+  }
+
+  Future<void> removeBootstrap(String server) async {
+    if (!_settings.bootstrap.contains(server)) return;
+    await setBootstrap(
+      _settings.bootstrap.where((entry) => entry != server).toList(),
+    );
+  }
+
   /// Applies [change] and persists it, but only when it produces a different
   /// record.
   ///
@@ -162,6 +188,7 @@ class DnsSettingsProvider extends ChangeNotifier {
         current.dnsMode == other.dnsMode &&
         current.nameserversRevision == other.nameserversRevision &&
         listEquals(current.nameservers, other.nameservers) &&
-        listEquals(current.fallback, other.fallback);
+        listEquals(current.fallback, other.fallback) &&
+        listEquals(current.bootstrap, other.bootstrap);
   }
 }

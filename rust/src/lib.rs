@@ -28,6 +28,7 @@ pub mod api;
 #[cfg(target_env = "ohos")]
 pub mod ohos_ffi;
 pub mod recursive_dns;
+mod rule_index;
 mod types;
 
 pub use api::*;

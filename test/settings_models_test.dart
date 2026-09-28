@@ -91,6 +91,16 @@ void main() {
       expect(restored.fallback, settings.fallback);
       expect(restored.nameserversRevision, settings.nameserversRevision);
     });
+
+    test('the bootstrap list survives a round trip', () {
+      final settings = DnsSettings(bootstrap: const ['119.29.29.29']);
+      final restored = DnsSettings.fromJson(settings.toJson());
+
+      expect(restored.bootstrap, const ['119.29.29.29']);
+      // Records written before the field existed read back as an empty list,
+      // not as null: the converter iterates it on every config build.
+      expect(DnsSettings.fromJson(const {}).bootstrap, isEmpty);
+    });
   });
 
   group('WallpaperSettings', () {
@@ -126,6 +136,40 @@ void main() {
     test('a nonsense number falls back to the default', () {
       final settings = WallpaperSettings.fromJson({'blur': double.nan});
       expect(settings.blur, 18);
+    });
+
+    test('framing defaults to centred and un-magnified', () {
+      const settings = WallpaperSettings(imagePath: '/tmp/a.png');
+      expect(settings.alignmentX, 0);
+      expect(settings.alignmentY, 0);
+      expect(settings.zoom, WallpaperSettings.minZoom);
+    });
+
+    test('framing survives a round trip', () {
+      const settings = WallpaperSettings(
+        imagePath: '/tmp/a.png',
+        alignmentX: -0.5,
+        alignmentY: 0.75,
+        zoom: 1.8,
+      );
+      final restored = WallpaperSettings.fromJson(settings.toJson());
+
+      expect(restored.alignmentX, -0.5);
+      expect(restored.alignmentY, 0.75);
+      expect(restored.zoom, 1.8);
+    });
+
+    test('framing values out of range are clamped to what can be drawn', () {
+      final settings = WallpaperSettings.fromJson({
+        'alignmentX': 9,
+        'alignmentY': -9,
+        'zoom': 0.1,
+      });
+
+      expect(settings.alignmentX, 1);
+      expect(settings.alignmentY, -1);
+      expect(settings.zoom, WallpaperSettings.minZoom);
+      expect(settings.copyWith(zoom: 99).zoom, WallpaperSettings.maxZoom);
     });
   });
 }

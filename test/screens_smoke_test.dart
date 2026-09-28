@@ -58,11 +58,12 @@ void main() {
     expect(find.text('Preview'), findsOneWidget);
     expect(find.text('Blur'), findsOneWidget);
     expect(find.text('Dim'), findsOneWidget);
+    expect(find.text('Zoom'), findsOneWidget);
     expect(find.text('Choose image'), findsOneWidget);
 
     // With no picture chosen, the adjustments are inert rather than absent.
     final sliders = tester.widgetList<Slider>(find.byType(Slider));
-    expect(sliders, hasLength(2));
+    expect(sliders, hasLength(3));
     expect(sliders.every((slider) => slider.onChanged == null), isTrue);
 
     expect(tester.takeException(), isNull);

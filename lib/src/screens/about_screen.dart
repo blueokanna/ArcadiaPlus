@@ -6,9 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
+import 'package:arcadiaplus/src/providers/update_provider.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
 import 'package:arcadiaplus/src/services/update_service.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
+import 'package:arcadiaplus/src/utils/update_error_messages.dart';
 import 'package:arcadiaplus/src/widgets/license_viewer.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
@@ -50,8 +52,6 @@ class _AboutScreenState extends State<AboutScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
-    // Narrow subscriptions on purpose: this provider notifies on every traffic
-    // sample, and none of those move a version string.
     final engineVersion = context.select<AppStateProvider, String>(
       (appState) => appState.version,
     );
@@ -82,6 +82,14 @@ class _AboutScreenState extends State<AboutScreen> {
 
           _sectionHeader(
             context,
+            l10n?.checkForUpdates ?? 'Check for updates',
+            Icons.system_update_alt_rounded,
+          ),
+          const _UpdatesCard(),
+          SizedBox(height: ResponsiveUtils.getSpacing(context) * 3),
+
+          _sectionHeader(
+            context,
             l10n?.features ?? 'Features',
             Icons.auto_awesome_outlined,
           ),
@@ -108,8 +116,6 @@ class _AboutScreenState extends State<AboutScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    // Straight from the converter's mapping table, so this
-                    // list cannot claim a protocol the engine would drop.
                     for (final protocol in ConfigConverter.supportedProtocols)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -609,5 +615,142 @@ class _AboutScreenState extends State<AboutScreen> {
         ),
       );
     }
+  }
+}
+
+/// The update control, wired to the same provider the startup prompt uses.
+///
+/// A version check that only ever runs once at launch is a feature the user
+/// cannot ask for again, and an install that fails with nothing on screen is
+/// indistinguishable from one that was never offered. This card is the place
+/// both facts are visible: the state of the check, the download progress, and
+/// the reason the installer refused a build when it did.
+class _UpdatesCard extends StatelessWidget {
+  const _UpdatesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final updater = context.watch<UpdateProvider>();
+    final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final update = updater.availableUpdate;
+    final state = updater.state;
+    final busy =
+        state == UpdateState.checking ||
+        state == UpdateState.downloading ||
+        state == UpdateState.installing;
+    final installError = updater.installError;
+
+    final String status;
+    if (state == UpdateState.downloading) {
+      status =
+          l10n?.downloadingProgress((updater.downloadProgress * 100).round()) ??
+          'Downloading';
+    } else if (state == UpdateState.installing) {
+      status = l10n?.openingInstaller ?? 'Opening installer';
+    } else if (installError != null) {
+      status = describeUpdateInstallError(l10n, installError);
+    } else if (update != null) {
+      status =
+          l10n?.updateAvailable(update.version) ??
+          'ArcadiaPlus ${update.version} is available';
+    } else if (updater.hasChecked) {
+      status = l10n?.updateUpToDate ?? 'ArcadiaPlus is up to date';
+    } else if (state == UpdateState.checking) {
+      status = l10n?.stableReleaseCheckDescription ?? 'Checking GitHub';
+    } else if (updater.lastError != null) {
+      status =
+          l10n?.updateFailed(updater.lastError.toString()) ??
+          'Update failed: ${updater.lastError}';
+    } else {
+      status =
+          l10n?.stableReleaseCheckDescription ?? 'Check stable GitHub Releases';
+    }
+
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerLow,
+      child: Column(
+        children: [
+          ListTile(
+            leading: Icon(
+              installError != null
+                  ? Icons.error_outline
+                  : Icons.system_update_alt_rounded,
+              color: installError != null
+                  ? colorScheme.error
+                  : colorScheme.primary,
+            ),
+            title: Text(l10n?.checkForUpdates ?? 'Check for updates'),
+            subtitle: Text(status, style: textTheme.bodySmall),
+            trailing: state == UpdateState.checking
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : IconButton(
+                    tooltip: l10n?.checkForUpdates ?? 'Check for updates',
+                    icon: const Icon(Icons.refresh),
+                    onPressed: busy ? null : () => updater.check(),
+                  ),
+          ),
+          if (state == UpdateState.downloading)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: LinearProgressIndicator(
+                value: updater.downloadProgress == 0
+                    ? null
+                    : updater.downloadProgress,
+              ),
+            ),
+          if (update != null && !busy && state != UpdateState.ready)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      l10n?.publishedOn(
+                            update.publishedAt
+                                .toLocal()
+                                .toString()
+                                .split('.')
+                                .first,
+                          ) ??
+                          '',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  FilledButton.icon(
+                    onPressed: updater.downloadAndInstall,
+                    icon: const Icon(Icons.download_rounded),
+                    label: Text(l10n?.download ?? 'Download'),
+                  ),
+                ],
+              ),
+            ),
+          if (installError != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => launchUrl(
+                    update?.releasePage ?? Uri.parse(UpdateService.releasesUrl),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(
+                    l10n?.openReleasesPage ?? 'Open the releases page',
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }

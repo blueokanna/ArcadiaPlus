@@ -73,6 +73,16 @@ class DnsSettings {
   final List<String> nameservers;
   final List<String> fallback;
 
+  /// Plain-IP resolvers used only to look up the host names of the other
+  /// servers — the `default-nameserver` entry of the engine's DNS section.
+  ///
+  /// Without one, a server named by a host name (a DoH endpoint, or a
+  /// subscription's private TCP resolver) has to be resolved by whatever
+  /// happens to answer first, which on a restricted network is exactly the
+  /// lookup that fails. A bootstrap resolver has to be an address literal for
+  /// the same reason: it has to work before any name resolves.
+  final List<String> bootstrap;
+
   DnsSettings({
     this.enable = true,
     this.overrideDns = false,
@@ -81,6 +91,7 @@ class DnsSettings {
     this.dnsMode = defaultMode,
     this.nameservers = defaultNameservers,
     this.fallback = const [],
+    this.bootstrap = const [],
     this.nameserversRevision = nameserverDefaultsRevision,
   }) : assert(
          modes.contains(dnsMode),
@@ -95,6 +106,7 @@ class DnsSettings {
     'dnsMode': dnsMode,
     'nameservers': nameservers,
     'fallback': fallback,
+    'bootstrap': bootstrap,
     'nameserversRevision': nameserversRevision,
   };
 
@@ -106,6 +118,7 @@ class DnsSettings {
     dnsMode: normaliseMode(json['dnsMode']),
     nameservers: (json['nameservers'] as List?)?.cast<String>() ?? const [],
     fallback: (json['fallback'] as List?)?.cast<String>() ?? const [],
+    bootstrap: (json['bootstrap'] as List?)?.cast<String>() ?? const [],
     // Records written before the revision existed carry the first default set.
     nameserversRevision: (json['nameserversRevision'] as num?)?.toInt() ?? 1,
   );
@@ -147,6 +160,7 @@ class DnsSettings {
     String? dnsMode,
     List<String>? nameservers,
     List<String>? fallback,
+    List<String>? bootstrap,
     int? nameserversRevision,
   }) {
     return DnsSettings(
@@ -157,6 +171,7 @@ class DnsSettings {
       dnsMode: dnsMode ?? this.dnsMode,
       nameservers: nameservers ?? this.nameservers,
       fallback: fallback ?? this.fallback,
+      bootstrap: bootstrap ?? this.bootstrap,
       nameserversRevision: nameserversRevision ?? this.nameserversRevision,
     );
   }
@@ -505,6 +520,10 @@ class NetworkSettings {
 ///
 /// [blur] and [dim] are what make a photograph usable as a background: without
 /// blur, details compete with text; without dim, a bright photo does the same.
+/// [alignmentX] / [alignmentY] and [zoom] are the framing controls: a picture
+/// cropped to a screen is almost never cropped where the user wants, and the
+/// way to show the region they meant is to let them move and magnify the sheet
+/// rather than guess a crop for them.
 class WallpaperSettings {
   /// Sigma of the gaussian blur, in logical pixels. The ceiling keeps the cost
   /// of the filter bounded — a full-screen blur is not free.
@@ -513,16 +532,33 @@ class WallpaperSettings {
   /// Alpha of the scrim drawn between the picture and the interface.
   static const double maxDim = 0.8;
 
+  /// How far the picture can be magnified. Below 1 there would be nothing to
+  /// crop, so 1 — fill the screen — is the floor.
+  static const double minZoom = 1.0;
+  static const double maxZoom = 3.0;
+
   final String? imagePath;
   final bool enabled;
   final double blur;
   final double dim;
+
+  /// Horizontal framing, `-1` (left edge) to `1` (right edge).
+  final double alignmentX;
+
+  /// Vertical framing, `-1` (top edge) to `1` (bottom edge).
+  final double alignmentY;
+
+  /// Magnification on top of the fill that cropping needs.
+  final double zoom;
 
   const WallpaperSettings({
     this.imagePath,
     this.enabled = true,
     this.blur = 18,
     this.dim = 0.35,
+    this.alignmentX = 0,
+    this.alignmentY = 0,
+    this.zoom = minZoom,
   });
 
   /// Whether a picture exists to draw.
@@ -536,6 +572,9 @@ class WallpaperSettings {
     'enabled': enabled,
     'blur': blur,
     'dim': dim,
+    'alignmentX': alignmentX,
+    'alignmentY': alignmentY,
+    'zoom': zoom,
   };
 
   factory WallpaperSettings.fromJson(Map<String, dynamic> json) =>
@@ -544,6 +583,11 @@ class WallpaperSettings {
         enabled: json['enabled'] as bool? ?? true,
         blur: _clamp(json['blur'] as num?, 0, maxBlur, 18),
         dim: _clamp(json['dim'] as num?, 0, maxDim, 0.35),
+        // Records written before framing existed sit in the centre at fill
+        // scale, which is exactly what those builds drew.
+        alignmentX: _clamp(json['alignmentX'] as num?, -1, 1, 0),
+        alignmentY: _clamp(json['alignmentY'] as num?, -1, 1, 0),
+        zoom: _clamp(json['zoom'] as num?, minZoom, maxZoom, minZoom),
       );
 
   WallpaperSettings copyWith({
@@ -551,12 +595,18 @@ class WallpaperSettings {
     bool? enabled,
     double? blur,
     double? dim,
+    double? alignmentX,
+    double? alignmentY,
+    double? zoom,
   }) {
     return WallpaperSettings(
       imagePath: imagePath == _unset ? this.imagePath : imagePath as String?,
       enabled: enabled ?? this.enabled,
       blur: _clamp(blur, 0, maxBlur, this.blur),
       dim: _clamp(dim, 0, maxDim, this.dim),
+      alignmentX: _clamp(alignmentX, -1, 1, this.alignmentX),
+      alignmentY: _clamp(alignmentY, -1, 1, this.alignmentY),
+      zoom: _clamp(zoom, minZoom, maxZoom, this.zoom),
     );
   }
 

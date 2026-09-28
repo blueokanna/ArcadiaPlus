@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -139664526;
+  int get rustContentHash => 2122262403;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -143,6 +143,12 @@ abstract class RustLibApi extends BaseApi {
 
   Future<List<RuleDto>> crateApiGetRules();
 
+  Future<RuleWindowDto> crateApiGetRulesWindow({
+    required int offset,
+    required int limit,
+    required bool refresh,
+  });
+
   Future<String?> crateApiGetSelectedProxyInGroup({required String groupName});
 
   Future<SystemInfo> crateApiGetSystemInfo();
@@ -177,6 +183,11 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiReloadConfigFromYaml({required String yamlConfig});
 
   Future<void> crateApiReloadCorduit({required String configJson});
+
+  Future<RuleSearchResultDto> crateApiSearchRules({
+    required String needle,
+    required int limit,
+  });
 
   Future<void> crateApiSelectProxy({
     required String groupTag,
@@ -948,6 +959,41 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "get_rules", argNames: []);
 
   @override
+  Future<RuleWindowDto> crateApiGetRulesWindow({
+    required int offset,
+    required int limit,
+    required bool refresh,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          var arg0 = cst_encode_u_32(offset);
+          var arg1 = cst_encode_u_32(limit);
+          var arg2 = cst_encode_bool(refresh);
+          return wire.wire__crate__api__get_rules_window(
+            port_,
+            arg0,
+            arg1,
+            arg2,
+          );
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_rule_window_dto,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiGetRulesWindowConstMeta,
+        argValues: [offset, limit, refresh],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiGetRulesWindowConstMeta => const TaskConstMeta(
+    debugName: "get_rules_window",
+    argNames: ["offset", "limit", "refresh"],
+  );
+
+  @override
   Future<String?> crateApiGetSelectedProxyInGroup({required String groupName}) {
     return handler.executeNormal(
       NormalTask(
@@ -1327,6 +1373,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiReloadCorduitConstMeta => const TaskConstMeta(
     debugName: "reload_corduit",
     argNames: ["configJson"],
+  );
+
+  @override
+  Future<RuleSearchResultDto> crateApiSearchRules({
+    required String needle,
+    required int limit,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          var arg0 = cst_encode_String(needle);
+          var arg1 = cst_encode_u_32(limit);
+          return wire.wire__crate__api__search_rules(port_, arg0, arg1);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_rule_search_result_dto,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiSearchRulesConstMeta,
+        argValues: [needle, limit],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSearchRulesConstMeta => const TaskConstMeta(
+    debugName: "search_rules",
+    argNames: ["needle", "limit"],
   );
 
   @override
@@ -2697,6 +2771,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RuleSearchResultDto dco_decode_rule_search_result_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return RuleSearchResultDto(
+      matched: dco_decode_u_32(arr[0]),
+      truncated: dco_decode_bool(arr[1]),
+      rules: dco_decode_list_rule_dto(arr[2]),
+    );
+  }
+
+  @protected
+  RuleWindowDto dco_decode_rule_window_dto(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return RuleWindowDto(
+      total: dco_decode_u_32(arr[0]),
+      offset: dco_decode_u_32(arr[1]),
+      totalMatches: dco_decode_u_64(arr[2]),
+      rules: dco_decode_list_rule_dto(arr[3]),
+    );
+  }
+
+  @protected
   SystemInfo dco_decode_system_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3417,6 +3518,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RuleSearchResultDto sse_decode_rule_search_result_dto(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_matched = sse_decode_u_32(deserializer);
+    var var_truncated = sse_decode_bool(deserializer);
+    var var_rules = sse_decode_list_rule_dto(deserializer);
+    return RuleSearchResultDto(
+      matched: var_matched,
+      truncated: var_truncated,
+      rules: var_rules,
+    );
+  }
+
+  @protected
+  RuleWindowDto sse_decode_rule_window_dto(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_total = sse_decode_u_32(deserializer);
+    var var_offset = sse_decode_u_32(deserializer);
+    var var_totalMatches = sse_decode_u_64(deserializer);
+    var var_rules = sse_decode_list_rule_dto(deserializer);
+    return RuleWindowDto(
+      total: var_total,
+      offset: var_offset,
+      totalMatches: var_totalMatches,
+      rules: var_rules,
+    );
+  }
+
+  @protected
   SystemInfo sse_decode_system_info(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_platform = sse_decode_String(deserializer);
@@ -4054,6 +4185,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.payload, serializer);
     sse_encode_String(self.outbound, serializer);
     sse_encode_u_64(self.matchedCount, serializer);
+  }
+
+  @protected
+  void sse_encode_rule_search_result_dto(
+    RuleSearchResultDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.matched, serializer);
+    sse_encode_bool(self.truncated, serializer);
+    sse_encode_list_rule_dto(self.rules, serializer);
+  }
+
+  @protected
+  void sse_encode_rule_window_dto(
+    RuleWindowDto self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.total, serializer);
+    sse_encode_u_32(self.offset, serializer);
+    sse_encode_u_64(self.totalMatches, serializer);
+    sse_encode_list_rule_dto(self.rules, serializer);
   }
 
   @protected

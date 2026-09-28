@@ -1,4 +1,5 @@
 import 'package:arcadiaplus/src/theme/app_shapes.dart';
+import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -150,15 +151,43 @@ class AppTheme {
   // theme on every call, which is what the cache avoids.
 
   // Create dynamic theme from system colors
+  //
+  // Two caches, because harmonisation and theme construction are both pure
+  // functions of an immutable scheme and both run on every rebuild of the app
+  // shell (a locale change, a theme-mode switch). The harmonised scheme is
+  // cached against the *raw* scheme the platform reported, so the theme cache
+  // below always sees the same instance and hits.
   static ThemeData createDynamicTheme(
     ColorScheme? dynamicColorScheme,
     Brightness brightness,
   ) {
     if (dynamicColorScheme != null) {
-      return _buildThemeData(dynamicColorScheme, brightness);
+      return _dynamicThemes[dynamicColorScheme] ??= _buildThemeData(
+        dynamicColorScheme,
+        brightness,
+      );
     }
     return createTheme(defaultTheme, brightness);
   }
+
+  static final Expando<ThemeData> _dynamicThemes = Expando<ThemeData>(
+    'dynamic themes',
+  );
+
+  /// The platform palette, adjusted so its colours sit well next to each
+  /// other instead of only next to the wallpaper they were sampled from.
+  ///
+  /// `dynamic_color`'s own guidance is to harmonise before use; skipping it is
+  /// how a red wallpaper produces a palette whose accent and containers fight
+  /// each other. Memoised per raw scheme for the same reason as the theme.
+  static ColorScheme? harmonizedDynamic(ColorScheme? scheme) {
+    if (scheme == null) return null;
+    return _harmonized[scheme] ??= scheme.harmonized();
+  }
+
+  static final Expando<ColorScheme> _harmonized = Expando<ColorScheme>(
+    'harmonized dynamic schemes',
+  );
 
   /// Returns [base] with its background layers made translucent, so a wallpaper
   /// drawn behind the app shows through.

@@ -167,6 +167,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RuleDto dco_decode_rule_dto(dynamic raw);
 
   @protected
+  RuleSearchResultDto dco_decode_rule_search_result_dto(dynamic raw);
+
+  @protected
+  RuleWindowDto dco_decode_rule_window_dto(dynamic raw);
+
+  @protected
   SystemInfo dco_decode_system_info(dynamic raw);
 
   @protected
@@ -363,6 +369,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RuleDto sse_decode_rule_dto(SseDeserializer deserializer);
+
+  @protected
+  RuleSearchResultDto sse_decode_rule_search_result_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RuleWindowDto sse_decode_rule_window_dto(SseDeserializer deserializer);
 
   @protected
   SystemInfo sse_decode_system_info(SseDeserializer deserializer);
@@ -858,6 +872,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  void cst_api_fill_to_wire_rule_search_result_dto(
+    RuleSearchResultDto apiObj,
+    wire_cst_rule_search_result_dto wireObj,
+  ) {
+    wireObj.matched = cst_encode_u_32(apiObj.matched);
+    wireObj.truncated = cst_encode_bool(apiObj.truncated);
+    wireObj.rules = cst_encode_list_rule_dto(apiObj.rules);
+  }
+
+  @protected
+  void cst_api_fill_to_wire_rule_window_dto(
+    RuleWindowDto apiObj,
+    wire_cst_rule_window_dto wireObj,
+  ) {
+    wireObj.total = cst_encode_u_32(apiObj.total);
+    wireObj.offset = cst_encode_u_32(apiObj.offset);
+    wireObj.total_matches = cst_encode_u_64(apiObj.totalMatches);
+    wireObj.rules = cst_encode_list_rule_dto(apiObj.rules);
+  }
+
+  @protected
   void cst_api_fill_to_wire_system_info(
     SystemInfo apiObj,
     wire_cst_system_info wireObj,
@@ -1139,6 +1174,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_rule_dto(RuleDto self, SseSerializer serializer);
 
   @protected
+  void sse_encode_rule_search_result_dto(
+    RuleSearchResultDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_rule_window_dto(RuleWindowDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_system_info(SystemInfo self, SseSerializer serializer);
 
   @protected
@@ -1194,6 +1238,87 @@ class RustLibWire implements BaseWire {
   RustLibWire.fromLookup(
     ffi.Pointer<T> Function<T extends ffi.NativeType>(String symbolName) lookup,
   ) : _lookup = lookup;
+
+  int arcadia_ohos_set_protect_callback(
+    ffi.Pointer<ffi.NativeFunction<ffi.Int Function(ffi.Int)>> callback,
+  ) {
+    return _arcadia_ohos_set_protect_callback(callback);
+  }
+
+  late final _arcadia_ohos_set_protect_callbackPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.NativeFunction<ffi.Int Function(ffi.Int)>>,
+          )
+        >
+      >('arcadia_ohos_set_protect_callback');
+  late final _arcadia_ohos_set_protect_callback =
+      _arcadia_ohos_set_protect_callbackPtr
+          .asFunction<
+            int Function(
+              ffi.Pointer<ffi.NativeFunction<ffi.Int Function(ffi.Int)>>,
+            )
+          >();
+
+  int arcadia_ohos_set_proxy_mode(ffi.Pointer<ffi.Char> mode) {
+    return _arcadia_ohos_set_proxy_mode(mode);
+  }
+
+  late final _arcadia_ohos_set_proxy_modePtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function(ffi.Pointer<ffi.Char>)>>(
+        'arcadia_ohos_set_proxy_mode',
+      );
+  late final _arcadia_ohos_set_proxy_mode = _arcadia_ohos_set_proxy_modePtr
+      .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
+
+  int arcadia_ohos_start(
+    ffi.Pointer<ffi.Char> config_path,
+    ffi.Pointer<ffi.Char> geoip_path,
+    ffi.Pointer<ffi.Char> log_path,
+    int tun_fd,
+    int protect_process,
+  ) {
+    return _arcadia_ohos_start(
+      config_path,
+      geoip_path,
+      log_path,
+      tun_fd,
+      protect_process,
+    );
+  }
+
+  late final _arcadia_ohos_startPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Int Function(
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Pointer<ffi.Char>,
+            ffi.Int,
+            ffi.Int,
+          )
+        >
+      >('arcadia_ohos_start');
+  late final _arcadia_ohos_start = _arcadia_ohos_startPtr
+      .asFunction<
+        int Function(
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          ffi.Pointer<ffi.Char>,
+          int,
+          int,
+        )
+      >();
+
+  int arcadia_ohos_stop() {
+    return _arcadia_ohos_stop();
+  }
+
+  late final _arcadia_ohos_stopPtr =
+      _lookup<ffi.NativeFunction<ffi.Int Function()>>('arcadia_ohos_stop');
+  late final _arcadia_ohos_stop = _arcadia_ohos_stopPtr
+      .asFunction<int Function()>();
 
   ffi.Pointer<ffi.Bool> cst_new_box_autoadd_bool(bool value) {
     return _cst_new_box_autoadd_bool(value);
@@ -1840,6 +1965,25 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__api__get_rules = _wire__crate__api__get_rulesPtr
       .asFunction<void Function(int)>();
 
+  void wire__crate__api__get_rules_window(
+    int port_,
+    int offset,
+    int limit,
+    bool refresh,
+  ) {
+    return _wire__crate__api__get_rules_window(port_, offset, limit, refresh);
+  }
+
+  late final _wire__crate__api__get_rules_windowPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64, ffi.Uint32, ffi.Uint32, ffi.Bool)
+        >
+      >('frbgen_arcadiaplus_wire__crate__api__get_rules_window');
+  late final _wire__crate__api__get_rules_window =
+      _wire__crate__api__get_rules_windowPtr
+          .asFunction<void Function(int, int, int, bool)>();
+
   void wire__crate__api__get_selected_proxy_in_group(
     int port_,
     ffi.Pointer<wire_cst_list_prim_u_8_strict> group_name,
@@ -2086,6 +2230,30 @@ class RustLibWire implements BaseWire {
       _wire__crate__api__reload_corduitPtr
           .asFunction<
             void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
+          >();
+
+  void wire__crate__api__search_rules(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> needle,
+    int limit,
+  ) {
+    return _wire__crate__api__search_rules(port_, needle, limit);
+  }
+
+  late final _wire__crate__api__search_rulesPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Uint32,
+          )
+        >
+      >('frbgen_arcadiaplus_wire__crate__api__search_rules');
+  late final _wire__crate__api__search_rules =
+      _wire__crate__api__search_rulesPtr
+          .asFunction<
+            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>, int)
           >();
 
   void wire__crate__api__select_proxy(
@@ -2836,6 +3004,10 @@ typedef DartDartPostCObjectFnTypeFunction = bool Function(
   ffi.Pointer<ffi.Void> message,
 );
 
+const int MAX_SEARCH = 500;
+
+const int MAX_WINDOW = 500;
+
 final class wire_cst_active_connection extends ffi.Struct {
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> id;
 
@@ -3573,6 +3745,51 @@ final class wire_cst_rule_dto extends ffi.Struct {
     ..ref.payload = payload
     ..ref.outbound = outbound
     ..ref.matched_count = matched_count;
+}
+
+final class wire_cst_rule_search_result_dto extends ffi.Struct {
+  @ffi.Uint32()
+  external int matched;
+
+  @ffi.Bool()
+  external bool truncated;
+
+  external ffi.Pointer<wire_cst_list_rule_dto> rules;
+
+  static ffi.Pointer<wire_cst_rule_search_result_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required int matched,
+    required bool truncated,
+    required ffi.Pointer<wire_cst_list_rule_dto> rules,
+  }) => $allocator<wire_cst_rule_search_result_dto>()
+    ..ref.matched = matched
+    ..ref.truncated = truncated
+    ..ref.rules = rules;
+}
+
+final class wire_cst_rule_window_dto extends ffi.Struct {
+  @ffi.Uint32()
+  external int total;
+
+  @ffi.Uint32()
+  external int offset;
+
+  @ffi.Uint64()
+  external int total_matches;
+
+  external ffi.Pointer<wire_cst_list_rule_dto> rules;
+
+  static ffi.Pointer<wire_cst_rule_window_dto> $allocate(
+    ffi.Allocator $allocator, {
+    required int total,
+    required int offset,
+    required int total_matches,
+    required ffi.Pointer<wire_cst_list_rule_dto> rules,
+  }) => $allocator<wire_cst_rule_window_dto>()
+    ..ref.total = total
+    ..ref.offset = offset
+    ..ref.total_matches = total_matches
+    ..ref.rules = rules;
 }
 
 final class wire_cst_system_info extends ffi.Struct {

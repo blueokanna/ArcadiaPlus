@@ -337,6 +337,37 @@ pub async fn get_rules() -> std::result::Result<Vec<RuleDto>, String> {
     run(|| engine::api::get_rules().map(convert_vec)).await
 }
 
+/// A window over the engine's rule table.
+///
+/// The whole-table call above sends every rule in one message, decoded on the
+/// UI isolate; a profile with an inline ACL list makes that a multi-second
+/// stall on the screen that asked for a diagnostic. A screen buys nothing
+/// from rows it is not showing, so it asks for windows instead and the
+/// bridge keeps the snapshot — see `rule_index` for the details of when it is
+/// re-read.
+#[frb]
+pub async fn get_rules_window(
+    offset: u32,
+    limit: u32,
+    refresh: bool,
+) -> std::result::Result<RuleWindowDto, String> {
+    run(move || crate::rule_index::window(offset, limit, refresh)).await
+}
+
+/// Case-insensitive substring search over rule type, payload and outbound.
+///
+/// The scan runs against the bridge's snapshot, so only matches cross the
+/// boundary. `limit` bounds the returned list; `matched` still reports how
+/// many rules matched in total, so the screen can say when it is showing a
+/// subset.
+#[frb]
+pub async fn search_rules(
+    needle: String,
+    limit: u32,
+) -> std::result::Result<RuleSearchResultDto, String> {
+    run(move || crate::rule_index::search(&needle, limit)).await
+}
+
 #[frb]
 pub async fn get_dns_config() -> std::result::Result<DnsConfigDto, String> {
     run(|| engine::api::get_dns_config().map(DnsConfigDto::from)).await

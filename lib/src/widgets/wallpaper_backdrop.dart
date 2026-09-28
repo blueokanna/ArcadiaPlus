@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arcadiaplus/src/providers/wallpaper_provider.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
 
 /// Draws the wallpaper behind [child], blurred and dimmed.
 ///
@@ -17,6 +18,10 @@ import 'package:arcadiaplus/src/providers/wallpaper_provider.dart';
 /// does not re-run the filter, and the picture is decoded at screen resolution
 /// rather than at its own: a 12-megapixel photo is tens of megabytes of bitmap
 /// for a background that is blurred anyway.
+///
+/// The user's framing — where the picture sits and how far it is magnified —
+/// is applied here and by the settings preview through the same arithmetic, so
+/// the preview is the result rather than an approximation of it.
 class WallpaperBackdrop extends StatelessWidget {
   const WallpaperBackdrop({super.key, required this.child});
 
@@ -59,24 +64,28 @@ class WallpaperBackdrop extends StatelessWidget {
   }
 
   Widget _buildPicture(BuildContext context, WallpaperProvider wallpaper) {
+    final alignment = Alignment(wallpaper.alignmentX, wallpaper.alignmentY);
     Widget picture = Image.file(
       File(wallpaper.imagePath!),
       fit: BoxFit.cover,
-      cacheWidth: decodeWidth(context),
-      // The picture is about to be blurred, so the extra sampling cost of a
-      // higher quality filter buys nothing.
+      alignment: alignment,
+      cacheWidth: decodeWidth(context, zoom: wallpaper.zoom),
       filterQuality: FilterQuality.low,
-      // Keeps the previous frame on screen while the next one decodes, so
-      // changing the wallpaper does not flash an empty background.
       gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) {
-        // The file was removed or unreadable. Painting the interface without a
-        // background is the only thing this layer can do; the settings screen
-        // drops the reference the next time it loads.
         debugPrint('Failed to draw the wallpaper: $error');
         return const ColoredBox(color: Colors.transparent);
       },
     );
+
+    final zoom = wallpaper.zoom;
+    if (zoom > WallpaperSettings.minZoom) {
+      picture = Transform.scale(
+        scale: zoom,
+        alignment: alignment,
+        child: picture,
+      );
+    }
 
     final blur = wallpaper.blur;
     if (blur > 0) {
@@ -95,13 +104,14 @@ class WallpaperBackdrop extends StatelessWidget {
     return picture;
   }
 
-  /// The width to decode the picture at, in pixels.
-  static int decodeWidth(BuildContext context) {
+  static int decodeWidth(BuildContext context, {double zoom = 1}) {
     final mediaQuery = MediaQuery.maybeOf(context);
     if (mediaQuery == null) return maxDecodeWidth;
     final physicalWidth = (mediaQuery.size.width * mediaQuery.devicePixelRatio)
         .round();
     if (physicalWidth <= 0) return maxDecodeWidth;
-    return physicalWidth < maxDecodeWidth ? physicalWidth : maxDecodeWidth;
+    final visibleWidth = (physicalWidth * (zoom < 1 ? 1.0 : zoom)).round();
+    final wanted = visibleWidth < physicalWidth ? physicalWidth : visibleWidth;
+    return wanted < maxDecodeWidth ? wanted : maxDecodeWidth;
   }
 }

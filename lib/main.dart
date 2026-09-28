@@ -301,23 +301,36 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
         builder: (lightColorScheme, darkColorScheme) {
           return Consumer2<ThemeProvider, LocaleProvider>(
             builder: (context, themeProvider, localeProvider, child) {
+              // The platform query is asynchronous: this callback first runs
+              // with nulls and again with the palette. Reporting availability
+              // after the frame (a listener cannot notify mid-build) turns
+              // "seen a palette" into a fact the settings switch can rely on,
+              // and a device without dynamic colour gets the explanation that
+              // makes its disabled switch make sense.
+              final dynamicAvailable =
+                  lightColorScheme != null || darkColorScheme != null;
+              if (themeProvider.dynamicColorAvailable != dynamicAvailable) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  themeProvider.setDynamicColorAvailable(dynamicAvailable);
+                });
+              }
+
+              // Harmonised before use: the raw platform palette is derived
+              // from one colour and can contain pairs that fight each other.
+              final lightDynamic = AppTheme.harmonizedDynamic(lightColorScheme);
+              final darkDynamic = AppTheme.harmonizedDynamic(darkColorScheme);
+
               final lightTheme =
-                  themeProvider.useDynamicColors && lightColorScheme != null
-                  ? AppTheme.createDynamicTheme(
-                      lightColorScheme,
-                      Brightness.light,
-                    )
+                  themeProvider.useDynamicColors && lightDynamic != null
+                  ? AppTheme.createDynamicTheme(lightDynamic, Brightness.light)
                   : AppTheme.createTheme(
                       themeProvider.selectedTheme,
                       Brightness.light,
                     );
 
               final darkTheme =
-                  themeProvider.useDynamicColors && darkColorScheme != null
-                  ? AppTheme.createDynamicTheme(
-                      darkColorScheme,
-                      Brightness.dark,
-                    )
+                  themeProvider.useDynamicColors && darkDynamic != null
+                  ? AppTheme.createDynamicTheme(darkDynamic, Brightness.dark)
                   : AppTheme.createTheme(
                       themeProvider.selectedTheme,
                       Brightness.dark,
@@ -482,11 +495,6 @@ CustomTransitionPage<void> _buildExpressivePage(
         reverseCurve: AnimationUtils.curveEmphasizedAccelerate,
       );
 
-      final fadeAnimation = Tween<double>(
-        begin: 0.0,
-        end: 1.0,
-      ).animate(curvedAnimation);
-
       final slideAnimation = Tween<Offset>(
         begin: const Offset(0.03, 0),
         end: Offset.zero,
@@ -497,12 +505,9 @@ CustomTransitionPage<void> _buildExpressivePage(
         end: 1.0,
       ).animate(curvedAnimation);
 
-      return FadeTransition(
-        opacity: fadeAnimation,
-        child: SlideTransition(
-          position: slideAnimation,
-          child: ScaleTransition(scale: scaleAnimation, child: child),
-        ),
+      return SlideTransition(
+        position: slideAnimation,
+        child: ScaleTransition(scale: scaleAnimation, child: child),
       );
     },
   );

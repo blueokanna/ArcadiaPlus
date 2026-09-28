@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
 
 /// Decodes the converter output into the JSON map corduit will see.
 Map<String, dynamic> convert(
@@ -9,6 +10,7 @@ Map<String, dynamic> convert(
   void Function(String)? onWarning,
   String? recursiveDnsAddress,
   Map<String, String>? ruleProviderPaths,
+  DnsSettings? dnsSettings,
 }) {
   return jsonDecode(
     ConfigConverter.convertClashYamlToJson(
@@ -16,6 +18,7 @@ Map<String, dynamic> convert(
       onWarning: onWarning,
       recursiveDnsAddress: recursiveDnsAddress,
       ruleProviderPaths: ruleProviderPaths,
+      dnsSettings: dnsSettings,
     ),
   ) as Map<String, dynamic>;
 }
@@ -531,6 +534,42 @@ rules: []
     expect(dns['nameserver_policy'], {
       '+.example.com': ['tcp://10.0.0.1:8080'],
     });
+  });
+
+  test('overriding DNS keeps the node policy and the bootstrap chain', () {
+    const yaml = '''
+dns:
+  nameserver: [1.1.1.1]
+  default-nameserver: [114.114.114.114]
+  nameserver-policy:
+    +.nodes.example: tcp://policy.example:8080
+proxies: []
+proxy-groups: []
+rules: []
+''';
+
+    final dns =
+        convert(
+              yaml,
+              dnsSettings: DnsSettings(
+                overrideDns: true,
+                nameservers: const ['223.5.5.5'],
+                bootstrap: const ['119.29.29.29'],
+              ),
+            )['dns']
+            as Map;
+
+    // The app's own servers replace the profile's…
+    expect(dns['nameservers'], ['223.5.5.5']);
+    // …but the two parts of the profile's section that exist to make servers
+    // *reachable* stay in force: the per-domain policy that resolves the
+    // subscription's node domains, and the bootstrap resolvers for upstreams
+    // that are named by a host name. The app's bootstrap leads, because it is
+    // the user's answer to a network that will not resolve the upstreams.
+    expect(dns['nameserver_policy'], {
+      '+.nodes.example': ['tcp://policy.example:8080'],
+    });
+    expect(dns['default_nameserver'], ['119.29.29.29', '114.114.114.114']);
   });
 
   test('fake-ip range, filter, cache size and hosts reach the engine', () {

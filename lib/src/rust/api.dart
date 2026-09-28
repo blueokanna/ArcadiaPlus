@@ -209,6 +209,35 @@ Future<(BigInt, BigInt, BigInt, BigInt)> getConnectionStats() =>
 
 Future<List<RuleDto>> getRules() => RustLib.instance.api.crateApiGetRules();
 
+/// A window over the engine's rule table.
+///
+/// The whole-table call above sends every rule in one message, decoded on the
+/// UI isolate; a profile with an inline ACL list makes that a multi-second
+/// stall on the screen that asked for a diagnostic. A screen buys nothing
+/// from rows it is not showing, so it asks for windows instead and the
+/// bridge keeps the snapshot — see `rule_index` for the details of when it is
+/// re-read.
+Future<RuleWindowDto> getRulesWindow({
+  required int offset,
+  required int limit,
+  required bool refresh,
+}) => RustLib.instance.api.crateApiGetRulesWindow(
+  offset: offset,
+  limit: limit,
+  refresh: refresh,
+);
+
+/// Case-insensitive substring search over rule type, payload and outbound.
+///
+/// The scan runs against the bridge's snapshot, so only matches cross the
+/// boundary. `limit` bounds the returned list; `matched` still reports how
+/// many rules matched in total, so the screen can say when it is showing a
+/// subset.
+Future<RuleSearchResultDto> searchRules({
+  required String needle,
+  required int limit,
+}) => RustLib.instance.api.crateApiSearchRules(needle: needle, limit: limit);
+
 Future<DnsConfigDto> getDnsConfig() =>
     RustLib.instance.api.crateApiGetDnsConfig();
 

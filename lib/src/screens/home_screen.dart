@@ -400,11 +400,25 @@ void _showThemeSelector(BuildContext context, ThemeProvider themeProvider) {
                       const Spacer(),
                       Switch(
                         value: themeProvider.useDynamicColors,
-                        onChanged: (value) =>
-                            themeProvider.setUseDynamicColors(value),
+                        onChanged: themeProvider.dynamicColorAvailable == false
+                            ? null
+                            : (value) =>
+                                  themeProvider.setUseDynamicColors(value),
                       ),
                     ],
                   ),
+                  if (themeProvider.dynamicColorAvailable == false)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        l10n?.dynamicColorUnavailable ??
+                            'Dynamic colours are not available on this '
+                                'platform',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

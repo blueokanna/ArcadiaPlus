@@ -38,16 +38,60 @@ class AvailableUpdate {
   final UpdateAsset asset;
 }
 
+/// Why a downloaded build cannot replace the installed app.
+///
+/// Android decides both cases before any installer dialog is shown, and the
+/// system's wording for them ("the same version is already installed",
+/// "signatures do not match") is the point at which the user has already paid
+/// for the download. The native check reports the case instead, so the
+/// interface can explain it in the user's own language and say what to do.
+enum UpdateInstallBlock {
+  /// The APK's version code is not greater than the installed one. A release
+  /// that carries a newer version name but the same code would install as a
+  /// downgrade, which Android refuses.
+  versionNotNewer,
+
+  /// The APK is signed with a different key than the installed app. No
+  /// installer can bridge that; the installed app has to go first, or the
+  /// release has to be installed by hand from its GitHub page.
+  signatureMismatch,
+
+  /// The package manager could not read the downloaded file.
+  apkUnreadable,
+
+  /// Android requires the user to allow installing from this source before
+  /// the installer can open; the settings screen for that was opened.
+  permissionRequired,
+
+  /// The installer activity did not start.
+  notLaunched,
+}
+
+class UpdateInstallException implements Exception {
+  const UpdateInstallException(
+    this.block, {
+    this.apkVersionCode,
+    this.installedVersionCode,
+    this.apkVersionName,
+  });
+
+  final UpdateInstallBlock block;
+
+  /// Version codes from the native preflight, when the failing case was
+  /// [UpdateInstallBlock.versionNotNewer].
+  final int? apkVersionCode;
+  final int? installedVersionCode;
+  final String? apkVersionName;
+
+  @override
+  String toString() => 'UpdateInstallException(${block.name})';
+}
+
 class UpdateService {
   UpdateService({http.Client? client, Dio? dio})
     : _client = client ?? http.Client(),
       _dio = dio ?? Dio();
 
-  /// The GitHub repository this app is published from.
-  ///
-  /// Public because the about screen quotes the same project the updater
-  /// downloads from: two copies of the project's own address is one copy too
-  /// many.
   static const String repositorySlug = 'blueokanna/ArcadiaPlus';
   static const String repositoryUrl = 'https://github.com/$repositorySlug';
   static const String releasesUrl = '$repositoryUrl/releases';
@@ -226,12 +270,42 @@ class UpdateService {
     final result = await _installer.invokeMethod<dynamic>('installApk', {
       'path': file.path,
     });
-    if (result is Map && result['requiresPermission'] == true) {
-      throw StateError(
-        'Allow installs from ArcadiaPlus, then tap Check for updates again',
-      );
+    if (result is Map) {
+      if (result['requiresPermission'] == true) {
+        throw const UpdateInstallException(
+          UpdateInstallBlock.permissionRequired,
+        );
+      }
+      final error = result['error'];
+      if (error is String) {
+        throw switch (error) {
+          'version_not_newer' => UpdateInstallException(
+            UpdateInstallBlock.versionNotNewer,
+            apkVersionCode: _asInt(result['apkVersionCode']),
+            installedVersionCode: _asInt(result['installedVersionCode']),
+            apkVersionName: result['apkVersionName'] as String?,
+          ),
+          'signature_mismatch' => const UpdateInstallException(
+            UpdateInstallBlock.signatureMismatch,
+          ),
+          'apk_unreadable' => const UpdateInstallException(
+            UpdateInstallBlock.apkUnreadable,
+          ),
+          // A code this build does not know yet is still a refusal; the
+          // generic case is better than claiming the install started.
+          _ => const UpdateInstallException(UpdateInstallBlock.notLaunched),
+        };
+      }
+      if (result['launched'] == true) return true;
     }
-    return result == true || (result is Map && result['launched'] == true);
+    return result == true;
+  }
+
+  static int? _asInt(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 
   Future<void> _rejectRollback(

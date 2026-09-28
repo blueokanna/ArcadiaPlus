@@ -486,9 +486,15 @@ class ConfigConverter {
     void Function(String message)? onWarning,
   }) {
     final override = dnsSettings != null && dnsSettings.overrideDns;
-    final dns = override
-        ? const <String, dynamic>{}
-        : (clash['dns'] as Map<String, dynamic>? ?? {});
+    // The profile's own section is read even when it is overridden: the parts
+    // of it that exist to make servers *reachable* — the per-domain policy and
+    // the bootstrap resolvers — stay in force, because losing them turns
+    // "use my own servers" into "the node domains no longer resolve".
+    final rawProfileDns = _convertToMap(clash['dns']);
+    final profileDns = rawProfileDns is Map
+        ? Map<String, dynamic>.from(rawProfileDns)
+        : const <String, dynamic>{};
+    final dns = override ? const <String, dynamic>{} : profileDns;
 
     final configured = override
         ? dnsSettings.nameservers
@@ -518,22 +524,36 @@ class ConfigConverter {
     // private TCP resolver). Overriding the general DNS servers must not
     // break the node bootstrap.
     final policy = <String, List<String>>{};
-    final rawPolicy =
-        clash['dns']?['nameserver-policy'] as Map<String, dynamic>?;
-    rawPolicy?.forEach((key, value) {
-      final servers = _toStringList(value);
-      if (servers.isNotEmpty) {
-        policy[key] = servers;
-      }
-    });
+    final rawPolicy = profileDns['nameserver-policy'];
+    if (rawPolicy is Map) {
+      rawPolicy.forEach((key, value) {
+        final servers = _toStringList(value);
+        if (servers.isNotEmpty) {
+          policy[key.toString()] = servers;
+        }
+      });
+    }
 
-    // `default-nameserver` bootstraps the hostname of an upstream resolver
-    // (`tls://doh.pub` needs *a* resolver before it can answer anything) and
+    // `default-nameserver` bootstraps the host name of an upstream resolver
+    // (`tls://doh.pub` needs *a* resolver before it can answer anything), and
     // `fallback-filter` decides when an answer is suspect enough to re-resolve
-    // through `fallback`. Both are profile knowledge the app's own settings
-    // cannot express, so they pass through unchanged — like the policy above,
-    // an override of the general servers must not silently disarm them.
-    final defaultNameserver = _toStringList(dns['default-nameserver']);
+    // through `fallback`. Under an override the app's own bootstrap list leads
+    // — it is the user's answer to a network that will not resolve the
+    // upstreams — and the profile's entries stay behind it, because a
+    // subscription reaches its private resolvers through exactly those
+    // addresses.
+    final defaultNameserver = <String>[];
+    if (override) {
+      for (final entry in dnsSettings.bootstrap) {
+        final address = entry.trim();
+        if (address.isNotEmpty && !defaultNameserver.contains(address)) {
+          defaultNameserver.add(address);
+        }
+      }
+    }
+    for (final entry in _toStringList(profileDns['default-nameserver'])) {
+      if (!defaultNameserver.contains(entry)) defaultNameserver.add(entry);
+    }
     final fallbackFilter = _extractFallbackFilter(dns['fallback-filter']);
 
     // Pass-through keys the app's own DNS settings cannot express yet, so they

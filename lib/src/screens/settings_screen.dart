@@ -200,7 +200,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       AdaptiveListTile(
                         title: Text(l10n?.dynamicColors ?? '动态颜色'),
                         subtitle: Text(
-                          l10n?.useSystemAccentColors ?? '使用系统强调色',
+                          themeProvider.dynamicColorAvailable == false
+                              ? (l10n?.dynamicColorUnavailable ??
+                                    'Dynamic colours are not available on this '
+                                        'platform')
+                              : (l10n?.useSystemAccentColors ?? '使用系统强调色'),
                         ),
                         leading: Icon(
                           Icons.color_lens_outlined,
@@ -208,8 +212,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         trailing: Switch.adaptive(
                           value: themeProvider.useDynamicColors,
-                          onChanged: (value) =>
-                              themeProvider.setUseDynamicColors(value),
+                          onChanged:
+                              themeProvider.dynamicColorAvailable == false
+                              ? null
+                              : (value) =>
+                                    themeProvider.setUseDynamicColors(value),
                         ),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),

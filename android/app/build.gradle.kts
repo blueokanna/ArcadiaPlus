@@ -4,6 +4,25 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+fun androidVersionCode(versionName: String?, buildNumber: Int?): Int {
+    val parts = versionName
+        ?.split('.')
+        ?.map { it.toIntOrNull() }
+        ?: emptyList()
+    require(parts.size == 3 && parts.all { it != null && it >= 0 }) {
+        "pubspec version '$versionName' is not a MAJOR.MINOR.PATCH version, " +
+            "so no stable Android version code can be derived from it"
+    }
+    val build = buildNumber ?: 1
+    require(build in 0..9_999) {
+        "build number $build does not fit the version-code layout (0..9999)"
+    }
+    return parts[0]!! * 100_000_000 +
+        parts[1]!! * 1_000_000 +
+        parts[2]!! * 10_000 +
+        build
+}
+
 val releaseSigningValues = mapOf(
     "ARCADIAPLUS_KEYSTORE_PATH" to System.getenv("ARCADIAPLUS_KEYSTORE_PATH"),
     "ARCADIAPLUS_KEYSTORE_PASSWORD" to System.getenv("ARCADIAPLUS_KEYSTORE_PASSWORD"),
@@ -35,7 +54,7 @@ android {
         applicationId = "com.blueokanna.arcadiaplus"
         minSdk = 24
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
+        versionCode = androidVersionCode(flutter.versionName, flutter.versionCode)
         versionName = flutter.versionName
         
         // Do not filter Flutter's supported armeabi-v7a, arm64-v8a, and x86_64
@@ -55,8 +74,6 @@ android {
 
     buildTypes {
         release {
-            // A missing keystore must not fail the build: fall back to the
-            // debug key so a release build still yields an installable APK.
             signingConfig =
                 if (hasCompleteReleaseSigningConfig) {
                     signingConfigs.getByName("release")

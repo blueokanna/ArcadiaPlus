@@ -25,11 +25,19 @@ class UpdateProvider extends ChangeNotifier {
   File? _downloadedFile;
   Object? _lastError;
   double _downloadProgress = 0;
+  bool _hasChecked = false;
 
   UpdateState get state => _state;
   AvailableUpdate? get availableUpdate => _availableUpdate;
   Object? get lastError => _lastError;
   double get downloadProgress => _downloadProgress;
+
+  UpdateInstallException? get installError {
+    final error = _lastError;
+    return error is UpdateInstallException ? error : null;
+  }
+
+  bool get hasChecked => _hasChecked;
 
   Future<void> check({bool silent = false}) async {
     if (_state == UpdateState.checking || _state == UpdateState.downloading) {
@@ -40,6 +48,7 @@ class UpdateProvider extends ChangeNotifier {
     notifyListeners();
     try {
       _availableUpdate = await _service.checkForUpdate();
+      _hasChecked = true;
       _state = _availableUpdate == null
           ? UpdateState.idle
           : UpdateState.available;

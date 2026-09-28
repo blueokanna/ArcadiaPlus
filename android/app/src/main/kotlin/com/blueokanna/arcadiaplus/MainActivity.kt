@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
@@ -18,6 +19,7 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.security.MessageDigest
 import kotlinx.coroutines.*
 
 class MainActivity : FlutterActivity() {
@@ -134,6 +136,11 @@ class MainActivity : FlutterActivity() {
             return
         }
 
+        preflightInstall(apk)?.let {
+            result.success(it)
+            return
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
                         !packageManager.canRequestPackageInstalls()
         ) {
@@ -165,6 +172,88 @@ class MainActivity : FlutterActivity() {
             Log.e(TAG, "Failed to launch APK installer", error)
             result.error("INSTALL_FAILED", error.message, null)
         }
+    }
+
+    /// Everything that decides whether a downloaded APK can replace the
+    /// installed app, checked before the system installer is involved.
+    private fun preflightInstall(apk: File): Map<String, Any>? {
+        val archive =
+                try {
+                    packageManager.getPackageArchiveInfo(apk.absolutePath, packageInfoFlags())
+                } catch (error: Exception) {
+                    Log.e(TAG, "Failed to read the downloaded APK", error)
+                    null
+                } ?: return mapOf("launched" to false, "error" to "apk_unreadable")
+
+        val installed =
+                try {
+                    packageManager.getPackageInfo(packageName, packageInfoFlags())
+                } catch (error: Exception) {
+                    Log.w(TAG, "Failed to read the installed package", error)
+                    return null
+                }
+
+        val archiveCode = versionCodeOf(archive)
+        val installedCode = versionCodeOf(installed)
+        if (archiveCode <= installedCode) {
+            return mapOf(
+                    "launched" to false,
+                    "error" to "version_not_newer",
+                    "apkVersionCode" to archiveCode,
+                    "installedVersionCode" to installedCode,
+                    "apkVersionName" to (archive.versionName ?: ""),
+            )
+        }
+
+        val archiveSigner = signerDigest(archive)
+        val installedSigner = signerDigest(installed)
+        if (archiveSigner != null && installedSigner != null && archiveSigner != installedSigner) {
+            return mapOf("launched" to false, "error" to "signature_mismatch")
+        }
+        return null
+    }
+
+    @Suppress("DEPRECATION")
+    private fun packageInfoFlags(): Int =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                PackageManager.GET_SIGNATURES
+            }
+
+    @Suppress("DEPRECATION")
+    private fun versionCodeOf(info: PackageInfo): Long =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                info.longVersionCode
+            } else {
+                info.versionCode.toLong()
+            }
+
+    /// SHA-256 of the certificate that currently signs [info], read the same
+    /// way for an APK archive and for an installed package.
+    ///
+    /// Under key rotation the history carries the past signers as well; the
+    /// last entry is the current one, and that is the one an update has to
+    /// match. A signing record that cannot be read returns null and the
+    /// comparison is skipped — the installer stays the authority in that case,
+    /// rather than this check inventing a mismatch it cannot prove.
+    @Suppress("DEPRECATION")
+    private fun signerDigest(info: PackageInfo): String? {
+        val signature =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    val signing = info.signingInfo ?: return null
+                    val signatures =
+                            if (signing.hasMultipleSigners()) {
+                                signing.apkContentsSigners
+                            } else {
+                                signing.signingCertificateHistory
+                            }
+                    signatures.lastOrNull() ?: return null
+                } else {
+                    info.signatures?.lastOrNull() ?: return null
+                }
+        val digest = MessageDigest.getInstance("SHA-256")
+        return digest.digest(signature.toByteArray()).joinToString("") { "%02x".format(it) }
     }
 
     private fun startVpnService(result: MethodChannel.Result, mode: String) {
@@ -341,8 +430,6 @@ class MainActivity : FlutterActivity() {
                         capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) ==
                                 true
                 val isOurVpnRunning = ArcadiaPlusVpnService.isRunning
-
-                // If VPN transport is active but our VPN is not running, another VPN is active
                 isVpnTransport && !isOurVpnRunning
             } else {
                 false

@@ -169,6 +169,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RuleDto dco_decode_rule_dto(dynamic raw);
 
   @protected
+  RuleSearchResultDto dco_decode_rule_search_result_dto(dynamic raw);
+
+  @protected
+  RuleWindowDto dco_decode_rule_window_dto(dynamic raw);
+
+  @protected
   SystemInfo dco_decode_system_info(dynamic raw);
 
   @protected
@@ -365,6 +371,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RuleDto sse_decode_rule_dto(SseDeserializer deserializer);
+
+  @protected
+  RuleSearchResultDto sse_decode_rule_search_result_dto(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RuleWindowDto sse_decode_rule_window_dto(SseDeserializer deserializer);
 
   @protected
   SystemInfo sse_decode_system_info(SseDeserializer deserializer);
@@ -781,6 +795,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  JSAny cst_encode_rule_search_result_dto(RuleSearchResultDto raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_u_32(raw.matched),
+      cst_encode_bool(raw.truncated),
+      cst_encode_list_rule_dto(raw.rules),
+    ].jsify()!;
+  }
+
+  @protected
+  JSAny cst_encode_rule_window_dto(RuleWindowDto raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_u_32(raw.total),
+      cst_encode_u_32(raw.offset),
+      cst_encode_u_64(raw.totalMatches),
+      cst_encode_list_rule_dto(raw.rules),
+    ].jsify()!;
+  }
+
+  @protected
   JSAny cst_encode_system_info(SystemInfo raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return [
@@ -1068,6 +1103,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_rule_dto(RuleDto self, SseSerializer serializer);
 
   @protected
+  void sse_encode_rule_search_result_dto(
+    RuleSearchResultDto self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_rule_window_dto(RuleWindowDto self, SseSerializer serializer);
+
+  @protected
   void sse_encode_system_info(SystemInfo self, SseSerializer serializer);
 
   @protected
@@ -1204,6 +1248,18 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__get_rules(NativePortType port_) =>
       wasmModule.wire__crate__api__get_rules(port_);
 
+  void wire__crate__api__get_rules_window(
+    NativePortType port_,
+    int offset,
+    int limit,
+    bool refresh,
+  ) => wasmModule.wire__crate__api__get_rules_window(
+    port_,
+    offset,
+    limit,
+    refresh,
+  );
+
   void wire__crate__api__get_selected_proxy_in_group(
     NativePortType port_,
     String group_name,
@@ -1267,6 +1323,12 @@ class RustLibWire implements BaseWire {
     NativePortType port_,
     String config_json,
   ) => wasmModule.wire__crate__api__reload_corduit(port_, config_json);
+
+  void wire__crate__api__search_rules(
+    NativePortType port_,
+    String needle,
+    int limit,
+  ) => wasmModule.wire__crate__api__search_rules(port_, needle, limit);
 
   void wire__crate__api__select_proxy(
     NativePortType port_,
@@ -1571,6 +1633,13 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void wire__crate__api__get_rules(NativePortType port_);
 
+  external void wire__crate__api__get_rules_window(
+    NativePortType port_,
+    int offset,
+    int limit,
+    bool refresh,
+  );
+
   external void wire__crate__api__get_selected_proxy_in_group(
     NativePortType port_,
     String group_name,
@@ -1622,6 +1691,12 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__api__reload_corduit(
     NativePortType port_,
     String config_json,
+  );
+
+  external void wire__crate__api__search_rules(
+    NativePortType port_,
+    String needle,
+    int limit,
   );
 
   external void wire__crate__api__select_proxy(

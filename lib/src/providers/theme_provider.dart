@@ -8,13 +8,43 @@ class ThemeProvider extends ChangeNotifier {
 
   String _selectedTheme = AppTheme.defaultTheme;
   bool _useDynamicColors = false;
+  bool? _dynamicColorAvailable;
+  bool _disposed = false;
 
   ThemeProvider() {
     _loadSettings();
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   String get selectedTheme => _selectedTheme;
   bool get useDynamicColors => _useDynamicColors;
+
+  /// Whether the platform produced a dynamic palette on its last report.
+  ///
+  /// Null means "not known yet": the platform query is asynchronous, and
+  /// treating the absence of an answer as an answer would disable the switch
+  /// for the first frame on devices that do support it. Only an explicit
+  /// false — reported once the builder has actually seen a null palette —
+  /// disables it and explains why.
+  bool? get dynamicColorAvailable => _dynamicColorAvailable;
+
+  /// Records what the dynamic-colour builder last received. Called once per
+  /// palette change, so "unavailable" is a statement about the platform
+  /// rather than about the current moment of the query.
+  ///
+  /// The availability report is scheduled as a post-frame callback, and the
+  /// one that is still in flight when the app goes away would otherwise call
+  /// `notifyListeners` on a disposed notifier.
+  void setDynamicColorAvailable(bool value) {
+    if (_disposed || _dynamicColorAvailable == value) return;
+    _dynamicColorAvailable = value;
+    notifyListeners();
+  }
 
   // Available themes
   List<String> get availableThemes => AppTheme.allThemes;

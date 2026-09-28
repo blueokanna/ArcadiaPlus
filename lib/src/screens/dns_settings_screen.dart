@@ -234,6 +234,26 @@ class DnsSettingsScreen extends StatelessWidget {
                         dnsSettings.removeFallback,
                       ),
                     ),
+                    _divider(),
+                    AdaptiveListTile(
+                      title: Text(l10n?.dnsBootstrap ?? 'Bootstrap resolvers'),
+                      subtitle: Text(
+                        l10n?.dnsBootstrapDesc ??
+                            'Plain-IP resolvers used to look up the host names '
+                                'of the other servers',
+                      ),
+                      isThreeLine: false,
+                      leading: _leadingIcon(context, Icons.foundation_outlined),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _showUpstreamEditor(
+                        context,
+                        l10n?.dnsBootstrap ?? 'Bootstrap resolvers',
+                        dnsSettings.bootstrap,
+                        dnsSettings.addBootstrap,
+                        dnsSettings.removeBootstrap,
+                        literalOnly: true,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -507,8 +527,9 @@ void _showUpstreamEditor(
   String title,
   List<String> items,
   Future<void> Function(Iterable<String>) onAdd,
-  Future<void> Function(String) onRemove,
-) {
+  Future<void> Function(String) onRemove, {
+  bool literalOnly = false,
+}) {
   final colorScheme = Theme.of(context).colorScheme;
 
   showModalBottomSheet<void>(
@@ -528,6 +549,7 @@ void _showUpstreamEditor(
         items: items,
         onAdd: onAdd,
         onRemove: onRemove,
+        literalOnly: literalOnly,
         scrollController: scrollController,
       ),
     ),
@@ -540,6 +562,7 @@ class _UpstreamEditorSheet extends StatefulWidget {
     required this.items,
     required this.onAdd,
     required this.onRemove,
+    this.literalOnly = false,
     required this.scrollController,
   });
 
@@ -547,6 +570,14 @@ class _UpstreamEditorSheet extends StatefulWidget {
   final List<String> items;
   final Future<void> Function(Iterable<String>) onAdd;
   final Future<void> Function(String) onRemove;
+
+  /// Whether only address literals belong in this list.
+  ///
+  /// The bootstrap list is resolved *by* nothing: an entry that is itself a
+  /// host name would need the very lookup it exists to make possible, so the
+  /// editor refuses it rather than storing a value the engine will ignore.
+  final bool literalOnly;
+
   final ScrollController scrollController;
 
   @override
@@ -632,8 +663,10 @@ class _UpstreamEditorSheetState extends State<_UpstreamEditorSheet> {
                   child: TextField(
                     controller: _controller,
                     decoration: InputDecoration(
-                      hintText:
-                          l10n?.dnsUpstreamHint ?? '1.1.1.1 · tls://1.1.1.1',
+                      hintText: widget.literalOnly
+                          ? '223.5.5.5 · 119.29.29.29'
+                          : (l10n?.dnsUpstreamHint ??
+                                '1.1.1.1 · tls://1.1.1.1'),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -666,7 +699,9 @@ class _UpstreamEditorSheetState extends State<_UpstreamEditorSheet> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      l10n?.dnsUpstreamUnknown ?? '',
+                      widget.literalOnly
+                          ? (l10n?.dnsBootstrapLiteralOnly ?? '')
+                          : (l10n?.dnsUpstreamUnknown ?? ''),
                       style: textTheme.bodySmall?.copyWith(
                         color: colorScheme.error,
                       ),
@@ -775,29 +810,38 @@ class _UpstreamEditorSheetState extends State<_UpstreamEditorSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
               for (final tag in DnsPresetTag.values)
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _presetTagLabel(l10n, tag),
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                if (!widget.literalOnly ||
+                    dnsPresets.any(
+                      (preset) =>
+                          preset.tag == tag &&
+                          preset.kind == DnsUpstreamKind.plain,
+                    ))
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _presetTagLabel(l10n, tag),
+                          style: textTheme.labelSmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final preset in dnsPresets)
-                            if (preset.tag == tag) _presetChip(context, preset),
-                        ],
-                      ),
-                    ],
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final preset in dnsPresets)
+                              if (preset.tag == tag &&
+                                  (!widget.literalOnly ||
+                                      preset.kind == DnsUpstreamKind.plain))
+                                _presetChip(context, preset),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
             ],
           ),
         ),
@@ -830,9 +874,12 @@ class _UpstreamEditorSheetState extends State<_UpstreamEditorSheet> {
   }
 
   void _onFieldChanged(String value) {
+    final trimmed = value.trim();
     final unrecognised =
-        value.trim().isNotEmpty &&
-        classifyUpstream(value) == DnsUpstreamKind.unknown;
+        trimmed.isNotEmpty &&
+        (widget.literalOnly
+            ? !isAddressLiteral(trimmed)
+            : classifyUpstream(trimmed) == DnsUpstreamKind.unknown);
     if (unrecognised != _unrecognisedEntry) {
       setState(() => _unrecognisedEntry = unrecognised);
     }

@@ -48,7 +48,7 @@ Conversion translates the profile rule by rule. The vocabulary it can express:
 
 Conversion downgrades explicitly: a rule type the engine cannot evaluate (`SCRIPT`, `PROCESS-PATH-REGEX`, `SUB-RULE`, `IP-SUFFIX`, and the like) is skipped with the reason reported through `onWarning`, and a rule set in `mrs` format or with binary content is refused rather than half-loaded. Skipping beats approximating here, because an approximation sends the traffic the rule was written to protect.
 
-The Rules entry in settings (`/rules`) shows the engine's table with each rule's **live hit count**, every conversion warning from the current profile, and each rule set's readiness, entry count, and last refresh. Hit counts are why this screen exists: a rule that never fires, or one that fires for everything, is visible instead of inferred.
+The Rules entry in settings (`/rules`) shows the engine's table with each rule's **live hit count**, every conversion warning from the current profile, and each rule set's readiness, entry count, and last refresh. Hit counts are why this screen exists: a rule that never fires, or one that fires for everything, is visible instead of inferred. The table is read a window at a time: the Rust side keeps the snapshot and answers window and search requests (the top page quietly re-reads the hit counts every five seconds), and the screen builds only the rows it shows — a subscription with an inline ACL can hold tens of thousands of rules, and decoding all of them on the UI isolate while building a row per entry is exactly how the diagnostic page used to take the whole app down with it. The search box scans the full table in Rust and returns the total match count plus the first 500 matches.
 
 ## Protocol Status
 
@@ -151,7 +151,7 @@ The bar: with the tunnel idle, `procs_running` should stay in the single digits,
 
 Gaps and boundaries worth knowing, so nothing here is mistaken for a feature it is not:
 
-- The DNS settings page is the only DNS surface the app edits, and it is applied only while “override DNS” is on — without it the profile's `dns` block wins. The engine's wider DNS surface (`nameserver-policy`, `fallback-filter`, `fake-ip-range` / `-filter` / `-ttl`, `cache-size`, `hosts`) is passed through from the profile and has no page of its own.
+- The DNS surface the app edits is its settings page, applied only while “override DNS” is on — without it the profile's `dns` block wins. An override is not a whole-section replacement either: `nameserver-policy` and `default-nameserver` are still read from the profile (the first is a subscription's only way to resolve its own node domains, the second bootstraps upstreams written as host names such as `tls://doh.pub`), and the **bootstrap resolvers** list the page now offers comes before the profile's entries. The engine's wider DNS surface (`fallback-filter`, `fake-ip-range` / `-filter` / `-ttl`, `cache-size`, `hosts`) still passes through from the profile.
 - The system proxy bypass list reaches Windows (`ProxyOverride`) and Linux (`ignore-hosts`); the macOS `networksetup` path currently only sets or clears the proxies themselves.
 
 ## Architecture

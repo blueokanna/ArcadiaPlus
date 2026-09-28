@@ -652,6 +652,81 @@ class RuleDto {
           matchedCount == other.matchedCount;
 }
 
+/// Rules matching a query, bounded by the caller's limit.
+class RuleSearchResultDto {
+  /// Rules matching the query anywhere in the table.
+  final int matched;
+
+  /// Whether [`RuleSearchResultDto::rules`] was cut off at the limit.
+  final bool truncated;
+
+  /// The matches actually returned, capped by the limit.
+  final List<RuleDto> rules;
+
+  const RuleSearchResultDto({
+    required this.matched,
+    required this.truncated,
+    required this.rules,
+  });
+
+  @override
+  int get hashCode => matched.hashCode ^ truncated.hashCode ^ rules.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RuleSearchResultDto &&
+          runtimeType == other.runtimeType &&
+          matched == other.matched &&
+          truncated == other.truncated &&
+          rules == other.rules;
+}
+
+/// A window over the engine's rule table.
+///
+/// The whole-table call exists, but for a profile with an inline ACL list it
+/// is tens of thousands of entries in one FFI message, decoded on the UI
+/// isolate. A diagnostic screen never needs all of them at once, so it asks
+/// for a window and the bridge keeps the snapshot on the Rust side.
+class RuleWindowDto {
+  /// Rules the table holds in total, so the screen can say "x of y" without
+  /// loading y.
+  final int total;
+
+  /// Index of the first rule in [`RuleWindowDto::rules`].
+  final int offset;
+
+  /// Hit counts summed over the whole table. The rows of one window cannot
+  /// answer "how many matches happened in total", and a diagnostic that
+  /// silently reported only the loaded rows would be wrong rather than
+  /// partial.
+  final BigInt totalMatches;
+
+  /// The requested slice, in configuration order.
+  final List<RuleDto> rules;
+
+  const RuleWindowDto({
+    required this.total,
+    required this.offset,
+    required this.totalMatches,
+    required this.rules,
+  });
+
+  @override
+  int get hashCode =>
+      total.hashCode ^ offset.hashCode ^ totalMatches.hashCode ^ rules.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RuleWindowDto &&
+          runtimeType == other.runtimeType &&
+          total == other.total &&
+          offset == other.offset &&
+          totalMatches == other.totalMatches &&
+          rules == other.rules;
+}
+
 /// System information.
 class SystemInfo {
   final String platform;

@@ -51,6 +51,11 @@ class WallpaperProvider extends ChangeNotifier {
   /// Alpha of the scrim between the picture and the interface.
   double get dim => _settings.dim;
 
+  /// Framing: which part of the picture the interface shows.
+  double get alignmentX => _settings.alignmentX;
+  double get alignmentY => _settings.alignmentY;
+  double get zoom => _settings.zoom;
+
   String? get imagePath => _settings.imagePath;
 
   WallpaperProvider() {
@@ -108,10 +113,22 @@ class WallpaperProvider extends ChangeNotifier {
       final path = await WallpaperService.instance.pickAndStore();
       if (path == null) return false;
 
-      _settings = _settings.copyWith(imagePath: path, enabled: true);
+      final previous = _settings.imagePath;
+      // A new picture gets a new framing: keeping the old pan and zoom would
+      // apply a crop that was chosen for a different image.
+      _settings = _settings.copyWith(
+        imagePath: path,
+        enabled: true,
+        alignmentX: 0,
+        alignmentY: 0,
+        zoom: WallpaperSettings.minZoom,
+      );
       _pendingSave?.cancel();
       _pendingSave = null;
       await StorageService.instance.saveWallpaperSettings(_settings);
+      if (previous != null && previous != path) {
+        await WallpaperService.forgetImage(previous);
+      }
       return true;
     } catch (error) {
       debugPrint('Failed to store the picked wallpaper: $error');
@@ -141,8 +158,50 @@ class WallpaperProvider extends ChangeNotifier {
     _scheduleSave();
   }
 
+  /// Moves and magnifies the picture: which part of it the interface shows.
+  ///
+  /// The three values travel together because a gesture that pans and pinches
+  /// at once produces all of them in one frame; writing them as one record
+  /// keeps the backdrop and the settings preview on the same revision instead
+  /// of racing between three notifications.
+  void setFraming({
+    required double alignmentX,
+    required double alignmentY,
+    required double zoom,
+  }) {
+    final next = _settings.copyWith(
+      alignmentX: alignmentX,
+      alignmentY: alignmentY,
+      zoom: zoom,
+    );
+    if (next.alignmentX == _settings.alignmentX &&
+        next.alignmentY == _settings.alignmentY &&
+        next.zoom == _settings.zoom) {
+      return;
+    }
+    _settings = next;
+    notifyListeners();
+    _scheduleSave();
+  }
+
+  /// Centres the picture at fill scale, which is what "no framing chosen"
+  /// means and what a first-time image gets.
+  void resetFraming() {
+    setFraming(alignmentX: 0, alignmentY: 0, zoom: WallpaperSettings.minZoom);
+  }
+
+  /// Magnifies the picture around the point the alignment already holds fixed.
+  void setZoom(double value) {
+    setFraming(
+      alignmentX: _settings.alignmentX,
+      alignmentY: _settings.alignmentY,
+      zoom: value,
+    );
+  }
+
   /// Forgets the picture and deletes the app's copy of it.
   Future<void> clearImage() async {
+    final previous = _settings.imagePath;
     _settings = _settings.copyWith(imagePath: null);
     _lastError = null;
     notifyListeners();
@@ -150,6 +209,9 @@ class WallpaperProvider extends ChangeNotifier {
     _pendingSave?.cancel();
     _pendingSave = null;
     await StorageService.instance.saveWallpaperSettings(_settings);
+    if (previous != null) {
+      await WallpaperService.forgetImage(previous);
+    }
     await WallpaperService.instance.deleteStored();
   }
 

@@ -48,7 +48,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 
 转换是**显式降级**：引擎没有对应类型的规则（`SCRIPT`、`PROCESS-PATH-REGEX`、`SUB-RULE`、`IP-SUFFIX` 等）会被跳过，并通过 `onWarning` 上报原因；`mrs` 格式或内容为二进制的规则集不会被半装载。跳过而不近似，是因为近似会把本该被规则保护的流量送出去。
 
-设置页的「规则」入口（`/rules`）显示引擎里的规则表与每条规则的**实时命中次数**、本次转换的全部警告，以及每个规则集的就绪状态、条目数与上次刷新时间。命中次数是这套界面存在的理由：一条从未命中、或命中了一切的规则，可以直接看出来。
+设置页的「规则」入口（`/rules`）显示引擎里的规则表与每条规则的**实时命中次数**、本次转换的全部警告，以及每个规则集的就绪状态、条目数与上次刷新时间。命中次数是这套界面存在的理由：一条从未命中、或命中了一切的规则，可以直接看出来。表是一页一页读的：Rust 侧保留快照、按窗口与搜索返回（顶部每 5 秒静默刷新一次命中数），界面只构建可见行——一份内联了 ACL 的订阅可能有几万条规则，整表一次性送进 UI isolate 再逐行建组件，正是这个诊断页把整个应用拖垮的原因。搜索框在 Rust 侧扫描全表，返回命中总数与前 500 条命中。
 
 ## 协议状态
 
@@ -151,7 +151,7 @@ adb shell 'P=$(pidof com.blueokanna.arcadiaplus); for t in /proc/$P/task/*; do e
 
 这些是需要知道的边界，避免把某个设置当成它并不具备的能力：
 
-- App 能编辑的 DNS 面只有 DNS 设置页，且只在“覆盖 DNS”开启时生效——未开启时以 profile 的 `dns` 段为准。引擎更宽的 DNS 面（`nameserver-policy`、`fallback-filter`、`fake-ip-range` / `-filter` / `-ttl`、`cache-size`、`hosts`）由 profile 直接透传，没有对应的设置页。
+- App 能编辑的 DNS 面是 DNS 设置页，且只在“覆盖 DNS”开启时生效——未开启时以 profile 的 `dns` 段为准。覆盖时也不是整段替换：`nameserver-policy` 与 `default-nameserver` 仍从 profile 读取（前者是订阅自家节点域名的唯一解析途径，后者是形如 `tls://doh.pub` 这类按域名书写的上游的引导），设置页新增的**引导解析器**列表排在 profile 的条目之前。引擎更宽的 DNS 面（`fallback-filter`、`fake-ip-range` / `-filter` / `-ttl`、`cache-size`、`hosts`）仍由 profile 直接透传。
 - 系统代理的 bypass 列表：Windows（`ProxyOverride`）与 Linux（`ignore-hosts`）会下发，macOS 的 `networksetup` 路径暂时只在启用/关闭时设置代理本身。
 
 ## 架构

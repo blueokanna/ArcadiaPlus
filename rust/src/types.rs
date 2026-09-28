@@ -171,6 +171,38 @@ pub struct RuleDto {
     pub matched_count: u64,
 }
 
+/// A window over the engine's rule table.
+///
+/// The whole-table call exists, but for a profile with an inline ACL list it
+/// is tens of thousands of entries in one FFI message, decoded on the UI
+/// isolate. A diagnostic screen never needs all of them at once, so it asks
+/// for a window and the bridge keeps the snapshot on the Rust side.
+#[frb]
+#[derive(Debug, Clone)]
+pub struct RuleWindowDto {
+    /// Rules the table holds in total, so the screen can say "x of y" without
+    /// loading y.
+    pub total: u32,
+    /// Index of the first rule in [`RuleWindowDto::rules`].
+    pub offset: u32,
+    /// Hit counts summed over the whole table.
+    pub total_matches: u64,
+    /// The requested slice, in configuration order.
+    pub rules: Vec<RuleDto>,
+}
+
+/// Rules matching a query, bounded by the caller's limit.
+#[frb]
+#[derive(Debug, Clone)]
+pub struct RuleSearchResultDto {
+    /// Rules matching the query anywhere in the table.
+    pub matched: u32,
+    /// Whether [`RuleSearchResultDto::rules`] was cut off at the limit.
+    pub truncated: bool,
+    /// The matches actually returned, capped by the limit.
+    pub rules: Vec<RuleDto>,
+}
+
 /// `fallback-filter`: what makes an answer suspect enough to re-resolve it
 /// through `fallback`.
 #[frb]
@@ -204,11 +236,6 @@ pub struct DnsConfigDto {
     pub fake_ip_filter: Vec<String>,
     pub fake_ip_ttl: u32,
     /// How many static `hosts` entries are in effect.
-    ///
-    /// The entries themselves stay in the engine: a UI needs the count, and a
-    /// hosts block can run to thousands of lines. A count of hosts or of cache
-    /// slots cannot approach `u32::MAX`, and the narrower type keeps it a plain
-    /// Dart `int` instead of the `BigInt` every byte counter needs.
     pub host_count: u32,
     pub use_hosts: bool,
     /// Forward-cache capacity, in entries.
@@ -455,14 +482,20 @@ impl From<engine::ProxyLatencyDto> for ProxyLatencyDto {
     }
 }
 
-impl From<engine::RuleDto> for RuleDto {
-    fn from(value: engine::RuleDto) -> Self {
+impl From<&engine::RuleDto> for RuleDto {
+    fn from(value: &engine::RuleDto) -> Self {
         Self {
-            rule_type: value.rule_type,
-            payload: value.payload,
-            outbound: value.outbound,
+            rule_type: value.rule_type.clone(),
+            payload: value.payload.clone(),
+            outbound: value.outbound.clone(),
             matched_count: value.matched_count,
         }
+    }
+}
+
+impl From<engine::RuleDto> for RuleDto {
+    fn from(value: engine::RuleDto) -> Self {
+        Self::from(&value)
     }
 }
 

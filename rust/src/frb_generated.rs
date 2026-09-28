@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueNom,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -139664526;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2122262403;
 
 // Section: executor
 
@@ -702,6 +702,36 @@ fn wire__crate__api__get_rules_impl(port_: flutter_rust_bridge::for_generated::M
         },
     )
 }
+fn wire__crate__api__get_rules_window_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    offset: impl CstDecode<u32>,
+    limit: impl CstDecode<u32>,
+    refresh: impl CstDecode<bool>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_rules_window",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_offset = offset.cst_decode();
+            let api_limit = limit.cst_decode();
+            let api_refresh = refresh.cst_decode();
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::get_rules_window(api_offset, api_limit, api_refresh)
+                                .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__get_selected_proxy_in_group_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     group_name: impl CstDecode<String>,
@@ -1071,6 +1101,32 @@ fn wire__crate__api__reload_corduit_impl(
                 transform_result_dco::<_, _, String>(
                     (move || async move {
                         let output_ok = crate::api::reload_corduit(api_config_json).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__search_rules_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    needle: impl CstDecode<String>,
+    limit: impl CstDecode<u32>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "search_rules",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_needle = needle.cst_decode();
+            let api_limit = limit.cst_decode();
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::search_rules(api_needle, api_limit).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -2592,6 +2648,36 @@ impl SseDecode for crate::types::RuleDto {
     }
 }
 
+impl SseDecode for crate::types::RuleSearchResultDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_matched = <u32>::sse_decode(deserializer);
+        let mut var_truncated = <bool>::sse_decode(deserializer);
+        let mut var_rules = <Vec<crate::types::RuleDto>>::sse_decode(deserializer);
+        return crate::types::RuleSearchResultDto {
+            matched: var_matched,
+            truncated: var_truncated,
+            rules: var_rules,
+        };
+    }
+}
+
+impl SseDecode for crate::types::RuleWindowDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_total = <u32>::sse_decode(deserializer);
+        let mut var_offset = <u32>::sse_decode(deserializer);
+        let mut var_totalMatches = <u64>::sse_decode(deserializer);
+        let mut var_rules = <Vec<crate::types::RuleDto>>::sse_decode(deserializer);
+        return crate::types::RuleWindowDto {
+            total: var_total,
+            offset: var_offset,
+            total_matches: var_totalMatches,
+            rules: var_rules,
+        };
+    }
+}
+
 impl SseDecode for crate::types::SystemInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3066,6 +3152,48 @@ impl flutter_rust_bridge::IntoDart for crate::types::RuleDto {
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::types::RuleDto {}
 impl flutter_rust_bridge::IntoIntoDart<crate::types::RuleDto> for crate::types::RuleDto {
     fn into_into_dart(self) -> crate::types::RuleDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::RuleSearchResultDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.matched.into_into_dart().into_dart(),
+            self.truncated.into_into_dart().into_dart(),
+            self.rules.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::types::RuleSearchResultDto
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::RuleSearchResultDto>
+    for crate::types::RuleSearchResultDto
+{
+    fn into_into_dart(self) -> crate::types::RuleSearchResultDto {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::RuleWindowDto {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.total.into_into_dart().into_dart(),
+            self.offset.into_into_dart().into_dart(),
+            self.total_matches.into_into_dart().into_dart(),
+            self.rules.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::types::RuleWindowDto {}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::RuleWindowDto>
+    for crate::types::RuleWindowDto
+{
+    fn into_into_dart(self) -> crate::types::RuleWindowDto {
         self
     }
 }
@@ -3587,6 +3715,25 @@ impl SseEncode for crate::types::RuleDto {
     }
 }
 
+impl SseEncode for crate::types::RuleSearchResultDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.matched, serializer);
+        <bool>::sse_encode(self.truncated, serializer);
+        <Vec<crate::types::RuleDto>>::sse_encode(self.rules, serializer);
+    }
+}
+
+impl SseEncode for crate::types::RuleWindowDto {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.total, serializer);
+        <u32>::sse_encode(self.offset, serializer);
+        <u64>::sse_encode(self.total_matches, serializer);
+        <Vec<crate::types::RuleDto>>::sse_encode(self.rules, serializer);
+    }
+}
+
 impl SseEncode for crate::types::SystemInfo {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -4080,6 +4227,27 @@ mod io {
             }
         }
     }
+    impl CstDecode<crate::types::RuleSearchResultDto> for wire_cst_rule_search_result_dto {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::RuleSearchResultDto {
+            crate::types::RuleSearchResultDto {
+                matched: self.matched.cst_decode(),
+                truncated: self.truncated.cst_decode(),
+                rules: self.rules.cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::RuleWindowDto> for wire_cst_rule_window_dto {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::RuleWindowDto {
+            crate::types::RuleWindowDto {
+                total: self.total.cst_decode(),
+                offset: self.offset.cst_decode(),
+                total_matches: self.total_matches.cst_decode(),
+                rules: self.rules.cst_decode(),
+            }
+        }
+    }
     impl CstDecode<crate::types::SystemInfo> for wire_cst_system_info {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> crate::types::SystemInfo {
@@ -4447,6 +4615,35 @@ mod io {
             Self::new_with_null_ptr()
         }
     }
+    impl NewWithNullPtr for wire_cst_rule_search_result_dto {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                matched: Default::default(),
+                truncated: Default::default(),
+                rules: core::ptr::null_mut(),
+            }
+        }
+    }
+    impl Default for wire_cst_rule_search_result_dto {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+    impl NewWithNullPtr for wire_cst_rule_window_dto {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                total: Default::default(),
+                offset: Default::default(),
+                total_matches: Default::default(),
+                rules: core::ptr::null_mut(),
+            }
+        }
+    }
+    impl Default for wire_cst_rule_window_dto {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
     impl NewWithNullPtr for wire_cst_system_info {
         fn new_with_null_ptr() -> Self {
             Self {
@@ -4679,6 +4876,16 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_rules_window(
+        port_: i64,
+        offset: u32,
+        limit: u32,
+        refresh: bool,
+    ) {
+        wire__crate__api__get_rules_window_impl(port_, offset, limit, refresh)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_selected_proxy_in_group(
         port_: i64,
         group_name: *mut wire_cst_list_prim_u_8_strict,
@@ -4776,6 +4983,15 @@ mod io {
         config_json: *mut wire_cst_list_prim_u_8_strict,
     ) {
         wire__crate__api__reload_corduit_impl(port_, config_json)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__search_rules(
+        port_: i64,
+        needle: *mut wire_cst_list_prim_u_8_strict,
+        limit: u32,
+    ) {
+        wire__crate__api__search_rules_impl(port_, needle, limit)
     }
 
     #[unsafe(no_mangle)]
@@ -5478,6 +5694,21 @@ mod io {
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
+    pub struct wire_cst_rule_search_result_dto {
+        matched: u32,
+        truncated: bool,
+        rules: *mut wire_cst_list_rule_dto,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_rule_window_dto {
+        total: u32,
+        offset: u32,
+        total_matches: u64,
+        rules: *mut wire_cst_list_rule_dto,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
     pub struct wire_cst_system_info {
         platform: *mut wire_cst_list_prim_u_8_strict,
         version: *mut wire_cst_list_prim_u_8_strict,
@@ -6127,6 +6358,49 @@ mod web {
             }
         }
     }
+    impl CstDecode<crate::types::RuleSearchResultDto>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::RuleSearchResultDto {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                3,
+                "Expected 3 elements, got {}",
+                self_.length()
+            );
+            crate::types::RuleSearchResultDto {
+                matched: self_.get(0).cst_decode(),
+                truncated: self_.get(1).cst_decode(),
+                rules: self_.get(2).cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::RuleWindowDto>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::RuleWindowDto {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                4,
+                "Expected 4 elements, got {}",
+                self_.length()
+            );
+            crate::types::RuleWindowDto {
+                total: self_.get(0).cst_decode(),
+                offset: self_.get(1).cst_decode(),
+                total_matches: self_.get(2).cst_decode(),
+                rules: self_.get(3).cst_decode(),
+            }
+        }
+    }
     impl CstDecode<crate::types::SystemInfo>
         for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
     {
@@ -6503,6 +6777,16 @@ mod web {
     }
 
     #[wasm_bindgen]
+    pub fn wire__crate__api__get_rules_window(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        offset: u32,
+        limit: u32,
+        refresh: bool,
+    ) {
+        wire__crate__api__get_rules_window_impl(port_, offset, limit, refresh)
+    }
+
+    #[wasm_bindgen]
     pub fn wire__crate__api__get_selected_proxy_in_group(
         port_: flutter_rust_bridge::for_generated::MessagePort,
         group_name: String,
@@ -6620,6 +6904,15 @@ mod web {
         config_json: String,
     ) {
         wire__crate__api__reload_corduit_impl(port_, config_json)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__search_rules(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        needle: String,
+        limit: u32,
+    ) {
+        wire__crate__api__search_rules_impl(port_, needle, limit)
     }
 
     #[wasm_bindgen]
