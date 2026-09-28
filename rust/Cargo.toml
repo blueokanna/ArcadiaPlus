@@ -2,7 +2,7 @@
 name = "lib-arcadiaplus"
 edition = "2021"
 license-file = "../LICENSE"
-version = "1.0.5"
+version = "1.0.6"
 authors = ["blueokanna"]
 description = "A cross-platform basic proxy client rust core for ArcadiaPlus"
 homepage = "https://github.com/blueokanna/ArcadiaPlus"
@@ -12,7 +12,7 @@ name = "rust_lib_arcadiaplus"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-corduit = { version = "0.2.3", features = [
+corduit = { version = "0.2.5", features = [
     "std",
     "tls",
     "tls13",

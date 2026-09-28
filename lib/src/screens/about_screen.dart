@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
 import 'package:arcadiaplus/src/providers/update_provider.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
 import 'package:arcadiaplus/src/services/update_service.dart';
+import 'package:arcadiaplus/src/utils/navigation.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/utils/update_error_messages.dart';
 import 'package:arcadiaplus/src/widgets/license_viewer.dart';
@@ -64,7 +64,7 @@ class _AboutScreenState extends State<AboutScreen> {
         title: Text(l10n?.aboutArcadiaPlus ?? 'About ArcadiaPlus'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/settings'),
+          onPressed: () => popOrGoSettings(context),
           tooltip: l10n?.back ?? 'Back',
         ),
       ),

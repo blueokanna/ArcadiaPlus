@@ -35,6 +35,7 @@ import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/device_info_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+import 'package:arcadiaplus/src/utils/page_transitions.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/screens/profiles_screen.dart';
 import 'package:go_router/go_router.dart';
@@ -407,108 +408,112 @@ final GoRouter _router = GoRouter(
       routes: [
         GoRoute(
           path: '/',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const HomeScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const HomeScreen(),
+            transition: AppPageTransition.destination,
+          ),
         ),
         GoRoute(
           path: '/proxies',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const ProxiesScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const ProxiesScreen(),
+            transition: AppPageTransition.destination,
+          ),
         ),
         GoRoute(
           path: '/profiles',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const ProfilesScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const ProfilesScreen(),
+            transition: AppPageTransition.destination,
+          ),
         ),
         GoRoute(
           path: '/connections',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const ConnectionsScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const ConnectionsScreen(),
+            transition: AppPageTransition.destination,
+          ),
         ),
         GoRoute(
           path: '/logs',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const LogsScreen()),
+          // Entered both ways: replaced as a desktop destination, and pushed
+          // from Settings on mobile. The destination motion is the one that
+          // must hold, because a replaced page has nothing underneath it.
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const LogsScreen(),
+            transition: AppPageTransition.destination,
+          ),
         ),
         GoRoute(
           path: '/settings',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const SettingsScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const SettingsScreen(),
+            transition: AppPageTransition.destination,
+          ),
         ),
         GoRoute(
           path: '/network-settings',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const NetworkSettingsScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const NetworkSettingsScreen(),
+            transition: AppPageTransition.hierarchical,
+          ),
         ),
         GoRoute(
           path: '/about',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const AboutScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const AboutScreen(),
+            transition: AppPageTransition.hierarchical,
+          ),
         ),
         GoRoute(
           path: '/dns-settings',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const DnsSettingsScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const DnsSettingsScreen(),
+            transition: AppPageTransition.hierarchical,
+          ),
         ),
         GoRoute(
           path: '/basic-config',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const BasicConfigScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const BasicConfigScreen(),
+            transition: AppPageTransition.hierarchical,
+          ),
         ),
         GoRoute(
           path: '/advanced-config',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const AdvancedConfigScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const AdvancedConfigScreen(),
+            transition: AppPageTransition.hierarchical,
+          ),
         ),
         GoRoute(
           path: '/rules',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const RulesScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const RulesScreen(),
+            transition: AppPageTransition.hierarchical,
+          ),
         ),
         GoRoute(
           path: '/wallpaper',
-          pageBuilder: (context, state) =>
-              _buildExpressivePage(state, const WallpaperScreen()),
+          pageBuilder: (context, state) => buildAppPage(
+            state,
+            const WallpaperScreen(),
+            transition: AppPageTransition.hierarchical,
+          ),
         ),
       ],
     ),
   ],
 );
-
-CustomTransitionPage<void> _buildExpressivePage(
-  GoRouterState state,
-  Widget child,
-) {
-  return CustomTransitionPage<void>(
-    key: state.pageKey,
-    child: child,
-    transitionDuration: AnimationUtils.pageTransitionDuration,
-    reverseTransitionDuration: const Duration(milliseconds: 300),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      if (MediaQuery.disableAnimationsOf(context)) {
-        return child;
-      }
-
-      final curvedAnimation = CurvedAnimation(
-        parent: animation,
-        curve: AnimationUtils.curveEmphasizedDecelerate,
-        reverseCurve: AnimationUtils.curveEmphasizedAccelerate,
-      );
-
-      final slideAnimation = Tween<Offset>(
-        begin: const Offset(0.03, 0),
-        end: Offset.zero,
-      ).animate(curvedAnimation);
-
-      final scaleAnimation = Tween<double>(
-        begin: 0.96,
-        end: 1.0,
-      ).animate(curvedAnimation);
-
-      return SlideTransition(
-        position: slideAnimation,
-        child: ScaleTransition(scale: scaleAnimation, child: child),
-      );
-    },
-  );
-}

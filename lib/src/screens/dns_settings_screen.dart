@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:arcadiaplus/src/providers/dns_settings_provider.dart';
 import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
 import 'package:arcadiaplus/src/services/dns_upstreams.dart';
 import 'package:arcadiaplus/src/services/system_dns_service.dart';
+import 'package:arcadiaplus/src/utils/navigation.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
@@ -62,7 +62,7 @@ class DnsSettingsScreen extends StatelessWidget {
         title: Text(l10n?.dnsSettings ?? 'DNS Settings'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/settings'),
+          onPressed: () => popOrGoSettings(context),
         ),
       ),
       body: Consumer<DnsSettingsProvider>(

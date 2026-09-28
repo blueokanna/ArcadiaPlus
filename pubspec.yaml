@@ -1,12 +1,12 @@
 name: arcadiaplus
 description: "A modern cross-platform proxy client built with Flutter and Rust."
-publish_to: 'none'
+publish_to: "none"
 
-version: 1.0.5+3
+version: 1.0.6+1
 
 environment:
   sdk: ^3.13.0
-  flutter: '>=3.47.0 <3.48.0'
+  flutter: ">=3.47.0 <3.48.0"
 
 dependencies:
   flutter:
@@ -82,7 +82,7 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
-  
+
   assets:
     - assets/arcadiaplus.png
     - assets/Country.mmdb

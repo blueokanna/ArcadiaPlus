@@ -814,8 +814,46 @@ jobs:
             echo "packaged: $required"
           done
 
+          # The file name says which flavor this is, and a device answers a
+          # mismatch with nothing but a parse error, so the package is asked
+          # for its own answer here. The result is reported, never enforced:
+          # an unsigned HAP is this repository's expected release state (no
+          # signing secrets are required to release), and the one person who
+          # ever configures secrets would rather see a failed verification
+          # warned about loudly than have a whole release stopped over a
+          # HarmonyOS label.
+          suffix="${HAP_NAME_SUFFIX:-unsigned}"
+          sign_tool="$(find "${DEVECO_SDK_HOME:-/nonexistent}/default/openharmony/toolchains/lib" \
+                        -maxdepth 1 -name 'hap-sign-tool.jar' -print -quit 2>/dev/null || true)"
+          verified="no"
+          if [[ -n "$sign_tool" ]]; then
+            if java -jar "$sign_tool" verify-app \
+                 -inFile "$hap" \
+                 -outCertChain "$RUNNER_TEMP/hap-certs.cer" \
+                 -outProfile "$RUNNER_TEMP/hap-profile.p7b" \
+                 > "$RUNNER_TEMP/hap-verify.log" 2>&1; then
+              verified="yes"
+            fi
+            echo '--- hap-sign-tool verify-app ---'
+            tail -n 20 "$RUNNER_TEMP/hap-verify.log" || true
+          else
+            echo "::notice title=No signature verifier::hap-sign-tool.jar was not found under \$DEVECO_SDK_HOME, so the HAP signature was not checked."
+          fi
+
+          if [[ "$verified" == "yes" ]]; then
+            echo "signature: signed package, verified"
+          else
+            echo "signature: unsigned package"
+          fi
+          if [[ "$suffix" == "signed" && "$verified" != "yes" ]]; then
+            echo "::warning title=Signed HAP failed verification::$hap is named as signed but does not verify as a signed package -- the ARCADIAPLUS_OHOS_* secrets or the signingConfigs injection did not take effect. Publishing anyway."
+          fi
+          if [[ "$suffix" != "signed" && "$verified" == "yes" ]]; then
+            echo "::warning title=Unsigned label on a signed package::$hap verifies as signed although the build ran without signing material; the artifact name understates it. Publishing anyway."
+          fi
+
           mkdir -p dist
-          cp "$hap" "dist/ArcadiaPlus-${TAG}-ohos-arm64-${HAP_NAME_SUFFIX:-unsigned}.hap"
+          cp "$hap" "dist/ArcadiaPlus-${TAG}-ohos-arm64-${suffix}.hap"
           ls -lh dist
 
       - name: Upload the HarmonyOS artifacts

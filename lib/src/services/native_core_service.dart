@@ -193,15 +193,16 @@ class NativeCoreService extends ChangeNotifier {
     }
   }
 
-  /// Places the bundled Wintun driver where the engine looks for it.
+  /// Places the bundled Wintun driver where the engine loads it from.
   ///
-  /// TUN mode on Windows needs `wintun.dll`, which is not part of Windows:
-  /// the engine searches beside the executable and in the per-user
-  /// application directory. The executable directory is tried first so a
-  /// portable build stays self-contained; an installed build whose directory
-  /// is read-only falls back to `%LOCALAPPDATA%`. A failure here is logged
-  /// rather than fatal — the engine can still download the DLL — but it is
-  /// what makes TUN work on a machine with no route to wintun.net.
+  /// TUN mode on Windows needs `wintun.dll`, which is not part of Windows.
+  /// The engine loads the driver — and downloads it when it is missing —
+  /// **only from beside the executable** (0.2.5 dropped the per-user and
+  /// working-directory search: the TUN path runs elevated, so a DLL in a
+  /// directory the same user can write would be loaded with the
+  /// administrator token). Staging therefore has exactly one destination; a
+  /// read-only install directory is a fact to report, not a reason to write
+  /// a copy the engine would never open.
   Future<void> _installWintunLibrary() async {
     if (!Platform.isWindows) return;
     try {
@@ -222,22 +223,12 @@ class NativeCoreService extends ChangeNotifier {
         debugPrint('wintun.dll staged at ${beside.path}');
         return;
       }
-
-      final localAppData = Platform.environment['LOCALAPPDATA'];
-      if (localAppData == null || localAppData.isEmpty) {
-        debugPrint('wintun.dll could not be staged: LOCALAPPDATA is unset');
-        return;
-      }
-      final fallbackDirectory = Directory(
-        '$localAppData${Platform.pathSeparator}ArcadiaPlus',
+      debugPrint(
+        'wintun.dll could not be staged beside the executable '
+        '(${executableDirectory.path} is not writable); TUN then asks the '
+        'engine to download it, which needs the same directory to be '
+        'writable.',
       );
-      await fallbackDirectory.create(recursive: true);
-      final fallback = File(
-        '${fallbackDirectory.path}${Platform.pathSeparator}wintun.dll',
-      );
-      if (await _writeIfChanged(fallback, bytes)) {
-        debugPrint('wintun.dll staged at ${fallback.path}');
-      }
     } catch (error) {
       debugPrint(
         'wintun.dll staging failed; the engine may download it instead: $error',

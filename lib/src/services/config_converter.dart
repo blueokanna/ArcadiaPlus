@@ -912,6 +912,22 @@ class ConfigConverter {
             );
             continue;
           }
+
+          // The cipher list is a boundary the engine enforces at outbound
+          // construction, and one refused outbound fails the whole profile
+          // at engine start — so it is screened here, where a single node can
+          // be dropped with the reason while the rest stays usable.
+          final cipherProblem = _shadowsocksCipherProblem(
+            proxyMap['cipher'] ?? proxyMap['method'],
+          );
+          if (cipherProblem != null) {
+            dropped.add(name);
+            onWarning?.call(
+              'Proxy "$name" $cipherProblem The node was dropped; '
+              'references to it fall back to DIRECT.',
+            );
+            continue;
+          }
         }
 
         // Remove common fields for options
@@ -1082,6 +1098,37 @@ class ConfigConverter {
   /// `shadowquic`, `naive`, ...); such a node is dropped from the outbound
   /// list and every reference to it is rewritten.
   static String? _mapProxyType(String clashType) => proxyTypeMapping[clashType];
+
+  /// The Shadowsocks ciphers the engine builds: the 2017 AEAD suite, in both
+  /// its plain and its `aead_` spelling. The engine folds the name's case
+  /// before matching, so this set is compared lowercase too.
+  static const Set<String> _shadowsocksCiphers = {
+    'aes-256-gcm',
+    'aead_aes_256_gcm',
+    'aes-128-gcm',
+    'aead_aes_128_gcm',
+    'chacha20-ietf-poly1305',
+    'aead_chacha20_poly1305',
+  };
+
+  /// Why the engine cannot build [cipher], or `null` when it can.
+  ///
+  /// A missing cipher is fine — the engine defaults it to `aes-256-gcm` — and
+  /// profiles occasionally spell the field `method`, which is why the caller
+  /// hands over both keys.
+  static String? _shadowsocksCipherProblem(Object? cipher) {
+    final value = cipher?.toString().trim().toLowerCase() ?? '';
+    if (value.isEmpty || _shadowsocksCiphers.contains(value)) {
+      return null;
+    }
+    if (value.startsWith('2022-blake3-')) {
+      return 'uses the Shadowsocks 2022 cipher "$value", which this engine '
+          'does not implement (SIP022 framing is a different wire protocol); '
+          'it builds the 2017 AEAD suite only.';
+    }
+    return 'names the Shadowsocks cipher "$value", which this engine cannot '
+        'build (supported: aes-256-gcm, aes-128-gcm, chacha20-ietf-poly1305).';
+  }
 
   /// Folds the option spellings that differ between profiles and the engine.
   ///

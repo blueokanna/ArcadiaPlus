@@ -1521,6 +1521,23 @@ class PlatformProxyService extends ChangeNotifier {
     return {'type': match.group(1)!, 'value': match.group(2)!.trim()};
   }
 
+  /// Whether a `ProxyEnable` value as `reg query` prints it means "on".
+  ///
+  /// `reg query` renders a `REG_DWORD` in hexadecimal — a proxy that is
+  /// switched on reads back as `0x1`, not `1` — and a value written by another
+  /// tool may arrive in either spelling. Comparing the text against `'1'`
+  /// alone read every enabled proxy as disabled, so the quick-actions card and
+  /// the network screen both said "disabled" while traffic was demonstrably
+  /// going through this app's own port.
+  static bool proxyEnableIsOn(String? raw) {
+    final text = (raw ?? '').trim().toLowerCase();
+    if (text.isEmpty) return false;
+    if (text.startsWith('0x')) {
+      return int.tryParse(text.substring(2), radix: 16) == 1;
+    }
+    return int.tryParse(text) == 1;
+  }
+
   /// Whether WinINET currently has a **usable** proxy switched on.
   ///
   /// `ProxyEnable=1` with no `ProxyServer` is a half-written setting: Windows
@@ -1530,7 +1547,7 @@ class PlatformProxyService extends ChangeNotifier {
   /// it is, but "on" must mean "traffic goes through a proxy".
   Future<bool> _readWindowsProxyEnabled() async {
     final enable = await _regQuery('ProxyEnable');
-    if (enable?['value'] != '1') return false;
+    if (!proxyEnableIsOn(enable?['value'])) return false;
     final server = (await _regQuery('ProxyServer'))?['value'];
     return server != null && server.trim().isNotEmpty;
   }

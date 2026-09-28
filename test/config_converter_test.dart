@@ -375,6 +375,74 @@ rules: []
     expect(optionsOf(group['options'])['outbounds'], ['ok-node']);
   });
 
+  test('a Shadowsocks 2022 node is dropped before it can fail the profile', () {
+    // The engine refuses these ciphers when it builds the outbound, and one
+    // refused outbound fails the whole config — so the converter must screen
+    // them, or a single node takes the entire subscription down at start-up.
+    const yaml = '''
+proxies:
+  - name: ss2022-node
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: 2022-blake3-aes-256-gcm
+    password: secret
+  - name: typo-node
+    type: ss
+    server: example.com
+    port: 8389
+    cipher: aes-256-gcm-mistyped
+    password: secret
+  - name: alias-node
+    type: ss
+    server: example.com
+    port: 8390
+    cipher: aead_chacha20_poly1305
+    password: secret
+  - name: method-node
+    type: ss
+    server: example.com
+    port: 8391
+    method: aes-128-gcm
+    password: secret
+  - name: default-node
+    type: ss
+    server: example.com
+    port: 8392
+    password: secret
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [ss2022-node, typo-node, alias-node, method-node, default-node]
+rules: []
+''';
+
+    final warnings = <String>[];
+    final converted = convert(yaml, onWarning: warnings.add);
+    final outbounds = converted['outbounds'] as List<dynamic>;
+    final tags = outbounds.map((o) => (o as Map)['tag']).toList();
+
+    expect(tags, isNot(contains('ss2022-node')));
+    expect(tags, isNot(contains('typo-node')));
+    expect(warnings.any((w) => w.contains('2022-blake3-aes-256-gcm')), isTrue);
+    expect(warnings.any((w) => w.contains('SIP022')), isTrue);
+    expect(warnings.any((w) => w.contains('aes-256-gcm-mistyped')), isTrue);
+
+    // The `aead_` alias, the `method` spelling and a missing cipher all
+    // reach the engine, which builds each of them.
+    expect(tags, contains('alias-node'));
+    expect(tags, contains('method-node'));
+    expect(tags, contains('default-node'));
+
+    final group =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'PROXY') as Map;
+    expect(optionsOf(group['options'])['outbounds'], [
+      'alias-node',
+      'method-node',
+      'default-node',
+    ]);
+  });
+
   test('the advertised protocol list covers every mapped outbound', () {
     expect(
       ConfigConverter.supportedProtocols,

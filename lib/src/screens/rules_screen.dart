@@ -7,9 +7,9 @@ import 'package:arcadiaplus/src/rust/types.dart';
 import 'package:arcadiaplus/src/services/rule_provider_service.dart';
 import 'package:arcadiaplus/src/theme/app_theme.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+import 'package:arcadiaplus/src/utils/navigation.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 /// The rule table as the engine sees it: a page of configured rules with
@@ -268,7 +268,7 @@ class _RulesScreenState extends State<RulesScreen> {
         title: Text(l10n?.rulesTitle ?? 'Rules'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/settings'),
+          onPressed: () => popOrGoSettings(context),
         ),
         actions: [
           IconButton(

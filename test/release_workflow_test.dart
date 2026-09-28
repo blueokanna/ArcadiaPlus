@@ -45,6 +45,24 @@ void main() {
       reason: 'the Android and HarmonyOS signing identities stay separate',
     );
     expect(source, contains(r'ArcadiaPlus-${TAG}-ohos-arm64-'));
+    // The HAP is asked for its own signature answer with the SDK tool, and a
+    // result that contradicts the file name is reported as a warning: the
+    // HarmonyOS job must never block a release (an unsigned HAP is the
+    // expected artifact when no signing secrets are configured, and none
+    // are required).
+    expect(source, contains('hap-sign-tool.jar'));
+    expect(source, contains('verify-app'));
+    expect(source, contains('signature: signed package, verified'));
+    expect(source, contains('::warning title=Signed HAP failed verification'));
+    expect(
+      source,
+      contains('::warning title=Unsigned label on a signed package'),
+    );
+    expect(
+      source,
+      isNot(contains('::error title=Signed HAP failed verification')),
+    );
+    expect(source, isNot(contains('::error title=Mislabeled HAP')));
     expect(
       source,
       contains('needs: [validate, android, windows, macos, linux, ohos]'),

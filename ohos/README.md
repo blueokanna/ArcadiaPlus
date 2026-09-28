@@ -177,16 +177,21 @@ HarmonyOS NEXT 真机。
 随后依次是 `ohos/scripts/build-rust-ohos.sh` 与 `flutter build hap --release [--no-codesign]`，
 收尾用 `unzip -l` 断言 HAP 内确实含有
 `libs/arm64-v8a/{libapp.so,librust_lib_arcadiaplus.so,libarcadia_core.so}`，
-避免出现「构建绿但包是空壳」。发布作业在配置了 `ARCADIAPLUS_OHOS_*` secrets 时输出**签名** HAP
-（`app.p12` / `app.cer` / `app.p7b` + 口令），未配置时输出 `-unsigned.hap` 并给出告警：
-未签名 HAP 无法安装到真机，这是可预期的中间态。
+避免出现「构建绿但包是空壳」；再用 SDK 的 `hap-sign-tool.jar verify-app` 把产物的真实签名
+状态查出来、与文件名对照。**结果只记录与告警，从不拦截发布**：本仓库不要求配置任何
+secrets，预期的发布产物就是 `-unsigned.hap`；名字与实情不一致会在 Actions 里留下
+一条 warning 注解，供需要时定位。发布作业在配置了 `ARCADIAPLUS_OHOS_*` secrets 时
+输出**签名** HAP（`app.p12` / `app.cer` / `app.p7b` + 口令），未配置时输出
+`-unsigned.hap`：未签名 HAP 装不进真机，需要装机时按本文档在本地签一次即可
+（调试 Profile 仍是设备白名单，装机范围有限——这是一条可选路径，不影响发布）。
 
 两个作业都把两个下载缓存到 `$RUNNER_TEMP/ohos-downloads`；缓存键包含版本与 SDK
 校验和，命中即免下载（命中后仍会再次校验 SHA-256）。
 
-### 签名材料（`ARCADIAPLUS_OHOS_*` secrets）
+### 签名材料（`ARCADIAPLUS_OHOS_*` secrets，可选）
 
-发布作业需要三件套与三枚凭据，全部来自 DevEco 的签名配置，以 base64 形式存进仓库 Secrets：
+不配置任何 secrets 也能正常发版（产物就是 `-unsigned.hap`）。想让发布直接带**已签名**
+HAP 时，再准备以下三件套与三枚凭据，全部来自 DevEco 的签名配置，以 base64 形式存进仓库 Secrets：
 
 | Secret | 内容 |
 |--------|------|
@@ -240,23 +245,40 @@ HarmonyOS NEXT 真机。
 未签名 HAP 有两个现成来源（不必在本地准备 Flutter-OHOS 工具链）：**CI**——每次 push 后，
 Actions 的 `ohos` 作业会把 `ArcadiaPlus-ci-ohos-arm64-unsigned.hap` 作为产物上传；
 **Release**——未配置 `ARCADIAPLUS_OHOS_*` secrets 时，发布会直接附带
-`ArcadiaPlus-<tag>-ohos-arm64-unsigned.hap`。未签名的 HAP 任何设备都装不了，先用签名材料
-（DevEco **自动签名**即可产出，见上文）和 SDK 的 `hap-sign-tool.jar` 在本地签一次：
+`ArcadiaPlus-<tag>-ohos-arm64-unsigned.hap`。未签名的 HAP 任何设备都装不了，用
+`sign-hap.ps1` 在本地签一次即可——它会自己找到 `hap-sign-tool.jar` 与 DevEco 的 JBR，
+读取 `build-profile.json5` 里 DevEco 写下的材料，签名后立刻用 `verify-app` 验证成品：
 
 ```powershell
-java -jar "<DevEco SDK>\default\openharmony\toolchains\lib\hap-sign-tool.jar" sign-app `
-  -mode localSign -signAlg SHA256withECDSA `
-  -keystoreFile app.p12 -keystorePwd <storePassword> -keyAlias <keyAlias> -keyPwd <keyPassword> `
-  -appCertFile app.cer -profileFile app.p7b `
-  -inFile ArcadiaPlus-ci-ohos-arm64-unsigned.hap -outFile ArcadiaPlus-signed.hap
+powershell -ExecutionPolicy Bypass -File ohos/scripts/sign-hap.ps1 `
+  -Hap ArcadiaPlus-v1.0.5-ohos-arm64-unsigned.hap
 ```
 
-`hap-sign-tool.jar` 在 DevEco SDK 的 `toolchains/lib` 下（找不到时就在 toolchains 目录里
-搜这个文件名）；`java` 用 DevEco 自带的 JBR（`<DevEco 安装目录>\jbr\bin\java.exe`）。
-试签通过说明材料与口令自洽，随后 `hdc install ArcadiaPlus-signed.hap` 即可装机
-（调试 Profile 只接受其登记过的设备——自动签名时连接设备即自动登记）。
+材料不在 `build-profile.json5` 里（或文件被还原成空 `signingConfigs`）时，显式传
+`-Keystore/-Cert/-Profile/-KeystorePassword/-KeyAlias/-KeyPassword` 六个参数，内容见
+上一节表格。验证通过说明材料与口令自洽，随后 `hdc install <…-signed.hap>` 即可装机
+（调试 Profile 只接受其登记过的设备——DevEco 自动签名时连接设备即自动登记）。
 
 ## 常见问题
+
+**Q：安装 HAP 提示「解析安装包出现问题」？**
+A：系统对"签名不可用"的包统一只回这一句，按顺序排查（`hdc install <hap>` 给出的错误码
+比点按安装具体，优先用它）：
+
+1. **文件名是 `-unsigned.hap`**：未签名的包任何设备都装不了，先用上文
+   `sign-hap.ps1` 签一次；脚本与 CI 的 `verify-app` 都能在装机前证明签名真的在包里，
+   不必靠设备报错猜。
+2. **签过名但设备不在白名单**：调试 Profile 是设备清单，未登记的整机拒装。
+   在 AGC「设备管理」添加该设备 UDID、重新下载 `.p7b`，再替换
+   `ARCADIAPLUS_OHOS_PROFILE_BASE64`（或本地用新 `.p7b` 重签一次）——
+   换了 Profile 必须重签，旧包不会因为换了 secrets 就生效。
+3. **材料与包不匹配**：密钥/证书/Profile 必须都来自 bundle name
+   `com.blueokanna.arcadiaplus` 这一个应用；拿错别的应用的三件套、或手改过
+   `app.json5` 的 bundleName，都会被拒。
+4. **设备系统版本过低**：`compatibleSdkVersion` 是 `5.1.0(18)`，低于 API 18 的设备
+   装不上（通常报兼容性错误，一并核对）。
+5. **下载损坏**：用 Release 页 `SHA256SUMS` 核对
+   （`certutil -hashfile <file> SHA256`）。
 
 **Q：DevEco 提示不识别 `"type": "vpn"`？**
 A：旧版工具链需在 SDK 的 `toolchains/modulecheck/module.json` 中为 extensionAbilities

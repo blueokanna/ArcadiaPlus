@@ -3,10 +3,10 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:arcadiaplus/src/providers/wallpaper_provider.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
 import 'package:arcadiaplus/src/theme/app_theme.dart';
+import 'package:arcadiaplus/src/utils/navigation.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
 import 'package:arcadiaplus/src/widgets/wallpaper_backdrop.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
@@ -28,7 +28,7 @@ class WallpaperScreen extends StatelessWidget {
         title: Text(l10n?.wallpaperScreenTitle ?? 'Wallpaper and appearance'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/settings'),
+          onPressed: () => popOrGoSettings(context),
         ),
       ),
       body: Consumer<WallpaperProvider>(

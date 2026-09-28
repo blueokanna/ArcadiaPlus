@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:go_router/go_router.dart';
 import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
 import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
+import 'package:arcadiaplus/src/utils/navigation.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
@@ -28,7 +28,7 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
             title: Text(l10n?.basicConfig ?? 'Basic Config'),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back),
-              onPressed: () => context.go('/settings'),
+              onPressed: () => popOrGoSettings(context),
             ),
           ),
           body: ListView(
