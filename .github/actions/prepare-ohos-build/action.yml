@@ -110,8 +110,12 @@ runs:
             count=1,
             flags=re.M,
         )
+        # The bound is written with single or double quotes depending on who
+        # last touched the file — YAML treats them alike, and an editor that
+        # flips them must not take the whole job down — so the pattern
+        # accepts either spelling of the same line.
         text, flutter_hits = re.subn(
-            r"^  flutter: '[^']*'.*$",
+            r"""^  flutter: (?:'[^']*'|"[^"]*").*$""",
             f"  flutter: '>={framework}'",
             text,
             count=1,
@@ -119,7 +123,10 @@ runs:
         )
         if sdk_hits != 1 or flutter_hits != 1:
             raise SystemExit(
-                f"pubspec.yaml did not look as expected (sdk={sdk_hits}, flutter={flutter_hits})"
+                "pubspec.yaml did not look as expected "
+                f"(environment.sdk={sdk_hits}, environment.flutter={flutter_hits}: "
+                "each bound must match exactly one line, and the flutter bound "
+                "must be quoted with ' or \")"
             )
         open(path, "w", encoding="utf-8").write(text)
         PY

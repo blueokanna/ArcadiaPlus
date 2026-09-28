@@ -174,6 +174,12 @@ void main() {
       expect(prepare, contains('OHOS targetSdkVersion reappeared'));
       expect(prepare, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
       expect(setup, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
+
+      // The pubspec rewrite must tolerate either YAML quote style: the bound
+      // has been written both ways, and a pattern pinned to one spelling
+      // failed the whole job (sdk=1, flutter=0) as soon as the file moved
+      // to double quotes.
+      expect(prepare, contains("""(?:'[^']*'|"[^"]*")"""));
     },
   );
 
