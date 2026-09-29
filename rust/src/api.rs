@@ -589,13 +589,17 @@ pub async fn ensure_wintun_dll() -> std::result::Result<String, String> {
 }
 
 #[frb]
-pub async fn enable_uwp_loopback() -> std::result::Result<bool, String> {
-    run(|| engine::api::enable_uwp_loopback()).await
+pub async fn list_uwp_loopback() -> std::result::Result<Vec<UwpLoopbackEntry>, String> {
+    run(|| {
+        engine::api::list_uwp_loopback()
+            .map(|entries| entries.into_iter().map(UwpLoopbackEntry::from).collect())
+    })
+    .await
 }
 
 #[frb]
-pub async fn open_uwp_loopback_utility() -> std::result::Result<bool, String> {
-    run(|| engine::api::open_uwp_loopback_utility()).await
+pub async fn set_uwp_loopback(family: String, exempt: bool) -> std::result::Result<(), String> {
+    run(move || engine::api::set_uwp_loopback(&family, exempt)).await
 }
 
 // ============== Platform proxy mode ==============

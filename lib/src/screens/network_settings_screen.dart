@@ -8,7 +8,7 @@ import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
 import 'package:arcadiaplus/src/utils/navigation.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
-import 'package:arcadiaplus/src/rust/api.dart' as api;
+import 'package:arcadiaplus/src/widgets/uwp_loopback_dialog.dart';
 
 class NetworkSettingsScreen extends StatefulWidget {
   const NetworkSettingsScreen({super.key});
@@ -20,7 +20,6 @@ class NetworkSettingsScreen extends StatefulWidget {
 class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
   final TextEditingController _bypassDomainsController =
       TextEditingController();
-  bool _isLoadingUwp = false;
 
   /// Both switches write a route to the local mixed port, and the platform can
   /// take a moment over it. Without this a second tap would race the first one
@@ -325,25 +324,14 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                           l10n?.uwpLoopbackTool ?? 'UWP Loopback Tool',
                         ),
                         subtitle: Text(
-                          l10n?.uwpLoopbackToolDesc ??
-                              'Open AppContainer loopback exemption tool',
+                          l10n?.uwpLoopbackToolDesc ?? 'Allow AppContainer apps to reach the local proxy',
                         ),
                         leading: Icon(
                           Icons.build_outlined,
                           color: colorScheme.primary,
                         ),
-                        trailing: _isLoadingUwp
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.open_in_new),
-                        onTap: _isLoadingUwp
-                            ? null
-                            : () => _openUwpLoopbackTool(context),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => UwpLoopbackDialog.show(context),
                       ),
                     ],
                   ),
@@ -527,60 +515,6 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
       );
     } finally {
       if (mounted) setState(() => _isApplyingTun = false);
-    }
-  }
-
-  Future<void> _openUwpLoopbackTool(BuildContext context) async {
-    setState(() => _isLoadingUwp = true);
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final errorColor = Theme.of(context).colorScheme.error;
-    final l10n = AppLocalizations.of(context);
-
-    try {
-      final result = await api.openUwpLoopbackUtility();
-      if (mounted) {
-        if (result) {
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text(l10n?.uwpToolOpened ?? 'UWP loopback tool opened'),
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
-        } else {
-          scaffoldMessenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                l10n?.uwpToolFailed ?? 'Failed to open UWP loopback tool, please try running as administrator',
-              ),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: errorColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text('${l10n?.error ?? 'Error'}: $e'),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: errorColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingUwp = false);
-      }
     }
   }
 }

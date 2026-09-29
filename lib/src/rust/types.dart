@@ -202,11 +202,6 @@ class DnsConfigDto {
   final int fakeIpTtl;
 
   /// How many static `hosts` entries are in effect.
-  ///
-  /// The entries themselves stay in the engine: a UI needs the count, and a
-  /// hosts block can run to thousands of lines. A count of hosts or of cache
-  /// slots cannot approach `u32::MAX`, and the narrower type keeps it a plain
-  /// Dart `int` instead of the `BigInt` every byte counter needs.
   final int hostCount;
   final bool useHosts;
 
@@ -696,10 +691,7 @@ class RuleWindowDto {
   /// Index of the first rule in [`RuleWindowDto::rules`].
   final int offset;
 
-  /// Hit counts summed over the whole table. The rows of one window cannot
-  /// answer "how many matches happened in total", and a diagnostic that
-  /// silently reported only the loaded rows would be wrong rather than
-  /// partial.
+  /// Hit counts summed over the whole table.
   final BigInt totalMatches;
 
   /// The requested slice, in configuration order.
@@ -874,4 +866,34 @@ class TunStatus {
           interfaceName == other.interfaceName &&
           mtu == other.mtu &&
           error == other.error;
+}
+
+/// One AppContainer package's UWP loopback exemption state.
+class UwpLoopbackEntry {
+  /// Package identity name, e.g. `Microsoft.WindowsCalculator`.
+  final String name;
+
+  /// Package family name, the identity the exemption is stored under.
+  final String family;
+
+  /// Whether the AppContainer may currently reach loopback.
+  final bool exempt;
+
+  const UwpLoopbackEntry({
+    required this.name,
+    required this.family,
+    required this.exempt,
+  });
+
+  @override
+  int get hashCode => name.hashCode ^ family.hashCode ^ exempt.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UwpLoopbackEntry &&
+          runtimeType == other.runtimeType &&
+          name == other.name &&
+          family == other.family &&
+          exempt == other.exempt;
 }

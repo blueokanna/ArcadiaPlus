@@ -263,9 +263,7 @@ dependencies = [
 
 [[package]]
 name = "corduit"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2936fdf2b335003dcccf289422036f17d9791a6ddb978acce3d5b8c28a463bc2"
+version = "0.2.6"
 dependencies = [
  "bitflags 2.13.2",
  "bytes",

@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 2122262403;
+  int get rustContentHash => -998977709;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -102,8 +102,6 @@ abstract class RustLibApi extends BaseApi {
   Future<TunStatus> crateApiEnableTunMode();
 
   Future<TunStatus> crateApiEnableTunModeWithMode({required String mode});
-
-  Future<bool> crateApiEnableUwpLoopback();
 
   Future<String> crateApiEnsureWintunDll();
 
@@ -176,7 +174,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<bool> crateApiIsWintunAvailable();
 
-  Future<bool> crateApiOpenUwpLoopbackUtility();
+  Future<List<UwpLoopbackEntry>> crateApiListUwpLoopback();
 
   Future<void> crateApiReloadConfigFromFile({required String configPath});
 
@@ -210,6 +208,11 @@ abstract class RustLibApi extends BaseApi {
   Future<void> crateApiSetProtectSocketCallbackEnabled({required bool enabled});
 
   Future<void> crateApiSetProxyMode({required int mode});
+
+  Future<void> crateApiSetUwpLoopback({
+    required String family,
+    required bool exempt,
+  });
 
   Future<void> crateApiSetVpnFd({required int fd});
 
@@ -533,27 +536,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         debugName: "enable_tun_mode_with_mode",
         argNames: ["mode"],
       );
-
-  @override
-  Future<bool> crateApiEnableUwpLoopback() {
-    return handler.executeNormal(
-      NormalTask(
-        callFfi: (port_) {
-          return wire.wire__crate__api__enable_uwp_loopback(port_);
-        },
-        codec: DcoCodec(
-          decodeSuccessData: dco_decode_bool,
-          decodeErrorData: dco_decode_String,
-        ),
-        constMeta: kCrateApiEnableUwpLoopbackConstMeta,
-        argValues: [],
-        apiImpl: this,
-      ),
-    );
-  }
-
-  TaskConstMeta get kCrateApiEnableUwpLoopbackConstMeta =>
-      const TaskConstMeta(debugName: "enable_uwp_loopback", argNames: []);
 
   @override
   Future<String> crateApiEnsureWintunDll() {
@@ -1281,25 +1263,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       const TaskConstMeta(debugName: "is_wintun_available", argNames: []);
 
   @override
-  Future<bool> crateApiOpenUwpLoopbackUtility() {
+  Future<List<UwpLoopbackEntry>> crateApiListUwpLoopback() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
-          return wire.wire__crate__api__open_uwp_loopback_utility(port_);
+          return wire.wire__crate__api__list_uwp_loopback(port_);
         },
         codec: DcoCodec(
-          decodeSuccessData: dco_decode_bool,
+          decodeSuccessData: dco_decode_list_uwp_loopback_entry,
           decodeErrorData: dco_decode_String,
         ),
-        constMeta: kCrateApiOpenUwpLoopbackUtilityConstMeta,
+        constMeta: kCrateApiListUwpLoopbackConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiOpenUwpLoopbackUtilityConstMeta =>
-      const TaskConstMeta(debugName: "open_uwp_loopback_utility", argNames: []);
+  TaskConstMeta get kCrateApiListUwpLoopbackConstMeta =>
+      const TaskConstMeta(debugName: "list_uwp_loopback", argNames: []);
 
   @override
   Future<void> crateApiReloadConfigFromFile({required String configPath}) {
@@ -1608,6 +1590,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiSetProxyModeConstMeta =>
       const TaskConstMeta(debugName: "set_proxy_mode", argNames: ["mode"]);
+
+  @override
+  Future<void> crateApiSetUwpLoopback({
+    required String family,
+    required bool exempt,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          var arg0 = cst_encode_String(family);
+          var arg1 = cst_encode_bool(exempt);
+          return wire.wire__crate__api__set_uwp_loopback(port_, arg0, arg1);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiSetUwpLoopbackConstMeta,
+        argValues: [family, exempt],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSetUwpLoopbackConstMeta => const TaskConstMeta(
+    debugName: "set_uwp_loopback",
+    argNames: ["family", "exempt"],
+  );
 
   @override
   Future<void> crateApiSetVpnFd({required int fd}) {
@@ -2588,6 +2598,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<UwpLoopbackEntry> dco_decode_list_uwp_loopback_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_uwp_loopback_entry).toList();
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
@@ -2887,6 +2903,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void dco_decode_unit(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return;
+  }
+
+  @protected
+  UwpLoopbackEntry dco_decode_uwp_loopback_entry(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return UwpLoopbackEntry(
+      name: dco_decode_String(arr[0]),
+      family: dco_decode_String(arr[1]),
+      exempt: dco_decode_bool(arr[2]),
+    );
   }
 
   @protected
@@ -3307,6 +3336,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<UwpLoopbackEntry> sse_decode_list_uwp_loopback_entry(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <UwpLoopbackEntry>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_uwp_loopback_entry(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -3646,6 +3689,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_decode_unit(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  UwpLoopbackEntry sse_decode_uwp_loopback_entry(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_name = sse_decode_String(deserializer);
+    var var_family = sse_decode_String(deserializer);
+    var var_exempt = sse_decode_bool(deserializer);
+    return UwpLoopbackEntry(
+      name: var_name,
+      family: var_family,
+      exempt: var_exempt,
+    );
   }
 
   @protected
@@ -4017,6 +4073,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_uwp_loopback_entry(
+    List<UwpLoopbackEntry> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_uwp_loopback_entry(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -4282,5 +4350,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   void sse_encode_unit(void self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_uwp_loopback_entry(
+    UwpLoopbackEntry self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.name, serializer);
+    sse_encode_String(self.family, serializer);
+    sse_encode_bool(self.exempt, serializer);
   }
 }

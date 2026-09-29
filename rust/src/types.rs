@@ -102,6 +102,18 @@ pub struct TunStatus {
     pub error: Option<String>,
 }
 
+/// One AppContainer package's UWP loopback exemption state.
+#[frb]
+#[derive(Debug, Clone)]
+pub struct UwpLoopbackEntry {
+    /// Package identity name, e.g. `Microsoft.WindowsCalculator`.
+    pub name: String,
+    /// Package family name, the identity the exemption is stored under.
+    pub family: String,
+    /// Whether the AppContainer may currently reach loopback.
+    pub exempt: bool,
+}
+
 /// Traffic statistics DTO.
 #[frb]
 #[derive(Debug, Clone)]
@@ -414,6 +426,16 @@ impl From<engine::TunStatus> for TunStatus {
             interface_name: value.interface_name,
             mtu: value.mtu,
             error: value.error,
+        }
+    }
+}
+
+impl From<engine::UwpLoopbackEntry> for UwpLoopbackEntry {
+    fn from(value: engine::UwpLoopbackEntry) -> Self {
+        Self {
+            name: value.name,
+            family: value.family,
+            exempt: value.exempt,
         }
     }
 }

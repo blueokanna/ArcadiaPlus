@@ -116,6 +116,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<RuleDto> dco_decode_list_rule_dto(dynamic raw);
 
   @protected
+  List<UwpLoopbackEntry> dco_decode_list_uwp_loopback_entry(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -198,6 +201,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  UwpLoopbackEntry dco_decode_uwp_loopback_entry(dynamic raw);
 
   @protected
   Map<String, List<String>> sse_decode_Map_String_list_String_None(
@@ -316,6 +322,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<RuleDto> sse_decode_list_rule_dto(SseDeserializer deserializer);
 
   @protected
+  List<UwpLoopbackEntry> sse_decode_list_uwp_loopback_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -404,6 +415,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  UwpLoopbackEntry sse_decode_uwp_loopback_entry(SseDeserializer deserializer);
 
   @protected
   ffi.Pointer<wire_cst_list_record_string_list_string>
@@ -581,6 +595,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     final ans = wire.cst_new_list_rule_dto(raw.length);
     for (var i = 0; i < raw.length; ++i) {
       cst_api_fill_to_wire_rule_dto(raw[i], ans.ref.ptr[i]);
+    }
+    return ans;
+  }
+
+  @protected
+  ffi.Pointer<wire_cst_list_uwp_loopback_entry>
+  cst_encode_list_uwp_loopback_entry(List<UwpLoopbackEntry> raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    final ans = wire.cst_new_list_uwp_loopback_entry(raw.length);
+    for (var i = 0; i < raw.length; ++i) {
+      cst_api_fill_to_wire_uwp_loopback_entry(raw[i], ans.ref.ptr[i]);
     }
     return ans;
   }
@@ -943,6 +968,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  void cst_api_fill_to_wire_uwp_loopback_entry(
+    UwpLoopbackEntry apiObj,
+    wire_cst_uwp_loopback_entry wireObj,
+  ) {
+    wireObj.name = cst_encode_String(apiObj.name);
+    wireObj.family = cst_encode_String(apiObj.family);
+    wireObj.exempt = cst_encode_bool(apiObj.exempt);
+  }
+
+  @protected
   bool cst_encode_bool(bool raw);
 
   @protected
@@ -1105,6 +1140,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_rule_dto(List<RuleDto> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_uwp_loopback_entry(
+    List<UwpLoopbackEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
@@ -1211,6 +1252,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_uwp_loopback_entry(
+    UwpLoopbackEntry self,
+    SseSerializer serializer,
+  );
 }
 
 // Section: wire_class
@@ -1555,6 +1602,24 @@ class RustLibWire implements BaseWire {
   late final _cst_new_list_rule_dto = _cst_new_list_rule_dtoPtr
       .asFunction<ffi.Pointer<wire_cst_list_rule_dto> Function(int)>();
 
+  ffi.Pointer<wire_cst_list_uwp_loopback_entry> cst_new_list_uwp_loopback_entry(
+    int len,
+  ) {
+    return _cst_new_list_uwp_loopback_entry(len);
+  }
+
+  late final _cst_new_list_uwp_loopback_entryPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_uwp_loopback_entry> Function(ffi.Int32)
+        >
+      >('frbgen_arcadiaplus_cst_new_list_uwp_loopback_entry');
+  late final _cst_new_list_uwp_loopback_entry =
+      _cst_new_list_uwp_loopback_entryPtr
+          .asFunction<
+            ffi.Pointer<wire_cst_list_uwp_loopback_entry> Function(int)
+          >();
+
   int dummy_method_to_enforce_bundling() {
     return _dummy_method_to_enforce_bundling();
   }
@@ -1733,18 +1798,6 @@ class RustLibWire implements BaseWire {
           .asFunction<
             void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>)
           >();
-
-  void wire__crate__api__enable_uwp_loopback(int port_) {
-    return _wire__crate__api__enable_uwp_loopback(port_);
-  }
-
-  late final _wire__crate__api__enable_uwp_loopbackPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadiaplus_wire__crate__api__enable_uwp_loopback',
-      );
-  late final _wire__crate__api__enable_uwp_loopback =
-      _wire__crate__api__enable_uwp_loopbackPtr
-          .asFunction<void Function(int)>();
 
   void wire__crate__api__ensure_wintun_dll(int port_) {
     return _wire__crate__api__ensure_wintun_dll(port_);
@@ -2154,17 +2207,16 @@ class RustLibWire implements BaseWire {
       _wire__crate__api__is_wintun_availablePtr
           .asFunction<void Function(int)>();
 
-  void wire__crate__api__open_uwp_loopback_utility(int port_) {
-    return _wire__crate__api__open_uwp_loopback_utility(port_);
+  void wire__crate__api__list_uwp_loopback(int port_) {
+    return _wire__crate__api__list_uwp_loopback(port_);
   }
 
-  late final _wire__crate__api__open_uwp_loopback_utilityPtr =
+  late final _wire__crate__api__list_uwp_loopbackPtr =
       _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
-        'frbgen_arcadiaplus_wire__crate__api__open_uwp_loopback_utility',
+        'frbgen_arcadiaplus_wire__crate__api__list_uwp_loopback',
       );
-  late final _wire__crate__api__open_uwp_loopback_utility =
-      _wire__crate__api__open_uwp_loopback_utilityPtr
-          .asFunction<void Function(int)>();
+  late final _wire__crate__api__list_uwp_loopback =
+      _wire__crate__api__list_uwp_loopbackPtr.asFunction<void Function(int)>();
 
   void wire__crate__api__reload_config_from_file(
     int port_,
@@ -2423,6 +2475,30 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__api__set_proxy_mode =
       _wire__crate__api__set_proxy_modePtr
           .asFunction<void Function(int, int)>();
+
+  void wire__crate__api__set_uwp_loopback(
+    int port_,
+    ffi.Pointer<wire_cst_list_prim_u_8_strict> family,
+    bool exempt,
+  ) {
+    return _wire__crate__api__set_uwp_loopback(port_, family, exempt);
+  }
+
+  late final _wire__crate__api__set_uwp_loopbackPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Void Function(
+            ffi.Int64,
+            ffi.Pointer<wire_cst_list_prim_u_8_strict>,
+            ffi.Bool,
+          )
+        >
+      >('frbgen_arcadiaplus_wire__crate__api__set_uwp_loopback');
+  late final _wire__crate__api__set_uwp_loopback =
+      _wire__crate__api__set_uwp_loopbackPtr
+          .asFunction<
+            void Function(int, ffi.Pointer<wire_cst_list_prim_u_8_strict>, bool)
+          >();
 
   void wire__crate__api__set_vpn_fd(int port_, int fd) {
     return _wire__crate__api__set_vpn_fd(port_, fd);
@@ -3491,6 +3567,21 @@ final class wire_cst_list_rule_dto extends ffi.Struct {
     ..ref.len = len;
 }
 
+final class wire_cst_list_uwp_loopback_entry extends ffi.Struct {
+  external ffi.Pointer<wire_cst_uwp_loopback_entry> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_uwp_loopback_entry> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_uwp_loopback_entry> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_uwp_loopback_entry>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
 final class wire_cst_proxy_group_dto extends ffi.Struct {
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> tag;
 
@@ -3918,4 +4009,23 @@ final class wire_cst_tun_status extends ffi.Struct {
     ..ref.interface_name = interface_name
     ..ref.mtu = mtu
     ..ref.error = error;
+}
+
+final class wire_cst_uwp_loopback_entry extends ffi.Struct {
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> name;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> family;
+
+  @ffi.Bool()
+  external bool exempt;
+
+  static ffi.Pointer<wire_cst_uwp_loopback_entry> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> name,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> family,
+    required bool exempt,
+  }) => $allocator<wire_cst_uwp_loopback_entry>()
+    ..ref.name = name
+    ..ref.family = family
+    ..ref.exempt = exempt;
 }

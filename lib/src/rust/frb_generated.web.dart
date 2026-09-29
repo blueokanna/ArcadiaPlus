@@ -118,6 +118,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<RuleDto> dco_decode_list_rule_dto(dynamic raw);
 
   @protected
+  List<UwpLoopbackEntry> dco_decode_list_uwp_loopback_entry(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
@@ -200,6 +203,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void dco_decode_unit(dynamic raw);
+
+  @protected
+  UwpLoopbackEntry dco_decode_uwp_loopback_entry(dynamic raw);
 
   @protected
   Map<String, List<String>> sse_decode_Map_String_list_String_None(
@@ -318,6 +324,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<RuleDto> sse_decode_list_rule_dto(SseDeserializer deserializer);
 
   @protected
+  List<UwpLoopbackEntry> sse_decode_list_uwp_loopback_entry(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
@@ -406,6 +417,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_decode_unit(SseDeserializer deserializer);
+
+  @protected
+  UwpLoopbackEntry sse_decode_uwp_loopback_entry(SseDeserializer deserializer);
 
   @protected
   JSAny cst_encode_Map_String_list_String_None(Map<String, List<String>> raw) {
@@ -648,6 +662,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  JSAny cst_encode_list_uwp_loopback_entry(List<UwpLoopbackEntry> raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return raw.map(cst_encode_uwp_loopback_entry).toList().jsify()!;
+  }
+
+  @protected
   String? cst_encode_opt_String(String? raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return raw == null ? null : cst_encode_String(raw);
@@ -872,6 +892,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  JSAny cst_encode_uwp_loopback_entry(UwpLoopbackEntry raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_String(raw.name),
+      cst_encode_String(raw.family),
+      cst_encode_bool(raw.exempt),
+    ].jsify()!;
+  }
+
+  @protected
   bool cst_encode_bool(bool raw);
 
   @protected
@@ -1034,6 +1064,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_rule_dto(List<RuleDto> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_uwp_loopback_entry(
+    List<UwpLoopbackEntry> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
@@ -1140,6 +1176,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_unit(void self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_uwp_loopback_entry(
+    UwpLoopbackEntry self,
+    SseSerializer serializer,
+  );
 }
 
 // Section: wire_class
@@ -1187,9 +1229,6 @@ class RustLibWire implements BaseWire {
     NativePortType port_,
     String mode,
   ) => wasmModule.wire__crate__api__enable_tun_mode_with_mode(port_, mode);
-
-  void wire__crate__api__enable_uwp_loopback(NativePortType port_) =>
-      wasmModule.wire__crate__api__enable_uwp_loopback(port_);
 
   void wire__crate__api__ensure_wintun_dll(NativePortType port_) =>
       wasmModule.wire__crate__api__ensure_wintun_dll(port_);
@@ -1306,8 +1345,8 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__is_wintun_available(NativePortType port_) =>
       wasmModule.wire__crate__api__is_wintun_available(port_);
 
-  void wire__crate__api__open_uwp_loopback_utility(NativePortType port_) =>
-      wasmModule.wire__crate__api__open_uwp_loopback_utility(port_);
+  void wire__crate__api__list_uwp_loopback(NativePortType port_) =>
+      wasmModule.wire__crate__api__list_uwp_loopback(port_);
 
   void wire__crate__api__reload_config_from_file(
     NativePortType port_,
@@ -1372,6 +1411,12 @@ class RustLibWire implements BaseWire {
 
   void wire__crate__api__set_proxy_mode(NativePortType port_, int mode) =>
       wasmModule.wire__crate__api__set_proxy_mode(port_, mode);
+
+  void wire__crate__api__set_uwp_loopback(
+    NativePortType port_,
+    String family,
+    bool exempt,
+  ) => wasmModule.wire__crate__api__set_uwp_loopback(port_, family, exempt);
 
   void wire__crate__api__set_vpn_fd(NativePortType port_, int fd) =>
       wasmModule.wire__crate__api__set_vpn_fd(port_, fd);
@@ -1589,8 +1634,6 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
     String mode,
   );
 
-  external void wire__crate__api__enable_uwp_loopback(NativePortType port_);
-
   external void wire__crate__api__ensure_wintun_dll(NativePortType port_);
 
   external void wire__crate__api__get_active_connections(NativePortType port_);
@@ -1674,9 +1717,7 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void wire__crate__api__is_wintun_available(NativePortType port_);
 
-  external void wire__crate__api__open_uwp_loopback_utility(
-    NativePortType port_,
-  );
+  external void wire__crate__api__list_uwp_loopback(NativePortType port_);
 
   external void wire__crate__api__reload_config_from_file(
     NativePortType port_,
@@ -1739,6 +1780,12 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__api__set_proxy_mode(
     NativePortType port_,
     int mode,
+  );
+
+  external void wire__crate__api__set_uwp_loopback(
+    NativePortType port_,
+    String family,
+    bool exempt,
   );
 
   external void wire__crate__api__set_vpn_fd(NativePortType port_, int fd);

@@ -897,18 +897,20 @@ class ConfigConverter {
 
         // A Shadowsocks node whose `plugin` is set speaks a different wire
         // than plain ss: obfs, v2ray-plugin and shadow-tls all shape the
-        // stream the server expects to receive. The engine has no plugin
-        // transport, and dialling such a node as plain Shadowsocks produces
-        // one that connects and then fails every request — refusing it here,
-        // with the plugin named, is the only honest option.
+        // stream the server expects to receive. The engine implements those
+        // three (SIP003 plus its own shadow-tls client); anything else is
+        // refused here by name, because dialling it as plain Shadowsocks
+        // connects and then fails every request.
         if (mappedType == 'shadowsocks') {
-          final plugin = proxyMap['plugin']?.toString().trim() ?? '';
-          if (plugin.isNotEmpty) {
+          final plugin =
+              proxyMap['plugin']?.toString().trim().toLowerCase() ?? '';
+          if (plugin.isNotEmpty && !_shadowsocksPlugins.contains(plugin)) {
             dropped.add(name);
             onWarning?.call(
-              'Proxy "$name" requests the Shadowsocks plugin "$plugin"; the '
-              'engine does not implement plugin transports, so the node was '
-              'dropped instead of being dialled as plain Shadowsocks.',
+              'Proxy "$name" requests the Shadowsocks plugin "$plugin", '
+              'which this engine does not implement; the node was dropped. '
+              'Implemented plugins: obfs (simple-obfs), v2ray-plugin '
+              '(websocket), shadow-tls (v3).',
             );
             continue;
           }
@@ -1047,10 +1049,9 @@ class ConfigConverter {
   ///
   /// Types corduit has no way to build (`ssh`, `shadowquic`, `naive`, ...)
   /// are simply absent, which is what makes [_mapProxyType] return `null`.
-  /// A Shadowsocks node carrying a `plugin` is a separate case: the type maps,
-  /// but the wire does not, and [_extractOutbounds] refuses it by name rather
-  /// than dialling it as plain Shadowsocks. Order is the order protocols are
-  /// listed in.
+  /// A Shadowsocks node carrying a `plugin` stays mapped: the plugin is a
+  /// separate axis, and [_shadowsocksPlugins] decides which of them the
+  /// engine can actually speak. Order is the order protocols are listed in.
   static const Map<String, String> proxyTypeMapping = {
     'ss': 'shadowsocks',
     'shadowsocks': 'shadowsocks',
@@ -1098,6 +1099,22 @@ class ConfigConverter {
   /// `shadowquic`, `naive`, ...); such a node is dropped from the outbound
   /// list and every reference to it is rewritten.
   static String? _mapProxyType(String clashType) => proxyTypeMapping[clashType];
+
+  /// The SIP003 plugins the engine builds, as profiles spell them.
+  ///
+  /// The list mirrors `corduit`'s `sip003::Plugin::parse`: `obfs` covers
+  /// simple-obfs under all three of its names, `v2ray-plugin` is implemented
+  /// in its websocket mode, and `shadow-tls` in version 3. A plugin outside
+  /// this list fails the whole profile at engine start, so the converter
+  /// screens it here, where one node can be dropped with its reason while
+  /// the rest of the profile stays usable.
+  static const Set<String> _shadowsocksPlugins = {
+    'obfs',
+    'simple-obfs',
+    'obfs-local',
+    'v2ray-plugin',
+    'shadow-tls',
+  };
 
   /// The Shadowsocks ciphers the engine builds: the 2017 AEAD suite, in both
   /// its plain and its `aead_` spelling. The engine folds the name's case

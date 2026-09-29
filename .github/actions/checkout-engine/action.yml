@@ -29,7 +29,9 @@ runs:
         set -euo pipefail
 
         manifest="rust/Cargo.toml"
-        requirement="$(sed -nE 's/^corduit[[:space:]]*=[[:space:]]*\{[[:space:]]*version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$manifest" | head -n1)"
+        # The requirement may appear before or after the `path` key, so match it
+        # anywhere inside the inline table instead of immediately after `{`.
+        requirement="$(sed -nE 's/^corduit[[:space:]]*=[[:space:]]*\{[^}]*version[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' "$manifest" | head -n1)"
         if [[ -z "${requirement:-}" ]]; then
           echo "::error file=$manifest::No readable 'corduit = { version = \"...\", ... }' requirement; this action cannot infer which engine revision to use."
           exit 1

@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueNom,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2122262403;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -998977709;
 
 // Section: executor
 
@@ -266,28 +266,6 @@ fn wire__crate__api__enable_tun_mode_with_mode_impl(
                 transform_result_dco::<_, _, String>(
                     (move || async move {
                         let output_ok = crate::api::enable_tun_mode_with_mode(api_mode).await?;
-                        std::result::Result::Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
-fn wire__crate__api__enable_uwp_loopback_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "enable_uwp_loopback",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            move |context| async move {
-                transform_result_dco::<_, _, String>(
-                    (move || async move {
-                        let output_ok = crate::api::enable_uwp_loopback().await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -1013,12 +991,12 @@ fn wire__crate__api__is_wintun_available_impl(
         },
     )
 }
-fn wire__crate__api__open_uwp_loopback_utility_impl(
+fn wire__crate__api__list_uwp_loopback_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
         flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "open_uwp_loopback_utility",
+            debug_name: "list_uwp_loopback",
             port: Some(port_),
             mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
         },
@@ -1026,7 +1004,7 @@ fn wire__crate__api__open_uwp_loopback_utility_impl(
             move |context| async move {
                 transform_result_dco::<_, _, String>(
                     (move || async move {
-                        let output_ok = crate::api::open_uwp_loopback_utility().await?;
+                        let output_ok = crate::api::list_uwp_loopback().await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -1332,6 +1310,33 @@ fn wire__crate__api__set_proxy_mode_impl(
                 transform_result_dco::<_, _, String>(
                     (move || async move {
                         let output_ok = crate::api::set_proxy_mode(api_mode).await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__set_uwp_loopback_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    family: impl CstDecode<String>,
+    exempt: impl CstDecode<bool>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "set_uwp_loopback",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_family = family.cst_decode();
+            let api_exempt = exempt.cst_decode();
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::set_uwp_loopback(api_family, api_exempt).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -2437,6 +2442,18 @@ impl SseDecode for Vec<crate::types::RuleDto> {
     }
 }
 
+impl SseDecode for Vec<crate::types::UwpLoopbackEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::types::UwpLoopbackEntry>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2785,6 +2802,20 @@ impl SseDecode for u8 {
 impl SseDecode for () {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {}
+}
+
+impl SseDecode for crate::types::UwpLoopbackEntry {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_name = <String>::sse_decode(deserializer);
+        let mut var_family = <String>::sse_decode(deserializer);
+        let mut var_exempt = <bool>::sse_decode(deserializer);
+        return crate::types::UwpLoopbackEntry {
+            name: var_name,
+            family: var_family,
+            exempt: var_exempt,
+        };
+    }
 }
 
 fn pde_ffi_dispatcher_primary_impl(
@@ -3277,6 +3308,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::types::TunStatus> for crate::types
         self
     }
 }
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::UwpLoopbackEntry {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.name.into_into_dart().into_dart(),
+            self.family.into_into_dart().into_dart(),
+            self.exempt.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::types::UwpLoopbackEntry
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::UwpLoopbackEntry>
+    for crate::types::UwpLoopbackEntry
+{
+    fn into_into_dart(self) -> crate::types::UwpLoopbackEntry {
+        self
+    }
+}
 
 impl SseEncode for std::collections::HashMap<String, Vec<String>> {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -3557,6 +3610,16 @@ impl SseEncode for Vec<crate::types::RuleDto> {
     }
 }
 
+impl SseEncode for Vec<crate::types::UwpLoopbackEntry> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::types::UwpLoopbackEntry>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<String> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3811,6 +3874,15 @@ impl SseEncode for u8 {
 impl SseEncode for () {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {}
+}
+
+impl SseEncode for crate::types::UwpLoopbackEntry {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.name, serializer);
+        <String>::sse_encode(self.family, serializer);
+        <bool>::sse_encode(self.exempt, serializer);
+    }
 }
 
 #[cfg(not(target_family = "wasm"))]
@@ -4114,6 +4186,16 @@ mod io {
             vec.into_iter().map(CstDecode::cst_decode).collect()
         }
     }
+    impl CstDecode<Vec<crate::types::UwpLoopbackEntry>> for *mut wire_cst_list_uwp_loopback_entry {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> Vec<crate::types::UwpLoopbackEntry> {
+            let vec = unsafe {
+                let wrap = flutter_rust_bridge::for_generated::box_from_leak_ptr(self);
+                flutter_rust_bridge::for_generated::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(CstDecode::cst_decode).collect()
+        }
+    }
     impl CstDecode<crate::types::ProxyGroupDto> for wire_cst_proxy_group_dto {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> crate::types::ProxyGroupDto {
@@ -4295,6 +4377,16 @@ mod io {
                 interface_name: self.interface_name.cst_decode(),
                 mtu: self.mtu.cst_decode(),
                 error: self.error.cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::UwpLoopbackEntry> for wire_cst_uwp_loopback_entry {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::UwpLoopbackEntry {
+            crate::types::UwpLoopbackEntry {
+                name: self.name.cst_decode(),
+                family: self.family.cst_decode(),
+                exempt: self.exempt.cst_decode(),
             }
         }
     }
@@ -4710,6 +4802,20 @@ mod io {
             Self::new_with_null_ptr()
         }
     }
+    impl NewWithNullPtr for wire_cst_uwp_loopback_entry {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                name: core::ptr::null_mut(),
+                family: core::ptr::null_mut(),
+                exempt: Default::default(),
+            }
+        }
+    }
+    impl Default for wire_cst_uwp_loopback_entry {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
 
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__clear_android_vpn_fd(port_: i64) {
@@ -4771,11 +4877,6 @@ mod io {
         mode: *mut wire_cst_list_prim_u_8_strict,
     ) {
         wire__crate__api__enable_tun_mode_with_mode_impl(port_, mode)
-    }
-
-    #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__enable_uwp_loopback(port_: i64) {
-        wire__crate__api__enable_uwp_loopback_impl(port_)
     }
 
     #[unsafe(no_mangle)]
@@ -4957,8 +5058,8 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
-    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__open_uwp_loopback_utility(port_: i64) {
-        wire__crate__api__open_uwp_loopback_utility_impl(port_)
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__list_uwp_loopback(port_: i64) {
+        wire__crate__api__list_uwp_loopback_impl(port_)
     }
 
     #[unsafe(no_mangle)]
@@ -5052,6 +5153,15 @@ mod io {
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_proxy_mode(port_: i64, mode: i32) {
         wire__crate__api__set_proxy_mode_impl(port_, mode)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__set_uwp_loopback(
+        port_: i64,
+        family: *mut wire_cst_list_prim_u_8_strict,
+        exempt: bool,
+    ) {
+        wire__crate__api__set_uwp_loopback_impl(port_, family, exempt)
     }
 
     #[unsafe(no_mangle)]
@@ -5436,6 +5546,20 @@ mod io {
         flutter_rust_bridge::for_generated::new_leak_box_ptr(wrap)
     }
 
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_uwp_loopback_entry(
+        len: i32,
+    ) -> *mut wire_cst_list_uwp_loopback_entry {
+        let wrap = wire_cst_list_uwp_loopback_entry {
+            ptr: flutter_rust_bridge::for_generated::new_leak_vec_ptr(
+                <wire_cst_uwp_loopback_entry>::new_with_null_ptr(),
+                len,
+            ),
+            len,
+        };
+        flutter_rust_bridge::for_generated::new_leak_box_ptr(wrap)
+    }
+
     #[repr(C)]
     #[derive(Clone, Copy)]
     pub struct wire_cst_active_connection {
@@ -5608,6 +5732,12 @@ mod io {
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
+    pub struct wire_cst_list_uwp_loopback_entry {
+        ptr: *mut wire_cst_uwp_loopback_entry,
+        len: i32,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
     pub struct wire_cst_proxy_group_dto {
         tag: *mut wire_cst_list_prim_u_8_strict,
         group_type: *mut wire_cst_list_prim_u_8_strict,
@@ -5744,6 +5874,13 @@ mod io {
         interface_name: *mut wire_cst_list_prim_u_8_strict,
         mtu: *mut u32,
         error: *mut wire_cst_list_prim_u_8_strict,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_uwp_loopback_entry {
+        name: *mut wire_cst_list_prim_u_8_strict,
+        family: *mut wire_cst_list_prim_u_8_strict,
+        exempt: bool,
     }
 }
 #[cfg(not(target_family = "wasm"))]
@@ -6115,6 +6252,18 @@ mod web {
     {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> Vec<crate::types::RuleDto> {
+            self.dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap()
+                .iter()
+                .map(CstDecode::cst_decode)
+                .collect()
+        }
+    }
+    impl CstDecode<Vec<crate::types::UwpLoopbackEntry>>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> Vec<crate::types::UwpLoopbackEntry> {
             self.dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
                 .unwrap()
                 .iter()
@@ -6495,6 +6644,27 @@ mod web {
             }
         }
     }
+    impl CstDecode<crate::types::UwpLoopbackEntry>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::UwpLoopbackEntry {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                3,
+                "Expected 3 elements, got {}",
+                self_.length()
+            );
+            crate::types::UwpLoopbackEntry {
+                name: self_.get(0).cst_decode(),
+                family: self_.get(1).cst_decode(),
+                exempt: self_.get(2).cst_decode(),
+            }
+        }
+    }
     impl CstDecode<std::collections::HashMap<String, Vec<String>>>
         for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
     {
@@ -6637,13 +6807,6 @@ mod web {
         mode: String,
     ) {
         wire__crate__api__enable_tun_mode_with_mode_impl(port_, mode)
-    }
-
-    #[wasm_bindgen]
-    pub fn wire__crate__api__enable_uwp_loopback(
-        port_: flutter_rust_bridge::for_generated::MessagePort,
-    ) {
-        wire__crate__api__enable_uwp_loopback_impl(port_)
     }
 
     #[wasm_bindgen]
@@ -6876,10 +7039,10 @@ mod web {
     }
 
     #[wasm_bindgen]
-    pub fn wire__crate__api__open_uwp_loopback_utility(
+    pub fn wire__crate__api__list_uwp_loopback(
         port_: flutter_rust_bridge::for_generated::MessagePort,
     ) {
-        wire__crate__api__open_uwp_loopback_utility_impl(port_)
+        wire__crate__api__list_uwp_loopback_impl(port_)
     }
 
     #[wasm_bindgen]
@@ -6979,6 +7142,15 @@ mod web {
         mode: i32,
     ) {
         wire__crate__api__set_proxy_mode_impl(port_, mode)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__set_uwp_loopback(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        family: String,
+        exempt: bool,
+    ) {
+        wire__crate__api__set_uwp_loopback_impl(port_, family, exempt)
     }
 
     #[wasm_bindgen]

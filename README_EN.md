@@ -52,18 +52,18 @@ The Rules entry in settings (`/rules`) shows the engine's table with each rule's
 
 ## Protocol Status
 
-The protocol implementations live in corduit 0.2.3, and this build enables every feature it defines (`hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic`, `tls13`, …). This repository wires them into Flutter and keeps the real-server interoperability checklist below open.
+The protocol implementations live in corduit 0.2.6, and this build enables every feature it defines (`hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic`, `tls13`, …). This repository wires them into Flutter and keeps the real-server interoperability checklist below open.
 
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
 | HTTP / SOCKS5 | corduit | Inbound and outbound paths inside the engine |
-| Shadowsocks | corduit | AEAD and stream ciphers; a node carrying a `plugin` (obfs, v2ray-plugin, shadow-tls) is refused at conversion — the plugin changes the wire, and dialling it as plain ss only yields a node that connects and then fails every request |
+| Shadowsocks | corduit | AEAD and stream ciphers; the SIP003 plugins `obfs` (simple-obfs http/tls), `v2ray-plugin` (websocket, optionally over TLS) and `shadow-tls` (v3) are implemented natively, so nodes carrying them convert normally (unimplemented plugins are refused by name); a plugin shapes TCP only, so its node runs with UDP disabled |
 | ShadowsocksR | corduit | Stream ciphers plus the protocol/obfs plugin layers; `auth_chain_*`, `random_head`, AEAD methods and the exotic block ciphers are refused by name with the reason |
 | VMess / VLESS / Trojan | corduit | WebSocket, gRPC and TLS transports |
 | Hysteria 1 / Hysteria 2 / TUIC | corduit (`hysteria`, `hysteria2`, `tuic` features) | QUIC paths, all enabled in this build |
-| Snell | corduit | v4/v5 record protocol (`obfs: http`; `tls` is refused by name) |
+| Snell | corduit | v4/v5 record protocol; both `obfs: http` and `obfs: tls` are implemented from the reference (the TLS obfuscation's ClientHello and record framing are byte-aligned with sing-snell / Surge 6.4.4); v6 and pre-v4 are refused by name |
 | WireGuard | corduit (`wireguard` feature) | Tunnel path, enabled in this build |
-| ShadowTLS | corduit (`shadowtls` feature) | The raw v3 tunnel is compiled (a hand-written engine config can use `type: shadowtls`); the subscription-side `plugin: shadow-tls` is a plugin and is refused at conversion, as above |
+| ShadowTLS | corduit (`shadowtls` feature) | The v3 tunnel: a hand-written engine config can use `type: shadowtls`, and the subscription-side `plugin: shadow-tls` works too — the plugin path reuses the same handshake and framing |
 | shadowquic / `ssh`-style types | Unsupported | The bridge drops such nodes during conversion, rewrites references, and raises a warning |
 
 A protocol can move to “supported” only after interoperability tests against mainstream servers, TCP and UDP coverage, authentication failure tests, reconnect tests, and target-platform integration tests.
@@ -219,7 +219,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT HAPs are built by the `ohos` job in CI and by the DevEco/hvigor workflow in [ohos/README.md](ohos/README.md). CI additionally asserts that the HAP really contains `libapp.so`, `librust_lib_arcadiaplus.so` and `libarcadia_core.so`: a successful build proves the packaging chain, and the VPN data path (authorization prompt, tunnel, engine routing) is still verified device-by-device against that document's checklist.
 
-`rust/Cargo.toml` references the engine by its crates.io version (`corduit = "0.2.3"`), and the engine moves in lockstep with this app, so every workflow starts with `.github/actions/checkout-engine`: it reads the version requirement from `rust/Cargo.toml`, checks out the matching `v<version>` tag when one exists (otherwise it follows the engine repository's default branch with a warning), and finally verifies that the checked-out engine reports the required version — a mismatch fails the job rather than letting an unknown engine turn CI green. Tag engine releases as `v<version>` to pin CI to an immutable revision.
+`rust/Cargo.toml` points at the engine through `path = "../../Corduit"` (a sibling checkout of the engine repository) and declares the version it requires. The engine moves in lockstep with this app, so every workflow starts with `.github/actions/checkout-engine`: it reads the version requirement from `rust/Cargo.toml`, materialises the engine at that sibling path, checks out the matching `v<version>` tag when one exists (otherwise it follows the engine repository's default branch with a warning), and finally verifies that the checked-out engine reports the required version — a mismatch fails the job rather than letting an unknown engine turn CI green. Tag engine releases as `v<version>` to pin CI to an immutable revision.
 
 ## Disclaimer
 

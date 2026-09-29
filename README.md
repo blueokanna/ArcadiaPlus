@@ -52,18 +52,18 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 
 ## 协议状态
 
-协议实现位于 corduit 0.2.3，本构建启用其全部 feature（`hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13`…）；本仓库负责把它们接进 Flutter，并对真实服务端的互操作保留验证清单（见下方结语）。
+协议实现位于 corduit 0.2.6，本构建启用其全部 feature（`hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13`…）；本仓库负责把它们接进 Flutter，并对真实服务端的互操作保留验证清单（见下方结语）。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
 | HTTP / SOCKS5 | corduit | 出入站路径均在引擎内 |
-| Shadowsocks | corduit | 含 AEAD 与流密码路径；带 `plugin`（obfs、v2ray-plugin、shadow-tls）的节点在转换时拒绝——插件改写线路，按纯 ss 拨号只会连上然后每个请求都失败 |
+| Shadowsocks | corduit | 含 AEAD 与流密码路径；SIP003 插件 `obfs`（simple-obfs http/tls）、`v2ray-plugin`（websocket，可叠 TLS）与 `shadow-tls`（v3）均为原生实现，带插件的节点照常转换（未实现的插件按名字拒绝）；插件只塑形 TCP，因此带插件的节点自动关闭 UDP |
 | ShadowsocksR | corduit | 流密码 + protocol/obfs 插件层；`auth_chain_*`、`random_head`、AEAD 方法与异域块密码明确拒绝并给出原因 |
 | VMess / VLESS / Trojan | corduit | 含 WebSocket、gRPC、TLS 传输 |
 | Hysteria 1 / Hysteria 2 / TUIC | corduit（`hysteria`、`hysteria2`、`tuic` feature） | QUIC 路径，本构建全部启用 |
-| Snell | corduit | v4/v5 记录协议（`obfs: http`；`tls` 明确拒绝） |
+| Snell | corduit | v4/v5 记录协议；`obfs: http` 与 `obfs: tls` 均按参考实现（TLS 混淆的 ClientHello 与记录分帧逐字节对齐 sing-snell / Surge 6.4.4），v6 与 v4 以下按名字拒绝 |
 | WireGuard | corduit（`wireguard` feature） | 隧道路径，本构建启用 |
-| ShadowTLS | corduit（`shadowtls` feature） | 引擎编译了原始 v3 隧道（手写引擎配置可用 `type: shadowtls`）；订阅侧的 `plugin: shadow-tls` 属于插件，如上一条所述在转换时拒绝 |
+| ShadowTLS | corduit（`shadowtls` feature） | v3 隧道：手写引擎配置可用 `type: shadowtls`，订阅侧的 `plugin: shadow-tls` 同样可用——插件路径复用同一套握手与帧实现 |
 | shadowquic / `ssh` 类 | 不支持 | 桥接层在配置转换时丢弃该节点并回落引用，同时上报警告 |
 
 协议进入“已支持”状态至少需要：官方/主流服务端互操作测试、TCP 与 UDP 测试、认证失败测试、断线重连测试，以及各目标平台上的集成测试。
@@ -259,7 +259,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT 的 HAP 由 CI 的 `ohos` 与 [ohos/README.md](ohos/README.md) 的 DevEco/hvigor 流程构建。CI 除构建外还会断言 HAP 内确实含有 `libapp.so`、`librust_lib_arcadiaplus.so` 与 `libarcadia_core.so`——构建通过只证明打包链路正确；VPN 数据面（授权弹窗、隧道、引擎分流）仍按该文档的真机清单逐项验证。
 
-`rust/Cargo.toml` 以 crates.io 版本号引用引擎（`corduit = "0.2.3"`），而引擎与本应用同步演进，因此每个工作流都会先执行 `.github/actions/checkout-engine`：它从 `rust/Cargo.toml` 读出版本要求，优先 checkout 同名 `v<版本>` 标签，没有标签时跟随引擎仓库的默认分支并给出警告，最后校验引擎自己声明的版本与要求一致——不一致就失败，绝不拿一个来源不明的引擎把 CI 刷成绿色。发布引擎时请打 `v<版本>` 标签，CI 才会被钉在不可变修订上。
+`rust/Cargo.toml` 通过 `path = "../../Corduit"` 引用同级目录中的引擎仓库，并声明所需的引擎版本。引擎与本应用同步演进，因此每个工作流都会先执行 `.github/actions/checkout-engine`：它从 `rust/Cargo.toml` 读出版本要求，把引擎检出到 `path` 指向的兄弟目录，优先 checkout 同名 `v<版本>` 标签，没有标签时跟随引擎仓库的默认分支并给出警告，最后校验引擎自己声明的版本与要求一致——不一致就失败，绝不拿一个来源不明的引擎把 CI 刷成绿色。发布引擎时请打 `v<版本>` 标签，CI 才会被钉在不可变修订上。
 
 ## 免责声明
 

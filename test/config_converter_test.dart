@@ -336,7 +336,9 @@ rules: []
     });
   });
 
-  test('a Shadowsocks node carrying a plugin is refused, plugin named', () {
+  test('a Shadowsocks node carrying a known plugin keeps it', () {
+    // shadow-tls is one of the SIP003 plugins the engine implements, so the
+    // node must survive the converter with its plugin and plugin-opts intact.
     const yaml = '''
 proxies:
   - name: st-node
@@ -367,13 +369,63 @@ rules: []
     final converted = convert(yaml, onWarning: warnings.add);
     final outbounds = converted['outbounds'] as List<dynamic>;
 
-    expect(outbounds.where((o) => (o as Map)['tag'] == 'st-node'), isEmpty);
-    expect(warnings.any((w) => w.contains('shadow-tls')), isTrue);
+    final node =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'st-node') as Map;
+    expect(node['outbound_type'], 'shadowsocks');
+    expect(optionsOf(node['options']), {
+      'cipher': 'aes-128-gcm',
+      'password': 'secret',
+      'plugin': 'shadow-tls',
+      'plugin-opts': {
+        'host': 'www.bing.com',
+        'password': 'tls-secret',
+        'version': 3,
+      },
+    });
+    expect(warnings.where((w) => w.contains('shadow-tls')), isEmpty);
 
     final group =
         outbounds.firstWhere((o) => (o as Map)['tag'] == 'PROXY') as Map;
-    expect(optionsOf(group['options'])['outbounds'], ['ok-node']);
+    expect(optionsOf(group['options'])['outbounds'], ['st-node', 'ok-node']);
   });
+
+  test(
+    'a Shadowsocks node carrying an unknown plugin is refused, plugin named',
+    () {
+      const yaml = '''
+proxies:
+  - name: kcp-node
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: kcptun
+  - name: ok-node
+    type: ss
+    server: example.com
+    port: 8389
+    cipher: aes-128-gcm
+    password: secret
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [kcp-node, ok-node]
+rules: []
+''';
+
+      final warnings = <String>[];
+      final converted = convert(yaml, onWarning: warnings.add);
+      final outbounds = converted['outbounds'] as List<dynamic>;
+
+      expect(outbounds.where((o) => (o as Map)['tag'] == 'kcp-node'), isEmpty);
+      expect(warnings.any((w) => w.contains('kcptun')), isTrue);
+
+      final group =
+          outbounds.firstWhere((o) => (o as Map)['tag'] == 'PROXY') as Map;
+      expect(optionsOf(group['options'])['outbounds'], ['ok-node']);
+    },
+  );
 
   test('a Shadowsocks 2022 node is dropped before it can fail the profile', () {
     // The engine refuses these ciphers when it builds the outbound, and one

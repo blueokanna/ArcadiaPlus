@@ -373,11 +373,11 @@ Future<String?> getWintunDllPath() =>
 Future<String> ensureWintunDll() =>
     RustLib.instance.api.crateApiEnsureWintunDll();
 
-Future<bool> enableUwpLoopback() =>
-    RustLib.instance.api.crateApiEnableUwpLoopback();
+Future<List<UwpLoopbackEntry>> listUwpLoopback() =>
+    RustLib.instance.api.crateApiListUwpLoopback();
 
-Future<bool> openUwpLoopbackUtility() =>
-    RustLib.instance.api.crateApiOpenUwpLoopbackUtility();
+Future<void> setUwpLoopback({required String family, required bool exempt}) =>
+    RustLib.instance.api.crateApiSetUwpLoopback(family: family, exempt: exempt);
 
 Future<bool> setWindowsProxyMode({required String mode}) =>
     RustLib.instance.api.crateApiSetWindowsProxyMode(mode: mode);

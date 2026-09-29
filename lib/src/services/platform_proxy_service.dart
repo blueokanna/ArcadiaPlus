@@ -1351,16 +1351,6 @@ class PlatformProxyService extends ChangeNotifier {
     }
   }
 
-  Future<bool> openUwpLoopbackUtility() async {
-    if (!Platform.isWindows) return false;
-    try {
-      return await rust_api.openUwpLoopbackUtility();
-    } catch (e) {
-      debugPrint('Failed to open UWP loopback utility: $e');
-      return false;
-    }
-  }
-
   // ==================== Bypass list dialects ====================
 
   /// The most wildcard patterns one IPv4 block may be expanded into.
