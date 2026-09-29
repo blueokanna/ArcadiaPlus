@@ -109,6 +109,41 @@
 			"command": "d:\\RustProject\\TempFiles\\stage-mux-gate5.cmd",
 			"isBackground": true,
 			"problemMatcher": []
+		},
+		{
+			"label": "gh-check-1",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\gh-check-1.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "gh-check-2",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\gh-check-2.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "gh-check-3",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\gh-check-3.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "gh-check-4",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\gh-check-4.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "app-release-gate-1",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\app-release-gate-1.cmd",
+			"isBackground": true,
+			"problemMatcher": []
 		}
 	]
 }
