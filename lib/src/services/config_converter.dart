@@ -914,11 +914,16 @@ class ConfigConverter {
             );
             continue;
           }
+          final pluginProblem = _shadowsocksPluginProblem(plugin, proxyMap);
+          if (pluginProblem != null) {
+            dropped.add(name);
+            onWarning?.call(
+              'Proxy "$name" $pluginProblem The node was dropped; '
+              'references to it fall back to DIRECT.',
+            );
+            continue;
+          }
 
-          // The cipher list is a boundary the engine enforces at outbound
-          // construction, and one refused outbound fails the whole profile
-          // at engine start — so it is screened here, where a single node can
-          // be dropped with the reason while the rest stays usable.
           final cipherProblem = _shadowsocksCipherProblem(
             proxyMap['cipher'] ?? proxyMap['method'],
           );
@@ -1147,6 +1152,80 @@ class ConfigConverter {
         'build (supported: aes-256-gcm, aes-128-gcm, chacha20-ietf-poly1305).';
   }
 
+  /// Why the engine cannot wrap this node's plugin, or `null` when it can.
+  ///
+  /// Mirrors the option refusals in `corduit`'s `sip003::Plugin::parse`:
+  /// a plugin mode, version or credential the engine cannot speak fails the
+  /// whole profile at outbound construction, so such a node is dropped here
+  /// instead, where the rest of the profile survives.
+  static String? _shadowsocksPluginProblem(
+    String plugin,
+    Map<String, dynamic> proxyMap,
+  ) {
+    final rawOpts = proxyMap['plugin-opts'];
+    final opts = rawOpts is Map ? rawOpts : const <String, dynamic>{};
+    String opt(String key) => opts[key]?.toString().trim() ?? '';
+
+    switch (plugin) {
+      case 'v2ray-plugin':
+        final mode = opt('mode').toLowerCase();
+        if (mode.isNotEmpty && mode != 'websocket') {
+          return 'requests v2ray-plugin mode "$mode", and this engine speaks '
+              'its websocket mode only.';
+        }
+        if (_pluginFlag(opts['v2ray-http-upgrade'])) {
+          return 'requests v2ray-plugin `v2ray-http-upgrade`, which this '
+              'engine does not implement.';
+        }
+        final path = opt('path');
+        if (path.isNotEmpty &&
+            (!path.startsWith('/') || _hasControlByte(path))) {
+          return 'names the v2ray-plugin path "$path", which cannot travel in '
+              'a WebSocket request line.';
+        }
+        return null;
+      case 'obfs':
+      case 'simple-obfs':
+      case 'obfs-local':
+        final mode = opt('mode').toLowerCase();
+        if (mode.isNotEmpty && mode != 'http' && mode != 'tls') {
+          return 'requests simple-obfs mode "$mode", and this engine '
+              'implements http and tls only.';
+        }
+        return null;
+      case 'shadow-tls':
+        final version = opt('version');
+        if (version.isNotEmpty && version != '3') {
+          return 'requests shadow-tls version "$version", and this engine '
+              'speaks version 3 only.';
+        }
+        if (opt('host').isEmpty) {
+          return 'requests shadow-tls without a `host`, which its handshake '
+              'requires.';
+        }
+        if (opt('password').isEmpty) {
+          return 'requests shadow-tls without a `password`, which its '
+              'handshake requires.';
+        }
+        return null;
+      default:
+        return null;
+    }
+  }
+
+  /// Whether [value] is one of the flag spellings the engine treats as true
+  /// (`true`, `1`, `"true"`, `"1"`), mirroring `sip003`'s scalar handling.
+  static bool _pluginFlag(Object? value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final text = value?.toString().trim().toLowerCase() ?? '';
+    return text == 'true' || text == '1';
+  }
+
+  /// Whether [text] holds a byte that cannot sit in an HTTP header line.
+  static bool _hasControlByte(String text) =>
+      text.codeUnits.any((unit) => unit < 0x20 || unit == 0x7f);
+
   /// Folds the option spellings that differ between profiles and the engine.
   ///
   /// Only field names that actually disagree are touched; the values travel
@@ -1163,8 +1242,6 @@ class ConfigConverter {
       return;
     }
     if (outboundType == 'snell') {
-      // mihomo writes `obfs-opts: {mode, host}`; the engine reads a mode
-      // string plus a host, and nothing else would reach it.
       final obfsOpts = options['obfs-opts'];
       if (obfsOpts is Map) {
         final mode = obfsOpts['mode']?.toString().trim() ?? '';

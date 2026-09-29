@@ -60,6 +60,55 @@
 			"label": "verify2",
 			"type": "shell",
 			"command": "d:\\RustProject\\TempFiles\\verify2.cmd"
+		},
+		{
+			"label": "stage16-api-map",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\stage16-api-map.cmd",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "stage16b-flow-map",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\stage16b-flow-map.cmd",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "mux-gate",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\stage-mux-gate.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "mux-gate-2",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\stage-mux-gate.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "mux-gate-3",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\stage-mux-gate3.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "app-gate",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\stage-app-gate.cmd",
+			"isBackground": true,
+			"problemMatcher": []
+		},
+		{
+			"label": "mux-gate-5",
+			"type": "shell",
+			"command": "d:\\RustProject\\TempFiles\\stage-mux-gate5.cmd",
+			"isBackground": true,
+			"problemMatcher": []
 		}
 	]
 }

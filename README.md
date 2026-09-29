@@ -57,7 +57,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
 | HTTP / SOCKS5 | corduit | 出入站路径均在引擎内 |
-| Shadowsocks | corduit | 含 AEAD 与流密码路径；SIP003 插件 `obfs`（simple-obfs http/tls）、`v2ray-plugin`（websocket，可叠 TLS）与 `shadow-tls`（v3）均为原生实现，带插件的节点照常转换（未实现的插件按名字拒绝）；插件只塑形 TCP，因此带插件的节点自动关闭 UDP |
+| Shadowsocks | corduit | 含 AEAD 与流密码路径；SIP003 插件 `obfs`（simple-obfs http/tls）、`v2ray-plugin`（websocket + mux 帧化，默认开——与参考服务端/mihomo 一致，`mux: false` 关闭；`skip-cert-verify` 与自定义 `headers` 均透传）与 `shadow-tls`（v3）均为原生实现，带插件的节点照常转换（未实现的插件与选项按名字拒绝）；插件只塑形 TCP，因此带插件的节点自动关闭 UDP |
 | ShadowsocksR | corduit | 流密码 + protocol/obfs 插件层；`auth_chain_*`、`random_head`、AEAD 方法与异域块密码明确拒绝并给出原因 |
 | VMess / VLESS / Trojan | corduit | 含 WebSocket、gRPC、TLS 传输 |
 | Hysteria 1 / Hysteria 2 / TUIC | corduit（`hysteria`、`hysteria2`、`tuic` feature） | QUIC 路径，本构建全部启用 |

@@ -57,7 +57,7 @@ The protocol implementations live in corduit 0.2.6, and this build enables every
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
 | HTTP / SOCKS5 | corduit | Inbound and outbound paths inside the engine |
-| Shadowsocks | corduit | AEAD and stream ciphers; the SIP003 plugins `obfs` (simple-obfs http/tls), `v2ray-plugin` (websocket, optionally over TLS) and `shadow-tls` (v3) are implemented natively, so nodes carrying them convert normally (unimplemented plugins are refused by name); a plugin shapes TCP only, so its node runs with UDP disabled |
+| Shadowsocks | corduit | AEAD and stream ciphers; the SIP003 plugins `obfs` (simple-obfs http/tls), `v2ray-plugin` (websocket with mux framing, on by default — matching the reference server and mihomo; `mux: false` turns it off; `skip-cert-verify` and custom `headers` pass through) and `shadow-tls` (v3) are implemented natively, so nodes carrying them convert normally (unimplemented plugins and options are refused by name); a plugin shapes TCP only, so its node runs with UDP disabled |
 | ShadowsocksR | corduit | Stream ciphers plus the protocol/obfs plugin layers; `auth_chain_*`, `random_head`, AEAD methods and the exotic block ciphers are refused by name with the reason |
 | VMess / VLESS / Trojan | corduit | WebSocket, gRPC and TLS transports |
 | Hysteria 1 / Hysteria 2 / TUIC | corduit (`hysteria`, `hysteria2`, `tuic` features) | QUIC paths, all enabled in this build |

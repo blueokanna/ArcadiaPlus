@@ -427,10 +427,109 @@ rules: []
     },
   );
 
+  test('plugin flavours the engine would refuse are dropped by name', () {
+    const yaml = '''
+proxies:
+  - name: v2ray-quic
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: quic
+  - name: v2ray-upgrade
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      v2ray-http-upgrade: true
+  - name: obfs-quic
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: obfs
+    plugin-opts:
+      mode: quic
+  - name: st-v2
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: shadow-tls
+    plugin-opts:
+      host: www.bing.com
+      password: tls-secret
+      version: 2
+  - name: st-nohost
+    type: ss
+    server: example.com
+    port: 8388
+    cipher: aes-128-gcm
+    password: secret
+    plugin: shadow-tls
+    plugin-opts:
+      password: tls-secret
+  - name: ok-node
+    type: ss
+    server: example.com
+    port: 8389
+    cipher: aes-128-gcm
+    password: secret
+    plugin: v2ray-plugin
+    plugin-opts:
+      mode: websocket
+      tls: true
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [v2ray-quic, v2ray-upgrade, obfs-quic, st-v2, st-nohost, ok-node]
+rules: []
+''';
+
+    final warnings = <String>[];
+    final converted = convert(yaml, onWarning: warnings.add);
+    final outbounds = converted['outbounds'] as List<dynamic>;
+    final tags = outbounds.map((o) => (o as Map)['tag']).toSet();
+
+    for (final dropped in const [
+      'v2ray-quic',
+      'v2ray-upgrade',
+      'obfs-quic',
+      'st-v2',
+      'st-nohost',
+    ]) {
+      expect(
+        tags.contains(dropped),
+        isFalse,
+        reason: '$dropped must be dropped',
+      );
+      expect(
+        warnings.any((w) => w.contains(dropped)),
+        isTrue,
+        reason: '$dropped must be reported by name',
+      );
+    }
+
+    expect(tags.contains('ok-node'), isTrue);
+    // The reasons stay specific, not one generic line for all of them.
+    expect(warnings.any((w) => w.contains('v2ray-http-upgrade')), isTrue);
+    expect(warnings.any((w) => w.contains('version 3 only')), isTrue);
+    expect(warnings.any((w) => w.contains('http and tls only')), isTrue);
+
+    final group =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'PROXY') as Map;
+    expect(optionsOf(group['options'])['outbounds'], ['ok-node']);
+  });
+
   test('a Shadowsocks 2022 node is dropped before it can fail the profile', () {
-    // The engine refuses these ciphers when it builds the outbound, and one
-    // refused outbound fails the whole config — so the converter must screen
-    // them, or a single node takes the entire subscription down at start-up.
     const yaml = '''
 proxies:
   - name: ss2022-node
