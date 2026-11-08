@@ -1,0 +1,69 @@
+name: Set up the pinned Android NDK
+description: Install the project's NDK on Linux and optionally configure a standalone Rust Android build.
+
+inputs:
+  rust-target:
+    description: Rust Android target. Leave empty for Flutter builds, where Cargokit configures each ABI.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Install and verify the Android toolchain
+      shell: bash
+      env:
+        RUST_ANDROID_TARGET: ${{ inputs.rust-target }}
+      run: |
+        set -euo pipefail
+        manifest="$GITHUB_WORKSPACE/android/app/build.gradle.kts"
+        ndk="$(sed -nE 's/^[[:space:]]*ndkVersion[[:space:]]*=[[:space:]]*"([0-9.]+)"[[:space:]]*$/\1/p' "$manifest")"
+        api="$(sed -nE 's/^[[:space:]]*minSdk[[:space:]]*=[[:space:]]*([0-9]+)[[:space:]]*$/\1/p' "$manifest")"
+        if [[ ! "$ndk" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ || ! "$api" =~ ^[0-9]+$ ]]; then
+          echo "::error file=android/app/build.gradle.kts::Expected one explicit ndkVersion and minSdk pin."
+          exit 1
+        fi
+        if [[ "$RUNNER_OS" != Linux ]]; then
+          echo '::error::This action requires a Linux runner; Flutter configures native toolchains on other hosts.'
+          exit 1
+        fi
+        sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+        manager="$sdk/cmdline-tools/latest/bin/sdkmanager"
+        if [[ -z "$sdk" || ! -x "$manager" ]]; then
+          echo '::error::Android SDK command-line tools are missing; set ANDROID_HOME to the installed SDK.'
+          exit 1
+        fi
+        "$manager" "ndk;$ndk"
+        toolchain="$sdk/ndk/$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+        "$toolchain/clang" --version
+
+        # Flutter's Cargokit sets target-specific compilers for every ABI.
+        # Only standalone Cargo jobs need these environment overrides.
+        if [[ -z "$RUST_ANDROID_TARGET" ]]; then
+          exit 0
+        fi
+        case "$RUST_ANDROID_TARGET" in
+          aarch64-linux-android|i686-linux-android|x86_64-linux-android)
+            clang_target="$RUST_ANDROID_TARGET" ;;
+          armv7-linux-androideabi) clang_target=armv7a-linux-androideabi ;;
+          *) echo "::error::Unsupported Android Rust target: $RUST_ANDROID_TARGET"; exit 1 ;;
+        esac
+        cc="$toolchain/${clang_target}${api}-clang"
+        cxx="$toolchain/${clang_target}${api}-clang++"
+        ar="$toolchain/llvm-ar"
+        for tool in "$cc" "$cxx" "$ar"; do
+          if [[ ! -x "$tool" ]]; then
+            echo "::error::Missing Android tool: $tool"
+            exit 1
+          fi
+        done
+        "$cc" --version
+
+        # cc-rs checks the hyphenated name BEFORE the underscore alias.
+        # Export both so a Cargo [env] default cannot select another host's NDK.
+        target_key="${RUST_ANDROID_TARGET//-/_}"
+        for key in "$RUST_ANDROID_TARGET" "$target_key"; do
+          printf 'CC_%s=%s\nCXX_%s=%s\nAR_%s=%s\n' "$key" "$cc" "$key" "$cxx" "$key" "$ar" >> "$GITHUB_ENV"
+        done
+        linker_key="$(printf '%s' "$target_key" | tr '[:lower:]' '[:upper:]')"
+        printf 'CARGO_TARGET_%s_LINKER=%s\n' "$linker_key" "$cc" >> "$GITHUB_ENV"

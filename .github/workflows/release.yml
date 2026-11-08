@@ -1,4 +1,4 @@
-name: Stable Release
+name: Stable App Release
 
 on:
   push:
@@ -197,19 +197,7 @@ jobs:
           targets: armv7-linux-androideabi,aarch64-linux-android,i686-linux-android,x86_64-linux-android
 
       - name: Install the Android NDK recorded in build.gradle.kts
-        shell: bash
-        run: |
-          set -euo pipefail
-          # `ndkVersion` in the app module is pinned so every build links with
-          # exactly the NDK the project was tested against; the runner image
-          # does not ship that release, so install it before Gradle runs.
-          ndk="$(sed -nE 's/^ *ndkVersion = "([^"]+)"$/\1/p' android/app/build.gradle.kts | head -n1)"
-          if [[ -z "$ndk" ]]; then
-            echo "No ndkVersion pin found; using the runner default" >&2
-            exit 0
-          fi
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ndk"
-          echo "Installed NDK $ndk"
+        uses: ./.github/actions/setup-android-ndk
 
       - name: Use the pub host recorded in pubspec.lock
         shell: bash
@@ -619,8 +607,6 @@ jobs:
         with:
           toolchain: '1.97.0'
 
-      # The action restores and saves the toolchain archives itself, keyed
-      # by their published digests and saved as soon as they verify.
       - name: Set up the HarmonyOS toolchain
         uses: ./.github/actions/setup-ohos
 

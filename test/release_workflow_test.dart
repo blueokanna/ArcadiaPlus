@@ -45,11 +45,6 @@ void main() {
       reason: 'the Android and HarmonyOS signing identities stay separate',
     );
     expect(source, contains(r'ArcadiaPlus-${TAG}-ohos-arm64-'));
-    // The HAP is asked for its own signature answer with the SDK tool, and a
-    // result that contradicts the file name is reported as a warning: the
-    // HarmonyOS job must never block a release (an unsigned HAP is the
-    // expected artifact when no signing secrets are configured, and none
-    // are required).
     expect(source, contains('hap-sign-tool.jar'));
     expect(source, contains('verify-app'));
     expect(source, contains('signature: signed package, verified'));
@@ -111,33 +106,19 @@ void main() {
     final ci = File('.github/workflows/ci.yml').readAsStringSync();
     final release = File('.github/workflows/release.yml').readAsStringSync();
 
-    // Restore and save live in the composite action both workflows already
-    // call: one implementation, one place to keep honest.
     final steps =
         (((loadYaml(setup) as YamlMap)['runs'] as YamlMap)['steps'] as YamlList)
             .cast<YamlMap>();
     final uses = steps.map((step) => step['uses']).whereType<String>();
     expect(uses, contains('actions/cache/restore@v4'));
     expect(uses, contains('actions/cache/save@v4'));
-
-    // The key is derived from the published digest, so a re-rolled
-    // upstream archive misses the cache instead of being re-downloaded
-    // against a stale entry on every run. The older prefixes stay as
-    // fallbacks so the retired two-archive entries are still reusable.
     expect(setup, contains('expected-clt-sha'));
     expect(setup, contains(r'ohos-clt-${{ runner.os }}'));
     expect(setup, contains(r'ohos-toolchain-archives-${{ runner.os }}'));
 
-    // The entry is saved as soon as the archive verifies (a later failure
-    // or cancellation must not lose it), and the runner drops it once it
-    // has been unpacked.
     expect(setup, contains('steps.download.outputs.verified'));
     expect(setup, contains(r'rm -f "$CLT_ARCHIVE"'));
 
-    // The SDK travels inside the command-line tools archive -- the action
-    // must not download the retired OpenHarmony test payload again (its
-    // 26.0.0 half broke `CompileResource` with 11201001), and the unpack
-    // step checks the bundled SDK's halves by name.
     expect(setup, isNot(contains('openharmony-sdk')));
     expect(setup, isNot(contains('SDK_ARCHIVE')));
     expect(setup, isNot(contains('SDK_URL')));
@@ -147,7 +128,6 @@ void main() {
       contains('sdk/default/hms/toolchains/lib/libimage_transcoder_shared.so'),
     );
 
-    // Neither workflow carries a cache step of its own any more.
     expect(ci, isNot(contains('ohos-downloads-v1')));
     expect(release, isNot(contains('ohos-downloads-v1')));
   });
@@ -160,25 +140,12 @@ void main() {
           .readAsStringSync();
       final setup = File('.github/actions/setup-ohos/action.yml')
           .readAsStringSync();
-
-      // hvigor validates the product versions before the build starts:
-      // anything the provisioned SDK cannot resolve aborts with 00303082,
-      // and in HarmonyOS mode the bare `M.S.F` a revision here once pinned
-      // as targetSdkVersion aborts with 00306042. The profile therefore
-      // carries exactly what the pinned fork template ships -- an
-      // `M.S.F(api)` compatibleSdkVersion and no targetSdkVersion -- and
-      // the values stay checked in rather than derived at build time.
       expect(profile, contains('"compatibleSdkVersion": "5.1.0(18)"'));
       expect(profile, isNot(contains('"targetSdkVersion"')));
       expect(prepare, contains('OHOS compatibleSdkVersion drifted'));
       expect(prepare, contains('OHOS targetSdkVersion reappeared'));
       expect(prepare, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
       expect(setup, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
-
-      // The pubspec rewrite must tolerate either YAML quote style: the bound
-      // has been written both ways, and a pattern pinned to one spelling
-      // failed the whole job (sdk=1, flutter=0) as soon as the file moved
-      // to double quotes.
       expect(prepare, contains("""(?:'[^']*'|"[^"]*")"""));
     },
   );
@@ -198,9 +165,6 @@ void main() {
     final sh = File('ohos/scripts/build-rust-ohos.sh').readAsStringSync();
     final ps = File('ohos/scripts/build-rust-ohos.ps1').readAsStringSync();
 
-    // The OHOS target is `target_os = "linux"` with `target_env = "ohos"`;
-    // a module lib.rs never declares exports nothing, and the CMake link
-    // of libarcadia_core.so dies on undefined arcadia_ohos_* symbols.
     expect(lib, contains('mod ohos_ffi'));
     expect(lib, contains('target_env = "ohos"'));
     for (final symbol in [
@@ -210,7 +174,6 @@ void main() {
       'arcadia_ohos_set_protect_callback',
     ]) {
       expect(ffi, contains('fn $symbol('));
-      // Both build scripts assert the symbol in the built static library.
       expect(sh, contains(symbol));
       expect(ps, contains(symbol));
     }
@@ -224,9 +187,6 @@ void main() {
     final plugin = File('ohos/entry/src/main/ets/plugins/ArcadiaPlusPlugin.ets')
         .readAsStringSync();
 
-    // `import arcadiaCore from 'libarcadia_core.so'` resolves its types
-    // through this dependency; without it the module is `any` and
-    // CompileArkTS fails on `arkts-no-any-unknown`.
     expect(entryPkg, contains('libarcadia_core.so'));
     expect(entryPkg, contains('src/main/cpp/types/libarcadia_core'));
 
@@ -257,9 +217,6 @@ void main() {
       '.github/workflows/release.yml',
     ]) {
       final source = File(path).readAsStringSync();
-      // `flutter build hap`'s own output dies with its step; the on-disk
-      // hvigor log and the stage products are what survives, so a failure
-      // report has to surface them explicitly.
       expect(source, contains('Report why the HAP build failed'));
       expect(source, contains('if: failure()'));
       expect(source, contains('.hvigor/outputs/build-logs'));
@@ -277,16 +234,10 @@ void main() {
         .readAsStringSync();
     final script = File('ohos/scripts/patch-flutter-ohos-har.py')
         .readAsStringSync();
-    // The pinned SDK's KeyEvent has no isCapsLockOn/isNumLockOn, so the
-    // embedding har must be patched after precache or CompileArkTS rejects
-    // the embedding and the HAP build fails.
     expect(prepare, contains('precache --ohos --ohos_internal_build'));
     expect(prepare, contains('patch-flutter-ohos-har.py'));
     expect(script, contains('isCapsLockOn'));
     expect(script, contains('isNumLockOn'));
-    // The same har's PiP bridge calls the process-level
-    // window.getGlobalWindowMode(), which this SDK does not expose either,
-    // so it is rewritten to the answer its own catch block already gave.
     expect(script, contains('getGlobalWindowMode'));
   });
 }
