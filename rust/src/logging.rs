@@ -13,7 +13,7 @@ use tracing::Level;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::registry::Registry;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::{reload, EnvFilter, Layer};
+use tracing_subscriber::{EnvFilter, Layer, reload};
 
 /// Verbose third-party stacks that would drown the user-facing log panel.
 const NOISY_TARGETS: &[&str] = &[

@@ -36,16 +36,18 @@ where
 
 // ============== Lifecycle ==============
 
-/// `flutter_rust_bridge` entry point: installs the default Dart utilities and
-/// brings up tracing.
+/// `flutter_rust_bridge` entry point: installs tracing and panic capture once.
 ///
 /// The subscriber is installed here rather than through `corduit::api::init_app`
 /// because corduit's installer runs once per process and cannot change the
 /// level afterwards — see [`crate::logging`].
 #[frb(init)]
 pub fn init_app() {
-    flutter_rust_bridge::setup_default_user_utils();
     let _ = crate::logging::init(crate::logging::LogFilter::UpTo(tracing::Level::INFO));
+    // Do not mutate process environment variables after worker threads start.
+    // Backtrace capture respects the environment supplied when the app starts.
+    static PANIC_CAPTURE: std::sync::Once = std::sync::Once::new();
+    PANIC_CAPTURE.call_once(flutter_rust_bridge::PanicBacktrace::setup);
 }
 
 /// Point the engine's GeoIP matcher at a database file on disk.
@@ -66,8 +68,7 @@ pub async fn set_geoip_database_path(path: String) -> std::result::Result<(), St
         if !database.is_file() {
             return Err(format!("GeoIP database not found at {path}"));
         }
-        std::env::set_var("CORDUIT_GEOIP_DB", database);
-        Ok(())
+        engine::engine::geoip::set_default_database_path(database).map_err(|e| e.to_string())
     })
     .await
 }
@@ -414,6 +415,11 @@ pub async fn get_logs(lines: Option<u32>) -> std::result::Result<Vec<String>, St
 }
 
 #[frb]
+pub async fn clear_logs() -> std::result::Result<(), String> {
+    run(|| engine::api::clear_logs()).await
+}
+
+#[frb]
 pub async fn set_log_level(level: String) -> std::result::Result<(), String> {
     let parsed = crate::logging::parse_level(&level)?;
     run(move || crate::logging::set_level(parsed)).await
@@ -491,8 +497,8 @@ pub async fn stop_external_controller() -> std::result::Result<(), String> {
 }
 
 #[frb]
-pub async fn get_external_controller_status(
-) -> std::result::Result<ExternalControllerStatus, String> {
+pub async fn get_external_controller_status()
+-> std::result::Result<ExternalControllerStatus, String> {
     run(|| engine::api::get_external_controller_status().map(ExternalControllerStatus::from)).await
 }
 

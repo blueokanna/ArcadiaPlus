@@ -1,3 +1,4 @@
+import 'package:arcadiaplus/src/widgets/dns_status_card.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -172,6 +173,7 @@ class DnsSettingsScreen extends StatelessWidget {
                         onChanged: dnsSettings.setUseRecursiveResolver,
                       ),
                     ),
+                    const DnsStatusCard(),
                     _divider(),
                     AdaptiveListTile(
                       title: Text(l10n?.dnsMode ?? 'DNS Mode'),
@@ -598,10 +600,6 @@ class _UpstreamEditorSheetState extends State<_UpstreamEditorSheet> {
   @override
   void didUpdateWidget(_UpstreamEditorSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // The store is the source of truth and this sheet writes through it, so a
-    // stored list that changed underneath (a migration on first load, or a
-    // rejected write) is mirrored rather than left showing something that is
-    // not what will be used.
     if (!listEquals(oldWidget.items, widget.items)) {
       _items = List.of(widget.items);
     }

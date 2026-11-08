@@ -38,8 +38,8 @@ class ProxyNodeTile extends StatelessWidget {
         onPressed: onPressed,
         style: ButtonStyle(
           animationDuration: AppMotion.duration(context, AppMotion.short),
-          padding: const WidgetStatePropertyAll(EdgeInsets.all(20)),
-          minimumSize: const WidgetStatePropertyAll(Size(48, 120)),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(12)),
+          minimumSize: const WidgetStatePropertyAll(Size(48, 104)),
           alignment: Alignment.centerLeft,
           shape: const WidgetStatePropertyAll(AppShapes.card),
           elevation: const WidgetStatePropertyAll(0),
@@ -82,6 +82,8 @@ class ProxyNodeTile extends StatelessWidget {
               children: [
                 Text(
                   subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: text.labelMedium?.copyWith(
                     color: selected
                         ? colors.onSecondaryContainer
@@ -91,6 +93,8 @@ class ProxyNodeTile extends StatelessWidget {
                 if (latency != null)
                   Text(
                     latency!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: text.labelMedium?.copyWith(
                       color: failed ? colors.error : foreground,
                       fontFeatures: const [FontFeature.tabularFigures()],

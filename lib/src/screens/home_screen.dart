@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/widgets/theme_picker.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -12,7 +14,6 @@ import 'package:arcadiaplus/src/providers/theme_provider.dart';
 import 'package:arcadiaplus/src/widgets/traffic_chart.dart';
 import 'package:arcadiaplus/src/widgets/status_card.dart';
 import 'package:arcadiaplus/src/widgets/quick_actions.dart';
-import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/utils/device_info_utils.dart';
@@ -91,10 +92,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
     _onTop = onTop;
     _syncClaim();
     if (onTop) {
-      // Whatever is on screen is stale by however long this screen was
-      // covered, so catch up once instead of waiting for the next tick. The
-      // proxy and tunnel switches are part of that: the platform can have
-      // changed under us while they were out of sight.
       _appState?.refreshStatus();
       unawaited(context.read<NetworkSettingsProvider>().refresh());
     }
@@ -141,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           IconButton(
             icon: const Icon(Icons.palette_outlined),
             onPressed: () =>
-                _showThemeSelector(context, context.read<ThemeProvider>()),
+                showThemePicker(context, context.read<ThemeProvider>()),
             tooltip: l10n?.changeTheme ?? 'Change theme',
           ),
           IconButton(
@@ -233,13 +230,10 @@ Widget _systemInfoCard(
 ) {
   final colorScheme = Theme.of(context).colorScheme;
   final borderRadius = ResponsiveUtils.getBorderRadius(context);
-
-  // Format CPU info
   final cpuInfo = info.cpuName.isNotEmpty && !info.cpuName.contains('Unknown')
       ? '${info.cpuName} (${info.cpuCores}C/${info.cpuThreads}T)'
       : '${info.cpuCores} ${l10n?.cpuCores ?? "cores"} / ${info.cpuThreads} ${l10n?.cpuThreads ?? "threads"}';
 
-  // Check if mobile platform (Android/iOS/HarmonyOS)
   final isMobile = PlatformUtils.isMobile;
 
   return Card(
@@ -269,9 +263,9 @@ Widget _systemInfoCard(
           _infoRow(
             context,
             icon: Icons.memory_outlined,
-            label: l10n?.memory ?? 'Memory',
+            label: '${l10n?.memory ?? 'Memory'} (RSS)',
             value:
-                '${info.memoryUsed ~/ BigInt.from(1024) ~/ BigInt.from(1024)} MB',
+                '${info.memoryUsed ~/ BigInt.from(1024) ~/ BigInt.from(1024)} MiB',
           ),
           if (!isMobile) ...[
             const Divider(height: 24),
@@ -357,105 +351,6 @@ String _deviceModel() {
   return 'Unknown Device';
 }
 
-void _showThemeSelector(BuildContext context, ThemeProvider themeProvider) {
-  final l10n = AppLocalizations.of(context);
-
-  showModalBottomSheet(
-    context: context,
-    showDragHandle: true,
-    isScrollControlled: true,
-    builder: (context) => DraggableScrollableSheet(
-      initialChildSize: 0.5,
-      minChildSize: 0.3,
-      maxChildSize: 0.8,
-      expand: false,
-      builder: (context, scrollController) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n?.chooseTheme ?? 'Choose Theme',
-              style: Theme.of(context).textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView(
-                controller: scrollController,
-                children: [
-                  ...themeProvider.availableThemes.map((themeName) {
-                    final isSelected = themeProvider.selectedTheme == themeName;
-                    return AdaptiveListTile(
-                      title: Text(themeProvider.getThemeDisplayName(themeName)),
-                      leading: Container(
-                        width: 24,
-                        height: 24,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: _getThemeColor(themeName, context),
-                        ),
-                      ),
-                      trailing: isSelected
-                          ? Icon(
-                              Icons.check,
-                              color: Theme.of(context).colorScheme.primary,
-                            )
-                          : null,
-                      onTap: () {
-                        themeProvider.setTheme(themeName);
-                        Navigator.of(context).pop();
-                      },
-                      selected: isSelected,
-                    );
-                  }),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.auto_awesome_outlined),
-                      const SizedBox(width: 12),
-                      Text(
-                        l10n?.dynamicColors ?? 'Dynamic Colors',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      const Spacer(),
-                      Switch(
-                        value: themeProvider.useDynamicColors,
-                        onChanged: themeProvider.dynamicColorAvailable == false
-                            ? null
-                            : (value) =>
-                                  themeProvider.setUseDynamicColors(value),
-                      ),
-                    ],
-                  ),
-                  if (themeProvider.dynamicColorAvailable == false)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        l10n?.dynamicColorUnavailable ??
-                            'Dynamic colours are not available on this '
-                                'platform',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-Color _getThemeColor(String themeName, BuildContext context) {
-  return context.read<ThemeProvider>().getThemeSeedColor(themeName);
-}
-
 Widget _sectionHeader(BuildContext context, String title, IconData icon) {
   final colorScheme = Theme.of(context).colorScheme;
   final textTheme = Theme.of(context).textTheme;
@@ -479,7 +374,6 @@ Widget _sectionHeader(BuildContext context, String title, IconData icon) {
   );
 }
 
-/// 服务状态卡片。只在运行状态、加载状态或引擎状态快照变化时重建。
 class _StatusSection extends StatelessWidget {
   const _StatusSection();
 
@@ -527,10 +421,6 @@ class _ServiceStatsSection extends StatelessWidget {
   }
 }
 
-/// 流量统计。
-///
-/// 订阅范围刻意收窄到图表真正消费的四个值，并用 [RepaintBoundary] 把图表
-/// 的绘制与整屏隔离：1 Hz 的速度更新只重绘这张图，而不是整页。
 class _TrafficSection extends StatelessWidget {
   const _TrafficSection();
 
@@ -566,7 +456,6 @@ class _TrafficSection extends StatelessWidget {
   }
 }
 
-/// 系统信息。系统信息刷新很慢，所以这一块基本不会引起重建。
 class _SystemInfoSection extends StatelessWidget {
   const _SystemInfoSection();
 

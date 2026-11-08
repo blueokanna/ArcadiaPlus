@@ -570,11 +570,28 @@ class RecursiveDnsStatus {
   /// The bound `host:port`, present while [`crate::api::start_recursive_dns`]
   /// has an active listener.
   final String? listen;
+  final BigInt queries;
+  final BigInt cacheHits;
+  final BigInt upstreamQueries;
+  final BigInt failures;
 
-  const RecursiveDnsStatus({required this.running, this.listen});
+  const RecursiveDnsStatus({
+    required this.running,
+    this.listen,
+    required this.queries,
+    required this.cacheHits,
+    required this.upstreamQueries,
+    required this.failures,
+  });
 
   @override
-  int get hashCode => running.hashCode ^ listen.hashCode;
+  int get hashCode =>
+      running.hashCode ^
+      listen.hashCode ^
+      queries.hashCode ^
+      cacheHits.hashCode ^
+      upstreamQueries.hashCode ^
+      failures.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -582,7 +599,11 @@ class RecursiveDnsStatus {
       other is RecursiveDnsStatus &&
           runtimeType == other.runtimeType &&
           running == other.running &&
-          listen == other.listen;
+          listen == other.listen &&
+          queries == other.queries &&
+          cacheHits == other.cacheHits &&
+          upstreamQueries == other.upstreamQueries &&
+          failures == other.failures;
 }
 
 /// Loopback JSON-RPC server status. The token itself is never reported.

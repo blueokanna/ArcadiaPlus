@@ -10,6 +10,8 @@ class ThemeProvider extends ChangeNotifier {
   bool _useDynamicColors = false;
   bool? _dynamicColorAvailable;
   bool _disposed = false;
+  int _revision = 0;
+  Future<void> _pendingSave = Future<void>.value();
 
   ThemeProvider() {
     _loadSettings();
@@ -78,7 +80,10 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   void setTheme(String themeName) {
-    if (_selectedTheme != themeName && availableThemes.contains(themeName)) {
+    if (!_disposed &&
+        _selectedTheme != themeName &&
+        availableThemes.contains(themeName)) {
+      _revision++;
       _selectedTheme = themeName;
       _saveSettings();
       notifyListeners();
@@ -86,24 +91,45 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   void setUseDynamicColors(bool useDynamic) {
-    if (_useDynamicColors != useDynamic) {
+    if (!_disposed && _useDynamicColors != useDynamic) {
+      _revision++;
       _useDynamicColors = useDynamic;
       _saveSettings();
       notifyListeners();
     }
   }
 
-  void _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    _selectedTheme = prefs.getString(_themeKey) ?? AppTheme.defaultTheme;
-    _useDynamicColors = prefs.getBool(_dynamicColorsKey) ?? false;
-    notifyListeners();
+  Future<void> _loadSettings() async {
+    final revision = _revision;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_disposed || revision != _revision) return;
+      final saved = prefs.getString(_themeKey);
+      _selectedTheme = availableThemes.contains(saved)
+          ? saved!
+          : AppTheme.defaultTheme;
+      _useDynamicColors = prefs.getBool(_dynamicColorsKey) ?? false;
+      notifyListeners();
+    } catch (error) {
+      debugPrint('Unable to load theme preferences: $error');
+    }
   }
 
-  void _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_themeKey, _selectedTheme);
-    await prefs.setBool(_dynamicColorsKey, _useDynamicColors);
+  void _saveSettings() {
+    final selected = _selectedTheme;
+    final dynamic = _useDynamicColors;
+    // Preserve selection order even when the platform store responds slowly.
+    _pendingSave = _pendingSave
+        .then((_) async {
+          final prefs = await SharedPreferences.getInstance();
+          if (!await prefs.setString(_themeKey, selected) ||
+              !await prefs.setBool(_dynamicColorsKey, dynamic)) {
+            throw StateError('Theme preferences were not saved');
+          }
+        })
+        .catchError((Object error) {
+          debugPrint('Unable to save theme preferences: $error');
+        });
   }
 
   // Get the current theme data

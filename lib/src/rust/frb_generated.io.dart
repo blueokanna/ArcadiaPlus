@@ -873,6 +873,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   ) {
     wireObj.running = cst_encode_bool(apiObj.running);
     wireObj.listen = cst_encode_opt_String(apiObj.listen);
+    wireObj.queries = cst_encode_u_64(apiObj.queries);
+    wireObj.cache_hits = cst_encode_u_64(apiObj.cacheHits);
+    wireObj.upstream_queries = cst_encode_u_64(apiObj.upstreamQueries);
+    wireObj.failures = cst_encode_u_64(apiObj.failures);
   }
 
   @protected
@@ -1653,6 +1657,17 @@ class RustLibWire implements BaseWire {
   late final _wire__crate__api__clear_android_vpn_fd =
       _wire__crate__api__clear_android_vpn_fdPtr
           .asFunction<void Function(int)>();
+
+  void wire__crate__api__clear_logs(int port_) {
+    return _wire__crate__api__clear_logs(port_);
+  }
+
+  late final _wire__crate__api__clear_logsPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__clear_logs',
+      );
+  late final _wire__crate__api__clear_logs = _wire__crate__api__clear_logsPtr
+      .asFunction<void Function(int)>();
 
   void wire__crate__api__clear_vpn_fd(int port_) {
     return _wire__crate__api__clear_vpn_fd(port_);
@@ -3786,13 +3801,33 @@ final class wire_cst_recursive_dns_status extends ffi.Struct {
 
   external ffi.Pointer<wire_cst_list_prim_u_8_strict> listen;
 
+  @ffi.Uint64()
+  external int queries;
+
+  @ffi.Uint64()
+  external int cache_hits;
+
+  @ffi.Uint64()
+  external int upstream_queries;
+
+  @ffi.Uint64()
+  external int failures;
+
   static ffi.Pointer<wire_cst_recursive_dns_status> $allocate(
     ffi.Allocator $allocator, {
     required bool running,
     required ffi.Pointer<wire_cst_list_prim_u_8_strict> listen,
+    required int queries,
+    required int cache_hits,
+    required int upstream_queries,
+    required int failures,
   }) => $allocator<wire_cst_recursive_dns_status>()
     ..ref.running = running
-    ..ref.listen = listen;
+    ..ref.listen = listen
+    ..ref.queries = queries
+    ..ref.cache_hits = cache_hits
+    ..ref.upstream_queries = upstream_queries
+    ..ref.failures = failures;
 }
 
 final class wire_cst_rpc_server_status extends ffi.Struct {

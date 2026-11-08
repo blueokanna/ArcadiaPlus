@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "com.blueokanna.arcadiaplus",
     "vendor": "blueokanna",
-    "versionCode": 1000000,
-    "versionName": "1.0.0",
+    "versionCode": 100080001,
+    "versionName": "1.0.8",
     "icon": "$media:app_icon",
     "label": "$string:app_name",
     "distributedNotificationEnabled": true,

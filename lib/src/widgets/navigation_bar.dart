@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/theme/app_motion.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
 class AppNavigationBar extends StatelessWidget {
@@ -159,7 +160,7 @@ class AppNavigationBar extends StatelessWidget {
       shadowColor: Colors.transparent,
       height: 80,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      animationDuration: AnimationUtils.durationMedium2,
+      animationDuration: AppMotion.duration(context),
       destinations: [
         NavigationDestination(
           icon: const Icon(Icons.home_outlined),

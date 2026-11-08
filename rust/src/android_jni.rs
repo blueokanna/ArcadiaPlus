@@ -13,11 +13,11 @@
 
 #![cfg(target_os = "android")]
 
-use jni::objects::JObject;
 use jni::JNIEnv;
+use jni::objects::JObject;
 
 /// Called by `ArcadiaPlusVpnService` when the service starts.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeInitRustBridge<
     'local,
 >(
@@ -31,7 +31,7 @@ pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nat
 }
 
 /// Called by `ArcadiaPlusVpnService` when the service stops.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeClearRustBridge<
     'local,
 >(
@@ -49,7 +49,7 @@ pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nat
 
 /// Notification, tile and permission-revocation disconnects stop the proxy too.
 /// A Flutter TUN-only toggle calls nativeClearRustBridge and keeps listeners up.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeStopProxy(
     _env: JNIEnv<'_>,
     _service: JObject<'_>,

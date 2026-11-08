@@ -790,6 +790,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     return [
       cst_encode_bool(raw.running),
       cst_encode_opt_String(raw.listen),
+      cst_encode_u_64(raw.queries),
+      cst_encode_u_64(raw.cacheHits),
+      cst_encode_u_64(raw.upstreamQueries),
+      cst_encode_u_64(raw.failures),
     ].jsify()!;
   }
 
@@ -1191,6 +1195,9 @@ class RustLibWire implements BaseWire {
 
   void wire__crate__api__clear_android_vpn_fd(NativePortType port_) =>
       wasmModule.wire__crate__api__clear_android_vpn_fd(port_);
+
+  void wire__crate__api__clear_logs(NativePortType port_) =>
+      wasmModule.wire__crate__api__clear_logs(port_);
 
   void wire__crate__api__clear_vpn_fd(NativePortType port_) =>
       wasmModule.wire__crate__api__clear_vpn_fd(port_);
@@ -1601,6 +1608,8 @@ external RustLibWasmModule get wasmModule;
 @anonymous
 extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__api__clear_android_vpn_fd(NativePortType port_);
+
+  external void wire__crate__api__clear_logs(NativePortType port_);
 
   external void wire__crate__api__clear_vpn_fd(NativePortType port_);
 

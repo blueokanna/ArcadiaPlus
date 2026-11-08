@@ -41,12 +41,11 @@ static SNAPSHOT: Mutex<Option<Snapshot>> = Mutex::new(None);
 fn snapshot(force: bool) -> Result<Arc<Vec<engine::RuleDto>>, String> {
     {
         let slot = SNAPSHOT.lock();
-        if !force {
-            if let Some(current) = slot.as_ref() {
-                if current.taken_at.elapsed() < SNAPSHOT_TTL {
-                    return Ok(Arc::clone(&current.rules));
-                }
-            }
+        if !force
+            && let Some(current) = slot.as_ref()
+            && current.taken_at.elapsed() < SNAPSHOT_TTL
+        {
+            return Ok(Arc::clone(&current.rules));
         }
     }
 

@@ -35,6 +35,17 @@ require(!hasAnyReleaseSigningValue || hasCompleteReleaseSigningConfig) {
     "Release signing requires all ARCADIAPLUS_KEYSTORE_* environment variables"
 }
 
+val requestedAbis = providers.gradleProperty("target-platform").orNull
+    ?.split(',')?.map { platform ->
+        when (platform.trim()) {
+            "android-arm" -> "armeabi-v7a"
+            "android-arm64" -> "arm64-v8a"
+            "android-x64" -> "x86_64"
+            else -> error("Unsupported Android target platform: $platform")
+        }
+    }.orEmpty()
+val splitPerAbi = providers.gradleProperty("split-per-abi").orNull.toBoolean()
+
 android {
     namespace = "com.blueokanna.arcadiaplus"
     compileSdk = flutter.compileSdkVersion
@@ -57,8 +68,15 @@ android {
         versionCode = androidVersionCode(flutter.versionName, flutter.versionCode)
         versionName = flutter.versionName
         
-        // Do not filter Flutter's supported armeabi-v7a, arm64-v8a, and x86_64
-        // libraries. Android selects the matching ABI at install time.
+        // Plugins can include libraries for ABIs that this Flutter build did
+        // not produce. Do not advertise those ABIs in a single-target APK.
+        // Split builds already apply their own filters and must keep control.
+        if (requestedAbis.isNotEmpty() && !splitPerAbi) {
+            ndk {
+                abiFilters.clear()
+                abiFilters.addAll(requestedAbis)
+            }
+        }
     }
 
     signingConfigs {

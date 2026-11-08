@@ -391,6 +391,83 @@ void main() {
     },
   );
 
+  for (final invalid in [
+    'payload: ["unfinished"',
+    'payload: {domain: example.com}',
+    'payload: [true, 123]',
+    'payload: [{domain: example.com}]',
+    'payload: [""]',
+    '["example.com"]',
+  ]) {
+    test('malformed structured refresh preserves cache: $invalid', () async {
+      var calls = 0;
+      final service = serviceWith(
+        MockClient(
+          (_) async => http.Response(
+            calls++ == 0 ? 'payload: ["safe.example"]' : invalid,
+            200,
+          ),
+        ),
+      );
+      addTearDown(service.dispose);
+      final before = await service.prepare('structured', httpProfile());
+      final after = await service.prepare(
+        'structured',
+        httpProfile(),
+        force: true,
+      );
+      expect(after.paths, before.paths);
+      expect(after.states.single.error, contains('payload'));
+      expect(File(after.paths['reject']!).readAsStringSync(), 'safe.example\n');
+    });
+  }
+
+  test('long comment headers do not hide a YAML payload', () async {
+    final service = serviceWith(
+      MockClient(
+        (_) async => http.Response(
+          '${'# provider metadata\n' * 300}payload:\n  - "+.bilibili.com"\n',
+          200,
+        ),
+      ),
+    );
+    addTearDown(service.dispose);
+    final report = await service.prepare('header', httpProfile());
+    expect(report.states.single.entries, 1);
+    expect(
+      File(report.paths['reject']!).readAsStringSync(),
+      '+.bilibili.com\n',
+    );
+  });
+
+  test('validates CIDR addresses and prefix lengths before caching', () async {
+    final service = serviceWith(
+      MockClient(
+        (_) async => http.Response(
+          'payload:\n'
+          '  - "999.1.2.3/24"\n'
+          '  - "192.168.0.0/33"\n'
+          '  - "2001:db8::/129"\n'
+          '  - ":::/64"\n'
+          '  - "192.168.0.0/16"\n'
+          '  - "2001:db8::/32"\n',
+          200,
+        ),
+      ),
+    );
+    addTearDown(service.dispose);
+    final report = await service.prepare(
+      'cidr',
+      httpProfile(behavior: 'ipcidr'),
+    );
+    expect(report.states.single.entries, 2);
+    expect(report.states.single.skipped, 4);
+    expect(
+      File(report.paths['reject']!).readAsStringSync(),
+      '192.168.0.0/16\n2001:db8::/32\n',
+    );
+  });
+
   test(
     'concurrent refreshes share the committed cache without racing files',
     () async {

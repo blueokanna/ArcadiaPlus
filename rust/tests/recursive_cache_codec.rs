@@ -1,7 +1,7 @@
 //! Exercise the real persistence consumer of RustBinary in the app's feature
 //! graph, rather than a stand-in DTO with a different serialization schema.
 use recurse_x::cache::{
-    persist, score::ScoreInputs, CacheConfig, CacheKey, LookupOutcome, SemanticCache,
+    CacheConfig, CacheKey, LookupOutcome, SemanticCache, persist, score::ScoreInputs,
 };
 use recurse_x::rrset::RrSet;
 use recurse_x::{Name, RData, Rcode, Record, RrClass, RrType};
@@ -102,11 +102,13 @@ fn invalid_cache_frames_are_rejected_without_replacing_live_entries() {
         assert!(live.lookup(&key("codec.example", RrType::A), NOW).is_hit());
     }
     std::fs::write(&file.0, &valid).unwrap();
-    assert!(persist::load_from_limit(
-        &mut populated_cache(),
-        &file.0,
-        NOW,
-        (valid.len() - 1) as u64
-    )
-    .is_err());
+    assert!(
+        persist::load_from_limit(
+            &mut populated_cache(),
+            &file.0,
+            NOW,
+            (valid.len() - 1) as u64
+        )
+        .is_err()
+    );
 }

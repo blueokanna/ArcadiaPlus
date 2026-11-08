@@ -211,7 +211,7 @@ class RuleProviderReport {
 /// service owns the network side instead: it keeps a local copy per provider,
 /// refreshes it on the declared interval (Loyalsoldier-style sets ship
 /// `interval: 86400`), normalises YAML `payload:` documents into the plain
-/// line format the engine parses for `domain` / `ipcidr` / `classical`, and
+/// line format shared with the engine for `domain` / `ipcidr` / `classical`, and
 /// hands the engine a `file` provider — so a provider that cannot be reached
 /// degrades to the last good copy instead of blocking the proxy.
 class RuleProviderService extends ChangeNotifier {
@@ -441,7 +441,7 @@ class RuleProviderService extends ChangeNotifier {
       if (size > _maxPayloadBytes) {
         throw const FormatException('rule set exceeds the 32 MiB limit');
       }
-      final raw = utf8.decode(await source.readAsBytes(), allowMalformed: true);
+      final raw = await _readBounded(source.openRead());
       final state = await _storeNormalised(
         spec,
         directory,
@@ -790,8 +790,12 @@ class RuleProviderService extends ChangeNotifier {
 
     if (document != null) {
       for (final item in document) {
-        final entry = item?.toString().trim() ?? '';
-        if (entry.isEmpty) continue;
+        if (item is! String || item.trim().isEmpty) {
+          throw const FormatException(
+            'every rule payload entry must be a non-empty string',
+          );
+        }
+        final entry = item.trim();
         if (_isSupported(entry, behavior)) {
           entries.add(entry);
         } else {
@@ -821,13 +825,21 @@ class RuleProviderService extends ChangeNotifier {
 
   /// Returns the `payload:` list when [raw] is a YAML/JSON rule-set document.
   ///
-  /// The engine parses `domain` / `ipcidr` / `classical` providers as plain
-  /// line lists; a YAML document fed to it would be read line by line and
-  /// produce entries that never match, so the payload is unwrapped here.
+  /// Malformed structured input must never fall through to the plain-text
+  /// parser: that would replace a valid cache with YAML syntax posing as rules.
   static List<Object?>? _yamlPayload(String raw) {
-    final head = raw.length > 4096 ? raw.substring(0, 4096) : raw;
+    final lines = LineSplitter.split(raw);
+    final first = lines
+        .map((line) => line.trim())
+        .firstWhere(
+          (line) => line.isNotEmpty && !line.startsWith('#'),
+          orElse: () => '',
+        );
     final looksStructured =
-        head.trimLeft().startsWith('{') || head.contains('payload:');
+        first.startsWith('{') ||
+        first.startsWith('[') ||
+        first == '---' ||
+        lines.any((line) => line.trimLeft().startsWith('payload:'));
     if (!looksStructured) return null;
 
     try {
@@ -835,23 +847,26 @@ class RuleProviderService extends ChangeNotifier {
       if (document is Map && document['payload'] is List) {
         return (document['payload'] as List).cast<Object?>();
       }
-    } on YamlException {
-      return null;
+    } on YamlException catch (error) {
+      throw FormatException('invalid rule payload: ${error.message}');
     }
-    return null;
+    throw const FormatException('rule document must contain a payload array');
   }
 
   static bool _isSupported(String entry, String behavior) {
     switch (behavior) {
       case 'ipcidr':
-        return _cidrPattern.hasMatch(entry);
+        return _isCidr(entry);
       case 'classical':
         final parts = entry.split(',');
-        return parts.length >= 2 &&
-            _classicalTypes.contains(parts.first.trim().toUpperCase());
+        if (parts.length < 2 || parts[1].trim().isEmpty) return false;
+        final type = parts.first.trim().toUpperCase();
+        if (!_classicalTypes.contains(type)) return false;
+        return !const {'IP-CIDR', 'IP-CIDR6', 'SRC-IP-CIDR'}.contains(type) ||
+            _isCidr(parts[1].trim());
       case 'domain':
       default:
-        return !entry.contains(RegExp(r'\s'));
+        return !_whitespace.hasMatch(entry);
     }
   }
 
@@ -866,9 +881,19 @@ class RuleProviderService extends ChangeNotifier {
     'PROCESS-NAME',
   };
 
-  static final RegExp _cidrPattern = RegExp(
-    r'^(?:\d{1,3}(?:\.\d{1,3}){3}|[0-9a-fA-F:]{2,45})/\d{1,3}$',
-  );
+  static bool _isCidr(String entry) {
+    final parts = entry.split('/');
+    if (parts.length != 2 || !_prefixLength.hasMatch(parts[1])) return false;
+    final address = InternetAddress.tryParse(parts[0]);
+    final prefix = int.tryParse(parts[1]);
+    if (address == null || prefix == null || parts[0].contains('%')) {
+      return false;
+    }
+    return prefix <= (address.type == InternetAddressType.IPv4 ? 32 : 128);
+  }
+
+  static final _prefixLength = RegExp(r'^\d{1,3}$');
+  static final _whitespace = RegExp(r'\s');
 
   Future<RuleProviderState?> _cachedState(
     RuleProviderSpec spec,

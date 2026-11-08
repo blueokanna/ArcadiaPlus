@@ -179,6 +179,43 @@ jobs:
       - name: Test Rust workspace
         run: cargo test --workspace --all-targets --all-features --locked
 
+  msrv:
+    name: Rust 1.88 compatibility (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/checkout-engine
+      - uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+          key: msrv-1.88
+      - name: Compile all bridge features and targets on the declared MSRV
+        working-directory: rust
+        run: cargo +1.88.0 check --locked --all-targets --all-features
+      - name: Prepare the Android C compiler for the bridge
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ndk="$(sed -nE 's/^ *ndkVersion = "([^"]+)"$/\1/p' android/app/build.gradle.kts | head -n1)"
+          test -n "$ndk"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;$ndk"
+          toolchain="$ANDROID_HOME/ndk/$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          echo "CC_aarch64_linux_android=$toolchain/aarch64-linux-android21-clang" >> "$GITHUB_ENV"
+          echo "AR_aarch64_linux_android=$toolchain/llvm-ar" >> "$GITHUB_ENV"
+      - name: Compile Android JNI and ARM crypto on the declared MSRV
+        if: runner.os == 'Linux'
+        working-directory: rust
+        run: cargo +1.88.0 check --locked --all-features --target aarch64-linux-android
+
   ohos:
     name: HarmonyOS release HAP (unsigned)
     runs-on: ubuntu-latest

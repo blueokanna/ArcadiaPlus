@@ -263,6 +263,10 @@ pub struct RecursiveDnsStatus {
     /// The bound `host:port`, present while [`crate::api::start_recursive_dns`]
     /// has an active listener.
     pub listen: Option<String>,
+    pub queries: u64,
+    pub cache_hits: u64,
+    pub upstream_queries: u64,
+    pub failures: u64,
 }
 
 /// Loopback JSON-RPC server status. The token itself is never reported.

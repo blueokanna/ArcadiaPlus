@@ -1,0 +1,28 @@
+name: Rust dependency security
+
+on:
+  push:
+    paths: ['rust/Cargo.toml', 'rust/Cargo.lock', '.github/workflows/security.yml']
+  pull_request:
+    paths: ['rust/Cargo.toml', 'rust/Cargo.lock', '.github/workflows/security.yml']
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.97.0'
+      - uses: Swatinem/rust-cache@v2
+      - name: Install the pinned RustSec scanner
+        run: cargo +1.97.0 install cargo-audit --version 0.22.2 --locked
+      - name: Audit every target in the committed lockfile
+        run: cargo +1.97.0 audit --file rust/Cargo.lock --deny warnings

@@ -27,8 +27,8 @@
 //! the system reads as "the VPN app crashed" and answers by tearing the tunnel
 //! down.
 
-use std::ffi::{c_char, c_int, CStr};
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::ffi::{CStr, c_char, c_int};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use tracing::{error, info, warn};
 
@@ -44,7 +44,7 @@ fn guarded(body: impl FnOnce() -> c_int) -> c_int {
 }
 
 /// Read a NUL-terminated string, `None` when the pointer is null or not UTF-8.
-fn read_cstr(pointer: *const c_char) -> Option<String> {
+unsafe fn read_cstr(pointer: *const c_char) -> Option<String> {
     if pointer.is_null() {
         return None;
     }
@@ -92,8 +92,8 @@ fn init_logging(path: &str) {
 ///
 /// The three string pointers must be NUL-terminated UTF-8 or null;
 /// `tun_fd` must be a valid descriptor owned by the calling process.
-#[no_mangle]
-pub extern "C" fn arcadia_ohos_start(
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcadia_ohos_start(
     config_path: *const c_char,
     geoip_path: *const c_char,
     log_path: *const c_char,
@@ -105,11 +105,11 @@ pub extern "C" fn arcadia_ohos_start(
             error!("arcadia_ohos_start: negative tun descriptor {tun_fd}");
             return -2;
         }
-        let Some(config_path) = read_cstr(config_path) else {
+        let Some(config_path) = (unsafe { read_cstr(config_path) }) else {
             error!("arcadia_ohos_start: no config path");
             return -2;
         };
-        if let Some(log_path) = read_cstr(log_path) {
+        if let Some(log_path) = unsafe { read_cstr(log_path) } {
             init_logging(&log_path);
         }
 
@@ -121,12 +121,12 @@ pub extern "C" fn arcadia_ohos_start(
             }
         };
 
-        match read_cstr(geoip_path) {
+        match unsafe { read_cstr(geoip_path) } {
             Some(path) if std::path::Path::new(&path).is_file() => {
-                // Same contract as the app's own process: the environment
-                // variable is what corduit reads when the router builds its
-                // country matcher, so it must be set before initialization.
-                std::env::set_var("CORDUIT_GEOIP_DB", &path);
+                if let Err(error) = corduit::engine::geoip::set_default_database_path(&path) {
+                    error!("GeoIP database registration failed: {error}");
+                    return -3;
+                }
                 info!("GeoIP database registered: {path}");
             }
             Some(path) => warn!("GeoIP database missing at {path}; GEOIP rules stay inert"),
@@ -165,7 +165,7 @@ pub extern "C" fn arcadia_ohos_start(
 }
 
 /// Stop the packet path and the engine. Idempotent.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn arcadia_ohos_stop() -> c_int {
     guarded(|| {
         let _ = corduit::api::stop_ohos_vpn();
@@ -183,19 +183,21 @@ mod tests {
     #[test]
     fn an_unknown_proxy_mode_is_refused_without_touching_the_engine() {
         let mode = CString::new("globel").expect("no interior nul");
-        assert_eq!(arcadia_ohos_set_proxy_mode(mode.as_ptr()), -2);
+        assert_eq!(unsafe { arcadia_ohos_set_proxy_mode(mode.as_ptr()) }, -2);
     }
 
     #[test]
     fn a_null_proxy_mode_is_refused() {
-        assert_eq!(arcadia_ohos_set_proxy_mode(std::ptr::null()), -2);
+        assert_eq!(unsafe { arcadia_ohos_set_proxy_mode(std::ptr::null()) }, -2);
     }
 
     #[test]
     fn a_negative_descriptor_is_refused_before_anything_else() {
         let config = CString::new("").expect("no interior nul");
         assert_eq!(
-            arcadia_ohos_start(config.as_ptr(), std::ptr::null(), std::ptr::null(), -1, 0),
+            unsafe {
+                arcadia_ohos_start(config.as_ptr(), std::ptr::null(), std::ptr::null(), -1, 0)
+            },
             -2
         );
     }
@@ -212,7 +214,7 @@ mod tests {
 ///
 /// `callback` must stay callable for as long as the engine runs; the NAPI
 /// wrapper owns that lifetime.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn arcadia_ohos_set_protect_callback(
     callback: Option<extern "C" fn(c_int) -> c_int>,
 ) -> c_int {
@@ -237,10 +239,10 @@ pub extern "C" fn arcadia_ohos_set_protect_callback(
 /// # Safety
 ///
 /// `mode` must be a NUL-terminated UTF-8 string or null.
-#[no_mangle]
-pub extern "C" fn arcadia_ohos_set_proxy_mode(mode: *const c_char) -> c_int {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn arcadia_ohos_set_proxy_mode(mode: *const c_char) -> c_int {
     guarded(|| {
-        let Some(mode) = read_cstr(mode) else {
+        let Some(mode) = (unsafe { read_cstr(mode) }) else {
             return -2;
         };
         let mode_int = match mode.to_ascii_lowercase().as_str() {

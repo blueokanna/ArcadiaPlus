@@ -1,3 +1,4 @@
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -13,9 +14,43 @@ class ProxiesScreen extends StatefulWidget {
 }
 
 class _ProxiesScreenState extends State<ProxiesScreen> {
+  int _columns = 0;
+  int _layoutRevision = 0;
+
+  Future<void> _loadLayout() async {
+    final revision = _layoutRevision;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getInt('proxy_node_columns') ?? 0;
+      if (mounted && revision == _layoutRevision && saved >= 0 && saved <= 2) {
+        setState(() => _columns = saved);
+      }
+    } catch (_) {
+      // A missing preference does not prevent access to the node list.
+    }
+  }
+
+  Future<void> _setColumns(int columns) async {
+    final revision = ++_layoutRevision;
+    setState(() => _columns = columns);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (revision != _layoutRevision) return;
+      if (!await prefs.setInt('proxy_node_columns', columns)) {
+        throw StateError('Could not save node layout');
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(error.toString())));
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _loadLayout();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<ProxiesProvider>().loadFromActiveProfile();
     });
@@ -51,6 +86,47 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
                           child: Text(
                             l10n?.proxies ?? 'Proxies',
                             style: text.headlineMedium,
+                          ),
+                        ),
+                        MenuAnchor(
+                          menuChildren: [
+                            for (final value in [0, 1, 2])
+                              MenuItemButton(
+                                onPressed: () => _setColumns(value),
+                                leadingIcon: _columns == value
+                                    ? const Icon(Icons.check)
+                                    : const SizedBox.square(dimension: 24),
+                                child: Text(
+                                  Localizations.localeOf(context)
+                                              .languageCode ==
+                                          'zh'
+                                      ? [
+                                          '\u81ea\u52a8',
+                                          '\u4e00\u5217',
+                                          '\u4e24\u5217',
+                                        ][value]
+                                      : [
+                                          'Automatic',
+                                          'One column',
+                                          'Two columns',
+                                        ][value],
+                                ),
+                              ),
+                          ],
+                          builder: (context, controller, _) => IconButton(
+                            tooltip:
+                                Localizations.localeOf(context).languageCode ==
+                                    'zh'
+                                ? '\u8282\u70b9\u5e03\u5c40'
+                                : 'Node layout',
+                            onPressed: () => controller.isOpen
+                                ? controller.close()
+                                : controller.open(),
+                            icon: Icon(
+                              _columns == 1
+                                  ? Icons.view_list_rounded
+                                  : Icons.grid_view_rounded,
+                            ),
                           ),
                         ),
                         IconButton(
@@ -136,7 +212,7 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
                         ),
                       ),
                     ),
-                    _NodeGrid(group: group),
+                    _NodeGrid(group: group, preferredColumns: _columns),
                   ],
                 ] else if (!state.$3)
                   SliverFillRemaining(
@@ -218,7 +294,8 @@ class _TestButton extends StatelessWidget {
 }
 
 class _NodeGrid extends StatelessWidget {
-  const _NodeGrid({required this.group});
+  const _NodeGrid({required this.group, required this.preferredColumns});
+  final int preferredColumns;
   final ParsedProxyGroup group;
 
   @override
@@ -229,10 +306,11 @@ class _NodeGrid extends StatelessWidget {
       sliver: SliverLayoutBuilder(
         builder: (context, constraints) {
           final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-          final columns =
-              (constraints.crossAxisExtent / (270 * scale.clamp(1, 2)))
-                  .floor()
-                  .clamp(1, 4);
+          final columns = preferredColumns == 0
+              ? (constraints.crossAxisExtent / (270 * scale.clamp(1, 2)))
+                    .floor()
+                    .clamp(1, 4)
+              : preferredColumns;
           Widget itemBuilder(BuildContext context, int index) {
             final item = items[index];
             final name = switch (item) {
@@ -247,8 +325,6 @@ class _NodeGrid extends StatelessWidget {
             );
           }
 
-          // A list has intrinsic height on narrow screens and at large text
-          // scales, preserving readability instead of shrinking labels.
           if (columns == 1) {
             return SliverList.separated(
               itemCount: items.length,
@@ -265,7 +341,7 @@ class _NodeGrid extends StatelessWidget {
               crossAxisCount: columns,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              mainAxisExtent: 176 + 70 * (scale - 1).clamp(0, 2),
+              mainAxisExtent: 76 + 80 * scale.clamp(1, 3),
             ),
           );
         },

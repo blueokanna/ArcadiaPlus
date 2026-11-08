@@ -3,14 +3,14 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
-import 'package:arcadiaplus/src/rust/api.dart' as rust_api;
+import 'package:arcadiaplus/src/services/log_source.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
-import 'package:arcadiaplus/src/services/native_core_service.dart';
 
 class LogsScreen extends StatefulWidget {
-  const LogsScreen({super.key});
+  const LogsScreen({super.key, this.source = const NativeLogSource()});
+  final LogSource source;
 
   @override
   State<LogsScreen> createState() => _LogsScreenState();
@@ -19,6 +19,10 @@ class LogsScreen extends StatefulWidget {
 class _LogsScreenState extends State<LogsScreen> {
   List<String> _logs = [];
   bool _isLoading = true;
+  bool _reading = false;
+  bool _manualRefreshPending = false;
+  bool _busy = false;
+  int _epoch = 0;
   bool _autoRefresh = true;
   Timer? _refreshTimer;
   final ScrollController _scrollController = ScrollController();
@@ -67,52 +71,102 @@ class _LogsScreenState extends State<LogsScreen> {
     }
   }
 
-  Future<void> _loadLogs({bool scrollToBottom = true}) async {
-    try {
-      // Check if RustLib is initialized
-      if (!NativeCoreService.instance.isReady) {
-        if (mounted) {
-          setState(() {
-            _logs = ['Rust library not initialized. Please restart the app.'];
-            _isLoading = false;
-          });
-        }
-        return;
+  void _replaceLogs(List<String> logs) {
+    _logs = logs;
+    _filteredCache = null;
+    _filteredCacheLevel = null;
+  }
+
+  void _feedback(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _loadLogs({
+    bool scrollToBottom = true,
+    bool manual = false,
+  }) async {
+    if (_busy) return;
+    if (_reading) {
+      if (manual) {
+        _manualRefreshPending = true;
+        setState(() => _busy = true);
       }
-
-      // Request more logs (up to 2000) to show more history
-      final logs = await rust_api.getLogs(lines: 2000);
-      if (!mounted) return;
-
-      // Nothing new to show: leave the list alone. This is both the common
-      // case for an idle app and the expensive one — a fresh list means
-      // re-filtering every line and rebuilding the list view.
-      if (listEquals(logs, _logs)) return;
-
+      return;
+    }
+    final epoch = _epoch;
+    _reading = true;
+    if (manual) setState(() => _busy = true);
+    try {
+      final logs = await widget.source.read();
+      if (!mounted || epoch != _epoch) return;
       setState(() {
-        _logs = logs;
-        _filteredCache = null;
-        _filteredCacheLevel = null;
+        if (!listEquals(logs, _logs)) _replaceLogs(logs);
         _isLoading = false;
       });
-      if (scrollToBottom && _scrollController.hasClients) {
+      if (manual) {
+        _feedback(
+          Localizations.localeOf(context).languageCode == 'zh'
+              ? '\u65e5\u5fd7\u5df2\u5237\u65b0'
+              : 'Logs refreshed',
+        );
+      }
+      if (scrollToBottom) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
+          if (mounted && _scrollController.hasClients) {
+            if (MediaQuery.disableAnimationsOf(context)) {
+              _scrollController.jumpTo(
+                _scrollController.position.maxScrollExtent,
+              );
+            } else {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 240),
+                curve: Curves.easeOutCubic,
+              );
+            }
           }
         });
       }
-    } catch (e) {
-      if (mounted) {
+    } catch (error) {
+      if (mounted && epoch == _epoch) _feedback(error.toString());
+    } finally {
+      _reading = false;
+      if (mounted && epoch == _epoch) {
         setState(() {
-          _logs = ['Error loading logs: $e'];
-          _filteredCache = null;
-          _filteredCacheLevel = null;
           _isLoading = false;
+          _busy = false;
+        });
+        if (_manualRefreshPending) {
+          _manualRefreshPending = false;
+          unawaited(_loadLogs(manual: true));
+        }
+      }
+    }
+  }
+
+  Future<void> _clearLogs() async {
+    if (_busy) return;
+    final epoch = ++_epoch;
+    setState(() => _busy = true);
+    try {
+      await widget.source.clear();
+      if (!mounted || epoch != _epoch) return;
+      setState(() => _replaceLogs([]));
+      _feedback(
+        Localizations.localeOf(context).languageCode == 'zh'
+            ? '\u65e5\u5fd7\u5df2\u6e05\u9664'
+            : 'Logs cleared',
+      );
+    } catch (error) {
+      if (mounted && epoch == _epoch) _feedback(error.toString());
+    } finally {
+      if (mounted && epoch == _epoch) {
+        setState(() {
+          _isLoading = false;
+          _busy = false;
         });
       }
     }
@@ -173,7 +227,7 @@ class _LogsScreenState extends State<LogsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          l10n?.logs ?? '日志',
+          l10n?.logs ?? 'Logs',
           style: textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -196,7 +250,7 @@ class _LogsScreenState extends State<LogsScreen> {
                     if (_filterLevel == 'all')
                       const Icon(Icons.check, size: 18),
                     const SizedBox(width: 8),
-                    const Text('全部'),
+                    const Text('All'),
                   ],
                 ),
               ),
@@ -238,7 +292,7 @@ class _LogsScreenState extends State<LogsScreen> {
           // Auto refresh toggle
           IconButton(
             icon: Icon(_autoRefresh ? Icons.sync : Icons.sync_disabled),
-            tooltip: _autoRefresh ? '自动刷新: 开' : '自动刷新: 关',
+            tooltip: _autoRefresh ? 'Auto Refresh: On' : 'Auto Refresh: Off',
             onPressed: () {
               setState(() {
                 _autoRefresh = !_autoRefresh;
@@ -249,18 +303,14 @@ class _LogsScreenState extends State<LogsScreen> {
           // Manual refresh
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: l10n?.refresh ?? '刷新',
-            onPressed: () => _loadLogs(),
+            tooltip: l10n?.refresh ?? 'Refresh',
+            onPressed: _busy ? null : () => _loadLogs(manual: true),
           ),
           // Clear logs
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: l10n?.clearLogs ?? '清除日志',
-            onPressed: () {
-              setState(() {
-                _logs = [];
-              });
-            },
+            tooltip: l10n?.clearLogs ?? 'Clear Logs',
+            onPressed: _busy ? null : _clearLogs,
           ),
         ],
       ),
@@ -268,6 +318,7 @@ class _LogsScreenState extends State<LogsScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
+                if (_busy) const LinearProgressIndicator(),
                 // Status bar
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -288,7 +339,7 @@ class _LogsScreenState extends State<LogsScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        '${filteredLogs.length} ${l10n?.logEntries ?? '条日志'}',
+                        '${filteredLogs.length} ${l10n?.logEntries ?? 'log entries'}',
                         style: textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -296,7 +347,7 @@ class _LogsScreenState extends State<LogsScreen> {
                       const Spacer(),
                       if (Platform.isAndroid || PlatformUtils.isOHOS)
                         Text(
-                          'VPN 模式',
+                          'VPN Mode',
                           style: textTheme.bodySmall?.copyWith(
                             color: colorScheme.primary,
                           ),
@@ -320,7 +371,7 @@ class _LogsScreenState extends State<LogsScreen> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                l10n?.noLogs ?? '暂无日志',
+                                l10n?.noLogs ?? 'No logs available',
                                 style: textTheme.bodyLarge?.copyWith(
                                   color: colorScheme.onSurfaceVariant,
                                 ),
@@ -369,7 +420,7 @@ class _LogsScreenState extends State<LogsScreen> {
             );
           }
         },
-        tooltip: '滚动到底部',
+        tooltip: 'Scroll to bottom',
         child: const Icon(Icons.arrow_downward),
       ),
     );

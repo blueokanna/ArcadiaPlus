@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/widgets/connection_destination.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -9,6 +11,7 @@ import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/theme/app_motion.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
 class ConnectionsScreen extends StatefulWidget {
@@ -19,10 +22,7 @@ class ConnectionsScreen extends StatefulWidget {
 }
 
 class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
-  /// How often the connection list is re-read while this screen is visible.
-  /// It used to ride the provider's one-second tick, which meant every screen
-  /// in the app paid for a full connection list.
-  static const Duration _listInterval = Duration(seconds: 2);
+  static const Duration _listInterval = Duration(seconds: 3);
 
   Timer? _listTimer;
   bool _onTop = true;
@@ -78,8 +78,6 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
   @override
   void didPop() => _setOnTop(false);
 
-  /// Poll the list only while this screen is the visible one and the app is
-  /// in the foreground.
   void _syncTimer() {
     if (_onTop && AppLifecycle.instance.isActive) {
       _listTimer ??= Timer.periodic(_listInterval, (_) {
@@ -91,9 +89,6 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
     }
   }
 
-  /// Pull the summary figures and the connection list; the list is the part
-  /// this screen is actually about, and it is no longer fetched by the
-  /// provider's own tick.
   Future<void> _refresh() async {
     final appState = context.read<AppStateProvider>();
     await appState.refreshStatus();
@@ -109,7 +104,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          l10n?.connections ?? '连接',
+          l10n?.connections ?? 'Connections',
           style: textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -121,7 +116,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                 return TextButton.icon(
                   onPressed: () => _showCloseAllDialog(context),
                   icon: const Icon(Icons.close),
-                  label: Text(l10n?.closeAll ?? '关闭全部'),
+                  label: Text(l10n?.closeAll ?? 'Close All'),
                   style: TextButton.styleFrom(
                     foregroundColor: colorScheme.error,
                   ),
@@ -132,7 +127,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
           ),
           IconButton(
             icon: const Icon(Icons.refresh_outlined),
-            tooltip: l10n?.refresh ?? '刷新',
+            tooltip: l10n?.refresh ?? 'Refresh',
             onPressed: _refresh,
           ),
         ],
@@ -180,7 +175,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
             ),
             SizedBox(height: spacing * 3),
             Text(
-              l10n?.serviceNotRunningTitle ?? '服务未运行',
+              l10n?.serviceNotRunningTitle ?? 'Service Not Running',
               style: textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -188,7 +183,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
             SizedBox(height: spacing),
             Text(
               l10n?.startServiceToViewConnections2 ??
-                  '启动 ArcadiaPlus 服务以查看活动连接',
+                  'Start the ArcadiaPlus service to view active connections',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -227,14 +222,14 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
             ),
             SizedBox(height: spacing * 3),
             Text(
-              l10n?.noActiveConnectionsTitle ?? '无活动连接',
+              l10n?.noActiveConnectionsTitle ?? 'No active connections',
               style: textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
             ),
             SizedBox(height: spacing),
             Text(
-              l10n?.connectionsWillAppear2 ?? '当数据流经代理时，活动连接将显示在此处',
+              l10n?.connectionsWillAppear2 ?? 'Active connections will appear here as data flows through the proxy.',
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -319,7 +314,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
             child: _buildStatItem(
               context,
               icon: Icons.link_rounded,
-              label: l10n?.activeConnections ?? '活动连接',
+              label: l10n?.activeConnections ?? 'Active connections',
               value: appState.activeConnections.length.toString(),
               color: colorScheme.primary,
             ),
@@ -329,7 +324,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
             child: _buildStatItem(
               context,
               icon: Icons.arrow_upward_rounded,
-              label: l10n?.totalUploadShort ?? '总上传',
+              label: l10n?.totalUploadShort ?? 'Total Uploads',
               value: appState.getFormattedTraffic(appState.totalUploadBytes),
               color: colorScheme.tertiary,
             ),
@@ -339,7 +334,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
             child: _buildStatItem(
               context,
               icon: Icons.arrow_downward_rounded,
-              label: l10n?.totalDownloadShort ?? '总下载',
+              label: l10n?.totalDownloadShort ?? 'Total Downloads',
               value: appState.getFormattedTraffic(appState.totalDownloadBytes),
               color: colorScheme.secondary,
             ),
@@ -445,13 +440,10 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                   ),
                   SizedBox(width: spacing * 1.5),
                   Expanded(
-                    child: Text(
-                      '${connection.host}:${connection.destinationPort}',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    child: ConnectionDestination(
+                      host: connection.host,
+                      port: connection.destinationPort,
+                      ip: connection.destinationIp,
                     ),
                   ),
                   _buildTrafficBadge(context, connection, appState),
@@ -463,7 +455,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                       size: 20,
                     ),
                     onPressed: () => _closeConnection(context, connection),
-                    tooltip: '关闭连接',
+                    tooltip: 'Close Connection',
                     visualDensity: VisualDensity.compact,
                     style: IconButton.styleFrom(
                       backgroundColor: colorScheme.errorContainer.withValues(
@@ -532,7 +524,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
     final downloadStr = _formatTrafficCompact(connection.downloadBytes);
 
     return AnimatedContainer(
-      duration: AnimationUtils.durationMedium2,
+      duration: AppMotion.duration(context),
       curve: AnimationUtils.curveStandard,
       padding: EdgeInsets.symmetric(
         horizontal: spacing * 1.25,
@@ -639,12 +631,14 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
       context: context,
       builder: (context) => AlertDialog(
         icon: Icon(Icons.warning_rounded, color: colorScheme.error, size: 48),
-        title: const Text('关闭所有连接'),
-        content: const Text('确定要关闭所有活动连接吗？这可能会中断正在进行的下载或流媒体。'),
+        title: const Text('Close All Connections'),
+        content: const Text(
+          'Are you sure you want to close all active connections? This may interrupt ongoing downloads or streaming.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: const Text('Cancel'),
           ),
           FilledButton(
             onPressed: () {
@@ -652,7 +646,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
               Navigator.of(context).pop();
             },
             style: FilledButton.styleFrom(backgroundColor: colorScheme.error),
-            child: const Text('关闭全部'),
+            child: const Text('Close All'),
           ),
         ],
       ),
@@ -742,46 +736,49 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                 children: [
                   _buildDetailSection(
                     context,
-                    title: '基本信息',
+                    title: 'Basic Information',
                     items: [
-                      _DetailItem('主机', connection.host),
-                      _DetailItem('端口', connection.destinationPort.toString()),
+                      _DetailItem('Host', connection.host),
                       _DetailItem(
-                        '协议',
+                        'Port',
+                        connection.destinationPort.toString(),
+                      ),
+                      _DetailItem(
+                        'Protocol',
                         '${connection.protocol}/${connection.network}',
                       ),
                       if (connection.destinationIp != null &&
                           connection.destinationIp!.isNotEmpty)
-                        _DetailItem('目标 IP', connection.destinationIp!),
+                        _DetailItem('Target IP', connection.destinationIp!),
                     ],
                   ),
                   const SizedBox(height: 20),
                   _buildDetailSection(
                     context,
-                    title: '路由信息',
+                    title: 'Routing Information',
                     items: [
-                      _DetailItem('规则', connection.rule),
+                      _DetailItem('Rules', connection.rule),
                       if (connection.rulePayload.isNotEmpty)
-                        _DetailItem('规则载荷', connection.rulePayload),
-                      _DetailItem('入站', connection.inboundTag),
-                      _DetailItem('出站', connection.outboundTag),
+                        _DetailItem('Rule Payload', connection.rulePayload),
+                      _DetailItem('Inbound', connection.inboundTag),
+                      _DetailItem('Outbound', connection.outboundTag),
                     ],
                   ),
                   const SizedBox(height: 20),
                   _buildDetailSection(
                     context,
-                    title: '流量统计',
+                    title: 'Traffic Statistics',
                     items: [
                       _DetailItem(
-                        '上传',
+                        'Upload',
                         appState.getFormattedTraffic(connection.uploadBytes),
                       ),
                       _DetailItem(
-                        '下载',
+                        'Download',
                         appState.getFormattedTraffic(connection.downloadBytes),
                       ),
                       _DetailItem(
-                        '创建时间',
+                        'Creation Time',
                         _formatTimestamp(connection.startTime),
                       ),
                     ],
@@ -791,8 +788,10 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                     const SizedBox(height: 20),
                     _buildDetailSection(
                       context,
-                      title: '进程信息',
-                      items: [_DetailItem('进程名', connection.processName!)],
+                      title: 'Process Information',
+                      items: [
+                        _DetailItem('Process Name', connection.processName!),
+                      ],
                     ),
                   ],
                   const SizedBox(height: 24),
@@ -808,11 +807,13 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                               ),
                             );
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('已复制到剪贴板')),
+                              const SnackBar(
+                                content: Text('Copied to clipboard'),
+                              ),
                             );
                           },
                           icon: const Icon(Icons.copy_rounded),
-                          label: const Text('复制地址'),
+                          label: const Text('Copy Address'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -823,7 +824,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                             Navigator.of(context).pop();
                           },
                           icon: const Icon(Icons.close_rounded),
-                          label: const Text('关闭连接'),
+                          label: const Text('Close Connection'),
                           style: FilledButton.styleFrom(
                             backgroundColor: colorScheme.error,
                           ),
@@ -921,11 +922,11 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
     final diff = now.difference(date);
 
     if (diff.inSeconds < 60) {
-      return '${diff.inSeconds} 秒前';
+      return '${diff.inSeconds} seconds ago';
     } else if (diff.inMinutes < 60) {
-      return '${diff.inMinutes} 分钟前';
+      return '${diff.inMinutes} minutes ago';
     } else if (diff.inHours < 24) {
-      return '${diff.inHours} 小时前';
+      return '${diff.inHours} hours ago';
     } else {
       return '${date.month}/${date.day} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
     }

@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => -998977709;
+  int get rustContentHash => 556028991;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -84,6 +84,8 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
 abstract class RustLibApi extends BaseApi {
   Future<void> crateApiClearAndroidVpnFd();
+
+  Future<void> crateApiClearLogs();
 
   Future<void> crateApiClearVpnFd();
 
@@ -332,6 +334,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiClearAndroidVpnFdConstMeta =>
       const TaskConstMeta(debugName: "clear_android_vpn_fd", argNames: []);
+
+  @override
+  Future<void> crateApiClearLogs() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__clear_logs(port_);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiClearLogsConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClearLogsConstMeta =>
+      const TaskConstMeta(debugName: "clear_logs", argNames: []);
 
   @override
   Future<void> crateApiClearVpnFd() {
@@ -2751,11 +2774,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   RecursiveDnsStatus dco_decode_recursive_dns_status(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return RecursiveDnsStatus(
       running: dco_decode_bool(arr[0]),
       listen: dco_decode_opt_String(arr[1]),
+      queries: dco_decode_u_64(arr[2]),
+      cacheHits: dco_decode_u_64(arr[3]),
+      upstreamQueries: dco_decode_u_64(arr[4]),
+      failures: dco_decode_u_64(arr[5]),
     );
   }
 
@@ -3529,7 +3556,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_running = sse_decode_bool(deserializer);
     var var_listen = sse_decode_opt_String(deserializer);
-    return RecursiveDnsStatus(running: var_running, listen: var_listen);
+    var var_queries = sse_decode_u_64(deserializer);
+    var var_cacheHits = sse_decode_u_64(deserializer);
+    var var_upstreamQueries = sse_decode_u_64(deserializer);
+    var var_failures = sse_decode_u_64(deserializer);
+    return RecursiveDnsStatus(
+      running: var_running,
+      listen: var_listen,
+      queries: var_queries,
+      cacheHits: var_cacheHits,
+      upstreamQueries: var_upstreamQueries,
+      failures: var_failures,
+    );
   }
 
   @protected
@@ -4233,6 +4271,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_bool(self.running, serializer);
     sse_encode_opt_String(self.listen, serializer);
+    sse_encode_u_64(self.queries, serializer);
+    sse_encode_u_64(self.cacheHits, serializer);
+    sse_encode_u_64(self.upstreamQueries, serializer);
+    sse_encode_u_64(self.failures, serializer);
   }
 
   @protected

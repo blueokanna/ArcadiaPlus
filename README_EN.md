@@ -20,7 +20,7 @@ The sections below state what the current build actually does, including the pla
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
-- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.2.7, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
+- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.3.0, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
 - Explicit configuration downgrades: a node whose protocol corduit cannot build is dropped and its references fall back to `DIRECT`, and a rule type corduit has no rule for is skipped — every downgrade is reported through `onWarning`, never silent.
 - Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
 - Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
@@ -52,7 +52,7 @@ The Rules entry in settings (`/rules`) shows the engine's table with each rule's
 
 ## Protocol Status
 
-The protocol implementations live in corduit 0.2.7, and this build enables every feature it defines (`hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic`, `tls13`, …). This repository wires them into Flutter and keeps the real-server interoperability checklist below open.
+The protocol implementations live in corduit 0.3.0, and this build enables every feature it defines (`hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic`, `tls13`, …). This repository wires them into Flutter and keeps the real-server interoperability checklist below open.
 
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
@@ -163,10 +163,10 @@ Flutter Rust Bridge (generated bindings)
         |
 lib-arcadiaplus (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
-corduit 0.2.7 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
+corduit 0.3.0 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
         +-- nextjson / rustbinary (config and binary codecs)
-recurse-x 0.2.2 (optional local recursion: the resolver, plus the client-facing UDP/TCP DNS server whose lifecycle the bridge owns)
+recurse-x 0.2.3 (optional local recursion: the resolver, plus the client-facing UDP/TCP DNS server whose lifecycle the bridge owns)
 ```
 
 corduit is synchronous while the Dart surface stays `Future`-based, so the bridge dispatches every engine call onto a blocking worker (`run`). Starting the proxy, probing latency, or toggling TUN therefore never stalls the Flutter isolate.
@@ -176,7 +176,7 @@ Clear ownership boundaries matter more than adding macros, generics, or complex 
 ## Prerequisites
 
 - Flutter SDK (Dart `^3.13.0`, Flutter `>=3.47.0 <3.48.0`; CI and the release workflow pin 3.47.2, the same line local development uses)
-- Rust ≥ 1.88 (edition 2021; `rust-toolchain.toml` pins 1.97.0 so local and CI lint with the same compiler)
+- Rust ≥ 1.88 (edition 2024; `rust-toolchain.toml` pins 1.97.0 so local and CI lint with the same compiler)
 - Android: Android SDK, NDK, and JDK 17
 - Windows: Visual Studio C++ toolchain, Wintun, and elevation
 - macOS/iOS: Xcode and valid signing configuration

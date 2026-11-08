@@ -5,6 +5,7 @@ abstract final class AppMotion {
   static const short = Duration(milliseconds: 160);
   static const standard = Duration(milliseconds: 240);
   static const curve = Curves.easeInOutCubicEmphasized;
+  static const standardCurve = Cubic(0.2, 0.0, 0.0, 1.0);
   static const pressSpring = SpringDescription(
     mass: 1,
     stiffness: 600,

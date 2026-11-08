@@ -1,7 +1,6 @@
-# Toolchain pin: local builds, `flutter build` (through cargokit) and CI must all
-# lint/compile with exactly the same rustc + clippy, otherwise clippy lints that
-# only exist in newer releases (e.g. `collapsible_if` in 1.97) fail in CI while
-# staying invisible on a developer machine.
+# Keep local builds, cargokit, rustfmt and CI Clippy on one toolchain.
+# Rust 1.88 is the minimum supported compiler and is checked separately in CI;
+# it does not need to be the compiler used to produce release artifacts.
 
 [toolchain]
 channel = "1.97.0"

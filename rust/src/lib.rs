@@ -19,6 +19,9 @@
 
 #![allow(unexpected_cfgs)]
 
+// FRB emits lint names introduced after our MSRV; keep this allowance scoped
+// to generated code, without weakening diagnostics in the handwritten bridge.
+#[allow(unknown_lints)]
 mod frb_generated;
 mod logging;
 

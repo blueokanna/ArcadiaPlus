@@ -28,7 +28,7 @@
 // Section: imports
 
 use flutter_rust_bridge::for_generated::byteorder::{NativeEndian, ReadBytesExt, WriteBytesExt};
-use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
 use flutter_rust_bridge::{Handler, IntoIntoDart};
 
 // Section: boilerplate
@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueNom,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -998977709;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 556028991;
 
 // Section: executor
 
@@ -63,6 +63,26 @@ fn wire__crate__api__clear_android_vpn_fd_impl(
                         let output_ok = Ok::<_, ()>({
                             crate::api::clear_android_vpn_fd().await;
                         })?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__clear_logs_impl(port_: flutter_rust_bridge::for_generated::MessagePort) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "clear_logs",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::clear_logs().await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -2628,9 +2648,17 @@ impl SseDecode for crate::types::RecursiveDnsStatus {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_running = <bool>::sse_decode(deserializer);
         let mut var_listen = <Option<String>>::sse_decode(deserializer);
+        let mut var_queries = <u64>::sse_decode(deserializer);
+        let mut var_cacheHits = <u64>::sse_decode(deserializer);
+        let mut var_upstreamQueries = <u64>::sse_decode(deserializer);
+        let mut var_failures = <u64>::sse_decode(deserializer);
         return crate::types::RecursiveDnsStatus {
             running: var_running,
             listen: var_listen,
+            queries: var_queries,
+            cache_hits: var_cacheHits,
+            upstream_queries: var_upstreamQueries,
+            failures: var_failures,
         };
     }
 }
@@ -3134,6 +3162,10 @@ impl flutter_rust_bridge::IntoDart for crate::types::RecursiveDnsStatus {
         [
             self.running.into_into_dart().into_dart(),
             self.listen.into_into_dart().into_dart(),
+            self.queries.into_into_dart().into_dart(),
+            self.cache_hits.into_into_dart().into_dart(),
+            self.upstream_queries.into_into_dart().into_dart(),
+            self.failures.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3756,6 +3788,10 @@ impl SseEncode for crate::types::RecursiveDnsStatus {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <bool>::sse_encode(self.running, serializer);
         <Option<String>>::sse_encode(self.listen, serializer);
+        <u64>::sse_encode(self.queries, serializer);
+        <u64>::sse_encode(self.cache_hits, serializer);
+        <u64>::sse_encode(self.upstream_queries, serializer);
+        <u64>::sse_encode(self.failures, serializer);
     }
 }
 
@@ -3896,7 +3932,7 @@ mod io {
     use flutter_rust_bridge::for_generated::byteorder::{
         NativeEndian, ReadBytesExt, WriteBytesExt,
     };
-    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate
@@ -4285,6 +4321,10 @@ mod io {
             crate::types::RecursiveDnsStatus {
                 running: self.running.cst_decode(),
                 listen: self.listen.cst_decode(),
+                queries: self.queries.cst_decode(),
+                cache_hits: self.cache_hits.cst_decode(),
+                upstream_queries: self.upstream_queries.cst_decode(),
+                failures: self.failures.cst_decode(),
             }
         }
     }
@@ -4670,6 +4710,10 @@ mod io {
             Self {
                 running: Default::default(),
                 listen: core::ptr::null_mut(),
+                queries: Default::default(),
+                cache_hits: Default::default(),
+                upstream_queries: Default::default(),
+                failures: Default::default(),
             }
         }
     }
@@ -4820,6 +4864,11 @@ mod io {
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__clear_android_vpn_fd(port_: i64) {
         wire__crate__api__clear_android_vpn_fd_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__clear_logs(port_: i64) {
+        wire__crate__api__clear_logs_impl(port_)
     }
 
     #[unsafe(no_mangle)]
@@ -5806,6 +5855,10 @@ mod io {
     pub struct wire_cst_recursive_dns_status {
         running: bool,
         listen: *mut wire_cst_list_prim_u_8_strict,
+        queries: u64,
+        cache_hits: u64,
+        upstream_queries: u64,
+        failures: u64,
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
@@ -5900,7 +5953,7 @@ mod web {
     };
     use flutter_rust_bridge::for_generated::wasm_bindgen;
     use flutter_rust_bridge::for_generated::wasm_bindgen::prelude::*;
-    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+    use flutter_rust_bridge::for_generated::{Lifetimeable, Lockable, transform_result_dco};
     use flutter_rust_bridge::{Handler, IntoIntoDart};
 
     // Section: boilerplate
@@ -6454,13 +6507,17 @@ mod web {
                 .unwrap();
             assert_eq!(
                 self_.length(),
-                2,
-                "Expected 2 elements, got {}",
+                6,
+                "Expected 6 elements, got {}",
                 self_.length()
             );
             crate::types::RecursiveDnsStatus {
                 running: self_.get(0).cst_decode(),
                 listen: self_.get(1).cst_decode(),
+                queries: self_.get(2).cst_decode(),
+                cache_hits: self_.get(3).cst_decode(),
+                upstream_queries: self_.get(4).cst_decode(),
+                failures: self_.get(5).cst_decode(),
             }
         }
     }
@@ -6742,6 +6799,11 @@ mod web {
         port_: flutter_rust_bridge::for_generated::MessagePort,
     ) {
         wire__crate__api__clear_android_vpn_fd_impl(port_)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__clear_logs(port_: flutter_rust_bridge::for_generated::MessagePort) {
+        wire__crate__api__clear_logs_impl(port_)
     }
 
     #[wasm_bindgen]

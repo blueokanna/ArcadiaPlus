@@ -32,9 +32,6 @@ class StatusCard extends StatelessWidget {
         : (isRunning
               ? (l10n?.running ?? 'Running')
               : (l10n?.stopped ?? 'Stopped'));
-    final description = isRunning
-        ? (l10n?.arcadiaplusRunning ?? 'ArcadiaPlus is running')
-        : (l10n?.serviceNotRunning ?? 'Service not running');
     final foreground = isRunning ? colors.onPrimaryContainer : colors.onSurface;
     final duration = AppMotion.duration(context);
 
@@ -45,7 +42,7 @@ class StatusCard extends StatelessWidget {
         color: isRunning ? colors.primaryContainer : colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(24),
       ),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -55,8 +52,8 @@ class StatusCard extends StatelessWidget {
               ExcludeSemantics(
                 child: AnimatedContainer(
                   duration: duration,
-                  width: 52,
-                  height: 52,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: isRunning
                         ? colors.primary
@@ -76,11 +73,30 @@ class StatusCard extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: Text(
-                  l10n?.serviceStatus ?? 'Service Status',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: foreground,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n?.serviceStatus ?? 'Service status',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                    Semantics(
+                      liveRegion: true,
+                      child: AnimatedSwitcher(
+                        duration: duration,
+                        child: Text(
+                          status,
+                          key: ValueKey(status),
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: foreground,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (isLoading) ...[
@@ -101,35 +117,7 @@ class StatusCard extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: 24),
-          Semantics(
-            liveRegion: true,
-            label: status,
-            excludeSemantics: true,
-            child: AnimatedSwitcher(
-              duration: duration,
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              layoutBuilder: (current, previous) => Stack(
-                alignment: AlignmentDirectional.centerStart,
-                children: [...previous, ?current],
-              ),
-              child: Text(
-                status,
-                key: ValueKey(status),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: AdaptiveButton(

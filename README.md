@@ -20,7 +20,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.2.7 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.3.0 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 配置转换采用显式降级：corduit 无法构建的协议节点会被丢弃、引用回落 `DIRECT`，corduit 没有对应类型的规则会被跳过——每次降级都通过 `onWarning` 上报，不静默处理。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
@@ -52,7 +52,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 
 ## 协议状态
 
-协议实现位于 corduit 0.2.7，本构建启用其全部 feature（`hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13`…）；本仓库负责把它们接进 Flutter，并对真实服务端的互操作保留验证清单（见下方结语）。
+协议实现位于 corduit 0.3.0，本构建启用其全部 feature（`hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13`…）；本仓库负责把它们接进 Flutter，并对真实服务端的互操作保留验证清单（见下方结语）。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
@@ -176,7 +176,7 @@ flowchart TB
     %% Engine Layer
     %% =========================
     subgraph ENGINE["③ 核心引擎层"]
-        CORDUIT["corduit 0.2.7<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
+        CORDUIT["corduit 0.3.0<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
     end
 
     %% =========================
@@ -192,7 +192,7 @@ flowchart TB
     %% Optional DNS Resolver
     %% =========================
     subgraph OPTIONAL["⑤ 可选本地递归 DNS"]
-        RECURSE["recurse-x 0.2.2<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
+        RECURSE["recurse-x 0.2.3<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
     end
 
     %% Main call path
@@ -216,7 +216,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 ## 环境要求
 
 - Flutter SDK（Dart `^3.13.0`，Flutter `>=3.47.0 <3.48.0`；CI 与发布流程固定使用 3.47.2，与本机开发环境同一版本线）
-- Rust ≥ 1.88（edition 2021；`rust-toolchain.toml` 固定 1.97.0，本地与 CI 使用同一编译器跑 rustfmt/clippy）
+- Rust ≥ 1.88（edition 2024；`rust-toolchain.toml` 固定 1.97.0，本地与 CI 使用同一编译器跑 rustfmt/clippy）
 - Android：Android SDK、NDK、JDK 17
 - Windows：Visual Studio C++ 工具链；Wintun/管理员权限
 - macOS/iOS：Xcode 与有效签名配置

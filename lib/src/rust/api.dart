@@ -271,6 +271,8 @@ Future<RecursiveDnsStatus> getRecursiveDnsStatus() =>
 Future<List<String>> getLogs({int? lines}) =>
     RustLib.instance.api.crateApiGetLogs(lines: lines);
 
+Future<void> clearLogs() => RustLib.instance.api.crateApiClearLogs();
+
 Future<void> setLogLevel({required String level}) =>
     RustLib.instance.api.crateApiSetLogLevel(level: level);
 

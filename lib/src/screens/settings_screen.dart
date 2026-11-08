@@ -1,3 +1,4 @@
+import 'package:arcadiaplus/src/widgets/theme_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -50,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              l10n?.settings ?? '设置',
+              l10n?.settings ?? 'Settings',
               style: textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -65,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // 外观设置
                 _buildSectionHeader(
                   context,
-                  l10n?.appearance ?? '外观',
+                  l10n?.appearance ?? 'Appearance',
                   Icons.palette_outlined,
                 ),
                 Card(
@@ -74,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       AdaptiveListTile(
-                        title: Text(l10n?.themeMode ?? '主题模式'),
+                        title: Text(l10n?.themeMode ?? 'Theme Mode'),
                         subtitle: Text(
                           _getThemeModeText(appState.themeMode, l10n),
                         ),
@@ -104,15 +105,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             items: [
                               DropdownMenuItem(
                                 value: ThemeMode.system,
-                                child: Text(l10n?.system ?? '跟随系统'),
+                                child: Text(l10n?.system ?? 'Follow System'),
                               ),
                               DropdownMenuItem(
                                 value: ThemeMode.light,
-                                child: Text(l10n?.light ?? '浅色'),
+                                child: Text(l10n?.light ?? 'Light'),
                               ),
                               DropdownMenuItem(
                                 value: ThemeMode.dark,
-                                child: Text(l10n?.dark ?? '深色'),
+                                child: Text(l10n?.dark ?? 'Dark'),
                               ),
                             ],
                             onChanged: (value) {
@@ -123,13 +124,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.themeStyle ?? '主题风格'),
+                        title: Text(l10n?.themeStyle ?? 'Theme Style'),
                         subtitle: Row(
                           children: [
                             Flexible(
                               child: Text(
                                 themeProvider.useDynamicColors
-                                    ? (l10n?.dynamicColors ?? '动态颜色')
+                                    ? (l10n?.dynamicColors ?? 'DynamicColors')
                                     : themeProvider.getThemeDisplayName(
                                         themeProvider.selectedTheme,
                                       ),
@@ -137,8 +138,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               ),
                             ),
                             const SizedBox(width: 10),
-                            // The palette the theme actually resolves to, so
-                            // "Ocean Blue" is not just a name.
                             _PaletteStrip(
                               scheme: themeProvider.getThemePreviewScheme(
                                 themeProvider.selectedTheme,
@@ -169,13 +168,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             : const Icon(Icons.chevron_right),
                         onTap: themeProvider.useDynamicColors
                             ? null
-                            : () => _showThemeSelector(context, themeProvider),
+                            : () => showThemePicker(context, themeProvider),
                         enabled: !themeProvider.useDynamicColors,
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
-                      // Only where a wallpaper can exist: `Image.file` has no
-                      // file system behind it on the web, so the entry is
-                      // absent there instead of leading to a dead screen.
                       if (WallpaperProvider.isSupported) ...[
                         Consumer<WallpaperProvider>(
                           builder: (context, wallpaper, child) {
@@ -198,13 +194,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const Divider(height: 1, indent: 16, endIndent: 16),
                       ],
                       AdaptiveListTile(
-                        title: Text(l10n?.dynamicColors ?? '动态颜色'),
+                        title: Text(l10n?.dynamicColors ?? 'Dynamic Colors'),
                         subtitle: Text(
                           themeProvider.dynamicColorAvailable == false
                               ? (l10n?.dynamicColorUnavailable ??
                                     'Dynamic colours are not available on this '
                                         'platform')
-                              : (l10n?.useSystemAccentColors ?? '使用系统强调色'),
+                              : (l10n?.useSystemAccentColors ??
+                                    'Use system accent colors'),
                         ),
                         leading: Icon(
                           Icons.color_lens_outlined,
@@ -223,7 +220,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Consumer<LocaleProvider>(
                         builder: (context, localeProvider, child) {
                           return AdaptiveListTile(
-                            title: Text(l10n?.language ?? '语言'),
+                            title: Text(l10n?.language ?? 'Language'),
                             subtitle: Text(
                               localeProvider.getLocaleName(
                                 localeProvider.currentLocale,
@@ -245,9 +242,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       Consumer<GeneralSettingsProvider>(
                         builder: (context, generalSettings, child) {
                           return AdaptiveListTile(
-                            title: Text(l10n?.hapticFeedback ?? '震动反馈'),
+                            title: Text(
+                              l10n?.hapticFeedback ?? 'Haptic Feedback',
+                            ),
                             subtitle: Text(
-                              l10n?.hapticFeedbackDesc ?? '操作时触发手机震动',
+                              l10n?.hapticFeedbackDesc ??
+                                  'Vibrate on interaction',
                             ),
                             leading: Icon(
                               Icons.vibration_outlined,
@@ -272,10 +272,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                // 配置设置
                 _buildSectionHeader(
                   context,
-                  l10n?.configuration ?? '配置',
+                  l10n?.configuration ?? 'Configuration',
                   Icons.tune_outlined,
                 ),
                 Card(
@@ -284,9 +283,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       AdaptiveListTile(
-                        title: Text(l10n?.basicConfig ?? '基本配置'),
+                        title: Text(l10n?.basicConfig ?? 'Basic Configuration'),
                         subtitle: Text(
-                          l10n?.basicConfigDesc ?? '端口、模式、日志等基本设置',
+                          l10n?.basicConfigDesc ??
+                              'Port, mode, logs, and other basic settings',
                         ),
                         leading: Icon(
                           Icons.settings_outlined,
@@ -297,9 +297,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.advancedConfig ?? '高级配置'),
+                        title: Text(
+                          l10n?.advancedConfig ?? 'Advanced Configuration',
+                        ),
                         subtitle: Text(
-                          l10n?.advancedConfigDesc ?? 'TCP、测速、进程等高级设置',
+                          l10n?.advancedConfigDesc ?? 'TCP, speed test, processes, and other advanced settings',
                         ),
                         leading: Icon(
                           Icons.build_outlined,
@@ -310,9 +312,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.dnsSettings ?? 'DNS 设置'),
+                        title: Text(l10n?.dnsSettings ?? 'DNS Settings'),
                         subtitle: Text(
-                          l10n?.dnsSettingsDesc ?? 'DNS 服务器、Fake-IP、Fallback 等',
+                          l10n?.dnsSettingsDesc ??
+                              'DNS servers, Fake-IP, Fallback, etc.',
                         ),
                         leading: Icon(
                           Icons.dns_outlined,
@@ -327,11 +330,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                // 网络设置 - 仅桌面平台显示
                 if (PlatformUtils.isDesktop) ...[
                   _buildSectionHeader(
                     context,
-                    l10n?.network ?? '网络',
+                    l10n?.network ?? 'Network',
                     Icons.wifi_outlined,
                   ),
                   Card(
@@ -340,9 +342,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: Column(
                       children: [
                         AdaptiveListTile(
-                          title: Text(l10n?.networkSettings ?? '网络设置'),
+                          title: Text(
+                            l10n?.networkSettings ?? 'Network Settings',
+                          ),
                           subtitle: Text(
-                            l10n?.systemProxyTunUwp ?? '系统代理、TUN、UWP 回环',
+                            l10n?.systemProxyTunUwp ??
+                                'System proxy, TUN, UWP loopback',
                           ),
                           leading: Icon(
                             Icons.settings_ethernet_outlined,
@@ -360,7 +365,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // 服务设置
                 _buildSectionHeader(
                   context,
-                  l10n?.service ?? '服务',
+                  l10n?.service ?? 'Service',
                   Icons.miscellaneous_services_outlined,
                 ),
                 Card(
@@ -369,11 +374,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       AdaptiveListTile(
-                        title: Text(l10n?.serviceStatus ?? '服务状态'),
+                        title: Text(l10n?.serviceStatus ?? 'Service Status'),
                         subtitle: Text(
                           appState.isServiceRunning
-                              ? (l10n?.running ?? '运行中')
-                              : (l10n?.stopped ?? '已停止'),
+                              ? (l10n?.running ?? 'Running')
+                              : (l10n?.stopped ?? 'Stopped'),
                         ),
                         leading: Icon(
                           appState.isServiceRunning
@@ -385,7 +390,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
-                      // 自动系统代理设置 (Windows)
                       if (PlatformUtils.isDesktop) ...[
                         AdaptiveListTile(
                           title: Text(
@@ -410,8 +414,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
 
                       AdaptiveListTile(
-                        title: Text(l10n?.viewLogs ?? '查看日志'),
-                        subtitle: Text(l10n?.viewLogsDesc ?? '查看运行时日志和调试信息'),
+                        title: Text(l10n?.viewLogs ?? 'View Logs'),
+                        subtitle: Text(
+                          l10n?.viewLogsDesc ??
+                              'View runtime logs and debug information',
+                        ),
                         leading: Icon(
                           Icons.article_outlined,
                           color: colorScheme.primary,
@@ -425,10 +432,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                // 关于
                 _buildSectionHeader(
                   context,
-                  l10n?.about ?? '关于',
+                  l10n?.about ?? 'About',
                   Icons.info_outline,
                 ),
                 Card(
@@ -437,7 +443,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       AdaptiveListTile(
-                        title: Text(l10n?.version ?? '版本'),
+                        title: Text(l10n?.version ?? 'Version'),
                         subtitle: Text(
                           _packageInfo?.version ?? appState.version,
                         ),
@@ -501,7 +507,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.buildInfo ?? '构建信息'),
+                        title: Text(l10n?.buildInfo ?? 'Build Info'),
                         subtitle: Text(appState.buildInfo),
                         leading: Icon(
                           Icons.build_outlined,
@@ -510,8 +516,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.disclaimer ?? '免责声明'),
-                        subtitle: Text(l10n?.disclaimerDesc ?? '使用条款和法律声明'),
+                        title: Text(l10n?.disclaimer ?? 'Disclaimer'),
+                        subtitle: Text(
+                          l10n?.disclaimerDesc ??
+                              'Terms of service and legal notices',
+                        ),
                         leading: Icon(
                           Icons.gavel_outlined,
                           color: colorScheme.primary,
@@ -521,9 +530,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.aboutArcadiaPlus ?? '关于 ArcadiaPlus'),
+                        title: Text(
+                          l10n?.aboutArcadiaPlus ?? 'About ArcadiaPlus',
+                        ),
                         subtitle: Text(
-                          l10n?.aboutArcadiaPlusDesc ?? '了解更多关于此应用',
+                          l10n?.aboutArcadiaPlusDesc ??
+                              'Learn more about this app',
                         ),
                         leading: Icon(
                           Icons.flash_on_outlined,
@@ -534,7 +546,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.license ?? '许可证'),
+                        title: Text(l10n?.license ?? 'License'),
                         subtitle: Text(
                           l10n?.licenseName ?? 'PolyForm Perimeter 1.0.1',
                         ),
@@ -551,10 +563,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 const SizedBox(height: 24),
 
-                // 操作
                 _buildSectionHeader(
                   context,
-                  l10n?.actions ?? '操作',
+                  l10n?.actions ?? 'Actions',
                   Icons.bolt_outlined,
                 ),
                 Card(
@@ -563,9 +574,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       AdaptiveListTile(
-                        title: Text(l10n?.restartService ?? '重启服务'),
+                        title: Text(l10n?.restartService ?? 'Restart Service'),
                         subtitle: Text(
-                          l10n?.restartServiceDesc ?? '重启 ArcadiaPlus 服务',
+                          l10n?.restartServiceDesc ??
+                              'Restart the ArcadiaPlus service',
                         ),
                         leading: Icon(
                           Icons.restart_alt_outlined,
@@ -579,8 +591,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       AdaptiveListTile(
-                        title: Text(l10n?.resetSettings ?? '重置设置'),
-                        subtitle: Text(l10n?.resetSettingsDesc ?? '重置所有设置为默认值'),
+                        title: Text(l10n?.resetSettings ?? 'Reset Settings'),
+                        subtitle: Text(
+                          l10n?.resetSettingsDesc ??
+                              'Reset all settings to their default values',
+                        ),
                         leading: Icon(
                           Icons.settings_backup_restore_outlined,
                           color: colorScheme.error,
@@ -630,11 +645,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _getThemeModeText(ThemeMode mode, AppLocalizations? l10n) {
     switch (mode) {
       case ThemeMode.system:
-        return l10n?.system ?? '跟随系统';
+        return l10n?.system ?? 'Follow System';
       case ThemeMode.light:
-        return l10n?.light ?? '浅色';
+        return l10n?.light ?? 'Light';
       case ThemeMode.dark:
-        return l10n?.dark ?? '深色';
+        return l10n?.dark ?? 'Dark';
     }
   }
 
@@ -653,7 +668,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Icon(Icons.gavel_outlined, color: colorScheme.primary),
             const SizedBox(width: 12),
-            Text(l10n?.disclaimer ?? '免责声明'),
+            Text(l10n?.disclaimer ?? 'Disclaimer'),
           ],
         ),
         content: SingleChildScrollView(
@@ -662,13 +677,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                l10n?.disclaimerTitle ?? '使用条款',
+                l10n?.disclaimerTitle ?? 'Terms of Use',
                 style: Theme.of(context).textTheme.titleMedium
                     ?.copyWith(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 12),
               Text(
-                l10n?.disclaimerContent ?? 'ArcadiaPlus 是一款网络代理工具，仅供合法用途使用。',
+                l10n?.disclaimerContent ??
+                    'ArcadiaPlus is a network proxy tool, for legal use only.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 16),
@@ -687,7 +703,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        l10n?.disclaimerWarning ?? '非法使用代理工具可能导致法律后果。',
+                        l10n?.disclaimerWarning ?? 'Illegal use of the proxy tool may lead to legal consequences.',
                         style: TextStyle(
                           color: colorScheme.error,
                           fontWeight: FontWeight.w500,
@@ -703,7 +719,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n?.understood ?? '我已了解'),
+            child: Text(l10n?.understood ?? 'I Understand'),
           ),
         ],
       ),
@@ -723,7 +739,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n?.cancel ?? '取消'),
+            child: Text(l10n?.cancel ?? 'Cancel'),
           ),
           FilledButton(
             onPressed: () {
@@ -751,7 +767,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(l10n?.cancel ?? '取消'),
+            child: Text(l10n?.cancel ?? 'Cancel'),
           ),
           FilledButton(
             onPressed: () {
@@ -771,179 +787,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showThemeSelector(BuildContext context, ThemeProvider themeProvider) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final l10n = AppLocalizations.of(context);
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: colorScheme.surfaceContainerLow,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return SafeArea(
-              child: Column(
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 12, bottom: 8),
-                    width: 32,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.4,
-                      ),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.palette_outlined,
-                          color: colorScheme.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          l10n?.chooseTheme ?? '选择主题',
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4, bottom: 8),
-                          child: Text(
-                            l10n?.appearancePreview ?? 'Theme colour preview',
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(color: colorScheme.onSurfaceVariant),
-                          ),
-                        ),
-                        Expanded(
-                          child: GridView.builder(
-                            controller: scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                  childAspectRatio: 2.5,
-                                  crossAxisSpacing: 12,
-                                  mainAxisSpacing: 12,
-                                ),
-                            itemCount: themeProvider.availableThemes.length,
-                            itemBuilder: (context, index) {
-                              final themeName =
-                                  themeProvider.availableThemes[index];
-                              final isSelected =
-                                  themeProvider.selectedTheme == themeName;
-                              final preview = themeProvider
-                                  .getThemePreviewScheme(
-                                    themeName,
-                                    Theme.of(context).brightness,
-                                  );
-
-                              return Material(
-                                color: isSelected
-                                    ? colorScheme.primaryContainer
-                                    : colorScheme.surfaceContainerHigh,
-                                borderRadius: BorderRadius.circular(16),
-                                child: InkWell(
-                                  onTap: () {
-                                    themeProvider.setTheme(themeName);
-                                    Navigator.of(context).pop();
-                                  },
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 12,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: isSelected
-                                          ? Border.all(
-                                              color: colorScheme.primary,
-                                              width: 2,
-                                            )
-                                          : null,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 34,
-                                          height: 34,
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            color: colorScheme
-                                                .surfaceContainerHighest,
-                                          ),
-                                          child: isSelected
-                                              ? Icon(
-                                                  Icons.check,
-                                                  size: 18,
-                                                  color: colorScheme.primary,
-                                                )
-                                              : _PaletteStrip(
-                                                  scheme: preview,
-                                                  size: 7,
-                                                  stack: true,
-                                                ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            themeProvider.getThemeDisplayName(
-                                              themeName,
-                                            ),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                  fontWeight: isSelected
-                                                      ? FontWeight.w600
-                                                      : FontWeight.w500,
-                                                  color: isSelected
-                                                      ? colorScheme
-                                                            .onPrimaryContainer
-                                                      : colorScheme.onSurface,
-                                                ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -987,7 +830,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      l10n?.language ?? '语言',
+                      l10n?.language ?? 'Language',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.w600),
                     ),
@@ -1068,24 +911,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 /// between two themes that share an accent, and it is the relationship between
 /// the roles that makes a Material palette look like itself.
 class _PaletteStrip extends StatelessWidget {
-  const _PaletteStrip({
-    required this.scheme,
-    required this.size,
-    this.stack = false,
-  });
+  const _PaletteStrip({required this.scheme, required this.size});
 
   final ColorScheme scheme;
 
   /// Diameter of one swatch, in logical pixels.
   final double size;
 
-  /// Overlaps the swatches, for a slot as small as the row's leading circle.
-  final bool stack;
-
   @override
   Widget build(BuildContext context) {
     final colors = [scheme.primary, scheme.secondary, scheme.tertiary];
-    final step = stack ? size * 0.82 : size + 3;
+    final step = size + 3;
 
     return SizedBox(
       width: step * (colors.length - 1) + size,

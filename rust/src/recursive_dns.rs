@@ -173,7 +173,6 @@ pub fn start(listen: &str, cache_path: Option<&str>) -> Result<String, String> {
 /// isolate. Waiting is what makes the contract real: when this returns, the
 /// ports are free and the threads are gone.
 pub fn stop() -> Result<(), String> {
-    // Serialize the full teardown against a concurrent start.
     let mut slot = SERVICE.lock();
     let Some(service) = slot.take() else {
         return Ok(());
@@ -304,13 +303,25 @@ fn validate_response(id: u16, name: &str, packet: &[u8]) -> bool {
 /// Whether the front-end is accepting queries, and where.
 pub fn status() -> RecursiveDnsStatus {
     match SERVICE.lock().as_ref() {
-        Some(service) => RecursiveDnsStatus {
-            running: true,
-            listen: Some(service.address()),
-        },
+        Some(service) => {
+            let stats = service.resolver.stats().snapshot();
+            RecursiveDnsStatus {
+                running: true,
+                listen: Some(service.address()),
+                queries: stats.queries,
+                cache_hits: stats.cache_hits,
+                upstream_queries: stats.upstream_queries,
+                // Upstream SERVFAIL retries are not failed client queries.
+                failures: stats.errors,
+            }
+        }
         None => RecursiveDnsStatus {
             running: false,
             listen: None,
+            queries: 0,
+            cache_hits: 0,
+            upstream_queries: 0,
+            failures: 0,
         },
     }
 }
@@ -399,7 +410,6 @@ mod tests {
         assert!(!status().running);
         assert_eq!(status().listen, None);
 
-        // Stopping a stopped front-end is a no-op, not an error.
         stop().expect("second stop is a no-op");
     }
 
