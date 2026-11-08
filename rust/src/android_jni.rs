@@ -38,8 +38,24 @@ pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nat
     env: JNIEnv<'local>,
     vpn_service: JObject<'local>,
 ) {
+    let _ = std::panic::catch_unwind(|| {
+        let _ = corduit::api::stop_android_vpn();
+    });
     corduit::android_jni::Java_com_blueokanna_corduit_CorduitVpnService_nativeClearRustBridge(
         env,
         vpn_service,
     );
+}
+
+/// Notification, tile and permission-revocation disconnects stop the proxy too.
+/// A Flutter TUN-only toggle calls nativeClearRustBridge and keeps listeners up.
+#[no_mangle]
+pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeStopProxy(
+    _env: JNIEnv<'_>,
+    _service: JObject<'_>,
+) {
+    let _ = std::panic::catch_unwind(|| {
+        let _ = corduit::api::stop_corduit();
+        let _ = crate::recursive_dns::stop();
+    });
 }

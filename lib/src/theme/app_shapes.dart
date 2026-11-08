@@ -7,10 +7,9 @@ abstract final class AppShapes {
   static const BorderRadius large = BorderRadius.all(Radius.circular(16));
   static const BorderRadius extraLarge = BorderRadius.all(Radius.circular(28));
 
-  /// Cards sit at the Material 3 "medium" step; [small] stays for chips and
-  /// other compact controls.
+  /// Containers are distinct from the tighter corners of form controls.
   static const RoundedRectangleBorder card = RoundedRectangleBorder(
-    borderRadius: medium,
+    borderRadius: BorderRadius.all(Radius.circular(20)),
   );
   static const RoundedRectangleBorder control = RoundedRectangleBorder(
     borderRadius: medium,

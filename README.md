@@ -74,7 +74,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 | --- | --- | --- | --- | --- |
 | Android | 有 | 不适用 | `VpnService` 路径已实现 | 需要真机、ABI 和长连接回归测试 |
 | Windows | 有 | 已实现 | Wintun 路径已实现 | 需要管理员权限和 Windows 10/11 实机测试 |
-| Linux | 有 | GNOME 设置路径（逐条校验 `gsettings` 退出码） | corduit 提供 IPv4 TUN 路径 | 需 root/实机验证；数据面把默认路由指向 TUN 且只豁免代理服务器地址，rule/direct 模式下引擎直连的流量存在回到 TUN 的风险，验证前不宣称可用 |
+| Linux | 有 | GNOME 设置路径（逐条校验 `gsettings` 退出码） | corduit 提供 IPv4 TUN 路径 | TUN 当前仅允许 global，rule/direct 会明确拒绝；仍需 root/实机验证 |
 | macOS | 有 | `networksetup` 路径 | 未实现 Network Extension | 不能宣称全局代理支持 |
 | iOS | 有 | 不适用 | 未实现 Packet Tunnel Extension | 仅应用壳 |
 | HarmonyOS NEXT | 有 | 不适用 | `VpnExtensionAbility` 隧道 + 引擎数据面已实现 | 需要 HarmonyOS NEXT 真机验证（授权弹窗、隧道与引擎分流），未经真机不得宣称可用 |
@@ -86,11 +86,11 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 | 平台 | 切换模式时做什么 | 说明 |
 | --- | --- | --- |
 | Android | `set_android_proxy_mode`（引擎运行时模式）+ 通知文案 | VPN 路由固定 `0.0.0.0/0`，模式由引擎在拨号时决定；进隧道的 53 端口查询统一由 netstack 的 fake-IP 解析器应答 |
-| Windows | `set_windows_proxy_mode` | 切到 `global` 时若路由表还没进入全局模式，改用 `enable_tun_mode_with_mode("global")` 重建路由 |
-| Linux / macOS | `set_proxy_mode`（引擎运行时模式） | Linux 的 TUN 数据面把连接转给本地 SOCKS inbound，模式在拨号时生效 |
+| Windows | `set_windows_proxy_mode` | TUN 保持捕获，模式仅改变引擎分流；切换不再重建路由 |
+| Linux / macOS | `set_proxy_mode`（引擎运行时模式） | Linux TUN 开启时仅允许 global；macOS 尚无 TUN 实现，系统代理仍支持引擎分流 |
 | 系统代理 | 与模式无关 | 指向本地 mixed 端口；Linux 逐条校验 `gsettings` 退出码，Windows 启用前会快照原代理设置并在关闭时恢复 |
 
-规则集刷新时机：应用启动、profile 更新，以及每 15 分钟一次的到期检查。只有声明间隔（默认一天）已过的规则集才真正发起网络请求，且带 `If-None-Match` / `If-Modified-Since` 条件头，304 视为已是最新；刷新后的文件按内容哈希命名，配置随之变化，运行中的引擎在下一次 `reload_corduit` 会立即装载新内容。
+规则集刷新时机：应用启动、profile 更新、恢复前台，以及前台运行时每 15 分钟的到期检查。支持手动强制更新；常规检查只请求已经到期的规则集，并使用 ETag / Last-Modified 条件请求。下载失败保留上次有效内容；下载成功后重新加载引擎。HarmonyOS 当前通过重启 VPN 扩展更新配置，会中断已有连接。尚未实现系统后台定时更新任务。
 
 ### 策略组语义
 
@@ -282,3 +282,7 @@ HarmonyOS NEXT 的 HAP 由 CI 的 `ohos` 与 [ohos/README.md](ohos/README.md) �
 - **不是 OSI 认可的开源许可**，而是 *source-available（源码可获取）* 许可：源码可以按上面的条款阅读和修改，而且你转发出去的副本，接收方也同时得到这份条款。
 - **必须保留署名通知。** 分发本软件或其任何部分时，必须随附 `LICENSE` 全文（或上述官方链接），以及其中的 `Required Notice: Copyright 2026 blueokanna and HyphenTeam (https://github.com/blueokanna/ArcadiaPlus)`（见 *Notices*）。
 - **无担保、无责任**（在法律允许范围内），并且末尾那段附加条款把同样的限制延伸到「他人用本软件（或其改动/衍生作品）从事违法行为」的情形（见 `LICENSE` 末尾 *Additional Term Adopted by the Licensor*）。
+
+本轮修复、依赖兼容说明及未验证范围见 [验证记录](docs/validation-2026-11.md)。
+
+Material 3 界面、节点状态管理、NextJson 0.1.5 适配和最新验证结果见 [修订记录](docs/ui-motion-2026-11.md)。

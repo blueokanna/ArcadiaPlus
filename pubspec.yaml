@@ -35,7 +35,7 @@ dependencies:
   package_info_plus: ^10.2.1
   device_info_plus: ^13.2.0
 
-  http: ^1.4.0
+  http: ^1.6.0
   dio: ^5.11.1
   crypto: ^3.0.6
 

@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:arcadiaplus/src/providers/proxies_provider.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
-import 'package:arcadiaplus/src/theme/app_shapes.dart';
-import 'package:arcadiaplus/src/utils/animation_utils.dart';
+import 'package:arcadiaplus/src/widgets/proxy_node_tile.dart';
 
 class ProxiesScreen extends StatefulWidget {
   const ProxiesScreen({super.key});
-
   @override
   State<ProxiesScreen> createState() => _ProxiesScreenState();
 }
@@ -19,912 +17,319 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProxiesProvider>().loadFromActiveProfile();
+      if (mounted) context.read<ProxiesProvider>().loadFromActiveProfile();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-
-    return Consumer<ProxiesProvider>(
-      builder: (context, provider, child) {
-        if (provider.isLoading) {
-          return _buildLoadingState(colorScheme, textTheme, l10n);
-        }
-
-        if (provider.error != null && provider.config == null) {
-          return _buildErrorState(context, l10n, colorScheme, textTheme);
-        }
-
-        if (provider.config == null || provider.proxyGroups.isEmpty) {
-          return _buildEmptyState(context, l10n, colorScheme, textTheme);
-        }
-
-        return _buildMainContent(
-          context,
-          provider,
-          l10n,
-          colorScheme,
-          textTheme,
+    // Latency arrivals belong to individual tiles; they do not rebuild the
+    // page header, group selector or scroll layout.
+    final state = context
+        .select<ProxiesProvider, (ParsedClashConfig?, String?, bool, String?)>(
+          (p) => (p.config, p.selectedGroupName, p.isLoading, p.error),
         );
-      },
-    );
-  }
-
-  Widget _buildLoadingState(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    AppLocalizations? l10n,
-  ) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(
-              l10n?.loading ?? 'Loading...',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(
-    BuildContext context,
-    AppLocalizations? l10n,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Text(
-                    l10n?.proxies ?? 'Proxies',
-                    style: textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Icon(
-                Icons.cloud_off_rounded,
-                size: 64,
-                color: colorScheme.outline,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n?.noActiveProfile ?? 'Please select a profile first',
-                style: textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n?.goToProfiles ?? 'Go to Profiles',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: () => Navigator.of(context).pushNamed('/profiles'),
-                icon: const Icon(Icons.folder_open_rounded),
-                label: Text(l10n?.profiles ?? 'Profiles'),
-              ),
-              const Spacer(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(
-    BuildContext context,
-    AppLocalizations? l10n,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Text(
-                    l10n?.proxies ?? 'Proxies',
-                    style: textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Icon(Icons.dns_rounded, size: 64, color: colorScheme.outline),
-              const SizedBox(height: 16),
-              Text(
-                l10n?.noProxies ?? 'No proxies available',
-                style: textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n?.noProxyNodes ?? 'No proxy nodes found in config',
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const Spacer(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMainContent(
-    BuildContext context,
-    ProxiesProvider provider,
-    AppLocalizations? l10n,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: Row(
-                children: [
-                  Text(
-                    l10n?.proxies ?? 'Proxies',
-                    style: textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.refresh_rounded),
-                    onPressed: () => provider.loadFromActiveProfile(),
-                    tooltip: l10n?.refresh ?? 'Refresh',
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildGroupSelector(
-              context,
-              provider,
-              l10n,
-              colorScheme,
-              textTheme,
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: provider.selectedGroup != null
-                  ? _buildProxiesGrid(
-                      context,
-                      provider,
-                      l10n,
-                      colorScheme,
-                      textTheme,
-                    )
-                  : const SizedBox.shrink(),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: _buildSpeedTestFab(context, provider, colorScheme),
-    );
-  }
-
-  Widget _buildGroupSelector(
-    BuildContext context,
-    ProxiesProvider provider,
-    AppLocalizations? l10n,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Row(
-            children: [
-              Icon(Icons.layers_rounded, size: 16, color: colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                l10n?.proxyGroups ?? 'Proxy Groups',
-                style: textTheme.labelMedium?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '${provider.proxyGroups.length}',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 48,
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.trackpad,
-              },
-            ),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: provider.proxyGroups.length,
-              itemBuilder: (context, index) {
-                final group = provider.proxyGroups[index];
-                final isSelected = group.name == provider.selectedGroupName;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _buildGroupChip(
-                    context,
-                    group,
-                    isSelected,
-                    colorScheme,
-                    textTheme,
-                    () => provider.selectGroup(group.name),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGroupChip(
-    BuildContext context,
-    ParsedProxyGroup group,
-    bool isSelected,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    VoidCallback onTap,
-  ) {
-    final icon = _getGroupIcon(group.type);
-    return ExpressiveButton(
-      onPressed: onTap,
-      pressedScale: 0.95,
-      child: AnimatedContainer(
-        duration: AnimationUtils.stateChangeDuration,
-        curve: AnimationUtils.stateChangeCurve,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AnimatedContainer(
-                duration: AnimationUtils.durationMedium2,
-                child: Icon(
-                  icon,
-                  size: 16,
-                  color: isSelected
-                      ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _getDisplayName(group.name),
-                style: textTheme.labelMedium?.copyWith(
-                  color: isSelected
-                      ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurface,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-              const SizedBox(width: 6),
-              AnimatedContainer(
-                duration: AnimationUtils.durationMedium2,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? colorScheme.primary.withValues(alpha: 0.2)
-                      : colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${group.proxies.length}',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: isSelected
-                        ? colorScheme.onPrimaryContainer
-                        : colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProxiesGrid(
-    BuildContext context,
-    ProxiesProvider provider,
-    AppLocalizations? l10n,
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-  ) {
-    final group = provider.selectedGroup!;
-    final items = provider.getProxiesForGroup(group);
-    final selectedProxy = provider.getSelectedProxyForGroup(group.name);
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final crossAxisCount = _calculateColumns(screenWidth);
-    final textScale = MediaQuery.textScalerOf(context).scale(1);
-    final cardExtent = 148.0 + (textScale - 1).clamp(0, 1) * 32;
-
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 10,
-        mainAxisExtent: cardExtent,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        return _buildProxyItem(
-          context,
-          l10n,
-          colorScheme,
-          textTheme,
-          item: item,
-          selectedProxy: selectedProxy,
-          group: group,
-          provider: provider,
-        );
-      },
-    );
-  }
-
-  int _calculateColumns(double width) {
-    if (width >= 1400) return 6;
-    if (width >= 1200) return 5;
-    if (width >= 900) return 4;
-    if (width >= 600) return 3;
-    return 2;
-  }
-
-  Widget _buildProxyItem(
-    BuildContext context,
-    AppLocalizations? l10n,
-    ColorScheme colorScheme,
-    TextTheme textTheme, {
-    required dynamic item,
-    required String? selectedProxy,
-    required ParsedProxyGroup group,
-    required ProxiesProvider provider,
-  }) {
-    if (item is ParsedProxy) {
-      final latency = provider.getLatency(item.name);
-      return _ProxyCard(
-        name: item.name,
-        type: item.displayType,
-        isSelected: item.name == selectedProxy,
-        onTap: () => provider.selectProxyInGroup(group.name, item.name),
-        latency: latency,
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-        l10n: l10n,
-      );
-    } else if (item is ParsedProxyGroup) {
-      return _ProxyCard(
-        name: item.name,
-        type: '${item.proxies.length} ${l10n?.nodes ?? 'nodes'}',
-        isSelected: item.name == selectedProxy,
-        onTap: () => provider.selectProxyInGroup(group.name, item.name),
-        isGroup: true,
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-        l10n: l10n,
-      );
-    } else if (item is String) {
-      return _SpecialCard(
-        name: item,
-        isSelected: item == selectedProxy,
-        onTap: () => provider.selectProxyInGroup(group.name, item),
-        colorScheme: colorScheme,
-        textTheme: textTheme,
-      );
-    }
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildSpeedTestFab(
-    BuildContext context,
-    ProxiesProvider provider,
-    ColorScheme colorScheme,
-  ) {
+    final provider = context.read<ProxiesProvider>();
     final l10n = AppLocalizations.of(context);
-    return FloatingActionButton.extended(
-      onPressed: provider.isTesting ? null : () => provider.testAllLatencies(),
-      backgroundColor: provider.isTesting
-          ? colorScheme.surfaceContainerHighest
-          : null,
-      icon: provider.isTesting
-          ? SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: colorScheme.primary,
-              ),
+    final text = Theme.of(context).textTheme;
+    final group = provider.selectedGroup;
+    return Scaffold(
+      body: SafeArea(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: CustomScrollView(
+              key: const PageStorageKey('proxy-nodes'),
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                  sliver: SliverToBoxAdapter(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n?.proxies ?? 'Proxies',
+                            style: text.headlineMedium,
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: l10n?.refresh ?? 'Refresh',
+                          onPressed: state.$3
+                              ? null
+                              : provider.loadFromActiveProfile,
+                          icon: const Icon(Icons.refresh_rounded),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (state.$3)
+                  const SliverToBoxAdapter(child: LinearProgressIndicator()),
+                if (state.$4 != null)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 8,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: Card.filled(
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            state.$4!,
+                            style: text.bodyMedium?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (provider.proxyGroups.isNotEmpty) ...[
+                  SliverToBoxAdapter(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          for (final candidate in provider.proxyGroups)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                showCheckmark: false,
+                                selected: candidate.name == group?.name,
+                                label: Text(candidate.name),
+                                avatar: Icon(
+                                  _groupIcon(candidate.type),
+                                  size: 18,
+                                ),
+                                onSelected: (_) =>
+                                    provider.selectGroup(candidate.name),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (group != null) ...[
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                      sliver: SliverToBoxAdapter(
+                        child: Wrap(
+                          spacing: 16,
+                          runSpacing: 12,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              '${group.proxies.length} ${l10n?.nodes ?? 'nodes'}',
+                              style: text.titleMedium,
+                            ),
+                            const _TestButton(),
+                          ],
+                        ),
+                      ),
+                    ),
+                    _NodeGrid(group: group),
+                  ],
+                ] else if (!state.$3)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.dns_outlined,
+                            size: 48,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            l10n?.noProxies ?? 'No proxies available',
+                            style: text.titleLarge,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n?.noActiveProfile ??
+                                'Select a profile to begin',
+                            textAlign: TextAlign.center,
+                            style: text.bodyMedium,
+                          ),
+                          const SizedBox(height: 24),
+                          FilledButton.icon(
+                            onPressed: () => context.go('/profiles'),
+                            icon: const Icon(Icons.folder_open_rounded),
+                            label: Text(l10n?.profiles ?? 'Profiles'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SliverToBoxAdapter(child: SizedBox(height: 32)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+IconData _groupIcon(String type) => switch (type.toLowerCase()) {
+  'url-test' => Icons.speed_rounded,
+  'fallback' => Icons.swap_horiz_rounded,
+  'load-balance' => Icons.balance_rounded,
+  _ => Icons.layers_outlined,
+};
+
+class _TestButton extends StatelessWidget {
+  const _TestButton();
+  @override
+  Widget build(BuildContext context) {
+    final testing = context.select<ProxiesProvider, bool>((p) => p.isTesting);
+    final l10n = AppLocalizations.of(context);
+    return FilledButton.tonalIcon(
+      onPressed: testing
+          ? null
+          : context.read<ProxiesProvider>().testAllLatencies,
+      icon: testing && !MediaQuery.disableAnimationsOf(context)
+          ? const SizedBox.square(
+              dimension: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.wifi_tethering_rounded),
+          : Icon(testing ? Icons.hourglass_top_rounded : Icons.speed_rounded),
       label: Text(
-        provider.isTesting
-            ? (l10n?.loading ?? 'Testing...')
-            : (l10n?.latencyTest ?? 'Latency Test'),
+        testing
+            ? (l10n?.loading ?? 'Testing…')
+            : (l10n?.latencyTest ?? 'Latency test'),
       ),
     );
-  }
-
-  IconData _getGroupIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'select':
-        return Icons.touch_app_rounded;
-      case 'url-test':
-        return Icons.speed_rounded;
-      case 'fallback':
-        return Icons.swap_horiz_rounded;
-      case 'load-balance':
-        return Icons.balance_rounded;
-      default:
-        return Icons.folder_rounded;
-    }
-  }
-
-  String _getDisplayName(String name) {
-    final emojiPattern = RegExp(r'^[\u{1F300}-\u{1F9FF}]+ ?', unicode: true);
-    return name.replaceFirst(emojiPattern, '').trim();
   }
 }
 
-class _ProxyCard extends StatelessWidget {
-  final String name;
-  final String type;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final LatencyResult? latency;
-  final bool isGroup;
-  final ColorScheme colorScheme;
-  final TextTheme textTheme;
-  final AppLocalizations? l10n;
-
-  const _ProxyCard({
-    required this.name,
-    required this.type,
-    required this.isSelected,
-    required this.onTap,
-    this.latency,
-    this.isGroup = false,
-    required this.colorScheme,
-    required this.textTheme,
-    this.l10n,
-  });
+class _NodeGrid extends StatelessWidget {
+  const _NodeGrid({required this.group});
+  final ParsedProxyGroup group;
 
   @override
   Widget build(BuildContext context) {
-    final flag = _getCountryFlag(name);
-    final displayName = _getDisplayName(name);
+    final items = context.read<ProxiesProvider>().getProxiesForGroup(group);
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      sliver: SliverLayoutBuilder(
+        builder: (context, constraints) {
+          final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+          final columns =
+              (constraints.crossAxisExtent / (270 * scale.clamp(1, 2)))
+                  .floor()
+                  .clamp(1, 4);
+          Widget itemBuilder(BuildContext context, int index) {
+            final item = items[index];
+            final name = switch (item) {
+              ParsedProxy p => p.name,
+              ParsedProxyGroup g => g.name,
+              _ => item.toString(),
+            };
+            return _NodeItem(
+              key: ValueKey('${group.name}:$name'),
+              group: group.name,
+              item: item,
+            );
+          }
 
-    return ExpressiveButton(
-      onPressed: onTap,
-      pressedScale: 0.96,
-      child: AnimatedContainer(
-        duration: AnimationUtils.stateChangeDuration,
-        curve: AnimationUtils.stateChangeCurve,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerLow,
-          borderRadius: AppShapes.small,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-          border: Border.all(
-            color: isSelected
-                ? colorScheme.primary.withValues(alpha: 0.3)
-                : colorScheme.outlineVariant.withValues(alpha: 0.3),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  if (flag != null)
-                    Text(flag, style: const TextStyle(fontSize: 18))
-                  else if (isGroup)
-                    _buildIcon(
-                      Icons.folder_rounded,
-                      colorScheme.tertiaryContainer,
-                      colorScheme.onTertiaryContainer,
-                    )
-                  else
-                    _buildIcon(
-                      Icons.public_rounded,
-                      colorScheme.surfaceContainerHighest,
-                      colorScheme.onSurfaceVariant,
-                    ),
-                  const Spacer(),
-                  AnimatedScale(
-                    scale: isSelected ? 1.0 : 0.0,
-                    duration: AnimationUtils.durationMedium2,
-                    curve: AnimationUtils.curveSpring,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.check_rounded,
-                        size: 10,
-                        color: colorScheme.onPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Expanded(
-                child: _FittedLabel(
-                  text: displayName,
-                  style: textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isSelected
-                        ? colorScheme.onPrimaryContainer
-                        : colorScheme.onSurface,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  _buildTypeBadge(),
-                  const Spacer(),
-                  if (!isGroup) _buildLatencyBadge(),
-                ],
-              ),
-            ],
-          ),
-        ),
+          // A list has intrinsic height on narrow screens and at large text
+          // scales, preserving readability instead of shrinking labels.
+          if (columns == 1) {
+            return SliverList.separated(
+              itemCount: items.length,
+              itemBuilder: itemBuilder,
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
+            );
+          }
+          return SliverGrid(
+            delegate: SliverChildBuilderDelegate(
+              itemBuilder,
+              childCount: items.length,
+            ),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              mainAxisExtent: 176 + 70 * (scale - 1).clamp(0, 2),
+            ),
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _buildIcon(IconData icon, Color bgColor, Color iconColor) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: AppShapes.extraSmall,
-      ),
-      child: Icon(icon, size: 14, color: iconColor),
-    );
-  }
+class _NodeItem extends StatelessWidget {
+  const _NodeItem({super.key, required this.group, required this.item});
+  final String group;
+  final Object item;
 
-  Widget _buildTypeBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      decoration: BoxDecoration(
-        color: isSelected
-            ? colorScheme.primary.withValues(alpha: 0.15)
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: AppShapes.extraSmall,
-      ),
-      child: Text(
-        type,
-        style: textTheme.labelSmall?.copyWith(
-          fontSize: 9,
-          color: isSelected
-              ? colorScheme.primary
-              : colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLatencyBadge() {
-    final latencyColor = _getLatencyColor();
-    final latencyText = _getLatencyText();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-      decoration: BoxDecoration(
-        color: latencyColor.withValues(alpha: 0.12),
-        borderRadius: AppShapes.extraSmall,
-      ),
-      child: Text(
-        latencyText,
-        style: textTheme.labelSmall?.copyWith(
-          fontSize: 9,
-          color: latencyColor,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Color _getLatencyColor() {
-    if (latency == null) return colorScheme.outline;
-    if (!latency!.isSuccess) return colorScheme.error;
-    final ms = latency!.latencyMs ?? 0;
-    if (ms < 100) return Colors.green;
-    if (ms < 300) return Colors.orange;
-    return colorScheme.error;
-  }
-
-  String _getLatencyText() {
-    if (latency == null) return l10n?.notTested ?? 'N/A';
-    if (!latency!.isSuccess) {
-      final error = latency!.error?.toLowerCase() ?? '';
-      if (error.contains('timeout')) return l10n?.timeout ?? 'Timeout';
-      return l10n?.failed ?? 'Failed';
-    }
-    return '${latency!.latencyMs ?? 0}ms';
-  }
-
-  String? _getCountryFlag(String name) {
-    final emojiPattern = RegExp(r'[\u{1F1E0}-\u{1F1FF}]{2}', unicode: true);
-    final existingFlag = emojiPattern.firstMatch(name);
-    if (existingFlag != null) {
-      return null;
-    }
-
-    final patterns = {
-      '🇭🇰': ['香港', 'Hong Kong'],
-      '🇯🇵': ['日本', 'Japan'],
-      '🇸🇬': ['新加坡', 'Singapore'],
-      '🇺🇸': ['美国', 'United States', 'USA'],
-      '🇹🇼': ['台湾', 'Taiwan'],
-      '🇰🇷': ['韩国', 'Korea'],
-      '🇬🇧': ['英国', 'United Kingdom'],
-      '🇩🇪': ['德国', 'Germany'],
-      '🇫🇷': ['法国', 'France'],
-      '🇦🇺': ['澳大利亚', 'Australia'],
-      '🇨🇦': ['加拿大', 'Canada'],
-      '🇷🇺': ['俄罗斯', 'Russia'],
-      '🇮🇳': ['印度', 'India'],
-      '🇳🇱': ['荷兰', 'Netherlands'],
+  @override
+  Widget build(BuildContext context) {
+    final name = switch (item) {
+      ParsedProxy p => p.name,
+      ParsedProxyGroup g => g.name,
+      _ => item.toString(),
     };
-
-    for (final entry in patterns.entries) {
-      for (final pattern in entry.value) {
-        if (name.contains(pattern)) {
-          return entry.key;
-        }
-      }
-    }
-    return null;
-  }
-
-  String _getDisplayName(String name) {
-    final emojiPattern = RegExp(r'^[\u{1F300}-\u{1F9FF}]+ ?', unicode: true);
-    return name.replaceFirst(emojiPattern, '').trim();
-  }
-}
-
-class _FittedLabel extends StatelessWidget {
-  final String text;
-  final TextStyle? style;
-
-  const _FittedLabel({required this.text, this.style});
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Text(text, style: style, maxLines: 1, softWrap: false),
+    final state = context.select<ProxiesProvider, (bool, bool, LatencyResult?)>(
+      (p) => (
+        p.getSelectedProxyForGroup(group) == name,
+        p.isSelecting(group),
+        p.getLatency(name),
       ),
     );
-  }
-}
-
-class _SpecialCard extends StatelessWidget {
-  final String name;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final ColorScheme colorScheme;
-  final TextTheme textTheme;
-
-  const _SpecialCard({
-    required this.name,
-    required this.isSelected,
-    required this.onTap,
-    required this.colorScheme,
-    required this.textTheme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDirect = name == 'DIRECT';
-    final isReject = name == 'REJECT';
-    final icon = isDirect
-        ? Icons.arrow_forward_rounded
-        : isReject
-        ? Icons.block_rounded
-        : Icons.help_outline_rounded;
-    final label = isDirect
-        ? '直连'
-        : isReject
-        ? '拒绝'
-        : name;
-    final desc = isDirect
-        ? '不使用代理'
-        : isReject
-        ? '拒绝连接'
-        : '未知类型';
-    final iconColor = isDirect
-        ? colorScheme.tertiary
-        : isReject
-        ? colorScheme.error
-        : colorScheme.outline;
-
-    return ExpressiveButton(
-      onPressed: onTap,
-      pressedScale: 0.96,
-      child: AnimatedContainer(
-        duration: AnimationUtils.stateChangeDuration,
-        curve: AnimationUtils.stateChangeCurve,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerLow,
-          borderRadius: AppShapes.small,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-          border: Border.all(
-            color: isSelected
-                ? colorScheme.primary.withValues(alpha: 0.3)
-                : colorScheme.outlineVariant.withValues(alpha: 0.3),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  AnimatedContainer(
-                    duration: AnimationUtils.durationMedium2,
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: iconColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(icon, size: 16, color: iconColor),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? colorScheme.onPrimaryContainer
-                            : colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  AnimatedScale(
-                    scale: isSelected ? 1.0 : 0.0,
-                    duration: AnimationUtils.durationMedium2,
-                    curve: AnimationUtils.curveSpring,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.check_rounded,
-                        size: 10,
-                        color: colorScheme.onPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              Text(
-                desc,
-                style: textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
-                  color: isSelected
-                      ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
-                      : colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    final l10n = AppLocalizations.of(context);
+    final latency = state.$3;
+    final subtitle = switch (item) {
+      ParsedProxy p => p.displayType,
+      ParsedProxyGroup g => '${g.proxies.length} ${l10n?.nodes ?? 'nodes'}',
+      'DIRECT' => l10n?.direct ?? 'Direct',
+      'REJECT' => 'REJECT',
+      _ => l10n?.failed ?? 'Unavailable',
+    };
+    final icon = switch (item) {
+      ParsedProxyGroup() => Icons.layers_outlined,
+      'DIRECT' => Icons.arrow_outward_rounded,
+      'REJECT' => Icons.block_rounded,
+      _ => Icons.public_rounded,
+    };
+    final available =
+        item is ParsedProxy ||
+        item is ParsedProxyGroup ||
+        name == 'DIRECT' ||
+        name == 'REJECT';
+    return ProxyNodeTile(
+      name: name,
+      subtitle: subtitle,
+      selected: state.$1,
+      onPressed: state.$2 || !available
+          ? null
+          : () =>
+                context.read<ProxiesProvider>().selectProxyInGroup(group, name),
+      icon: icon,
+      failed: latency != null && !latency.isSuccess,
+      latency: item is! ParsedProxy
+          ? null
+          : latency == null
+          ? l10n?.notTested ?? 'Not tested'
+          : latency.isSuccess
+          ? '${latency.latencyMs} ms'
+          : l10n?.failed ?? 'Failed',
     );
   }
 }

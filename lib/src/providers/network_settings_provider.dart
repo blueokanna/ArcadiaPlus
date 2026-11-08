@@ -191,7 +191,6 @@ class NetworkSettingsProvider extends ChangeNotifier {
     final service = PlatformProxyService.instance;
     final applied = value
         ? await service.enableTunMode(
-            mode: service.currentProxyMode,
             allowLan:
                 (await StorageService.instance.getGeneralSettings()).allowLan,
           )

@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show listEquals, compute;
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,8 +15,12 @@ import 'package:arcadiaplus/src/services/rule_provider_service.dart';
 import 'package:arcadiaplus/src/services/system_dns_service.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
 
 class AppStateProvider extends ChangeNotifier {
+  final _operations = SerialTaskQueue();
+  late final Future<void> _initialization;
+  bool _disposed = false;
   // App state
   ThemeMode _themeMode = ThemeMode.system;
   bool _isServiceRunning = false;
@@ -104,18 +108,23 @@ class AppStateProvider extends ChangeNotifier {
   AppStateProvider() {
     RuleProviderService.instance.addListener(_onRuleProviderRefresh);
     AppLifecycle.instance.active.addListener(_onLifecycleChanged);
-    _loadSettings();
+    _initialization = _loadSettings().then(
+      (_) => _initializeFromActiveProfile(),
+    );
     _loadSystemInfo();
     _loadVersionInfo();
-    _initializeFromActiveProfile();
     _syncTimers();
     _initializePlatformProxyService();
+    PlatformProxyService.instance.onQuickConnectRequested =
+        _consumeQuickConnect;
+    PlatformProxyService.instance.onVpnStatusChanged = _onVpnStatusChanged;
+    unawaited(_initialization.then((_) => _consumeQuickConnect()));
   }
 
   /// A rule set refresh outside this provider (profile update, manual action)
   /// may have changed the files the engine is reading.
   void _onRuleProviderRefresh() {
-    if (_isInitializingProfile) return;
+    if (_isInitializingProfile || _isRefreshingRuleSets || _disposed) return;
     final profileId = RuleProviderService.instance.lastProfileId;
     if (profileId == null || profileId != _activeProfileId) return;
     refreshRuleSets();
@@ -131,12 +140,20 @@ class AppStateProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    PlatformProxyService.instance.onQuickConnectRequested = null;
+    PlatformProxyService.instance.onVpnStatusChanged = null;
     RuleProviderService.instance.removeListener(_onRuleProviderRefresh);
     AppLifecycle.instance.active.removeListener(_onLifecycleChanged);
     _systemInfoTimer?.cancel();
     _statusTimer?.cancel();
     _ruleSetTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
   }
 
   // ---------------------------------------------------------------------------
@@ -179,11 +196,41 @@ class AppStateProvider extends ChangeNotifier {
     _syncTimers();
   }
 
-  void _onLifecycleChanged() => _syncTimers(refreshOnReturn: true);
+  void _onLifecycleChanged() {
+    _syncTimers(refreshOnReturn: true);
+    if (AppLifecycle.instance.isActive) unawaited(_consumeQuickConnect());
+  }
+
+  bool _consumingQuickConnect = false;
+  Future<void> _consumeQuickConnect() async {
+    if (_disposed || _consumingQuickConnect) return;
+    _consumingQuickConnect = true;
+    try {
+      await _initialization;
+      if (await PlatformProxyService.instance.consumeQuickConnect()) {
+        await startService();
+      }
+    } catch (error) {
+      debugPrint('Quick connect failed: $error');
+    } finally {
+      _consumingQuickConnect = false;
+    }
+  }
+
+  void _onVpnStatusChanged(bool running) {
+    if (!running &&
+        _isServiceRunning &&
+        !_isLoading &&
+        !_isRefreshingRuleSets &&
+        !_disposed) {
+      unawaited(stopService());
+    }
+  }
 
   /// Bring the set of running timers in line with what is actually being watched
   void _syncTimers({bool refreshOnReturn = false}) {
     final isActive = AppLifecycle.instance.isActive;
+    if (_disposed) return;
 
     final wantsStatus = isActive && _isServiceRunning && _liveStatsClaims > 0;
     if (wantsStatus) {
@@ -216,6 +263,7 @@ class AppStateProvider extends ChangeNotifier {
       // Whatever is on screen is stale by however long the app was away.
       if (_isServiceRunning) unawaited(_refreshStatus());
       unawaited(_loadSystemInfo());
+      unawaited(refreshRuleSets());
     }
   }
 
@@ -258,7 +306,7 @@ class AppStateProvider extends ChangeNotifier {
 
       // Bringing the resolver up is only worth anything when the engine that
       // queries it is about to run.
-      if (startResolver) {
+      if (startResolver && !PlatformUtils.isOHOS) {
         await _ensureRecursiveDns();
       }
 
@@ -293,32 +341,30 @@ class AppStateProvider extends ChangeNotifier {
   Future<(String, RuleProviderReport)> _generateConfig(
     String profileId,
     String configContent,
-    GeneralSettings generalSettings,
-  ) async {
+    GeneralSettings generalSettings, {
+    bool forceRuleSets = false,
+  }) async {
     final warnings = <String>[];
     final dnsSettings = await StorageService.instance.getDnsSettings();
-    // The engine has no `append-system-dns` key, so the app-level switch is
-    // expressed by adding the platform's own resolvers to the list. Reading
-    // them is best-effort by design: an unsupported platform, a missing
-    // `/etc/resolv.conf`, or a `reg` that is not on PATH all yield an empty
-    // list rather than failing the profile load.
     final systemDnsServers = generalSettings.appendSystemDns
         ? await SystemDnsService.instance.read()
         : const <String>[];
     final report = await RuleProviderService.instance.prepare(
       profileId,
       configContent,
+      force: forceRuleSets,
       onWarning: warnings.add,
     );
-    final jsonConfig = ConfigConverter.convertClashYamlToJson(
+    final converted = await compute(_convertProfile, (
       configContent,
-      generalSettings: generalSettings,
-      dnsSettings: dnsSettings,
-      recursiveDnsAddress: _recursiveDnsAddress,
-      systemDnsServers: systemDnsServers,
-      ruleProviderPaths: report.paths,
-      onWarning: warnings.add,
-    );
+      generalSettings,
+      dnsSettings,
+      _recursiveDnsAddress,
+      systemDnsServers,
+      report.paths,
+    ));
+    final jsonConfig = converted.$1;
+    warnings.addAll(converted.$2);
     for (final state in report.states) {
       if (state.error != null) {
         debugPrint('Rule provider ${state.name}: ${state.error}');
@@ -332,7 +378,11 @@ class AppStateProvider extends ChangeNotifier {
   /// resulting config differs from the one the engine holds, reloads it.
   ///
   /// Called by the scheduler and by the UI's "update rule sets" action.
-  Future<bool> refreshRuleSets({bool force = false}) async {
+  Future<bool> refreshRuleSets({bool force = false}) =>
+      _operations.run(() => _refreshRuleSets(force: force));
+
+  Future<bool> _refreshRuleSets({bool force = false}) async {
+    await _initialization;
     if (_isRefreshingRuleSets) return false;
 
     final profileId =
@@ -353,12 +403,12 @@ class AppStateProvider extends ChangeNotifier {
         profileId,
         configContent,
         generalSettings,
+        forceRuleSets: force,
       );
       _ruleSetReport = report;
 
       if (_isServiceRunning && jsonConfig != _appliedConfigJson) {
-        await reloadCorduit(configJson: jsonConfig);
-        _appliedConfigJson = jsonConfig;
+        await _applyReload(jsonConfig);
       }
       return true;
     } catch (e) {
@@ -373,6 +423,33 @@ class AppStateProvider extends ChangeNotifier {
   /// Bring the RecurseX front-end up when the DNS settings ask for local
   /// recursion, and remember the bound address so the next config
   /// conversion can point corduit at it.
+  Future<void> _applyReload(String config) async {
+    if (!PlatformUtils.isOHOS) {
+      await reloadCorduit(configJson: config);
+      _appliedConfigJson = config;
+      return;
+    }
+    // The VPN extension owns the listeners. Until it supports reload IPC,
+    // replace that instance rather than reloading the dormant UI mirror.
+    final platform = PlatformProxyService.instance;
+    final previous = _appliedConfigJson;
+    if (!await platform.disableTunMode()) {
+      throw StateError('Cannot stop VPN for reload');
+    }
+    try {
+      _appliedConfigJson = config;
+      await _prepareOhosEngine();
+      if (!await platform.enableTunMode(mode: _proxyMode)) {
+        throw StateError('Extension rejected updated configuration');
+      }
+    } catch (_) {
+      _appliedConfigJson = previous;
+      await _prepareOhosEngine();
+      _isServiceRunning = await platform.enableTunMode(mode: _proxyMode);
+      rethrow;
+    }
+  }
+
   Future<void> _ensureRecursiveDns() async {
     try {
       final dnsSettings = await StorageService.instance.getDnsSettings();
@@ -381,13 +458,6 @@ class AppStateProvider extends ChangeNotifier {
         return;
       }
 
-      // Port 0 asks the OS for a free port, so the resolver never fights
-      // with a system DNS service for 53.
-      //
-      // The cache snapshot lives in the app's own support directory: the
-      // resolver loads it when it starts and rewrites it on an interval, so
-      // a restart resumes with the answers the last run already learned
-      // instead of walking from the roots for every name again.
       final support = await getApplicationSupportDirectory();
       final cachePath =
           '${support.path}${Platform.pathSeparator}recursion-cache.rxc';
@@ -405,8 +475,6 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> _stopRecursiveDns() async {
-    // Unconditional: the Rust side treats stopping a stopped front-end as a
-    // no-op, and this way a half-initialised state cannot leak a listener.
     try {
       await stopRecursiveDns();
     } catch (e) {
@@ -479,18 +547,17 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> setProxyMode(ProxyMode mode) async {
+  Future<bool> setProxyMode(ProxyMode mode) =>
+      _operations.run(() => _setProxyMode(mode));
+
+  Future<bool> _setProxyMode(ProxyMode mode) async {
+    await _initialization;
     if (_proxyMode == mode) return true;
 
     final previousMode = _proxyMode;
-    _proxyMode = mode;
-    notifyListeners();
 
     try {
       final settings = await StorageService.instance.getGeneralSettings();
-      await StorageService.instance.saveGeneralSettings(
-        settings.copyWith(mode: mode.name),
-      );
       if (NativeCoreService.instance.isReady) {
         final applied = await PlatformProxyService.instance.configureProxyMode(
           mode,
@@ -499,8 +566,16 @@ class AppStateProvider extends ChangeNotifier {
           throw StateError('Native router rejected ${mode.name} mode');
         }
       }
+      await StorageService.instance.saveGeneralSettings(
+        settings.copyWith(mode: mode.name),
+      );
+      _proxyMode = mode;
+      notifyListeners();
       return true;
     } catch (error) {
+      if (NativeCoreService.instance.isReady) {
+        await PlatformProxyService.instance.configureProxyMode(previousMode);
+      }
       _proxyMode = previousMode;
       notifyListeners();
       debugPrint('Failed to set proxy mode: $error');
@@ -532,7 +607,11 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   // Service management
-  Future<bool> startService() async {
+  Future<bool> startService() => _operations.run(_startService);
+
+  Future<bool> _startService() async {
+    await _initialization;
+    if (_isServiceRunning) return true;
     if (!NativeCoreService.instance.isReady) {
       debugPrint('Cannot start service: RustLib not initialized');
       return false;
@@ -542,19 +621,27 @@ class AppStateProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Every start rebuilds the engine from the profile on disk: the config
-      // may have changed (ports, mode, rule sets) since the last run, and
-      // `initialize_corduit` is also what releases a previous instance.
       debugPrint('Re-initializing ArcadiaPlus...');
       await _initializeFromActiveProfile(startResolver: true);
 
       if (!_isInitialized) {
-        debugPrint('Cannot start service: No profile selected');
-        return false;
+        throw StateError('No usable profile is selected');
       }
 
       debugPrint('Starting ArcadiaPlus proxy...');
-      await startCorduit();
+      if (PlatformUtils.isOHOS) {
+        await _prepareOhosEngine();
+        if (!await PlatformProxyService.instance.enableTunMode(
+          mode: _proxyMode,
+        )) {
+          throw StateError('HarmonyOS VPN could not be established');
+        }
+      } else {
+        await startCorduit();
+      }
+      if (!await PlatformProxyService.instance.configureProxyMode(_proxyMode)) {
+        throw StateError('Cannot apply the selected routing mode');
+      }
 
       // Set running state immediately after successful start
       _isServiceRunning = true;
@@ -566,9 +653,9 @@ class AppStateProvider extends ChangeNotifier {
 
       // Verify the proxy is actually running
       try {
-        final status = await getCorduitStatus();
-        debugPrint('Proxy status after start: running=${status.running}');
-        if (!status.running) {
+        final status = PlatformUtils.isOHOS ? null : await getCorduitStatus();
+        debugPrint('Proxy status after start: running=${status?.running}');
+        if (status != null && !status.running) {
           debugPrint('WARNING: Proxy reports not running after start!');
         }
         _proxyStatus = status;
@@ -579,10 +666,6 @@ class AppStateProvider extends ChangeNotifier {
       // Start status timer for periodic updates
       _syncTimers();
 
-      // Desktop: auto enable system proxy if setting is enabled. WinINET on
-      // Windows, networksetup on macOS and gsettings on Linux all back the
-      // same switch, so the setting applies to every desktop rather than only
-      // to the one platform it was first written for.
       if (PlatformUtils.isDesktop && _autoSystemProxy) {
         final generalSettings = await StorageService.instance
             .getGeneralSettings();
@@ -606,29 +689,9 @@ class AppStateProvider extends ChangeNotifier {
         }
       }
 
-      // Android: the proxy alone does not capture any traffic, the VPN has to
-      // be up before the route to the proxy means anything. HarmonyOS works
-      // the same way, with the tunnel owned by the VpnExtension process.
       if (Platform.isAndroid) {
         if (!await _enableAndroidVpnWithRetry()) {
-          debugPrint(
-            'Failed to enable the VPN; the proxy stays up so the user can '
-            'retry without restarting the service',
-          );
-        }
-      }
-      if (PlatformUtils.isOHOS) {
-        await _prepareOhosEngine();
-        final allowLan =
-            (await StorageService.instance.getGeneralSettings()).allowLan;
-        if (!await PlatformProxyService.instance.enableTunMode(
-          mode: _proxyMode,
-          allowLan: allowLan,
-        )) {
-          debugPrint(
-            'Failed to enable the HarmonyOS VPN; the proxy stays up so the '
-            'user can retry without restarting the service',
-          );
+          throw StateError('Android VPN could not be established');
         }
       }
 
@@ -637,7 +700,7 @@ class AppStateProvider extends ChangeNotifier {
     } catch (e, stackTrace) {
       debugPrint('Failed to start service: $e');
       debugPrint('Stack trace: $stackTrace');
-      _isServiceRunning = false;
+      await _stopService();
       _isInitialized = false;
       return false;
     } finally {
@@ -646,32 +709,32 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> stopService() async {
+  Future<void> stopService() => _operations.run(_stopService);
+
+  Future<void> _stopService() async {
+    await _initialization;
     _isLoading = true;
     notifyListeners();
 
     try {
       debugPrint('Stopping ArcadiaPlus service...');
 
-      // Stop status timer first to prevent concurrent refresh during shutdown
       _isServiceRunning = false;
       _syncTimers();
 
-      // Android: take the VPN down before the engine stops, so no packet
-      // processor is left reading a closed descriptor.
-      if (Platform.isAndroid || PlatformUtils.isOHOS) {
-        await PlatformProxyService.instance.disableTunMode();
+      if (Platform.isAndroid ||
+          PlatformUtils.isOHOS ||
+          PlatformProxyService.instance.tunModeEnabled) {
+        if (!await PlatformProxyService.instance.disableTunMode()) {
+          throw StateError(
+            'Tunnel cleanup failed; keeping the proxy available',
+          );
+        }
         debugPrint('VPN disabled automatically');
 
         // Wait for VPN to fully disconnect
         await Future.delayed(const Duration(milliseconds: 500));
       }
-
-      // Desktop: take the system proxy down with the service, on whichever
-      // platform it was set. Leaving one behind points the machine at a port
-      // nobody listens on — which is how "I stopped the client and lost the
-      // internet" happens — while a proxy this app did not configure is left
-      // exactly as its owner left it.
       if (PlatformUtils.isDesktop) {
         final generalSettings = await StorageService.instance
             .getGeneralSettings();
@@ -692,8 +755,7 @@ class AppStateProvider extends ChangeNotifier {
       await stopCorduit();
       await _stopRecursiveDns();
       _isServiceRunning = false;
-      _isInitialized =
-          false; // Mark as not initialized so we re-init on next start
+      _isInitialized = false;
       _proxyStatus = null;
       _trafficStats = null;
       _activeConnections.clear();
@@ -706,7 +768,13 @@ class AppStateProvider extends ChangeNotifier {
       debugPrint('ArcadiaPlus service stopped');
     } catch (e) {
       debugPrint('Failed to stop service: $e');
-      _isServiceRunning = false;
+      try {
+        _isServiceRunning = PlatformUtils.isOHOS
+            ? await PlatformProxyService.instance.checkTunModeStatus()
+            : (await getCorduitStatus()).running;
+      } catch (_) {
+        _isServiceRunning = PlatformProxyService.instance.tunModeEnabled;
+      }
       _syncTimers();
       _isInitialized = false;
       _currentUploadSpeed = BigInt.zero;
@@ -720,17 +788,10 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> restartService() async {
-    debugPrint('Restarting ArcadiaPlus service...');
-
-    // Stop the service completely
-    await stopService();
-
-    // Wait for resources to be fully released
-    await Future.delayed(const Duration(seconds: 2));
-
-    await startService();
-  }
+  Future<void> restartService() => _operations.run(() async {
+    await _stopService();
+    await _startService();
+  });
 
   /// Materialise what the HarmonyOS extension process needs to run the engine.
   ///
@@ -742,8 +803,7 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _prepareOhosEngine() async {
     final config = _appliedConfigJson;
     if (config == null) {
-      debugPrint('Cannot prepare the HarmonyOS engine: no applied config');
-      return;
+      throw StateError('No configuration for the VPN extension');
     }
     try {
       final support = await getApplicationSupportDirectory();
@@ -762,6 +822,7 @@ class AppStateProvider extends ChangeNotifier {
       );
     } catch (e) {
       debugPrint('Failed to prepare the HarmonyOS engine files: $e');
+      rethrow;
     }
   }
 
@@ -804,6 +865,16 @@ class AppStateProvider extends ChangeNotifier {
   ///   same zero speeds every tick; notifying on those rebuilds the home
   ///   screen once a second for no visible difference.
   Future<void> _refreshStatus() async {
+    if (PlatformUtils.isOHOS) {
+      if (_isLoading || _isRefreshingRuleSets) return;
+      final running = await PlatformProxyService.instance.checkTunModeStatus();
+      if (!_isLoading && running != _isServiceRunning) {
+        _isServiceRunning = running;
+        _syncTimers();
+        notifyListeners();
+      }
+      return;
+    }
     if (!NativeCoreService.instance.isReady) {
       debugPrint('Skipping status refresh: RustLib not initialized');
       return;
@@ -957,40 +1028,32 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> loadConfiguration(String configJson) async {
-    if (!NativeCoreService.instance.isReady) {
-      debugPrint('Cannot load config: RustLib not initialized');
-      return;
-    }
+  Future<void> loadConfiguration(String configJson) =>
+      _operations.run(() => _updateConfiguration(configJson, reload: false));
 
+  Future<void> reloadConfiguration(String configJson) =>
+      _operations.run(() => _updateConfiguration(configJson, reload: true));
+
+  Future<void> _updateConfiguration(
+    String configJson, {
+    required bool reload,
+  }) async {
+    await _initialization;
+    if (!NativeCoreService.instance.isReady) {
+      throw StateError('The native core is not ready');
+    }
     _isLoading = true;
     notifyListeners();
-
     try {
-      await initializeCorduit(configJson: configJson);
+      // Replacing an initialized engine under a live tunnel loses its listeners.
+      if (reload || _isServiceRunning) {
+        await _applyReload(configJson);
+      } else {
+        await initializeCorduit(configJson: configJson);
+        _isInitialized = true;
+        _appliedConfigJson = configJson;
+      }
       await _refreshStatus();
-    } catch (e) {
-      debugPrint('Failed to load configuration: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> reloadConfiguration(String configJson) async {
-    if (!NativeCoreService.instance.isReady) {
-      debugPrint('Cannot reload config: RustLib not initialized');
-      return;
-    }
-
-    _isLoading = true;
-    notifyListeners();
-
-    try {
-      await reloadCorduit(configJson: configJson);
-      await _refreshStatus();
-    } catch (e) {
-      debugPrint('Failed to reload configuration: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -1099,4 +1162,29 @@ class AppStateProvider extends ChangeNotifier {
       return 'Disconnected';
     }
   }
+}
+
+// Parsing large subscriptions must not compete with gestures and frame layout.
+(String, List<String>) _convertProfile(
+  (
+    String,
+    GeneralSettings,
+    DnsSettings,
+    String?,
+    List<String>,
+    Map<String, String>,
+  )
+  input,
+) {
+  final warnings = <String>[];
+  final json = ConfigConverter.convertClashYamlToJson(
+    input.$1,
+    generalSettings: input.$2,
+    dnsSettings: input.$3,
+    recursiveDnsAddress: input.$4,
+    systemDnsServers: input.$5,
+    ruleProviderPaths: input.$6,
+    onWarning: warnings.add,
+  );
+  return (json, warnings);
 }

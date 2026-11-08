@@ -1,20 +1,21 @@
 import 'dart:async';
+import 'dart:collection';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
-import 'package:arcadiaplus/src/rust/api.dart' as rust_api;
-import 'package:arcadiaplus/src/services/native_core_service.dart';
+import 'package:arcadiaplus/src/services/proxy_engine_service.dart';
+import 'package:arcadiaplus/src/services/proxy_selection_service.dart';
+import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
+import 'package:arcadiaplus/src/services/proxy_selection_events.dart';
 
-/// Latency test result
 class LatencyResult {
   final String proxyName;
   final int? latencyMs;
   final bool isSuccess;
   final String? error;
-
-  LatencyResult({
+  const LatencyResult({
     required this.proxyName,
     this.latencyMs,
     this.isSuccess = false,
@@ -22,562 +23,398 @@ class LatencyResult {
   });
 }
 
-/// Stream controller for proxy selection changes
-final proxySelectionChangedController = StreamController<String>.broadcast();
-
 class ProxiesProvider extends ChangeNotifier {
+  ProxiesProvider({
+    ProxyEngine? engine,
+    Future<SharedPreferences> Function()? preferences,
+  }) : _engine = engine ?? const NativeProxyEngine(),
+       _preferences = preferences ?? SharedPreferences.getInstance {
+    _engine.addListener(_onEngineChanged);
+  }
+
+  final ProxyEngine _engine;
+  final Future<SharedPreferences> Function() _preferences;
+  late final _selection = ProxySelectionService(_engine);
+  final _operations = SerialTaskQueue();
+  final _persistence = SerialTaskQueue();
   ParsedClashConfig? _config;
   String? _selectedGroupName;
   final Map<String, String> _selectedProxies = {};
   final Map<String, LatencyResult> _latencyResults = {};
+  final Map<String, ParsedProxy> _proxiesByName = {};
+  final Map<String, ParsedProxyGroup> _groupsByName = {};
+  final Map<String, int> _pendingSelections = {};
+  final Map<String, Future<void>> _probes = {};
+  final Queue<Completer<void>> _probeWaiters = Queue();
+  int _activeProbes = 0;
+  int _generation = 0;
+  int _measurementGeneration = 0;
+  bool _disposed = false;
   bool _isLoading = false;
   bool _isTesting = false;
   String? _error;
-  bool _rustSyncPending = false;
-  bool _engineReadyListenerAttached = false;
 
+  static const maxConcurrentProbes = 4;
   ParsedClashConfig? get config => _config;
   String? get selectedGroupName => _selectedGroupName;
-  Map<String, String> get selectedProxies => _selectedProxies;
-  Map<String, LatencyResult> get latencyResults => _latencyResults;
+  Map<String, String> get selectedProxies =>
+      UnmodifiableMapView(_selectedProxies);
+  Map<String, LatencyResult> get latencyResults =>
+      UnmodifiableMapView(_latencyResults);
   bool get isLoading => _isLoading;
   bool get isTesting => _isTesting;
   String? get error => _error;
+  List<ParsedProxyGroup> get proxyGroups => _config?.proxyGroups ?? const [];
+  List<ParsedProxy> get proxies => _config?.proxies ?? const [];
+  ParsedProxyGroup? get selectedGroup => _groupsByName[_selectedGroupName];
+  bool isSelecting(String group) => (_pendingSelections[group] ?? 0) > 0;
 
-  List<ParsedProxyGroup> get proxyGroups => _config?.proxyGroups ?? [];
-  List<ParsedProxy> get proxies => _config?.proxies ?? [];
+  List<Object> getProxiesForGroup(ParsedProxyGroup group) => [
+    for (final name in group.proxies)
+      _groupsByName[name] ?? _proxiesByName[name] ?? name,
+  ];
 
-  /// Get the currently selected group
-  ParsedProxyGroup? get selectedGroup {
-    if (_selectedGroupName == null || _config == null) return null;
-    try {
-      return _config!.proxyGroups.firstWhere(
-        (g) => g.name == _selectedGroupName,
-      );
-    } catch (e) {
-      return _config!.proxyGroups.isNotEmpty
-          ? _config!.proxyGroups.first
-          : null;
-    }
+  bool _current(int generation) => !_disposed && generation == _generation;
+  void _notify() {
+    if (!_disposed) notifyListeners();
   }
 
-  /// Get proxies for a specific group
-  List<dynamic> getProxiesForGroup(ParsedProxyGroup group) {
-    final result = <dynamic>[];
-    for (final proxyName in group.proxies) {
-      // Check if it's a direct/reject
-      if (proxyName == 'DIRECT' || proxyName == 'REJECT') {
-        result.add(proxyName);
-        continue;
-      }
-      // Check if it's another group
-      final subGroup = _config?.proxyGroups
-          .where((g) => g.name == proxyName)
-          .firstOrNull;
-      if (subGroup != null) {
-        result.add(subGroup);
-        continue;
-      }
-      // Check if it's a proxy
-      final proxy = _config?.proxies
-          .where((p) => p.name == proxyName)
-          .firstOrNull;
-      if (proxy != null) {
-        result.add(proxy);
-      } else {
-        // Unknown proxy, add as string
-        result.add(proxyName);
-      }
-    }
-    return result;
+  void _onEngineChanged() {
+    if (!_disposed && _engine.isReady) unawaited(syncSelectionsToRust());
   }
 
-  /// Load config from the active profile
-  Future<void> loadFromActiveProfile() async {
+  Future<void> loadFromActiveProfile() => _operations.run(() async {
+    if (_disposed) return;
+    final generation = ++_generation;
+    _measurementGeneration++;
     _isLoading = true;
     _error = null;
-    notifyListeners();
-
+    _notify();
     try {
-      final activeProfileId = await StorageService.instance
-          .getActiveProfileId();
-      if (activeProfileId == null) {
-        _config = null;
+      final id = await StorageService.instance.getActiveProfileId();
+      final yaml = id == null
+          ? null
+          : await StorageService.instance.getProfileConfig(id);
+      if (!_current(generation)) return;
+      if (yaml == null) {
+        _replaceConfig(null);
         _error = 'No active profile';
         return;
       }
-
-      final configContent = await StorageService.instance.getProfileConfig(
-        activeProfileId,
-      );
-      if (configContent == null) {
-        _config = null;
-        _error = 'Profile config not found';
-        return;
-      }
-
-      _config = ConfigConverter.parseClashConfig(configContent);
-
-      // Load persisted selections
-      await _loadPersistedSelections();
-
-      // Select first group by default if no persisted selection
-      if (_config!.proxyGroups.isNotEmpty && _selectedGroupName == null) {
-        _selectedGroupName = _config!.proxyGroups.first.name;
-      }
-
-      // Initialize selected proxies with first proxy in each group if not persisted
-      for (final group in _config!.proxyGroups) {
-        if (!_selectedProxies.containsKey(group.name) &&
-            group.proxies.isNotEmpty) {
-          _selectedProxies[group.name] = group.proxies.first;
-        }
-      }
-
-      // Only after the group table is complete: the engine is told about every
-      // group exactly once, and a group added by the fallback above is part of
-      // that answer.
-      await _syncSelectionsToRustWhenReady();
-    } catch (e) {
-      debugPrint('Failed to load proxies: $e');
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Load persisted selections from SharedPreferences
-  Future<void> _loadPersistedSelections() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Load selected group
+      final parsed = await compute(ConfigConverter.parseClashConfig, yaml);
+      if (!_current(generation)) return;
+      _replaceConfig(parsed);
+      final prefs = await _preferences();
+      if (!_current(generation)) return;
       final savedGroup = prefs.getString('selected_proxy_group');
-      if (savedGroup != null &&
-          _config!.proxyGroups.any((g) => g.name == savedGroup)) {
+      if (_groupsByName.containsKey(savedGroup)) {
         _selectedGroupName = savedGroup;
       }
-
-      // Load selected proxies for each group
-      for (final group in _config!.proxyGroups) {
-        final savedProxy = prefs.getString('selected_proxy_${group.name}');
-        if (savedProxy != null && group.proxies.contains(savedProxy)) {
-          _selectedProxies[group.name] = savedProxy;
+      for (final group in proxyGroups) {
+        final saved = prefs.getString('selected_proxy_${group.name}');
+        if (saved != null && group.proxies.contains(saved)) {
+          _selectedProxies[group.name] = saved;
         }
       }
-    } catch (e) {
-      debugPrint('Failed to load persisted selections: $e');
+      await _syncSelections(generation);
+    } catch (error) {
+      if (_current(generation)) _error = error.toString();
+    } finally {
+      if (_current(generation)) {
+        _isLoading = false;
+        _notify();
+      }
+    }
+  });
+
+  void _replaceConfig(ParsedClashConfig? config) {
+    _config = config;
+    _proxiesByName
+      ..clear()
+      ..addEntries(proxies.map((p) => MapEntry(p.name, p)));
+    _groupsByName
+      ..clear()
+      ..addEntries(proxyGroups.map((g) => MapEntry(g.name, g)));
+    _selectedProxies.removeWhere(
+      (group, proxy) =>
+          !(_groupsByName[group]?.proxies.contains(proxy) ?? false),
+    );
+    for (final group in proxyGroups) {
+      if (group.proxies.isNotEmpty) {
+        _selectedProxies.putIfAbsent(group.name, () => group.proxies.first);
+      }
+    }
+    if (!_groupsByName.containsKey(_selectedGroupName)) {
+      _selectedGroupName = proxyGroups.firstOrNull?.name;
+    }
+    _latencyResults.clear();
+  }
+
+  void loadFromYaml(String yamlContent) {
+    if (_disposed) return;
+    _generation++;
+    _measurementGeneration++;
+    _isLoading = false;
+    try {
+      _replaceConfig(ConfigConverter.parseClashConfig(yamlContent));
+      _error = null;
+      unawaited(syncSelectionsToRust());
+    } catch (error) {
+      _error = error.toString();
+    }
+    _notify();
+  }
+
+  void selectGroup(String groupName) {
+    if (_disposed ||
+        !_groupsByName.containsKey(groupName) ||
+        groupName == _selectedGroupName) {
+      return;
+    }
+    _selectedGroupName = groupName;
+    unawaited(_saveSelections());
+    _notify();
+  }
+
+  Future<void> selectProxyInGroup(String groupName, String proxyName) async {
+    if (_disposed ||
+        !(_groupsByName[groupName]?.proxies.contains(proxyName) ?? false)) {
+      return;
+    }
+    final generation = _generation;
+    _pendingSelections.update(
+      groupName,
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
+    _notify();
+    try {
+      await _operations.run(() async {
+        if (!_current(generation)) return;
+        _error = null;
+        if (await _applySelection(groupName, proxyName, generation)) {
+          if (_engine.isReady) ProxySelectionEvents.applied(groupName);
+          await _saveSelections();
+        }
+      });
+    } finally {
+      final count = (_pendingSelections[groupName] ?? 1) - 1;
+      if (count <= 0) {
+        _pendingSelections.remove(groupName);
+      } else {
+        _pendingSelections[groupName] = count;
+      }
+      _notify();
     }
   }
 
-  /// Apply the current selections to the engine, and remember that they still
-  /// need applying when it cannot take them yet.
-  Future<void> _syncSelectionsToRustWhenReady() async {
-    _attachEngineReadyListener();
-    await _applySelectionsToRust();
+  Future<void> syncSelectionsToRust() {
+    final generation = _generation;
+    return _operations.run(() => _syncSelections(generation));
   }
 
-  /// Re-assert the selections whenever the engine reports itself ready.
-  ///
-  /// Not gated on a pending flag: the engine is (re)created when the VPN
-  /// service starts, and a fresh instance sits on each group's default member
-  /// — the first node of the list — until it is told otherwise. That is
-  /// exactly the "I picked Singapore and got a Hong Kong IP" report.
-  void _attachEngineReadyListener() {
-    if (_engineReadyListenerAttached) return;
-    _engineReadyListenerAttached = true;
-    NativeCoreService.instance.addListener(() {
-      if (!NativeCoreService.instance.isReady) return;
-      // A pending flag here means the engine has not confirmed the selections
-      // yet; re-asserting them is what clears it, so log the reason and the
-      // outcome stay connected.
-      if (_rustSyncPending) {
-        debugPrint('Re-asserting selections the engine has not confirmed');
+  Future<void> _syncSelections(int generation) async {
+    if (!_current(generation) || !_engine.isReady) return;
+    _error = null;
+    var applied = false;
+    for (final entry in _selectedProxies.entries.toList(growable: false)) {
+      if (!_current(generation)) return;
+      final updated = await _applySelection(entry.key, entry.value, generation);
+      applied = applied || updated;
+    }
+    if (!_current(generation)) return;
+    if (applied) {
+      ProxySelectionEvents.applied(_selectedGroupName ?? '');
+      await _saveSelections();
+    }
+    _notify();
+  }
+
+  Future<bool> _applySelection(
+    String group,
+    String member,
+    int generation,
+  ) async {
+    if (!_current(generation)) return false;
+    if (_engine.isReady) {
+      final result = await _selection.select(
+        group,
+        member,
+        isCurrent: () => _current(generation),
+      );
+      if (result == null || !_current(generation)) return false;
+      final effective = result.member;
+      if (effective != null &&
+          (_groupsByName[group]?.proxies.contains(effective) ?? false)) {
+        _selectedProxies[group] = effective;
+      } else {
+        // Never retain a checkmark or saved preference for unconfirmed state.
+        _selectedProxies.remove(group);
       }
-      unawaited(_applySelectionsToRust());
+      if (result.error != null) _error = result.error.toString();
+    } else {
+      _selectedProxies[group] = member;
+    }
+    return true;
+  }
+
+  Future<void> _saveSelections() async {
+    final generation = _generation;
+    final group = _selectedGroupName;
+    final groups = _groupsByName.keys.toList(growable: false);
+    final selections = Map<String, String>.of(_selectedProxies);
+    try {
+      await _persistence.run(() async {
+        if (!_current(generation)) return;
+        final prefs = await _preferences();
+        if (!_current(generation)) return;
+        if (group != null &&
+            prefs.getString('selected_proxy_group') != group &&
+            !await prefs.setString('selected_proxy_group', group)) {
+          throw StateError('Could not save proxy group');
+        }
+        for (final name in groups) {
+          if (!_current(generation)) return;
+          final key = 'selected_proxy_$name';
+          final member = selections[name];
+          if (prefs.getString(key) == member) continue;
+          final saved = member == null
+              ? await prefs.remove(key)
+              : await prefs.setString(key, member);
+          if (!saved) throw StateError('Could not save proxy selection');
+        }
+      });
+    } catch (error) {
+      if (_current(generation)) {
+        _error ??= 'Could not save proxy preferences: $error';
+        _notify();
+      }
+    }
+  }
+
+  String? getSelectedProxyForGroup(String groupName) =>
+      _selectedProxies[groupName];
+  LatencyResult? getLatency(String proxyName) => _latencyResults[proxyName];
+
+  Future<void> testAllLatencies() async {
+    if (_disposed || _isTesting || selectedGroup == null) return;
+    final group = selectedGroup!;
+    final names = group.proxies
+        .where(_proxiesByName.containsKey)
+        .toSet()
+        .toList();
+    final generation = _generation;
+    final measurementGeneration = _measurementGeneration;
+    _isTesting = true;
+    _notify();
+    var next = 0;
+    Future<void> worker() async {
+      while (_current(generation) &&
+          measurementGeneration == _measurementGeneration &&
+          next < names.length) {
+        final name = names[next++];
+        await _measure(name, group.url);
+      }
+    }
+
+    try {
+      await Future.wait(
+        List.generate(
+          names.length.clamp(0, maxConcurrentProbes),
+          (_) => worker(),
+        ),
+      );
+    } finally {
+      _isTesting = false;
+      _notify();
+    }
+  }
+
+  Future<void> testLatency(String proxyName) {
+    if (_disposed || !_proxiesByName.containsKey(proxyName)) {
+      return Future.value();
+    }
+    return _measure(proxyName, selectedGroup?.url);
+  }
+
+  Future<void> _measure(String name, String? url) {
+    final generation = _generation;
+    final measurementGeneration = _measurementGeneration;
+    final key = '$generation:$measurementGeneration:$name:${url ?? ''}';
+    return _probes.putIfAbsent(key, () {
+      final operation = _runProbe(name, url, generation, measurementGeneration);
+      return operation.whenComplete(() {
+        _probes.remove(key);
+      });
     });
   }
 
-  /// Apply all current selections to Rust backend
-  Future<void> _applySelectionsToRust() async {
-    if (!NativeCoreService.instance.isReady) {
-      debugPrint('Skipping Rust selection sync: RustLib not initialized');
-      _rustSyncPending = _selectedProxies.isNotEmpty;
-      return;
-    }
-
-    var allApplied = true;
-    for (final entry in _selectedProxies.entries) {
-      final group = entry.key;
-      final wanted = entry.value;
-      try {
-        final applied = await rust_api.selectProxyInGroup(
-          groupName: group,
-          proxyName: wanted,
-        );
-        if (!applied) {
-          allApplied = false;
-          debugPrint('Engine refused selection $group -> $wanted');
-          continue;
-        }
-
-        // 接受调用与真的解析到这个节点是两件事，只有后者决定出口 IP。
-        // 不读回就永远不知道选择有没有落地：引擎会安静地留在本组默认值
-        // （成员列表的第一个），而用户只能从出口 IP 上发现。
-        final effective = await rust_api.getSelectedProxyInGroup(
-          groupName: group,
-        );
-        if (effective != null && effective != wanted) {
-          allApplied = false;
-          debugPrint(
-            'Selection mismatch for $group: asked "$wanted", engine reports "$effective"',
-          );
-        } else {
-          debugPrint('Applied selection: $group -> $wanted');
-        }
-      } catch (e) {
-        allApplied = false;
-        debugPrint('Failed to apply selection $group -> $wanted: $e');
-      }
-    }
-    _rustSyncPending = !allApplied;
-  }
-
-  /// Sync selections to Rust backend (call this after service starts)
-  Future<void> syncSelectionsToRust() async {
-    await _syncSelectionsToRustWhenReady();
-  }
-
-  /// Save selections to SharedPreferences
-  Future<void> _saveSelections() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Save selected group
-      if (_selectedGroupName != null) {
-        await prefs.setString('selected_proxy_group', _selectedGroupName!);
-      }
-
-      // Save selected proxies for each group
-      for (final entry in _selectedProxies.entries) {
-        await prefs.setString('selected_proxy_${entry.key}', entry.value);
-      }
-    } catch (e) {
-      debugPrint('Failed to save selections: $e');
-    }
-  }
-
-  /// Load config from raw YAML content
-  void loadFromYaml(String yamlContent) {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      _config = ConfigConverter.parseClashConfig(yamlContent);
-
-      // Select first group by default
-      if (_config!.proxyGroups.isNotEmpty && _selectedGroupName == null) {
-        _selectedGroupName = _config!.proxyGroups.first.name;
-      }
-
-      // Initialize selected proxies
-      for (final group in _config!.proxyGroups) {
-        if (!_selectedProxies.containsKey(group.name) &&
-            group.proxies.isNotEmpty) {
-          _selectedProxies[group.name] = group.proxies.first;
-        }
-      }
-
-      unawaited(_syncSelectionsToRustWhenReady());
-    } catch (e) {
-      debugPrint('Failed to parse config: $e');
-      _error = e.toString();
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  /// Select a proxy group to display
-  void selectGroup(String groupName) {
-    _selectedGroupName = groupName;
-    _saveSelections();
-    notifyListeners();
-  }
-
-  /// Select a proxy within a group
-  Future<void> selectProxyInGroup(String groupName, String proxyName) async {
-    _selectedProxies[groupName] = proxyName;
-    _saveSelections();
-    notifyListeners();
-
-    // Call Rust API to change proxy selection (only if RustLib is initialized)
-    if (!NativeCoreService.instance.isReady) {
-      debugPrint('Skipping Rust API call: RustLib not initialized');
-
-      _rustSyncPending = true;
-      _attachEngineReadyListener();
-      return;
-    }
-
-    // Retry logic to ensure selection is applied
-    int retryCount = 0;
-    const maxRetries = 3;
-    bool success = false;
-
-    while (retryCount < maxRetries && !success) {
-      try {
-        final result = await rust_api.selectProxyInGroup(
-          groupName: groupName,
-          proxyName: proxyName,
-        );
-        if (result) {
-          // 接受调用与真的解析到这个节点是两件事：只有后者决定出口 IP。
-          // 名字在引擎成员表里对不上时，调用会返回成功而引擎仍留在默认节点，
-          // 用户只会从出口 IP 上发现——所以必须读回。
-          final effective = await rust_api.getSelectedProxyInGroup(
-            groupName: groupName,
-          );
-          if (effective != null && effective != proxyName) {
-            debugPrint(
-              'Selection mismatch for $groupName: asked "$proxyName", engine reports "$effective" (attempt ${retryCount + 1}/$maxRetries)',
-            );
-            retryCount++;
-            if (retryCount < maxRetries) {
-              await Future.delayed(const Duration(milliseconds: 200));
-            }
-            continue;
-          }
-          debugPrint('Proxy selection updated: $groupName -> $proxyName');
-          success = true;
-          _rustSyncPending = false;
-          // Notify listeners that proxy selection changed - trigger IP refresh
-          proxySelectionChangedController.add(proxyName);
-        } else {
-          debugPrint(
-            'Proxy selection returned false, retrying... (${retryCount + 1}/$maxRetries)',
-          );
-          retryCount++;
-          if (retryCount < maxRetries) {
-            await Future.delayed(const Duration(milliseconds: 200));
-          }
-        }
-      } catch (e) {
-        debugPrint(
-          'Failed to update proxy selection in Rust (attempt ${retryCount + 1}): $e',
-        );
-        retryCount++;
-        if (retryCount < maxRetries) {
-          await Future.delayed(const Duration(milliseconds: 200));
-        }
-      }
-    }
-
-    if (!success) {
-      debugPrint(
-        'WARNING: Failed to apply proxy selection after $maxRetries attempts',
-      );
-    }
-  }
-
-  /// Get the selected proxy for a group
-  String? getSelectedProxyForGroup(String groupName) {
-    return _selectedProxies[groupName];
-  }
-
-  /// Get latency for a proxy
-  LatencyResult? getLatency(String proxyName) {
-    return _latencyResults[proxyName];
-  }
-
-  /// Test latency for all proxies in the current group (concurrent)
-  Future<void> testAllLatencies() async {
-    if (_isTesting || selectedGroup == null) return;
-
-    _isTesting = true;
-    notifyListeners();
-
-    try {
-      final group = selectedGroup!;
-      final items = getProxiesForGroup(group);
-
-      // Collect all test futures
-      final List<Future<void>> testFutures = [];
-
-      for (final item in items) {
-        ParsedProxy? proxy;
-        String proxyName;
-
-        if (item is ParsedProxy) {
-          proxy = item;
-          proxyName = item.name;
-        } else if (item is String && item != 'DIRECT' && item != 'REJECT') {
-          proxyName = item;
-          // Try to find the proxy
-          proxy = _config?.proxies.where((p) => p.name == item).firstOrNull;
-        } else {
-          continue;
-        }
-
-        if (proxy?.server != null) {
-          // Add concurrent test task
-          testFutures.add(_testLatencyAndUpdate(proxyName, proxy!));
-        }
-      }
-
-      // Run all tests concurrently
-      await Future.wait(testFutures);
-    } finally {
-      _isTesting = false;
-      notifyListeners();
-    }
-  }
-
-  /// Internal method to test latency and update result
-  Future<void> _testLatencyAndUpdate(
-    String proxyName,
-    ParsedProxy proxy,
+  Future<void> _runProbe(
+    String name,
+    String? url,
+    int generation,
+    int measurementGeneration,
   ) async {
-    final result = await _testLatency(proxyName, proxy);
-    _latencyResults[proxyName] = result;
-    notifyListeners();
-  }
-
-  /// Test latency for a single proxy
-  Future<void> testLatency(String proxyName) async {
-    final proxy = _config?.proxies
-        .where((p) => p.name == proxyName)
-        .firstOrNull;
-    if (proxy?.server == null) return;
-
-    final result = await _testLatency(proxyName, proxy!);
-    _latencyResults[proxyName] = result;
-    notifyListeners();
-  }
-
-  Future<LatencyResult> _testLatency(
-    String proxyName,
-    ParsedProxy proxy,
-  ) async {
-    // Check if RustLib is initialized
-    if (!NativeCoreService.instance.isReady) {
-      return LatencyResult(
-        proxyName: proxyName,
-        isSuccess: false,
-        error: 'Rust library not initialized',
-      );
+    if (_activeProbes >= maxConcurrentProbes) {
+      final waiter = Completer<void>();
+      _probeWaiters.add(waiter);
+      await waiter.future;
+    } else {
+      _activeProbes++;
     }
-
     try {
-      final server = proxy.server;
-      if (server == null) {
-        return LatencyResult(
-          proxyName: proxyName,
-          isSuccess: false,
-          error: 'No server address',
+      if (!_current(generation) ||
+          measurementGeneration != _measurementGeneration) {
+        return;
+      }
+      LatencyResult result;
+      try {
+        if (!_engine.isReady) throw StateError('Proxy core is not ready');
+        final ms = await _engine.measure(
+          name,
+          url?.isNotEmpty == true
+              ? url!
+              : 'http://www.gstatic.com/generate_204',
         );
+        result = LatencyResult(proxyName: name, latencyMs: ms, isSuccess: true);
+      } catch (error) {
+        result = LatencyResult(proxyName: name, error: error.toString());
       }
-
-      String host = server;
-      int resolvedPort = proxy.port ?? 0;
-
-      // Handle server:port format
-      if (server.contains(':')) {
-        final parts = server.split(':');
-        host = parts[0];
-        if (parts.length > 1 && resolvedPort == 0) {
-          resolvedPort = int.tryParse(parts[1]) ?? 0;
-        }
+      if (_current(generation) &&
+          measurementGeneration == _measurementGeneration) {
+        _latencyResults[name] = result;
+        _notify();
       }
-
-      if (resolvedPort == 0) {
-        resolvedPort = 443; // Default for most proxy protocols
+    } finally {
+      if (_probeWaiters.isEmpty) {
+        _activeProbes--;
+      } else {
+        _probeWaiters.removeFirst().complete();
       }
-
-      final proxyType = proxy.type.toLowerCase();
-
-      if (proxyType == 'ss' || proxyType == 'shadowsocks') {
-        final password = proxy.options['password'] as String? ?? '';
-        final cipher =
-            (proxy.options['cipher'] as String?) ??
-            (proxy.options['method'] as String?) ??
-            'aes-256-gcm';
-
-        if (password.isEmpty) {
-          return LatencyResult(
-            proxyName: proxyName,
-            isSuccess: false,
-            error: 'Missing password',
-          );
-        }
-
-        try {
-          final result = await rust_api.testShadowsocksLatency(
-            server: host,
-            port: resolvedPort,
-            password: password,
-            cipher: cipher,
-            timeoutMs: 5000,
-          );
-
-          return LatencyResult(
-            proxyName: proxyName,
-            latencyMs: result.latencyMs,
-            isSuccess: result.success,
-            error: result.error,
-          );
-        } catch (e) {
-          final result = await rust_api.testTcpConnectivity(
-            server: host,
-            port: resolvedPort,
-            timeoutMs: 5000,
-          );
-
-          return LatencyResult(
-            proxyName: proxyName,
-            latencyMs: result.latencyMs,
-            isSuccess: result.success,
-            error: result.success ? null : e.toString(),
-          );
-        }
-      }
-
-      final result = await rust_api.testTcpConnectivity(
-        server: host,
-        port: resolvedPort,
-        timeoutMs: 5000,
-      );
-
-      return LatencyResult(
-        proxyName: proxyName,
-        latencyMs: result.latencyMs,
-        isSuccess: result.success,
-        error: result.error,
-      );
-    } catch (e) {
-      return LatencyResult(
-        proxyName: proxyName,
-        isSuccess: false,
-        error: e.toString(),
-      );
     }
   }
 
-  /// Clear latency results
   void clearLatencies() {
+    _measurementGeneration++;
     _latencyResults.clear();
-    notifyListeners();
+    _notify();
   }
 
-  /// Clear all data
   void clear() {
-    _config = null;
-    _selectedGroupName = null;
-    _selectedProxies.clear();
-    _latencyResults.clear();
+    if (_disposed) return;
+    _generation++;
+    _measurementGeneration++;
+    _replaceConfig(null);
+    _isLoading = false;
     _error = null;
-    notifyListeners();
+    _notify();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _generation++;
+    _engine.removeListener(_onEngineChanged);
+    super.dispose();
   }
 }

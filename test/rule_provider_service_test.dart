@@ -318,4 +318,112 @@ void main() {
       expect(report.paths, isEmpty);
     },
   );
+  test(
+    'changing a source URL invalidates fresh cache and conditional headers',
+    () async {
+      final requests = <http.Request>[];
+      final service = serviceWith(
+        MockClient((request) async {
+          requests.add(request);
+          return http.Response(
+            'payload: ["${request.url.host}"]',
+            200,
+            headers: {'etag': 'old-source'},
+          );
+        }),
+      );
+      await service.prepare('source-change', httpProfile());
+      final report = await service.prepare(
+        'source-change',
+        httpProfile(url: 'https://new.example/rules'),
+      );
+      expect(requests, hasLength(2));
+      expect(requests.last.headers.containsKey('if-none-match'), isFalse);
+      expect(
+        File(report.paths['reject']!).readAsStringSync(),
+        contains('new.example'),
+      );
+    },
+  );
+
+  test(
+    'invalid refresh retains the previous usable rules and reports failure',
+    () async {
+      var request = 0;
+      final service = serviceWith(
+        MockClient(
+          (_) async => http.Response(
+            request++ == 0 ? 'payload: ["safe.example"]' : 'payload: []',
+            200,
+          ),
+        ),
+      );
+      final before = await service.prepare('last-good', httpProfile());
+      final after = await service.prepare(
+        'last-good',
+        httpProfile(),
+        force: true,
+      );
+      expect(after.paths, before.paths);
+      expect(after.states.single.error, contains('no usable rules'));
+      expect(File(before.paths['reject']!).existsSync(), isTrue);
+    },
+  );
+
+  test(
+    'HTTPS downgrade is refused before sending an insecure request',
+    () async {
+      var requests = 0;
+      final service = serviceWith(
+        MockClient((request) async {
+          requests++;
+          return http.Response(
+            '',
+            302,
+            headers: {'location': 'http://unsafe.example/rules'},
+          );
+        }),
+      );
+      final report = await service.prepare('redirect', httpProfile());
+      expect(requests, 1);
+      expect(report.states.single.ready, isFalse);
+      expect(report.states.single.error, contains('HTTPS'));
+    },
+  );
+
+  test(
+    'concurrent refreshes share the committed cache without racing files',
+    () async {
+      var requests = 0;
+      final service = serviceWith(
+        MockClient((_) async {
+          requests++;
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          return http.Response('payload: ["safe.example"]', 200);
+        }),
+      );
+      final reports = await Future.wait([
+        service.prepare('concurrent', httpProfile()),
+        service.prepare('concurrent', httpProfile()),
+      ]);
+      expect(requests, 1);
+      expect(reports.first.paths, reports.last.paths);
+    },
+  );
+
+  test('profile dot segments cannot escape the rule cache directory', () async {
+    final service = serviceWith(
+      MockClient((_) async => http.Response('example.org', 200)),
+    );
+    final report = await service.prepare('..', httpProfile());
+    final directory = File(report.paths['reject']!).parent;
+    expect(
+      directory.parent.uri.pathSegments.where((s) => s.isNotEmpty).last,
+      'rule-providers',
+    );
+    expect(
+      directory.uri.pathSegments.where((s) => s.isNotEmpty).last,
+      startsWith('key_'),
+    );
+  });
 }

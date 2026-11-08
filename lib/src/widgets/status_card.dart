@@ -2,426 +2,183 @@ import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/rust/types.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
-import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
+import 'package:arcadiaplus/src/theme/app_motion.dart';
+import 'package:arcadiaplus/src/widgets/adaptive_button.dart';
 
-class StatusCard extends StatefulWidget {
-  final bool isRunning;
-  final bool isLoading;
-  final ProxyStatus? proxyStatus;
-  final VoidCallback onStartStop;
-
+/// A stable control surface: only the state content changes, never the card's
+/// scale. Running is a persistent state and does not require a repeating ticker.
+class StatusCard extends StatelessWidget {
   const StatusCard({
     super.key,
     required this.isRunning,
     required this.isLoading,
-    this.proxyStatus,
     required this.onStartStop,
   });
 
-  @override
-  State<StatusCard> createState() => _StatusCardState();
-}
-
-class _StatusCardState extends State<StatusCard> with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _statusController;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _statusScaleAnimation;
-  bool _reduceMotion = false;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // 脉冲动画 - 运行时的呼吸效果
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
-      vsync: this,
-    );
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    // 状态切换动画
-    _statusController = AnimationController(
-      duration: AnimationUtils.stateChangeDuration,
-      vsync: this,
-    );
-    _statusScaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _statusController,
-        curve: AnimationUtils.curveSpring,
-      ),
-    );
-    _statusController.forward();
-
-    AppLifecycle.instance.active.addListener(_updateAnimations);
-    _updateAnimations();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    if (_reduceMotion == reduceMotion) return;
-    _reduceMotion = reduceMotion;
-    _updateAnimations();
-    if (_reduceMotion) {
-      _statusController.value = 1;
-    }
-  }
-
-  @override
-  void didUpdateWidget(StatusCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isRunning != oldWidget.isRunning ||
-        widget.isLoading != oldWidget.isLoading) {
-      _updateAnimations();
-      if (_reduceMotion) {
-        _statusController.value = 1;
-      } else {
-        _statusController.forward(from: 0);
-      }
-    }
-  }
-
-  /// The breathing indicator is a "the proxy is up" cue, so it is tied to the
-  /// proxy being up *and* the app being on screen.
-  void _updateAnimations() {
-    if (!_reduceMotion &&
-        AppLifecycle.instance.isActive &&
-        widget.isRunning &&
-        !widget.isLoading) {
-      if (!_pulseController.isAnimating) {
-        _pulseController.repeat(reverse: true);
-      }
-    } else {
-      _pulseController.stop();
-      _pulseController.reset();
-    }
-  }
-
-  @override
-  void dispose() {
-    AppLifecycle.instance.active.removeListener(_updateAnimations);
-    _pulseController.dispose();
-    _statusController.dispose();
-    super.dispose();
-  }
+  final bool isRunning;
+  final bool isLoading;
+  final VoidCallback onStartStop;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
-    final spacing = ResponsiveUtils.getSpacing(context);
-    final borderRadius = ResponsiveUtils.getBorderRadius(context);
+    final status = isLoading
+        ? (isRunning
+              ? (l10n?.stopping ?? 'Stopping...')
+              : (l10n?.starting ?? 'Starting...'))
+        : (isRunning
+              ? (l10n?.running ?? 'Running')
+              : (l10n?.stopped ?? 'Stopped'));
+    final description = isRunning
+        ? (l10n?.arcadiaplusRunning ?? 'ArcadiaPlus is running')
+        : (l10n?.serviceNotRunning ?? 'Service not running');
+    final foreground = isRunning ? colors.onPrimaryContainer : colors.onSurface;
+    final duration = AppMotion.duration(context);
 
-    return ScaleTransition(
-      scale: _statusScaleAnimation,
-      child: Card(
-        elevation: 0,
-        color: colorScheme.surfaceContainerLow,
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(borderRadius),
-          side: BorderSide(
-            color: widget.isRunning
-                ? colorScheme.primary.withValues(alpha: 0.3)
-                : colorScheme.outlineVariant.withValues(alpha: 0.5),
-            width: 1,
+    return AnimatedContainer(
+      duration: duration,
+      curve: AppMotion.curve,
+      decoration: BoxDecoration(
+        color: isRunning ? colors.primaryContainer : colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              ExcludeSemantics(
+                child: AnimatedContainer(
+                  duration: duration,
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: isRunning
+                        ? colors.primary
+                        : colors.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Icon(
+                    isRunning
+                        ? Icons.check_rounded
+                        : Icons.power_settings_new_rounded,
+                    color: isRunning
+                        ? colors.onPrimary
+                        : colors.onSurfaceVariant,
+                    size: 26,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  l10n?.serviceStatus ?? 'Service Status',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: foreground,
+                  ),
+                ),
+              ),
+              if (isLoading) ...[
+                const SizedBox(width: 12),
+                SizedBox.square(
+                  dimension: 22,
+                  child: MediaQuery.disableAnimationsOf(context)
+                      ? Icon(
+                          Icons.hourglass_top_rounded,
+                          size: 22,
+                          color: foreground,
+                        )
+                      : CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: foreground,
+                        ),
+                ),
+              ],
+            ],
           ),
-        ),
-        child: AnimatedContainer(
-          duration: AnimationUtils.stateChangeDuration,
-          curve: AnimationUtils.curveEmphasized,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: widget.isRunning
-                  ? [
-                      colorScheme.primaryContainer.withValues(alpha: 0.3),
-                      colorScheme.surfaceContainerLow,
-                    ]
-                  : [
-                      colorScheme.surfaceContainerLow,
-                      colorScheme.surfaceContainerLow,
-                    ],
+          const SizedBox(height: 24),
+          Semantics(
+            liveRegion: true,
+            label: status,
+            excludeSemantics: true,
+            child: AnimatedSwitcher(
+              duration: duration,
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              layoutBuilder: (current, previous) => Stack(
+                alignment: AlignmentDirectional.centerStart,
+                children: [...previous, ?current],
+              ),
+              child: Text(
+                status,
+                key: ValueKey(status),
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: foreground,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
-          padding: EdgeInsets.all(spacing * 2),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+          const SizedBox(height: 8),
+          Text(
+            description,
+            style: theme.textTheme.bodyMedium?.copyWith(color: foreground),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: AdaptiveButton(
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      AnimationUtils.mediumHaptic();
+                      onStartStop();
+                    },
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(48, 52),
+                backgroundColor: isRunning ? colors.surface : colors.primary,
+                foregroundColor: isRunning
+                    ? colors.onSurface
+                    : colors.onPrimary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  _buildStatusIndicator(colorScheme, textTheme, l10n),
-                  SizedBox(width: spacing * 2),
-                  Expanded(
-                    child: _buildStatusText(colorScheme, textTheme, l10n),
+                  Icon(
+                    isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      isLoading
+                          ? status
+                          : isRunning
+                          ? (l10n?.stopService ?? 'Stop Service')
+                          : (l10n?.startService ?? 'Start Service'),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ],
               ),
-
-              SizedBox(height: spacing * 2),
-              _buildControlButton(colorScheme, textTheme, l10n, borderRadius),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
-  }
-
-  Widget _buildStatusIndicator(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    AppLocalizations? l10n,
-  ) {
-    final indicatorSize = 56.0;
-    final iconSize = 28.0;
-
-    // Isolated so the pulse repaints this circle instead of the whole card.
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _pulseAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: widget.isRunning && !widget.isLoading
-                ? _pulseAnimation.value
-                : 1.0,
-            child: AnimatedContainer(
-              duration: AnimationUtils.stateChangeDuration,
-              curve: AnimationUtils.stateChangeCurve,
-              width: indicatorSize,
-              height: indicatorSize,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _getStatusColor(colorScheme).withValues(alpha: 0.15),
-                border: Border.all(
-                  color: _getStatusColor(colorScheme).withValues(alpha: 0.4),
-                  width: 2,
-                ),
-              ),
-              child: AnimatedSwitcher(
-                duration: AnimationUtils.iconMorphDuration,
-                switchInCurve: AnimationUtils.curveEmphasizedDecelerate,
-                switchOutCurve: AnimationUtils.curveEmphasizedAccelerate,
-                transitionBuilder: (child, animation) {
-                  return ScaleTransition(
-                    scale: animation,
-                    child: FadeTransition(opacity: animation, child: child),
-                  );
-                },
-                child: widget.isLoading
-                    ? SizedBox(
-                        key: const ValueKey('loading'),
-                        width: iconSize,
-                        height: iconSize,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: _getStatusColor(colorScheme),
-                        ),
-                      )
-                    : Icon(
-                        _getStatusIcon(),
-                        key: ValueKey(widget.isRunning),
-                        size: iconSize,
-                        color: _getStatusColor(colorScheme),
-                      ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildStatusText(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    AppLocalizations? l10n,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AnimatedSwitcher(
-          duration: AnimationUtils.stateChangeDuration,
-          switchInCurve: AnimationUtils.curveEmphasizedDecelerate,
-          transitionBuilder: (child, animation) {
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, 0.2),
-                end: Offset.zero,
-              ).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          },
-          child: Text(
-            _getStatusText(l10n),
-            key: ValueKey('${widget.isRunning}_${widget.isLoading}'),
-            style: textTheme.titleLarge?.copyWith(
-              color: _getStatusColor(colorScheme),
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 4),
-
-        AnimatedSwitcher(
-          duration: AnimationUtils.durationMedium2,
-          child: Text(
-            _getStatusDescription(l10n),
-            key: ValueKey(_getStatusDescription(l10n)),
-            style: textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildControlButton(
-    ColorScheme colorScheme,
-    TextTheme textTheme,
-    AppLocalizations? l10n,
-    double borderRadius,
-  ) {
-    final buttonColor = widget.isRunning
-        ? colorScheme.error
-        : colorScheme.primary;
-    final buttonBgColor = widget.isRunning
-        ? colorScheme.errorContainer
-        : colorScheme.primaryContainer;
-    final buttonTextColor = widget.isRunning
-        ? colorScheme.onErrorContainer
-        : colorScheme.onPrimaryContainer;
-
-    return SizedBox(
-      width: double.infinity,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: widget.isLoading
-              ? null
-              : () {
-                  AnimationUtils.mediumHaptic();
-                  widget.onStartStop();
-                },
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: AnimatedContainer(
-            duration: AnimationUtils.stateChangeDuration,
-            curve: AnimationUtils.curveEmphasized,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            decoration: BoxDecoration(
-              color: widget.isLoading
-                  ? colorScheme.surfaceContainerHighest
-                  : buttonBgColor,
-              borderRadius: BorderRadius.circular(borderRadius),
-              boxShadow: widget.isLoading
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: buttonColor.withValues(alpha: 0.2),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedSwitcher(
-                  duration: AnimationUtils.iconMorphDuration,
-                  transitionBuilder: (child, animation) {
-                    return RotationTransition(
-                      turns: Tween(begin: 0.5, end: 1.0).animate(animation),
-                      child: ScaleTransition(scale: animation, child: child),
-                    );
-                  },
-                  child: Icon(
-                    widget.isLoading
-                        ? Icons.hourglass_top_rounded
-                        : widget.isRunning
-                        ? Icons.stop_rounded
-                        : Icons.play_arrow_rounded,
-                    key: ValueKey(
-                      'btn_${widget.isRunning}_${widget.isLoading}',
-                    ),
-                    size: 22,
-                    color: widget.isLoading
-                        ? colorScheme.onSurfaceVariant
-                        : buttonTextColor,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  widget.isLoading
-                      ? (l10n?.loading ?? 'Loading...')
-                      : widget.isRunning
-                      ? (l10n?.stopService ?? 'Stop Service')
-                      : (l10n?.startService ?? 'Start Service'),
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: widget.isLoading
-                        ? colorScheme.onSurfaceVariant
-                        : buttonTextColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Color _getStatusColor(ColorScheme colorScheme) {
-    if (widget.isLoading) {
-      return colorScheme.tertiary;
-    } else if (widget.isRunning) {
-      return colorScheme.primary;
-    } else {
-      return colorScheme.error;
-    }
-  }
-
-  IconData _getStatusIcon() {
-    if (widget.isRunning) {
-      return Icons.check_circle_rounded;
-    } else {
-      return Icons.cancel_rounded;
-    }
-  }
-
-  String _getStatusText(AppLocalizations? l10n) {
-    if (widget.isLoading) {
-      return l10n?.starting ?? 'Starting...';
-    } else if (widget.isRunning) {
-      return l10n?.running ?? 'Running';
-    } else {
-      return l10n?.stopped ?? 'Stopped';
-    }
-  }
-
-  String _getStatusDescription(AppLocalizations? l10n) {
-    if (widget.isLoading) {
-      return l10n?.startingService ?? 'Starting service...';
-    } else if (widget.isRunning) {
-      return l10n?.arcadiaplusRunning ?? 'ArcadiaPlus is running';
-    } else {
-      return l10n?.serviceNotRunning ?? 'Service not running';
-    }
   }
 }
 
-/// 服务运行时的详细统计卡片（可选显示）
 class ServiceStatsCard extends StatelessWidget {
   final ProxyStatus proxyStatus;
 

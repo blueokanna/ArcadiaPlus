@@ -66,19 +66,40 @@ class MainActivity : FlutterActivity() {
             Log.d(TAG, "Method called: ${call.method}")
 
             when (call.method) {
+                "consumePendingQuickAction" -> {
+                    val connect = intent?.action == ArcadiaPlusTileService.ACTION_CONNECT
+                    if (connect) intent.action = Intent.ACTION_MAIN
+                    result.success(connect)
+                }
+                "requestQuickSettingsTile" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        getSystemService(android.app.StatusBarManager::class.java)
+                            .requestAddTileService(
+                                android.content.ComponentName(this, ArcadiaPlusTileService::class.java),
+                                "ArcadiaPlus", android.graphics.drawable.Icon.createWithResource(this, R.mipmap.ic_launcher),
+                                mainExecutor,
+                            ) { code -> result.success(code) }
+                    } else {
+                        result.success(-1)
+                    }
+                }
                 "startVpn" -> {
                     val mode = call.argument<String>("mode") ?: "rule"
                     pendingAllowLan = call.argument<Boolean>("allowLan") ?: true
                     startVpnService(result, mode)
                 }
                 "stopVpn" -> {
-                    stopVpnService()
-                    result.success(true)
+                    mainScope.launch {
+                        withContext(Dispatchers.IO) { stopVpnService() }
+                        result.success(true)
+                    }
                 }
                 "resetVpnState" -> {
                     Log.d(TAG, "Resetting VPN state...")
-                    ArcadiaPlusVpnService.resetAllState()
-                    result.success(true)
+                    mainScope.launch {
+                        withContext(Dispatchers.IO) { ArcadiaPlusVpnService.resetAllState() }
+                        result.success(true)
+                    }
                 }
                 "isVpnRunning" -> {
                     result.success(ArcadiaPlusVpnService.isRunning)
@@ -262,7 +283,6 @@ class MainActivity : FlutterActivity() {
         pendingProxyMode = mode
 
         try {
-            // First, check if another VPN is currently active
             val connectivityManager =
                     getSystemService(Context.CONNECTIVITY_SERVICE) as
                             android.net.ConnectivityManager
@@ -283,7 +303,6 @@ class MainActivity : FlutterActivity() {
             val intent = VpnService.prepare(this)
 
             if (intent != null) {
-                // VPN permission needed - this will also revoke other VPN's permission
                 Log.d(TAG, "VPN permission needed, showing permission dialog...")
                 if (otherVpnActive) {
                     Log.d(TAG, "This will disconnect the other active VPN")
@@ -324,8 +343,6 @@ class MainActivity : FlutterActivity() {
                     )
                 }
             } else {
-                // We already have VPN permission
-                // If another VPN is active, calling establish() will take over the VPN slot
                 if (otherVpnActive) {
                     Log.d(TAG, "We have VPN permission, will take over from other VPN...")
                 } else {
@@ -425,7 +442,6 @@ class MainActivity : FlutterActivity() {
             val activeNetwork = connectivityManager.activeNetwork
             if (activeNetwork != null) {
                 val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-                // Check if VPN transport is active AND it's not our VPN
                 val isVpnTransport =
                         capabilities?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN) ==
                                 true
@@ -480,6 +496,14 @@ class MainActivity : FlutterActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.action == ArcadiaPlusTileService.ACTION_CONNECT) {
+            methodChannel?.invokeMethod("quickConnectRequested", null)
         }
     }
 

@@ -123,6 +123,7 @@ class AppTheme {
   /// to draw the swatches. The cache is bounded by the theme list, which is a
   /// compile-time constant.
   static ColorScheme previewScheme(String themeName, Brightness brightness) {
+    themeName = allThemes.contains(themeName) ? themeName : defaultTheme;
     final key = '$themeName:${brightness.name}';
     return _previewSchemes[key] ??= _generateColorScheme(themeName, brightness);
   }
@@ -136,6 +137,7 @@ class AppTheme {
   /// brightnesses every time the locale or the theme mode changes. [ThemeData]
   /// is immutable, so handing out the same instance is safe.
   static ThemeData createTheme(String themeName, Brightness brightness) {
+    themeName = allThemes.contains(themeName) ? themeName : defaultTheme;
     final key = '$themeName:${brightness.name}';
     return _themes[key] ??= _buildThemeData(
       _generateColorScheme(themeName, brightness),
@@ -214,8 +216,6 @@ class AppTheme {
     Color veil(Color color) => color.withValues(alpha: wallpaperSurfaceAlpha);
 
     return base.copyWith(
-      // The page background itself is the wallpaper, so the scaffold stops
-      // painting over it.
       scaffoldBackgroundColor: Colors.transparent,
       canvasColor: Colors.transparent,
       appBarTheme: base.appBarTheme.copyWith(
@@ -302,17 +302,11 @@ class AppTheme {
     );
   }
 
-  /// Material 3's fade-forwards transition wherever the framework drives the
-  /// route. The app's own screens ride go_router's expressive page builder
-  /// (`_buildExpressivePage`); this covers everything else — a
-  /// `MaterialPageRoute`, a full-screen dialog route, a platform default.
-  ///
-  /// Apple platforms keep their own builders: the interactive back-swipe and
-  /// the parallax are platform behaviour, not a theme choice.
+  /// Platform routes retain Android predictive back and Apple edge gestures.
   static PageTransitionsTheme _createPageTransitionsTheme() {
     return const PageTransitionsTheme(
       builders: {
-        TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        TargetPlatform.android: PredictiveBackPageTransitionsBuilder(),
         TargetPlatform.fuchsia: FadeForwardsPageTransitionsBuilder(),
         TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
         TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
@@ -469,27 +463,8 @@ class AppTheme {
   }
 
   static SwitchThemeData _createSwitchTheme(ColorScheme colorScheme) {
-    return SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return colorScheme.onPrimary;
-        }
-        return colorScheme.outline;
-      }),
-      trackColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return colorScheme.primary;
-        }
-        return colorScheme.surfaceContainerHighest;
-      }),
-      trackOutlineColor: WidgetStateProperty.resolveWith((states) {
-        if (states.contains(WidgetState.selected)) {
-          return Colors.transparent;
-        }
-        return colorScheme.outline;
-      }),
-      trackOutlineWidth: WidgetStateProperty.all(2),
-    );
+    // Native Material defaults resolve disabled, hovered and focused states.
+    return const SwitchThemeData();
   }
 
   static DropdownMenuThemeData _createDropdownMenuTheme(
@@ -556,16 +531,28 @@ class AppTheme {
     return SegmentedButtonThemeData(
       style: ButtonStyle(
         shape: const WidgetStatePropertyAll(AppShapes.control),
-        side: WidgetStatePropertyAll(
-          BorderSide(color: colorScheme.outlineVariant),
+        side: WidgetStateProperty.resolveWith(
+          (states) => BorderSide(
+            color: states.contains(WidgetState.disabled)
+                ? colorScheme.onSurface.withValues(alpha: 0.12)
+                : colorScheme.outlineVariant,
+          ),
         ),
         backgroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return states.contains(WidgetState.selected)
+                ? colorScheme.onSurface.withValues(alpha: 0.12)
+                : Colors.transparent;
+          }
           if (states.contains(WidgetState.selected)) {
             return colorScheme.secondaryContainer;
           }
           return Colors.transparent;
         }),
         foregroundColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) {
+            return colorScheme.onSurface.withValues(alpha: 0.38);
+          }
           if (states.contains(WidgetState.selected)) {
             return colorScheme.onSecondaryContainer;
           }
@@ -585,6 +572,7 @@ class AppTheme {
         foregroundColor: colorScheme.primary,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: AppShapes.pill,
+        minimumSize: const Size(48, 48),
         textStyle: _textStyle(fontWeight: FontWeight.w500, fontSize: 14),
       ),
     );
@@ -599,6 +587,7 @@ class AppTheme {
         foregroundColor: colorScheme.onPrimary,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: AppShapes.pill,
+        minimumSize: const Size(48, 48),
         textStyle: _textStyle(fontWeight: FontWeight.w500, fontSize: 14),
       ),
     );
@@ -624,6 +613,7 @@ class AppTheme {
         foregroundColor: colorScheme.primary,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         shape: AppShapes.pill,
+        minimumSize: const Size(48, 48),
         textStyle: _textStyle(fontWeight: FontWeight.w500, fontSize: 14),
       ),
     );

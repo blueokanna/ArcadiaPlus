@@ -26,6 +26,7 @@ class ArcadiaPlusVpnService : VpnService() {
     // JNI methods for Rust bridge
     private external fun nativeInitRustBridge()
     private external fun nativeClearRustBridge()
+    private external fun nativeStopProxy()
 
     companion object {
         private const val TAG = "ArcadiaPlusVpnService"
@@ -260,18 +261,7 @@ class ArcadiaPlusVpnService : VpnService() {
             instance?.let { vpnInstance ->
                 Log.d(TAG, "Calling stopVpnInternal on instance...")
                 vpnInstance.stopVpnInternal()
-            }
-
-            // Also send stop intent to ensure service stops
-            try {
-                val intent =
-                        Intent(context, ArcadiaPlusVpnService::class.java).apply {
-                            action = ACTION_STOP
-                        }
-                context.startService(intent)
-                Log.d(TAG, "Stop intent sent to VPN service")
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to send stop intent: ${e.message}")
+                return
             }
 
             Log.d(TAG, "=== stopVpnFromOutside complete ===")
@@ -451,12 +441,8 @@ class ArcadiaPlusVpnService : VpnService() {
                         }
                 _proxyMode = currentMode
 
-                // Android gives startForegroundService() only a short deadline
-                // to publish its notification. VPN takeover/retry can exceed it.
                 startForeground(NOTIFICATION_ID, createNotification())
 
-                // Establishing the tunnel retries and sleeps; the main thread
-                // must stay free to answer the system's callbacks.
                 Thread(
                                 { startVpn() },
                                 "arcadiaplus-vpn-start",
@@ -464,7 +450,7 @@ class ArcadiaPlusVpnService : VpnService() {
                         .start()
             }
             ACTION_STOP -> {
-                stopVpnInternal()
+                Thread({ stopVpnInternal(stopProxy = true) }, "arcadiaplus-vpn-stop").start()
             }
             else -> {
                 if (!_isRunning.get()) {
@@ -476,6 +462,7 @@ class ArcadiaPlusVpnService : VpnService() {
         return START_NOT_STICKY
     }
 
+    @Synchronized
     private fun startVpn() {
         try {
             Log.d(TAG, "=== Starting VPN with mode: $currentMode ===")
@@ -514,28 +501,12 @@ class ArcadiaPlusVpnService : VpnService() {
                             .setSession("ArcadiaPlus")
                             .setMtu(1500)
                             .addAddress("198.18.0.1", 16)
-                            // Every DNS query that enters the tunnel is answered by the
-                            // engine's fake-IP resolver, whichever server the app asks for,
-                            // so the tunnel's own address is the only one that belongs in
-                            // the interface configuration. Listing public resolvers here
-                            // would let Android resolve outside the tunnel.
                             .addDnsServer("198.18.0.2")
                             .setBlocking(false)
 
-            // Route selection is not mode dependent: rule, global and direct
-            // all capture the full default route, and the engine decides per
-            // connection which outbound to dial (the same semantics as any
-            // Clash client with a TUN device). Narrowing the route would take
-            // traffic out of the engine's hands, not out of the proxy.
             builder.addRoute("0.0.0.0", 0)
             Log.d(TAG, "Added route: 0.0.0.0/0 (all traffic)")
 
-            // Private ranges are only worth capturing when the user asked for
-            // LAN access. With it off they belong to the system's own routing:
-            // otherwise every LAN announcement, SSDP/mDNS packet and gateway
-            // probe is materialised inside the engine as a real connection,
-            // which spawns threads and burns CPU for traffic that the rules
-            // can only send DIRECT anyway. Public traffic is unaffected.
             if (!_captureLan) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     for ((address, prefixLength) in PRIVATE_PREFIXES) {
@@ -564,8 +535,6 @@ class ArcadiaPlusVpnService : VpnService() {
                 builder.setMetered(false)
             }
 
-            // Try to establish VPN with extended retry logic
-            // This handles the case where another VPN is being disconnected
             var retryCount = 0
             val maxRetries = 5 // Increased from 3 to 5 for better handling of competing VPNs
             var lastError: Exception? = null
@@ -580,7 +549,6 @@ class ArcadiaPlusVpnService : VpnService() {
 
                     if (vpnInterface == null && retryCount < maxRetries - 1) {
                         Log.w(TAG, "establish() returned null, waiting before retry...")
-                        // Progressively longer waits to give other VPN time to disconnect
                         val waitTime = 500L + (retryCount * 500L)
                         Thread.sleep(waitTime)
                         retryCount++
@@ -591,7 +559,6 @@ class ArcadiaPlusVpnService : VpnService() {
                     lastError = e
                     Log.w(TAG, "establish() failed (attempt ${retryCount + 1}): ${e.message}")
                     if (retryCount < maxRetries - 1) {
-                        // Progressively longer waits
                         val waitTime = 500L + (retryCount * 500L)
                         Thread.sleep(waitTime)
                     }
@@ -603,6 +570,7 @@ class ArcadiaPlusVpnService : VpnService() {
                 val fd = vpnInterface!!.fd
                 _vpnFd = fd
                 _isRunning.set(true)
+                publishTileState()
 
                 Log.d(TAG, "=== VPN STARTED SUCCESSFULLY ===")
                 Log.d(TAG, "  fd=$fd")
@@ -637,16 +605,22 @@ class ArcadiaPlusVpnService : VpnService() {
     }
 
     @Synchronized
-    private fun stopVpnInternal() {
+    private fun stopVpnInternal(stopProxy: Boolean = false) {
         Log.d(TAG, "=== stopVpnInternal called ===")
 
-        // Set all flags to stopped state
         _isRunning.set(false)
         _vpnFd = -1
         _isStarting.set(false)
         startLatch?.countDown()
         startLatch = null
         isStarting.set(false)
+
+        try {
+            nativeClearRustBridge()
+            _jniInitialized.set(false)
+        } catch (e: Exception) {
+            Log.w(TAG, "Native teardown failed: ${e.message}")
+        }
 
         // Close VPN interface
         vpnInterface?.let { pfd ->
@@ -660,15 +634,8 @@ class ArcadiaPlusVpnService : VpnService() {
         }
         vpnInterface = null
 
-        // Clear Rust JNI bridge
-        try {
-            Log.d(TAG, "Clearing Rust JNI bridge...")
-            nativeClearRustBridge()
-            _jniInitialized.set(false)
-            Log.d(TAG, "Rust JNI bridge cleared")
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to clear Rust JNI bridge: ${e.message}")
-        }
+        if (stopProxy) nativeStopProxy()
+        publishTileState()
 
         // Stop foreground service
         stopForegroundCompat()
@@ -680,6 +647,12 @@ class ArcadiaPlusVpnService : VpnService() {
         instance = null
 
         Log.d(TAG, "=== VPN service stopped completely ===")
+    }
+
+    private fun publishTileState() {
+        sendBroadcast(Intent(ArcadiaPlusTileService.ACTION_STATE_CHANGED).setPackage(packageName))
+        android.service.quicksettings.TileService.requestListeningState(
+            this, android.content.ComponentName(this, ArcadiaPlusTileService::class.java))
     }
 
     private fun stopForegroundCompat() {
@@ -695,7 +668,7 @@ class ArcadiaPlusVpnService : VpnService() {
                                     NotificationManager.IMPORTANCE_LOW
                             )
                             .apply {
-                                description = "VPN 服务通知"
+                                description = "VPN Service Notifications"
                                 setShowBadge(false)
                                 lockscreenVisibility = Notification.VISIBILITY_SECRET
                             }
@@ -737,9 +710,9 @@ class ArcadiaPlusVpnService : VpnService() {
 
         val modeText =
                 when (currentMode) {
-                    ProxyMode.GLOBAL -> "全局代理"
-                    ProxyMode.RULE -> "规则模式"
-                    ProxyMode.DIRECT -> "直连模式"
+                    ProxyMode.GLOBAL -> "Global Proxy"
+                    ProxyMode.RULE -> "Rule Mode"
+                    ProxyMode.DIRECT -> "Direct Mode"
                 }
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
@@ -757,22 +730,22 @@ class ArcadiaPlusVpnService : VpnService() {
 
     override fun onDestroy() {
         Log.d(TAG, "onDestroy called")
-        _isRunning.set(false)
-        _vpnFd = -1
-        isStarting.set(false)
-        instance = null
-
-        // Release anyone parked in startVpnAndGetFd(): the service is gone, so
-        // waiting for the full ten-second timeout would report a failure long
-        // after it already happened.
-        startLatch?.countDown()
-        startLatch = null
+        val ownsState = instance === this
+        if (ownsState) {
+            _isRunning.set(false)
+            _vpnFd = -1
+            isStarting.set(false)
+            instance = null
+            startLatch?.countDown()
+            startLatch = null
+            publishTileState()
+        }
 
         // Unregister network callback
         unregisterNetworkCallback()
 
         try {
-            nativeClearRustBridge()
+            if (ownsState && _jniInitialized.getAndSet(false)) nativeClearRustBridge()
         } catch (e: Exception) {
             Log.w(TAG, "Failed to clear Rust JNI bridge: ${e.message}")
         }
@@ -785,7 +758,7 @@ class ArcadiaPlusVpnService : VpnService() {
 
     override fun onRevoke() {
         Log.d(TAG, "VPN permission revoked")
-        stopVpnInternal()
+        Thread({ stopVpnInternal(stopProxy = true) }, "arcadiaplus-vpn-revoke").start()
         super.onRevoke()
     }
 }

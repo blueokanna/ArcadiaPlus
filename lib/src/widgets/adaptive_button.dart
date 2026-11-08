@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:arcadiaplus/src/utils/platform_utils.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:arcadiaplus/src/widgets/spring_press.dart';
 
-class AdaptiveButton extends StatelessWidget {
+class AdaptiveButton extends StatefulWidget {
   final Widget child;
   final VoidCallback? onPressed;
   final VoidCallback? onLongPress;
@@ -24,47 +25,81 @@ class AdaptiveButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final adaptiveStyle =
-        style ??
-        ButtonStyle(
-          padding: WidgetStateProperty.all(
-            EdgeInsets.symmetric(
-              horizontal: PlatformUtils.isDesktop ? 20 : 16,
-              vertical: PlatformUtils.isDesktop ? 12 : 10,
-            ),
-          ),
-          shape: WidgetStateProperty.all(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                PlatformUtils.isDesktop ? 8 : 100,
-              ),
-            ),
-          ),
-          elevation: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.pressed)) {
-              return PlatformUtils.isDesktop ? 2 : 0;
-            }
-            return PlatformUtils.isDesktop ? 1 : 0;
-          }),
-          mouseCursor: WidgetStateProperty.all(
-            PlatformUtils.isDesktop
-                ? SystemMouseCursors.click
-                : MouseCursor.defer,
-          ),
-        );
+  State<AdaptiveButton> createState() => _AdaptiveButtonState();
+}
 
-    return FilledButton(
-      onPressed: onPressed,
-      onLongPress: PlatformUtils.shouldShowContextMenu() ? onLongPress : null,
-      style: adaptiveStyle,
-      focusNode: focusNode,
-      autofocus: autofocus,
-      clipBehavior: clipBehavior,
-      statesController: statesController,
-      child: child,
-    );
+class _AdaptiveButtonState extends State<AdaptiveButton> {
+  final _internalStates = WidgetStatesController();
+  WidgetStatesController get _states =>
+      widget.statesController ?? _internalStates;
+  bool _pressed = false;
+  bool _updateScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _states.addListener(_syncPressed);
+    _pressed =
+        _states.value.contains(WidgetState.pressed) &&
+        (widget.onPressed != null || widget.onLongPress != null);
   }
+
+  @override
+  void didUpdateWidget(AdaptiveButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.statesController != widget.statesController) {
+      (oldWidget.statesController ?? _internalStates).removeListener(
+        _syncPressed,
+      );
+      _states.addListener(_syncPressed);
+    }
+    _pressed =
+        _states.value.contains(WidgetState.pressed) &&
+        (widget.onPressed != null || widget.onLongPress != null);
+  }
+
+  void _syncPressed() {
+    final pressed =
+        _states.value.contains(WidgetState.pressed) &&
+        (widget.onPressed != null || widget.onLongPress != null);
+    if (_pressed == pressed) return;
+    // Material may update disabled/pressed state while rebuilding its child.
+    // Rebuilding an ancestor there would violate Flutter's build contract.
+    if (SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks) {
+      if (!_updateScheduled) {
+        _updateScheduled = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _updateScheduled = false;
+          if (mounted) _syncPressed();
+        });
+      }
+      return;
+    }
+    setState(() => _pressed = pressed);
+  }
+
+  @override
+  void dispose() {
+    _states.removeListener(_syncPressed);
+    _internalStates.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SpringPress(
+    pressed: _pressed,
+    child: FilledButton(
+      onPressed: widget.onPressed,
+      onLongPress: widget.onLongPress,
+      style: widget.style,
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      clipBehavior: widget.clipBehavior,
+      statesController: _states,
+      child: widget.child,
+    ),
+  );
 }
 
 class AdaptiveOutlinedButton extends StatelessWidget {
@@ -91,36 +126,10 @@ class AdaptiveOutlinedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final adaptiveStyle =
-        style ??
-        ButtonStyle(
-          padding: WidgetStateProperty.all(
-            EdgeInsets.symmetric(
-              horizontal: PlatformUtils.isDesktop ? 20 : 16,
-              vertical: PlatformUtils.isDesktop ? 12 : 10,
-            ),
-          ),
-          shape: WidgetStateProperty.all(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                PlatformUtils.isDesktop ? 8 : 100,
-              ),
-            ),
-          ),
-          side: WidgetStateProperty.all(
-            BorderSide(color: Theme.of(context).colorScheme.outline, width: 1),
-          ),
-          mouseCursor: WidgetStateProperty.all(
-            PlatformUtils.isDesktop
-                ? SystemMouseCursors.click
-                : MouseCursor.defer,
-          ),
-        );
-
     return OutlinedButton(
       onPressed: onPressed,
-      onLongPress: PlatformUtils.shouldShowContextMenu() ? onLongPress : null,
-      style: adaptiveStyle,
+      onLongPress: onLongPress,
+      style: style,
       focusNode: focusNode,
       autofocus: autofocus,
       clipBehavior: clipBehavior,
@@ -154,33 +163,10 @@ class AdaptiveTextButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final adaptiveStyle =
-        style ??
-        ButtonStyle(
-          padding: WidgetStateProperty.all(
-            EdgeInsets.symmetric(
-              horizontal: PlatformUtils.isDesktop ? 16 : 12,
-              vertical: PlatformUtils.isDesktop ? 12 : 8,
-            ),
-          ),
-          shape: WidgetStateProperty.all(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                PlatformUtils.isDesktop ? 6 : 8,
-              ),
-            ),
-          ),
-          mouseCursor: WidgetStateProperty.all(
-            PlatformUtils.isDesktop
-                ? SystemMouseCursors.click
-                : MouseCursor.defer,
-          ),
-        );
-
     return TextButton(
       onPressed: onPressed,
-      onLongPress: PlatformUtils.shouldShowContextMenu() ? onLongPress : null,
-      style: adaptiveStyle,
+      onLongPress: onLongPress,
+      style: style,
       focusNode: focusNode,
       autofocus: autofocus,
       clipBehavior: clipBehavior,

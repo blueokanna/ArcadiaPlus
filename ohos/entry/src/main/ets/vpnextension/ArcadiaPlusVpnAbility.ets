@@ -188,7 +188,10 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
           const command = parameters?.command?.toString() ?? '';
           if (command === 'set-mode' && this.running) {
             const mode = parameters?.mode?.toString() ?? 'rule';
-            arcadiaCore.setProxyMode(mode);
+            const requestId = parameters?.requestId?.toString() ?? '';
+            const applied = arcadiaCore.setProxyMode(mode) === 0;
+            this.publishStatus(applied ? 'mode-applied' : 'mode-failed',
+              applied ? '' : 'engine rejected routing mode', requestId);
             hilog.info(DOMAIN, TAG, 'proxy mode switched to %{public}s', mode);
           }
         });
@@ -196,10 +199,10 @@ export default class ArcadiaPlusVpnAbility extends VpnExtensionAbility {
     );
   }
 
-  private publishStatus(state: string, error: string): void {
+  private publishStatus(state: string, error: string, requestId: string = ''): void {
     commonEventManager.publish(
       STATUS_EVENT,
-      { parameters: { state: state, error: error } },
+      { parameters: { state: state, error: error, requestId: requestId } },
       (publishError) => {
         if (publishError) {
           hilog.error(DOMAIN, TAG, 'status publish failed: %{public}s', JSON.stringify(publishError));

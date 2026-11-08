@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
-import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
+import 'package:arcadiaplus/src/services/ip_probe_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -11,9 +10,8 @@ import 'package:arcadiaplus/src/rust/types.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
-import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
-import 'package:arcadiaplus/src/providers/proxies_provider.dart'
-    show proxySelectionChangedController;
+import 'package:arcadiaplus/src/theme/app_motion.dart';
+import 'package:arcadiaplus/src/services/proxy_selection_events.dart';
 
 /// Traffic history data point
 class TrafficDataPoint {
@@ -93,6 +91,7 @@ class TrafficChart extends StatefulWidget {
   final BigInt uploadSpeed;
   final bool isProxyRunning;
   final int proxyPort;
+  final IpProbeClientFactory ipClientFactory;
 
   const TrafficChart({
     super.key,
@@ -101,6 +100,7 @@ class TrafficChart extends StatefulWidget {
     required this.uploadSpeed,
     this.isProxyRunning = false,
     this.proxyPort = 7890,
+    this.ipClientFactory = createIpProbeClient,
   });
 
   @override
@@ -149,10 +149,16 @@ class _IpInfoCache {
   IpInfo? ipv6Info;
   DateTime? lastFetchTime;
   bool? lastProxyState;
+  int? lastProxyPort;
+  int? lastSelectionRevision;
 
   static const cacheDuration = Duration(minutes: 5);
 
-  bool shouldRefresh(bool isProxyRunning) {
+  bool shouldRefresh(bool isProxyRunning, int proxyPort) {
+    if (lastProxyPort != proxyPort ||
+        lastSelectionRevision != ProxySelectionEvents.revision) {
+      return true;
+    }
     if (lastProxyState != null && lastProxyState != isProxyRunning) {
       return true;
     }
@@ -162,11 +168,18 @@ class _IpInfoCache {
     return DateTime.now().difference(lastFetchTime!) > cacheDuration;
   }
 
-  void update({IpInfo? ipv4, IpInfo? ipv6, required bool proxyState}) {
-    if (ipv4 != null) ipv4Info = ipv4;
-    if (ipv6 != null) ipv6Info = ipv6;
+  void update({
+    IpInfo? ipv4,
+    IpInfo? ipv6,
+    required bool proxyState,
+    required int proxyPort,
+  }) {
+    ipv4Info = ipv4;
+    ipv6Info = ipv6;
     lastFetchTime = DateTime.now();
     lastProxyState = proxyState;
+    lastProxyPort = proxyPort;
+    lastSelectionRevision = ProxySelectionEvents.revision;
   }
 
   void clear() {
@@ -174,17 +187,22 @@ class _IpInfoCache {
     ipv6Info = null;
     lastFetchTime = null;
     lastProxyState = null;
+    lastProxyPort = null;
+    lastSelectionRevision = null;
   }
 }
 
 final _ipInfoCache = _IpInfoCache();
 
-class _TrafficChartState extends State<TrafficChart>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _pulseController;
+class _TrafficChartState extends State<TrafficChart> {
+  Timer? _ipRefreshTimer;
+  final _clients = <Dio>{};
   IpInfo? _ipv4Info;
   IpInfo? _ipv6Info;
   bool _isLoadingIp = false;
+  int _ipGeneration = 0;
+  bool _isCurrentIpRequest(int generation) =>
+      mounted && generation == _ipGeneration;
   String? _ipError;
   StreamSubscription<String>? _proxySelectionSubscription;
 
@@ -192,33 +210,20 @@ class _TrafficChartState extends State<TrafficChart>
   void initState() {
     super.initState();
     _recordSample();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    );
-    // The pulse marks "traffic is moving", so it has to be tied to traffic
-    // rather than to the widget's lifetime.
-    AppLifecycle.instance.active.addListener(_syncPulse);
-    _syncPulse();
-
-    if (_ipInfoCache.ipv4Info != null || _ipInfoCache.ipv6Info != null) {
+    if (!_ipInfoCache.shouldRefresh(widget.isProxyRunning, widget.proxyPort)) {
       _ipv4Info = _ipInfoCache.ipv4Info;
       _ipv6Info = _ipInfoCache.ipv6Info;
     }
 
-    if (_ipInfoCache.shouldRefresh(widget.isProxyRunning)) {
+    if (_ipInfoCache.shouldRefresh(widget.isProxyRunning, widget.proxyPort)) {
       _fetchIpInfo();
     }
 
-    _proxySelectionSubscription = proxySelectionChangedController.stream.listen(
-      (_) {
-        // Clear cache and refresh IP when proxy selection changes
-        _ipInfoCache.clear();
-        Future.delayed(const Duration(milliseconds: 800), () {
-          if (mounted) _fetchIpInfo();
-        });
-      },
-    );
+    _proxySelectionSubscription = ProxySelectionEvents.changes.listen((_) {
+      // Clear cache and refresh IP when proxy selection changes
+      _ipInfoCache.clear();
+      setState(() => _scheduleIpRefresh(const Duration(milliseconds: 800)));
+    });
   }
 
   DateTime? _lastSampleAt;
@@ -242,96 +247,63 @@ class _TrafficChartState extends State<TrafficChart>
     );
   }
 
-  /// Whether the pulse has any reason to run: traffic flowing, proxy up, app
-  /// on screen. Anything else means the animation would be paying for a
-  /// repaint nobody can see a difference in.
-  bool get _pulseWanted =>
-      mounted &&
-      AppLifecycle.instance.isActive &&
-      widget.isProxyRunning &&
-      (widget.downloadSpeed > BigInt.zero || widget.uploadSpeed > BigInt.zero);
-
-  void _syncPulse() {
-    if (!mounted) return;
-    if (_pulseWanted) {
-      if (!_pulseController.isAnimating) {
-        _pulseController.repeat(reverse: true);
-      }
-    } else if (_pulseController.isAnimating) {
-      _pulseController.stop();
-      _pulseController.value = 0;
+  void _scheduleIpRefresh(Duration delay) {
+    _ipGeneration++;
+    for (final client in _clients.toList()) {
+      client.close(force: true);
     }
+    _clients.clear();
+    _isLoadingIp = false;
+    _ipv4Info = null;
+    _ipv6Info = null;
+    _ipError = null;
+    _ipRefreshTimer?.cancel();
+    _ipRefreshTimer = Timer(delay, _fetchIpInfo);
   }
 
   @override
   void didUpdateWidget(TrafficChart oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.downloadSpeed != oldWidget.downloadSpeed ||
-        widget.uploadSpeed != oldWidget.uploadSpeed) {
-      _recordSample();
-    }
-    if (widget.isProxyRunning != oldWidget.isProxyRunning) {
+    _recordSample();
+    if (widget.isProxyRunning != oldWidget.isProxyRunning ||
+        widget.proxyPort != oldWidget.proxyPort) {
       _ipInfoCache.clear();
-      Future.delayed(const Duration(milliseconds: 500), _fetchIpInfo);
+      _scheduleIpRefresh(const Duration(milliseconds: 500));
     }
-    _syncPulse();
   }
 
   @override
   void dispose() {
-    AppLifecycle.instance.active.removeListener(_syncPulse);
-    _pulseController.dispose();
+    _ipRefreshTimer?.cancel();
+    for (final client in _clients) {
+      client.close(force: true);
+    }
+    _clients.clear();
     _proxySelectionSubscription?.cancel();
     super.dispose();
   }
 
   Future<void> _fetchIpInfo() async {
-    if (_isLoadingIp) return;
+    if (!mounted || _isLoadingIp) return;
+    final generation = ++_ipGeneration;
     setState(() {
       _isLoadingIp = true;
       _ipError = null;
     });
 
-    await Future.wait([_fetchIpv4Info(), _fetchIpv6Info()]);
+    await Future.wait([_fetchIpv4Info(generation), _fetchIpv6Info(generation)]);
 
+    if (!_isCurrentIpRequest(generation)) return;
     _ipInfoCache.update(
       ipv4: _ipv4Info,
       ipv6: _ipv6Info,
       proxyState: widget.isProxyRunning,
+      proxyPort: widget.proxyPort,
     );
 
     if (mounted) {
       setState(() => _isLoadingIp = false);
     }
-  }
-
-  Dio _createDioClient({bool useProxy = false}) {
-    final dio = Dio(
-      BaseOptions(
-        connectTimeout: const Duration(seconds: 8),
-        receiveTimeout: const Duration(seconds: 8),
-        headers: {
-          'User-Agent': 'ArcadiaPlus/1.0',
-          // A one-shot probe must not park a keep-alive socket: the engine
-          // counts live connections, and a socket the server would keep open
-          // shows up in that count long after the check finished.
-          'Connection': 'close',
-        },
-      ),
-    );
-
-    if (useProxy) {
-      final port = widget.proxyPort;
-      dio.httpClientAdapter = IOHttpClientAdapter(
-        createHttpClient: () {
-          final client = HttpClient();
-          client.findProxy = (uri) => 'PROXY 127.0.0.1:$port';
-          return client;
-        },
-      );
-    }
-
-    return dio;
   }
 
   /// Run a one-shot request on a client that is always torn down.
@@ -342,20 +314,27 @@ class _TrafficChartState extends State<TrafficChart>
   /// or fails must not leave a socket behind, and `close()` without `force`
   /// leaves exactly that behind.
   Future<T> _oneShot<T>(
+    int generation,
     bool useProxy,
     Future<T> Function(Dio dio) request,
   ) async {
-    final dio = _createDioClient(useProxy: useProxy);
+    if (!_isCurrentIpRequest(generation)) {
+      throw StateError('IP request is no longer current');
+    }
+    final dio = widget.ipClientFactory(useProxy, widget.proxyPort);
+    _clients.add(dio);
     try {
       return await request(dio);
     } finally {
+      _clients.remove(dio);
       dio.close(force: true);
     }
   }
 
-  Future<void> _fetchIpv4Info() async {
+  Future<void> _fetchIpv4Info(int generation) async {
     try {
       final response = await _oneShot(
+        generation,
         widget.isProxyRunning,
         (dio) => dio.get('https://api.ip.sb/geoip'),
       );
@@ -363,7 +342,7 @@ class _TrafficChartState extends State<TrafficChart>
       if (response.statusCode == 200) {
         final data = response.data as Map<String, dynamic>;
 
-        if (mounted) {
+        if (_isCurrentIpRequest(generation)) {
           setState(() {
             _ipv4Info = IpInfo(
               ip: data['ip']?.toString() ?? '',
@@ -382,7 +361,7 @@ class _TrafficChartState extends State<TrafficChart>
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout ||
           e.type == DioExceptionType.sendTimeout) {
-        if (mounted) {
+        if (_isCurrentIpRequest(generation)) {
           setState(() {
             _ipError = 'Connect Timeout';
           });
@@ -391,12 +370,13 @@ class _TrafficChartState extends State<TrafficChart>
       }
       try {
         final response = await _oneShot(
+          generation,
           widget.isProxyRunning,
           (dio) => dio.get('https://api.ip.sb/ip'),
         );
         if (response.statusCode == 200) {
           final body = response.data.toString().trim();
-          if (mounted) {
+          if (_isCurrentIpRequest(generation)) {
             setState(() {
               _ipv4Info = IpInfo(ip: body);
               _ipError = null;
@@ -407,14 +387,14 @@ class _TrafficChartState extends State<TrafficChart>
         if (e2.type == DioExceptionType.connectionTimeout ||
             e2.type == DioExceptionType.receiveTimeout ||
             e2.type == DioExceptionType.sendTimeout) {
-          if (mounted) {
+          if (_isCurrentIpRequest(generation)) {
             setState(() {
               _ipError = 'Connect Timeout';
             });
           }
         } else {
           debugPrint('Failed to fetch IPv4 info: $e2');
-          if (mounted) {
+          if (_isCurrentIpRequest(generation)) {
             setState(() {
               _ipError = 'Network Error';
             });
@@ -425,7 +405,7 @@ class _TrafficChartState extends State<TrafficChart>
       }
     } catch (e) {
       debugPrint('Failed to fetch IPv4 info: $e');
-      if (mounted) {
+      if (_isCurrentIpRequest(generation)) {
         setState(() {
           _ipError = 'Network Error';
         });
@@ -433,9 +413,10 @@ class _TrafficChartState extends State<TrafficChart>
     }
   }
 
-  Future<void> _fetchIpv6Info() async {
+  Future<void> _fetchIpv6Info(int generation) async {
     try {
       final response = await _oneShot(
+        generation,
         widget.isProxyRunning,
         (dio) => dio.get('https://api-ipv6.ip.sb/geoip'),
       );
@@ -444,7 +425,7 @@ class _TrafficChartState extends State<TrafficChart>
         final data = response.data as Map<String, dynamic>;
         final ip = data['ip']?.toString() ?? '';
 
-        if (ip.contains(':') && mounted) {
+        if (ip.contains(':') && _isCurrentIpRequest(generation)) {
           setState(() {
             _ipv6Info = IpInfo(
               ip: ip,
@@ -480,10 +461,10 @@ class _TrafficChartState extends State<TrafficChart>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _TrafficStatCard(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cards = <Widget>[
+              _TrafficStatCard(
                 icon: Icons.arrow_downward_rounded,
                 label: l10n?.download ?? 'Download',
                 speed: _formatSpeed(widget.downloadSpeed),
@@ -491,13 +472,9 @@ class _TrafficChartState extends State<TrafficChart>
                 color: colorScheme.primary,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
-                pulseController: _pulseController,
                 isActive: widget.downloadSpeed > BigInt.zero,
               ),
-            ),
-            SizedBox(width: spacing),
-            Expanded(
-              child: _TrafficStatCard(
+              _TrafficStatCard(
                 icon: Icons.arrow_upward_rounded,
                 label: l10n?.upload ?? 'Upload',
                 speed: _formatSpeed(widget.uploadSpeed),
@@ -505,11 +482,28 @@ class _TrafficChartState extends State<TrafficChart>
                 color: colorScheme.tertiary,
                 colorScheme: colorScheme,
                 textTheme: textTheme,
-                pulseController: _pulseController,
                 isActive: widget.uploadSpeed > BigInt.zero,
               ),
-            ),
-          ],
+            ];
+            if (constraints.maxWidth < 340 ||
+                MediaQuery.textScalerOf(context).scale(14) > 19) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  cards[0],
+                  SizedBox(height: spacing),
+                  cards[1],
+                ],
+              );
+            }
+            return Row(
+              children: [
+                Expanded(child: cards[0]),
+                SizedBox(width: spacing),
+                Expanded(child: cards[1]),
+              ],
+            );
+          },
         ),
 
         SizedBox(height: spacing),
@@ -538,22 +532,28 @@ class _TrafficChartState extends State<TrafficChart>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.show_chart_rounded,
-                      size: 18,
-                      color: colorScheme.primary,
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.show_chart_rounded,
+                          size: 18,
+                          color: colorScheme.primary,
+                        ),
+                        SizedBox(width: spacing),
+                        Expanded(
+                          child: Text(
+                            l10n?.realTimeTraffic ?? 'Real-time Traffic',
+                            style: textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: spacing),
-                    Text(
-                      l10n?.realTimeTraffic ?? 'Real-time Traffic',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const Spacer(),
+                    const SizedBox(height: 12),
                     _ChartLegend(
                       downloadColor: colorScheme.primary,
                       uploadColor: colorScheme.tertiary,
@@ -711,7 +711,7 @@ class _TrafficChartState extends State<TrafficChart>
                               ),
                             ],
                           ),
-                          duration: const Duration(milliseconds: 300),
+                          duration: AppMotion.duration(context),
                         ),
                 ),
               ],
@@ -765,7 +765,6 @@ class _TrafficStatCard extends StatelessWidget {
   final Color color;
   final ColorScheme colorScheme;
   final TextTheme textTheme;
-  final AnimationController pulseController;
   final bool isActive;
 
   const _TrafficStatCard({
@@ -776,7 +775,6 @@ class _TrafficStatCard extends StatelessWidget {
     required this.color,
     required this.colorScheme,
     required this.textTheme,
-    required this.pulseController,
     required this.isActive,
   });
 
@@ -799,28 +797,22 @@ class _TrafficStatCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                AnimatedBuilder(
-                  animation: pulseController,
-                  builder: (context, child) {
-                    return Container(
-                      padding: EdgeInsets.all(spacing * 0.8),
-                      decoration: BoxDecoration(
-                        color: isActive
-                            ? color.withValues(
-                                alpha: 0.12 + (pulseController.value * 0.08),
-                              )
-                            : color.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(borderRadius * 0.5),
-                      ),
-                      child: Icon(icon, size: 18, color: color),
-                    );
-                  },
+                AnimatedContainer(
+                  duration: AppMotion.duration(context, AppMotion.short),
+                  padding: EdgeInsets.all(spacing * 0.8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: isActive ? 0.16 : 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, size: 18, color: color),
                 ),
                 SizedBox(width: spacing),
-                Text(
-                  label,
-                  style: textTheme.labelMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
+                Expanded(
+                  child: Text(
+                    label,
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -1032,7 +1024,7 @@ class _IpInfoCard extends StatelessWidget {
               ],
 
               if (error != null && ipv4Info == null && ipv6Info == null)
-                _AutoScrollText(
+                _AddressText(
                   text: error!,
                   isp: null,
                   isProxyRunning: false,
@@ -1046,7 +1038,7 @@ class _IpInfoCard extends StatelessWidget {
                   '--',
                   style: textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    fontFamily: 'monospace',
+                    fontFeatures: const [FontFeature.tabularFigures()],
                     color: colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -1094,7 +1086,7 @@ class _IpInfoCard extends StatelessWidget {
         SizedBox(width: spacing),
         Expanded(
           child: isIpv6
-              ? _AutoScrollText(
+              ? _AddressText(
                   text: ip,
                   isp: isp,
                   isProxyRunning: isProxyRunning,
@@ -1110,7 +1102,7 @@ class _IpInfoCard extends StatelessWidget {
                         ip,
                         style: textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          fontFamily: 'monospace',
+                          fontFeatures: const [FontFeature.tabularFigures()],
                           color: isProxyRunning
                               ? colorScheme.primary
                               : colorScheme.onSurface,
@@ -1135,7 +1127,7 @@ class _IpInfoCard extends StatelessWidget {
 }
 
 /// 自动滚动文本组件 - 用于长 IPv6 地址
-class _AutoScrollText extends StatefulWidget {
+class _AddressText extends StatelessWidget {
   final String text;
   final String? isp;
   final bool isProxyRunning;
@@ -1143,7 +1135,7 @@ class _AutoScrollText extends StatefulWidget {
   final TextTheme textTheme;
   final bool isError;
 
-  const _AutoScrollText({
+  const _AddressText({
     required this.text,
     this.isp,
     required this.isProxyRunning,
@@ -1153,141 +1145,32 @@ class _AutoScrollText extends StatefulWidget {
   });
 
   @override
-  State<_AutoScrollText> createState() => _AutoScrollTextState();
-}
-
-class _AutoScrollTextState extends State<_AutoScrollText>
-    with SingleTickerProviderStateMixin {
-  late ScrollController _scrollController;
-  late AnimationController _animationController;
-  bool _needsScroll = false;
-  double _maxScrollExtent = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController = ScrollController();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    );
-    _animationController.addListener(_applyScrollOffset);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkScrollNeeded();
-    });
-
-    AppLifecycle.instance.active.addListener(_syncAutoScroll);
-  }
-
-  void _checkScrollNeeded() {
-    if (!mounted) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_scrollController.hasClients) {
-        final maxExtent = _scrollController.position.maxScrollExtent;
-        if (maxExtent > 0) {
-          setState(() {
-            _needsScroll = true;
-            _maxScrollExtent = maxExtent;
-          });
-          _startAutoScroll();
-        }
-      }
-    });
-  }
-
-  void _startAutoScroll() {
-    if (!_needsScroll || !mounted) return;
-    _syncAutoScroll();
-  }
-
-  /// Park the scroll offset for the current animation phase.
-  ///
-  /// Registered once from `initState`; it used to be added from
-  /// `_startAutoScroll`, which can run more than once, so a rebuild could
-  /// leave several copies racing to jump the same scroll controller.
-  void _applyScrollOffset() {
-    if (!mounted || !_scrollController.hasClients) return;
-
-    final progress = _animationController.value;
-
-    if (progress < 0.45) {
-      _scrollController.jumpTo(_maxScrollExtent * (progress / 0.45));
-    } else if (progress < 0.55) {
-      _scrollController.jumpTo(_maxScrollExtent);
-    } else {
-      _scrollController.jumpTo(
-        _maxScrollExtent * (1 - (progress - 0.55) / 0.45),
-      );
-    }
-  }
-
-  /// Run the marquee only while the text actually overflows and the app is on
-  /// screen; otherwise leave the controller parked at rest.
-  void _syncAutoScroll() {
-    if (!mounted) return;
-    final wanted = _needsScroll && AppLifecycle.instance.isActive;
-    if (wanted) {
-      if (!_animationController.isAnimating) {
-        _animationController.repeat();
-      }
-    } else if (_animationController.isAnimating) {
-      _animationController.stop();
-    }
-  }
-
-  @override
-  void didUpdateWidget(_AutoScrollText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.text != oldWidget.text) {
-      _animationController.stop();
-      _animationController.reset();
-      _needsScroll = false;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _checkScrollNeeded();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    AppLifecycle.instance.active.removeListener(_syncAutoScroll);
-    _animationController.removeListener(_applyScrollOffset);
-    _animationController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final spacing = ResponsiveUtils.getSpacing(context);
 
     return SingleChildScrollView(
-      controller: _scrollController,
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
       child: Row(
         children: [
           Text(
-            widget.text,
-            style: widget.textTheme.bodyMedium?.copyWith(
+            text,
+            style: textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              fontFamily: 'monospace',
-              color: widget.isError
-                  ? widget.colorScheme.error
-                  : widget.isProxyRunning
-                  ? widget.colorScheme.primary
-                  : widget.colorScheme.onSurface,
+              fontFeatures: const [FontFeature.tabularFigures()],
+              color: isError
+                  ? colorScheme.error
+                  : isProxyRunning
+                  ? colorScheme.primary
+                  : colorScheme.onSurface,
             ),
           ),
-          if (widget.isp != null && widget.isp!.isNotEmpty) ...[
+          if (isp != null && isp!.isNotEmpty) ...[
             SizedBox(width: spacing),
             Text(
-              '(${widget.isp})',
-              style: widget.textTheme.labelSmall?.copyWith(
-                color: widget.colorScheme.onSurfaceVariant,
+              '($isp)',
+              style: textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -1313,11 +1196,11 @@ class _ChartLegend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Wrap(
+      spacing: 12,
+      runSpacing: 8,
       children: [
         _LegendDot(color: downloadColor, label: downloadLabel),
-        const SizedBox(width: 12),
         _LegendDot(color: uploadColor, label: uploadLabel),
       ],
     );

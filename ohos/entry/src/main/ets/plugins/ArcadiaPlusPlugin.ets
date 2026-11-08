@@ -84,6 +84,9 @@ export class ArcadiaPlusPlugin implements FlutterPlugin, MethodCallHandler {
   }
 
   onDetachedFromEngine(binding: FlutterPluginBinding): void {
+    this.settleMode(false);
+    this.settleStart(false, 'UI engine detached');
+    this.settleStop(false, 'UI engine detached');
     this.channel?.setMethodCallHandler(null);
     this.channel = null;
     if (this.subscriber !== null) {
@@ -225,19 +228,34 @@ export class ArcadiaPlusPlugin implements FlutterPlugin, MethodCallHandler {
     }, STOP_TIMEOUT_MS);
   }
 
+  private pendingMode: MethodResult | null = null;
+  private modeRequestId: string = '';
+  private modeSequence: number = 0;
+  private modeTimer: number = -1;
+
+  private settleMode(success: boolean): void {
+    if (this.modeTimer !== -1) clearTimeout(this.modeTimer);
+    this.modeTimer = -1;
+    const pending = this.pendingMode;
+    this.pendingMode = null;
+    if (pending !== null) pending.success(success);
+  }
+
   private setProxyMode(call: MethodCall, result: MethodResult): void {
     const mode = (call.argument('mode') as string | undefined) ?? 'rule';
+    if (!this.running || this.pendingMode !== null ||
+        (mode !== 'rule' && mode !== 'global' && mode !== 'direct')) {
+      result.success(false);
+      return;
+    }
+    this.pendingMode = result;
+    this.modeSequence++;
+    this.modeRequestId = `${Date.now()}-${this.modeSequence}`;
+    this.modeTimer = setTimeout(() => this.settleMode(false), 5000);
     commonEventManager.publish(
       COMMAND_EVENT,
-      { parameters: { command: 'set-mode', mode: mode } },
-      (error) => {
-        if (error) {
-          hilog.error(DOMAIN, TAG, 'mode command failed: %{public}s', JSON.stringify(error));
-          result.success(false);
-          return;
-        }
-        result.success(this.running);
-      },
+      { parameters: { command: 'set-mode', mode: mode, requestId: this.modeRequestId } },
+      (error) => { if (error) this.settleMode(false); },
     );
   }
 
@@ -258,6 +276,13 @@ export class ArcadiaPlusPlugin implements FlutterPlugin, MethodCallHandler {
           const parameters = data.parameters as Record<string, Object> | undefined;
           const state = parameters?.state?.toString() ?? '';
           const detail = parameters?.error?.toString() ?? '';
+          if (state === 'mode-applied' || state === 'mode-failed') {
+            if (parameters?.requestId?.toString() === this.modeRequestId) {
+              this.settleMode(state === 'mode-applied');
+            }
+            return;
+          }
+
           if (state === 'started') {
             this.running = true;
             this.settleStart(true, '');
@@ -265,6 +290,7 @@ export class ArcadiaPlusPlugin implements FlutterPlugin, MethodCallHandler {
             this.running = false;
             this.settleStart(false, detail);
           } else if (state === 'stopped') {
+            this.settleMode(false);
             this.running = false;
             this.settleStop(true, '');
           }

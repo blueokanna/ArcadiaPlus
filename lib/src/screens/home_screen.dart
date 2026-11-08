@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:arcadiaplus/src/theme/app_motion.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
@@ -158,43 +160,64 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           padding: ResponsiveUtils.getResponsivePadding(context),
           child: SafeArea(
             top: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _sectionHeader(
-                  context,
-                  l10n?.serviceStatus ?? 'Service Status',
-                  Icons.power_settings_new_outlined,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1120),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final controls = Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const _StatusSection(),
+                        const _ServiceStatsSection(),
+                        const SizedBox(height: 28),
+                        _sectionHeader(
+                          context,
+                          l10n?.quickActions ?? 'Quick Actions',
+                          Icons.tune_rounded,
+                        ),
+                        const SizedBox(height: 16),
+                        const QuickActions(),
+                      ],
+                    );
+                    final traffic = Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _sectionHeader(
+                          context,
+                          l10n?.trafficStatistics ?? 'Traffic Statistics',
+                          Icons.show_chart_rounded,
+                        ),
+                        const SizedBox(height: 16),
+                        const _TrafficSection(),
+                      ],
+                    );
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (constraints.maxWidth >= 960 &&
+                            MediaQuery.textScalerOf(context).scale(14) <= 19)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(flex: 5, child: controls),
+                              const SizedBox(width: 28),
+                              Expanded(flex: 6, child: traffic),
+                            ],
+                          )
+                        else ...[
+                          controls,
+                          const SizedBox(height: 28),
+                          traffic,
+                        ],
+                        const SizedBox(height: 28),
+                        const _SystemInfoSection(),
+                      ],
+                    );
+                  },
                 ),
-                ResponsiveSpacing(multiplier: 1.5),
-                const _StatusSection(),
-
-                const _ServiceStatsSection(),
-
-                ResponsiveSpacing(multiplier: 3),
-
-                _sectionHeader(
-                  context,
-                  l10n?.trafficStatistics ?? 'Traffic Statistics',
-                  Icons.show_chart_outlined,
-                ),
-                ResponsiveSpacing(multiplier: 1.5),
-                const _TrafficSection(),
-
-                ResponsiveSpacing(multiplier: 3),
-
-                _sectionHeader(
-                  context,
-                  l10n?.quickActions ?? 'Quick Actions',
-                  Icons.bolt_outlined,
-                ),
-                ResponsiveSpacing(multiplier: 1.5),
-                const QuickActions(),
-
-                ResponsiveSpacing(multiplier: 3),
-
-                const _SystemInfoSection(),
-              ],
+              ),
             ),
           ),
         ),
@@ -440,14 +463,14 @@ Widget _sectionHeader(BuildContext context, String title, IconData icon) {
 
   return Row(
     children: [
-      Icon(icon, size: iconSize * 0.9, color: colorScheme.primary),
+      Icon(icon, size: iconSize * 0.9, color: colorScheme.onSurfaceVariant),
       SizedBox(width: ResponsiveUtils.getSpacing(context)),
       Flexible(
         child: Text(
           title,
           style: textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.w600,
-            color: colorScheme.primary,
+            color: colorScheme.onSurface,
           ),
           overflow: TextOverflow.ellipsis,
         ),
@@ -462,19 +485,12 @@ class _StatusSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Selector<
-      AppStateProvider,
-      ({bool isRunning, bool isLoading, ProxyStatus? status})
-    >(
-      selector: (_, appState) => (
-        isRunning: appState.isServiceRunning,
-        isLoading: appState.isLoading,
-        status: appState.proxyStatus,
-      ),
+    return Selector<AppStateProvider, ({bool isRunning, bool isLoading})>(
+      selector: (_, appState) =>
+          (isRunning: appState.isServiceRunning, isLoading: appState.isLoading),
       builder: (context, snapshot, _) => StatusCard(
         isRunning: snapshot.isRunning,
         isLoading: snapshot.isLoading,
-        proxyStatus: snapshot.status,
         onStartStop: () {
           final appState = context.read<AppStateProvider>();
           if (appState.isServiceRunning) {
@@ -498,7 +514,7 @@ class _ServiceStatsSection extends StatelessWidget {
       selector: (_, appState) =>
           appState.isServiceRunning ? appState.proxyStatus : null,
       builder: (context, status, _) => AnimatedSize(
-        duration: AnimationUtils.stateChangeDuration,
+        duration: AppMotion.duration(context),
         curve: AnimationUtils.curveEmphasized,
         child: status == null
             ? const SizedBox.shrink()

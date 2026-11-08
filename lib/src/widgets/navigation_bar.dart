@@ -5,52 +5,21 @@ import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
-class AppNavigationBar extends StatefulWidget {
+class AppNavigationBar extends StatelessWidget {
   final ValueChanged<int>? onDestinationSelected;
 
   const AppNavigationBar({super.key, this.onDestinationSelected});
 
-  @override
-  State<AppNavigationBar> createState() => _AppNavigationBarState();
-}
-
-class _AppNavigationBarState extends State<AppNavigationBar>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-
   bool get _isMobilePlatform {
     if (kIsWeb) return false;
-    // Android、iOS、鸿蒙（HarmonyOS 基于 Android 或 OHOS）都算移动端
-    // 使用 PlatformUtils.isMobile 来统一判断，包含 HarmonyOS 检测
     return PlatformUtils.isMobile;
   }
 
-  /// 是否显示日志选项（只在桌面端显示）
   bool get _showLogs => !_isMobilePlatform;
 
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: AnimationUtils.durationMedium2,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: AnimationUtils.curveStandard,
-    );
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
   int _getCurrentIndex(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
+    final path = GoRouterState.of(context).uri.path;
+    final location = path == '/' ? '/' : '/${path.split('/')[1]}';
     if (_showLogs) {
       switch (location) {
         case '/':
@@ -93,21 +62,10 @@ class _AppNavigationBarState extends State<AppNavigationBar>
     final l10n = AppLocalizations.of(context);
 
     if (PlatformUtils.shouldUseSideNavigation(context)) {
-      return FadeTransition(
-        opacity: _fadeAnimation,
-        child: _buildNavigationRail(context, colorScheme, currentIndex, l10n),
-      );
+      return _buildNavigationRail(context, colorScheme, currentIndex, l10n);
     }
 
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: _buildBottomNavigationBar(
-        context,
-        colorScheme,
-        currentIndex,
-        l10n,
-      ),
-    );
+    return _buildBottomNavigationBar(context, colorScheme, currentIndex, l10n);
   }
 
   Widget _buildNavigationRail(
@@ -120,7 +78,7 @@ class _AppNavigationBarState extends State<AppNavigationBar>
       selectedIndex: currentIndex,
       onDestinationSelected: (index) {
         AnimationUtils.selectionHaptic();
-        widget.onDestinationSelected?.call(index);
+        onDestinationSelected?.call(index);
         _navigateToScreen(context, index);
       },
       labelType: NavigationRailLabelType.all,
@@ -192,7 +150,7 @@ class _AppNavigationBarState extends State<AppNavigationBar>
       selectedIndex: currentIndex,
       onDestinationSelected: (index) {
         AnimationUtils.selectionHaptic();
-        widget.onDestinationSelected?.call(index);
+        onDestinationSelected?.call(index);
         _navigateToScreen(context, index);
       },
       backgroundColor: colorScheme.surface,
@@ -223,7 +181,6 @@ class _AppNavigationBarState extends State<AppNavigationBar>
           selectedIcon: const Icon(Icons.link),
           label: l10n?.connectionsShort ?? 'Conns',
         ),
-        // 移动端不显示日志
         NavigationDestination(
           icon: const Icon(Icons.settings_outlined),
           selectedIcon: const Icon(Icons.settings),

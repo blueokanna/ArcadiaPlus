@@ -48,27 +48,17 @@ use std::thread::JoinHandle;
 
 use parking_lot::Mutex;
 use recurse_x::cache::persist::PersistConfig;
-use recurse_x::{Resolver, ResolverConfig, Server, ServerConfig};
+use recurse_x::{
+    Message, Name, RData, Resolver, ResolverConfig, RrClass, RrType, Server, ServerConfig,
+};
 
 use crate::types::RecursiveDnsStatus;
 
-/// Concurrent TCP sessions.
-///
-/// Each session costs a thread, so this is a thread bound rather than a memory
-/// bound. The crate default (1024) suits a server with a scheduler to spare;
-/// on a phone it is a pool a single client could park with connections that
-/// never send a query. RFC 7766 expects clients to be served over few
-/// persistent connections, and the only client here is the engine, so 64 is
-/// already generous.
-const MAX_TCP_CONNECTIONS: usize = 64;
+/// Bound per-connection TCP worker threads on mobile devices.
+const MAX_TCP_CONNECTIONS: usize = 16;
 
-/// Datagrams allowed to wait for a handler.
-///
-/// A datagram may be up to 64 KiB on the wire, which makes the queue a memory
-/// bound as well as a scheduling one: 256 slots cap what a flood can make this
-/// service hold at 16 MiB, while staying far above the depth a real client can
-/// build (a query is tens of bytes, and the handlers drain continuously).
-const UDP_QUEUE: usize = 256;
+/// Bound the backlog independently of resolver concurrency.
+const UDP_QUEUE: usize = 64;
 
 /// How often the resolver snapshots its L3 cache to disk.
 ///
@@ -82,9 +72,32 @@ const CACHE_SNAPSHOT_INTERVAL_MS: u64 = 30_000;
 /// the numbers which are wrong for a phone appear here.
 fn server_config() -> ServerConfig {
     ServerConfig {
+        udp_workers: 1,
+        udp_handlers: 4,
         udp_queue: UDP_QUEUE,
         max_tcp_connections: MAX_TCP_CONNECTIONS,
         ..ServerConfig::default()
+    }
+}
+
+// These are client budgets, including every cache tier and negative answers.
+fn resolver_config() -> ResolverConfig {
+    ResolverConfig {
+        cache: recurse_x::cache::CacheConfig {
+            hot_capacity: 512,
+            warm_capacity: 4096,
+            cold_capacity: 1024,
+            nx_capacity: 1024,
+            ..Default::default()
+        },
+        engine: recurse_x::resolver::EngineConfig {
+            query_budget_ms: 4_000,
+            ..Default::default()
+        },
+        max_inflight: 128,
+        max_prefetch_per_tick: 4,
+        max_concurrent_refreshes: 2,
+        ..Default::default()
     }
 }
 
@@ -124,7 +137,7 @@ pub fn start(listen: &str, cache_path: Option<&str>) -> Result<String, String> {
     }
 
     let requested = requested_address(listen)?;
-    let mut config = ResolverConfig::default();
+    let mut config = resolver_config();
     if let Some(path) = cache_path.filter(|path| !path.is_empty()) {
         config.persist = Some(PersistConfig::new(path, CACHE_SNAPSHOT_INTERVAL_MS));
     }
@@ -160,7 +173,9 @@ pub fn start(listen: &str, cache_path: Option<&str>) -> Result<String, String> {
 /// isolate. Waiting is what makes the contract real: when this returns, the
 /// ports are free and the threads are gone.
 pub fn stop() -> Result<(), String> {
-    let Some(service) = SERVICE.lock().take() else {
+    // Serialize the full teardown against a concurrent start.
+    let mut slot = SERVICE.lock();
+    let Some(service) = slot.take() else {
         return Ok(());
     };
 
@@ -224,17 +239,20 @@ fn canary_resolution(address: &str) -> Result<(), String> {
         .set_read_timeout(Some(CANARY_ATTEMPT_TIMEOUT))
         .map_err(|error| format!("the canary socket has no timeout: {error}"))?;
 
+    socket
+        .connect(target)
+        .map_err(|error| format!("cannot connect canary: {error}"))?;
     let mut last = String::new();
     for (index, name) in CANARY_NAMES.iter().enumerate() {
         let id = 0x5A00u16 + index as u16;
         let query = build_query(id, name)?;
-        if let Err(error) = socket.send_to(&query, target) {
+        if let Err(error) = socket.send(&query) {
             last = format!("{name}: send failed: {error}");
             continue;
         }
         let mut response = [0u8; 1232];
-        match socket.recv_from(&mut response) {
-            Ok((len, _)) if validate_response(id, &response[..len]) => return Ok(()),
+        match socket.recv(&mut response) {
+            Ok(len) if validate_response(id, name, &response[..len]) => return Ok(()),
             Ok(_) => last = format!("{name}: the answer was empty or malformed"),
             Err(error) => last = format!("{name}: {error}"),
         }
@@ -262,15 +280,25 @@ fn build_query(id: u16, name: &str) -> Result<Vec<u8>, String> {
 
 /// Whether a response is an answer to *this* query: same id, a response, no
 /// error code, at least one record.
-fn validate_response(id: u16, packet: &[u8]) -> bool {
-    if packet.len() < 12 {
+fn validate_response(id: u16, name: &str, packet: &[u8]) -> bool {
+    let Ok(message) = Message::parse(packet) else {
         return false;
-    }
-    let response_id = u16::from_be_bytes([packet[0], packet[1]]);
-    let is_response = packet[2] & 0x80 != 0;
-    let rcode = packet[3] & 0x0F;
-    let answers = u16::from_be_bytes([packet[6], packet[7]]);
-    response_id == id && is_response && rcode == 0 && answers > 0
+    };
+    let Ok(name) = Name::from_ascii(name) else {
+        return false;
+    };
+    message.id == id
+        && message.flags.qr
+        && !message.flags.tc
+        && packet[3] & 0x0f == 0
+        && message.questions.len() == 1
+        && message
+            .question()
+            .is_some_and(|q| q.qname == name && q.qtype == RrType::A && q.qclass == RrClass::IN)
+        && message
+            .answers
+            .iter()
+            .any(|r| matches!(r.rdata, RData::A(_)))
 }
 
 /// Whether the front-end is accepting queries, and where.
@@ -419,22 +447,26 @@ mod tests {
         assert!(build_query(1, "bad..name").is_err());
         assert!(build_query(1, &"a".repeat(64)).is_err());
 
-        let mut response = query.clone();
-        response[2] |= 0x80; // QR
-        response[6] = 0;
-        response[7] = 1; // one answer
-        assert!(validate_response(0x1234, &response));
-        assert!(!validate_response(0x1235, &response), "a foreign id");
-        let mut nxdomain = response.clone();
-        nxdomain[3] = 0x03;
-        assert!(!validate_response(0x1234, &nxdomain), "an error code");
-        let mut empty = response.clone();
-        empty[7] = 0;
-        assert!(!validate_response(0x1234, &empty), "no records");
-        assert!(
-            !validate_response(0x1234, &response[..8]),
-            "truncated header"
-        );
+        let mut response = Message::parse(&query).unwrap();
+        response.flags.qr = true;
+        response.answers.push(recurse_x::Record {
+            name: Name::from_ascii("www.qq.com").unwrap(),
+            rr_type: RrType::A,
+            class: RrClass::IN,
+            ttl: 60,
+            rdata: RData::A("1.1.1.1".parse().unwrap()),
+        });
+        let packet = response.to_bytes().unwrap();
+        assert!(validate_response(0x1234, "www.qq.com", &packet));
+        assert!(!validate_response(0x1235, "www.qq.com", &packet));
+        assert!(!validate_response(0x1234, "other.test", &packet));
+        assert!(!validate_response(0x1234, "www.qq.com", &packet[..12]));
+        response.flags.tc = true;
+        assert!(!validate_response(
+            0x1234,
+            "www.qq.com",
+            &response.to_bytes().unwrap()
+        ));
     }
 
     #[test]
@@ -476,7 +508,6 @@ mod tests {
             .set_read_timeout(Some(client_timeout()))
             .expect("timeout");
 
-        // RFC 1035 §4.2.2: the query is length-prefixed, and so is the answer.
         let mut framed = Vec::with_capacity(MALFORMED_QUERY.len() + 2);
         framed.extend_from_slice(&(MALFORMED_QUERY.len() as u16).to_be_bytes());
         framed.extend_from_slice(&MALFORMED_QUERY);

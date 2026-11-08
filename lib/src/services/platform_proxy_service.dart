@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:arcadiaplus/src/rust/api.dart' as rust_api;
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
+import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
 
 enum ProxyMode { global, rule, direct }
 
@@ -33,6 +34,7 @@ class PlatformProxyService extends ChangeNotifier {
   bool _tunModeEnabled = false;
   ProxyMode _currentProxyMode = ProxyMode.rule;
   int _vpnFd = -1;
+  final _modeChanges = SerialTaskQueue();
 
   bool get systemProxyEnabled => _systemProxyEnabled;
   bool get tunModeEnabled => _tunModeEnabled;
@@ -40,6 +42,18 @@ class PlatformProxyService extends ChangeNotifier {
   int get vpnFd => _vpnFd;
   int get androidVpnFd => _vpnFd;
   Function(bool isRunning)? onVpnStatusChanged;
+  Future<void> Function()? onQuickConnectRequested;
+
+  Future<bool> consumeQuickConnect() async {
+    if (!Platform.isAndroid) return false;
+    return await _channel.invokeMethod<bool>('consumePendingQuickAction') ??
+        false;
+  }
+
+  Future<int> requestQuickSettingsTile() async {
+    if (!Platform.isAndroid) return -1;
+    return await _channel.invokeMethod<int>('requestQuickSettingsTile') ?? -1;
+  }
 
   /// Records what the platform is doing now and tells the listeners.
   ///
@@ -75,13 +89,25 @@ class PlatformProxyService extends ChangeNotifier {
   /// The engine mode is the authority on every platform: inbounds, the TUN
   /// netstack and the VPN all funnel their connections through one router, so
   /// a mode switch never needs the tunnel restarted.
-  Future<bool> configureProxyMode(ProxyMode mode) async {
+  Future<bool> configureProxyMode(ProxyMode mode) =>
+      _modeChanges.run(() => _configureProxyMode(mode));
+
+  Future<bool> _configureProxyMode(ProxyMode mode) async {
+    final previous = _currentProxyMode;
     try {
-      _publish(mode: mode);
       await rust_api.setProxyMode(mode: _runtimeModeValue(mode));
-      if (!_tunModeEnabled) return true;
-      return await setProxyMode(mode);
+      if (_tunModeEnabled && !await setProxyMode(mode)) {
+        throw StateError('Platform rejected ${mode.name} mode');
+      }
+      _publish(mode: mode);
+      return true;
     } catch (error) {
+      try {
+        await rust_api.setProxyMode(mode: _runtimeModeValue(previous));
+        if (_tunModeEnabled) await setProxyMode(previous);
+      } catch (rollbackError) {
+        debugPrint('Failed to restore proxy mode: $rollbackError');
+      }
       debugPrint('Failed to configure proxy mode: $error');
       return false;
     }
@@ -94,6 +120,9 @@ class PlatformProxyService extends ChangeNotifier {
       debugPrint('PlatformProxyService: Received ${call.method}');
 
       switch (call.method) {
+        case 'quickConnectRequested':
+          await onQuickConnectRequested?.call();
+          return null;
         case 'vpnStatusChanged':
           if (call.arguments is Map) {
             final args = call.arguments as Map;
@@ -183,10 +212,12 @@ class PlatformProxyService extends ChangeNotifier {
   /// tunnel. With it off they are left to the system's own routing, so LAN
   /// traffic never enters the engine; with it on the tunnel captures them and
   /// the rules decide where they go.
-  Future<bool> enableTunMode({
-    ProxyMode mode = ProxyMode.rule,
-    bool allowLan = true,
-  }) async {
+  Future<bool> enableTunMode({ProxyMode? mode, bool allowLan = true}) =>
+      _modeChanges.run(
+        () => _enableTunMode(mode ?? _currentProxyMode, allowLan),
+      );
+
+  Future<bool> _enableTunMode(ProxyMode mode, bool allowLan) async {
     try {
       if (Platform.isWindows) {
         return await _enableWindowsTun(mode);
@@ -199,15 +230,15 @@ class PlatformProxyService extends ChangeNotifier {
       }
       if (Platform.isMacOS || Platform.isLinux) {
         final status = await rust_api.enableTunModeWithMode(mode: mode.name);
-        if (status.enabled) {
+        if (status.enabled && status.error == null) {
           _publish(tunEnabled: true, mode: mode);
         } else {
-          _publish(tunEnabled: false);
+          _publish(tunEnabled: status.enabled);
           if (status.error case final error?) {
             debugPrint('Failed to enable TUN mode: $error');
           }
         }
-        return status.enabled;
+        return status.enabled && status.error == null;
       }
       return false;
     } catch (e) {
@@ -216,7 +247,9 @@ class PlatformProxyService extends ChangeNotifier {
     }
   }
 
-  Future<bool> disableTunMode() async {
+  Future<bool> disableTunMode() => _modeChanges.run(_disableTunMode);
+
+  Future<bool> _disableTunMode() async {
     try {
       if (Platform.isWindows) {
         return await _disableWindowsTun();
@@ -349,17 +382,17 @@ class PlatformProxyService extends ChangeNotifier {
       }
       await rust_api.ensureWintunDll();
       final status = await rust_api.enableTunModeWithMode(mode: mode.name);
-      if (status.enabled) {
+      if (status.enabled && status.error == null) {
         _lastTunError = null;
         _publish(tunEnabled: true, mode: mode);
       } else {
         _lastTunError = status.error;
-        _publish(tunEnabled: false);
+        _publish(tunEnabled: status.enabled);
         if (status.error case final error?) {
           debugPrint('Windows TUN error: $error');
         }
       }
-      return status.enabled;
+      return status.enabled && status.error == null;
     } catch (e) {
       _lastTunError = '$e';
       debugPrint('Windows TUN error: $e');
@@ -371,11 +404,12 @@ class PlatformProxyService extends ChangeNotifier {
     try {
       final status = await rust_api.disableTunMode();
       _publish(tunEnabled: status.enabled);
-      return !status.enabled;
+      _lastTunError = status.error;
+      return !status.enabled && status.error == null;
     } catch (e) {
+      _lastTunError = '$e';
       debugPrint('Windows TUN disable error: $e');
-      _publish(tunEnabled: false);
-      return true;
+      return false;
     }
   }
 
@@ -391,14 +425,6 @@ class PlatformProxyService extends ChangeNotifier {
       }
       return result;
     } catch (e) {
-      // The engine refuses `global` while a TUN route manager is up but not
-      // carrying global routes; rebuilding the tunnel is the documented way
-      // into that state, and it is what the user asked for by picking global
-      // while connected.
-      if (mode == ProxyMode.global && _tunModeEnabled) {
-        debugPrint('Entering global mode through the TUN route table: $e');
-        return enableWindowsTunWithMode(mode);
-      }
       debugPrint('Failed to set Windows proxy mode: $e');
       return false;
     }
@@ -437,22 +463,7 @@ class PlatformProxyService extends ChangeNotifier {
   /// Enable Windows TUN mode with specific proxy mode
   Future<bool> enableWindowsTunWithMode(ProxyMode mode) async {
     if (!Platform.isWindows) return false;
-    try {
-      await rust_api.ensureWintunDll();
-      final status = await rust_api.enableTunModeWithMode(mode: mode.name);
-      if (status.enabled) {
-        _publish(tunEnabled: true, mode: mode);
-      } else {
-        _publish(tunEnabled: false);
-        if (status.error case final error?) {
-          debugPrint('Windows TUN error: $error');
-        }
-      }
-      return status.enabled;
-    } catch (e) {
-      debugPrint('Windows TUN error: $e');
-      return false;
-    }
+    return enableTunMode(mode: mode);
   }
 
   Future<bool> _enableAndroidVpn({
@@ -473,8 +484,7 @@ class PlatformProxyService extends ChangeNotifier {
       // If already running, stop first
       if (_tunModeEnabled || _vpnFd >= 0) {
         debugPrint('_enableAndroidVpn: VPN already enabled, stopping first...');
-        await _disableAndroidVpn();
-        await Future.delayed(const Duration(milliseconds: 1000));
+        if (!await _disableAndroidVpn()) return false;
       }
 
       // Reset state
@@ -560,10 +570,10 @@ class PlatformProxyService extends ChangeNotifier {
         debugPrint(
           '_enableAndroidVpn: Setting VPN fd=$_vpnFd in Rust layer...',
         );
-        rust_api.setAndroidVpnFd(fd: _vpnFd);
+        await rust_api.setAndroidVpnFd(fd: _vpnFd);
 
         debugPrint('_enableAndroidVpn: Setting proxy mode to ${mode.name}...');
-        rust_api.setAndroidProxyMode(mode: mode.name);
+        await rust_api.setAndroidProxyMode(mode: mode.name);
 
         debugPrint(
           '_enableAndroidVpn: Starting Android VPN packet processing in Rust...',
@@ -628,7 +638,7 @@ class PlatformProxyService extends ChangeNotifier {
       try {
         debugPrint('_disableAndroidVpn: Stopping Rust VPN processing...');
         await rust_api.stopAndroidVpn();
-        rust_api.clearAndroidVpnFd();
+        await rust_api.clearAndroidVpnFd();
         debugPrint('_disableAndroidVpn: Rust VPN state cleared');
       } catch (e) {
         debugPrint('_disableAndroidVpn: Failed to cleanup Rust VPN state: $e');
@@ -639,33 +649,16 @@ class PlatformProxyService extends ChangeNotifier {
       await _channel.invokeMethod('stopVpn');
       debugPrint('_disableAndroidVpn: Android VPN service stopped');
 
-      _vpnFd = -1;
-      _publish(tunEnabled: false);
-
-      // Wait for VPN to fully disconnect
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Verify VPN is actually stopped
-      try {
-        final isRunning =
-            await _channel.invokeMethod('isVpnRunning') as bool? ?? false;
-        if (isRunning) {
-          debugPrint(
-            '_disableAndroidVpn: WARNING - VPN still running after stop, forcing reset...',
-          );
-          await _channel.invokeMethod('resetVpnState');
-          await Future.delayed(const Duration(milliseconds: 300));
-        }
-      } catch (e) {
-        debugPrint('_disableAndroidVpn: Error checking VPN status: $e');
+      var running = await _channel.invokeMethod<bool>('isVpnRunning') ?? true;
+      if (running) {
+        await _channel.invokeMethod('resetVpnState');
+        running = await _channel.invokeMethod<bool>('isVpnRunning') ?? true;
       }
-
-      debugPrint('=== _disableAndroidVpn: VPN shutdown complete ===');
-      return true;
-    } on PlatformException catch (e) {
-      debugPrint('_disableAndroidVpn: PlatformException: ${e.message}');
-      _vpnFd = -1;
-      _publish(tunEnabled: false);
+      if (!running) _vpnFd = -1;
+      _publish(tunEnabled: running);
+      return !running;
+    } catch (e) {
+      debugPrint('_disableAndroidVpn: $e');
       return false;
     }
   }
@@ -765,12 +758,6 @@ class PlatformProxyService extends ChangeNotifier {
 
       _vpnFd = -1;
       _publish(tunEnabled: false);
-
-      // The tunnel lives in the VpnExtensionAbility process: it is the only
-      // place allowed to create the adapter and the tun fd the engine reads,
-      // and it is where the packet path runs. The request carries the routing
-      // mode plus the paths of the staged config, GeoIP database and log —
-      // the extension shares the sandbox but not this process's memory.
       final configPath = _ohosConfigPath;
       if (configPath == null) {
         debugPrint(
@@ -833,10 +820,7 @@ class PlatformProxyService extends ChangeNotifier {
         'mode': mode.name,
       });
       final accepted = result == true;
-      // The extension owns the tunnel's mode; this process' engine mirrors it
-      // so the UI keeps answering stats and rules from the mode it displays.
-      // A failure of that local mirror is reported but must not mask a switch
-      // the extension already accepted.
+      if (!accepted) return false;
       try {
         await rust_api.setAndroidProxyMode(mode: mode.name);
       } catch (e) {
@@ -850,13 +834,8 @@ class PlatformProxyService extends ChangeNotifier {
     }
   }
 
-  /// Hands a mode switch to the platform that owns the tunnel.
-  ///
-  /// Windows is the only platform where the route table depends on the mode
-  /// (global mode routes everything through the adapter); Android, HarmonyOS
-  /// and the desktop tunnels read the mode from the engine at dial time, so
-  /// they only record it. The engine itself was already switched by
-  /// [configureProxyMode].
+  /// Notifies the tunnel owner after the shared router accepts a mode.
+  /// Capturing traffic remains independent from routing new connections.
   Future<bool> setProxyMode(ProxyMode mode) async {
     if (Platform.isAndroid) {
       return setAndroidProxyMode(mode);
@@ -967,9 +946,6 @@ class PlatformProxyService extends ChangeNotifier {
             ]) &&
             applied;
       }
-      // Best effort: the bypass list is secondary state, and a snapshot that
-      // cannot be replayed must not make "the proxy is off now" report as a
-      // failure the user has to act on.
       if (!await _restoreMacOSBypassDomains()) {
         debugPrint('macOS bypass domains: nothing recorded to restore');
       }
@@ -1054,8 +1030,6 @@ class PlatformProxyService extends ChangeNotifier {
     final domains = <String>[];
     for (final line in result.stdout.toString().split('\n')) {
       final entry = line.trim();
-      // Skip the `<service> bypass domains:` header and the prose
-      // `networksetup` prints instead of an empty list.
       if (entry.isEmpty ||
           entry.endsWith(':') ||
           entry.toLowerCase().contains('bypass domains')) {
@@ -1308,7 +1282,7 @@ class PlatformProxyService extends ChangeNotifier {
       }
       final status = await rust_api.getTunStatus();
       _publish(tunEnabled: status.enabled);
-      return status.enabled;
+      return status.enabled && status.error == null;
     } catch (e) {
       debugPrint('Failed to check TUN status: $e');
       return false;

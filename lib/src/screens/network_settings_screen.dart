@@ -306,6 +306,47 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                 ),
               ),
 
+              if (Platform.isAndroid) ...[
+                const SizedBox(height: 16),
+                Card(
+                  child: AdaptiveListTile(
+                    leading: const Icon(Icons.dashboard_customize_outlined),
+                    title: Text(
+                      Localizations.localeOf(context).languageCode == 'zh'
+                          ? '添加快捷设置磁贴'
+                          : 'Add Quick Settings tile',
+                    ),
+                    subtitle: Text(
+                      Localizations.localeOf(context).languageCode == 'zh'
+                          ? '从系统控制面板快速连接或停止 VPN'
+                          : 'Connect or disconnect VPN from Quick Settings',
+                    ),
+                    onTap: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final chinese =
+                          Localizations.localeOf(context).languageCode == 'zh';
+                      try {
+                        final result = await PlatformProxyService.instance
+                            .requestQuickSettingsTile();
+                        if (result == -1) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                chinese ? '打开快捷设置，点击编辑，然后添加 ArcadiaPlus 磁贴。' : 'Open Quick Settings, tap Edit, and add ArcadiaPlus.',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (error) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('$error')),
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ],
+
               // Windows UWP 回环
               if (Platform.isWindows) ...[
                 const SizedBox(height: 24),

@@ -1511,17 +1511,7 @@ class ResponsiveUtils {
     return 4;
   }
 
-  static double getBorderRadius(BuildContext context) {
-    final screenType = getScreenSizeType(context);
-    switch (screenType) {
-      case ScreenSizeType.compact:
-        return 12;
-      case ScreenSizeType.medium:
-        return 16;
-      case ScreenSizeType.expanded:
-        return 20;
-    }
-  }
+  static double getBorderRadius(BuildContext context) => 20;
 
   static BorderRadius getCardBorderRadius(BuildContext context) {
     return BorderRadius.circular(getBorderRadius(context));

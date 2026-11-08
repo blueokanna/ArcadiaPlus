@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:arcadiaplus/src/widgets/routing_mode_selector.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
@@ -136,9 +138,11 @@ class _QuickActionsState extends State<QuickActions> {
       }
       AnimationUtils.selectionHaptic();
       final l10n = AppLocalizations.of(context);
-      final modeText = mode == ProxyMode.global
-          ? (l10n?.globalProxy ?? 'Global Proxy')
-          : (l10n?.ruleMode ?? 'Rule Mode');
+      final modeText = switch (mode) {
+        ProxyMode.global => l10n?.globalProxy ?? 'Global Proxy',
+        ProxyMode.rule => l10n?.ruleMode ?? 'Rule Mode',
+        ProxyMode.direct => l10n?.directModeName ?? 'Direct Mode',
+      };
       _showSnackBar('${l10n?.switchedTo ?? "Switched to"} $modeText');
     } finally {
       if (mounted) {
@@ -169,33 +173,44 @@ class _QuickActionsState extends State<QuickActions> {
     final isMobile =
         Platform.isAndroid || PlatformUtils.isOHOS || Platform.isIOS;
 
-    if (isMobile) {
-      return _buildMobileLayout(colorScheme, spacing);
-    }
-    return _buildDesktopLayout(colorScheme, spacing);
-  }
-
-  Widget _buildMobileLayout(ColorScheme colorScheme, double spacing) {
-    final appState = context.watch<AppStateProvider>();
-    final isServiceRunning = appState.isServiceRunning;
-    final networkSettings = context.watch<NetworkSettingsProvider>();
-
+    final state = context
+        .select<
+          AppStateProvider,
+          ({ProxyMode mode, bool loading, bool running})
+        >(
+          (value) => (
+            mode: value.proxyMode,
+            loading: value.isLoading,
+            running: value.isServiceRunning,
+          ),
+        );
+    final network = context.watch<NetworkSettingsProvider>();
+    final l10n = AppLocalizations.of(context);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _ServiceStatusCard(
-          isRunning: isServiceRunning,
-          isTunEnabled: networkSettings.tunEnabled,
-          currentMode: appState.proxyMode,
+        RoutingModeSelector(
+          mode: state.mode,
+          onChanged: _isUpdating || state.loading ? null : _switchProxyMode,
         ),
-        SizedBox(height: spacing * 2),
-        _ProxyModeSelectorSimple(
-          currentMode: appState.proxyMode,
-          isEnabled: !_isUpdating,
-          isLoading: _isUpdating,
-          onModeSelected: _switchProxyMode,
-        ),
-        SizedBox(height: spacing * 2),
-        _buildModeExplanation(colorScheme),
+        const SizedBox(height: 12),
+        Text(switch (state.mode) {
+          ProxyMode.rule =>
+            l10n?.ruleModeDesc ??
+                'Route traffic using the active profile rules.',
+          ProxyMode.global =>
+            l10n?.globalModeDesc ?? 'Route traffic through the selected proxy.',
+          ProxyMode.direct => l10n?.directModeName ?? 'Direct Mode',
+        }, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 20),
+        if (isMobile)
+          _ServiceStatusCard(
+            isRunning: state.running,
+            isTunEnabled: network.tunEnabled,
+            currentMode: state.mode,
+          )
+        else
+          _buildDesktopLayout(colorScheme, spacing),
       ],
     );
   }
@@ -203,7 +218,9 @@ class _QuickActionsState extends State<QuickActions> {
   Widget _buildDesktopLayout(ColorScheme colorScheme, double spacing) {
     final l10n = AppLocalizations.of(context);
     final networkSettings = context.watch<NetworkSettingsProvider>();
-    final isServiceRunning = context.watch<AppStateProvider>().isServiceRunning;
+    final isServiceRunning = context.select<AppStateProvider, bool>(
+      (state) => state.isServiceRunning,
+    );
 
     // Both switches configure a route to the local mixed port, so with the
     // engine stopped they would only point this machine at a port nobody
@@ -214,9 +231,6 @@ class _QuickActionsState extends State<QuickActions> {
     final systemProxyCard = _ProxyCard(
       icon: Icons.language_rounded,
       title: l10n?.systemProxy ?? 'System Proxy',
-      subtitle: networkSettings.systemProxy
-          ? (l10n?.enabled ?? 'Enabled')
-          : (l10n?.disabled ?? 'Disabled'),
       description: isServiceRunning || networkSettings.systemProxy
           ? (l10n?.setSystemHttpSocksProxy ?? 'Set system HTTP/SOCKS proxy')
           : stoppedHint,
@@ -228,9 +242,6 @@ class _QuickActionsState extends State<QuickActions> {
     final tunCard = _ProxyCard(
       icon: Icons.router_rounded,
       title: l10n?.tunMode ?? 'TUN Mode',
-      subtitle: networkSettings.tunEnabled
-          ? (l10n?.enabled ?? 'Enabled')
-          : (l10n?.disabled ?? 'Disabled'),
       description: isServiceRunning || networkSettings.tunEnabled
           ? (l10n?.tunModeDesc ?? 'Requires administrator privileges')
           : stoppedHint,
@@ -242,7 +253,8 @@ class _QuickActionsState extends State<QuickActions> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 500) {
+        if (constraints.maxWidth < 620 ||
+            MediaQuery.textScalerOf(context).scale(14) > 19) {
           return Column(
             children: [
               systemProxyCard,
@@ -252,664 +264,101 @@ class _QuickActionsState extends State<QuickActions> {
           );
         }
 
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(child: systemProxyCard),
-              SizedBox(width: spacing * 1.5),
-              Expanded(child: tunCard),
-            ],
-          ),
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: systemProxyCard),
+            SizedBox(width: spacing * 1.5),
+            Expanded(child: tunCard),
+          ],
         );
       },
     );
   }
-
-  Widget _buildModeExplanation(ColorScheme colorScheme) {
-    final textTheme = Theme.of(context).textTheme;
-    final borderRadius = ResponsiveUtils.getBorderRadius(context);
-    final l10n = AppLocalizations.of(context);
-    final tunEnabled = context.watch<NetworkSettingsProvider>().tunEnabled;
-    final currentProxyMode = context.watch<AppStateProvider>().proxyMode;
-
-    return AnimatedContainer(
-      duration: AnimationUtils.stateChangeDuration,
-      curve: AnimationUtils.curveEmphasized,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: colorScheme.outlineVariant, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline_rounded,
-                size: 18,
-                color: colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n?.proxyModeDesc ?? 'Proxy Mode Description',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colorScheme.primary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildModeExplanationItem(
-            colorScheme,
-            textTheme,
-            icon: Icons.rule_rounded,
-            title: l10n?.ruleMode ?? 'Rule Mode',
-            description:
-                l10n?.ruleModeDesc ??
-                'Route traffic based on rules, domestic direct, foreign proxy',
-            isActive: currentProxyMode == ProxyMode.rule && tunEnabled,
-          ),
-          const SizedBox(height: 8),
-          _buildModeExplanationItem(
-            colorScheme,
-            textTheme,
-            icon: Icons.public_rounded,
-            title: l10n?.globalProxy ?? 'Global Proxy',
-            description:
-                l10n?.globalModeDesc ?? 'All traffic goes through proxy server',
-            isActive: currentProxyMode == ProxyMode.global && tunEnabled,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModeExplanationItem(
-    ColorScheme colorScheme,
-    TextTheme textTheme, {
-    required IconData icon,
-    required String title,
-    required String description,
-    required bool isActive,
-  }) {
-    return AnimatedContainer(
-      duration: AnimationUtils.durationMedium2,
-      curve: AnimationUtils.curveEmphasized,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive
-            ? colorScheme.primaryContainer.withValues(alpha: 0.5)
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: isActive
-                ? colorScheme.primary
-                : colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isActive
-                        ? colorScheme.primary
-                        : colorScheme.onSurface,
-                  ),
-                ),
-                Text(
-                  description,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (isActive)
-            Icon(
-              Icons.check_circle_rounded,
-              size: 18,
-              color: colorScheme.primary,
-            ),
-        ],
-      ),
-    );
-  }
 }
 
-/// 服务状态卡片 - 显示当前服务和VPN状态
 class _ServiceStatusCard extends StatelessWidget {
-  final bool isRunning;
-  final bool isTunEnabled;
-  final ProxyMode currentMode;
-
   const _ServiceStatusCard({
     required this.isRunning,
     required this.isTunEnabled,
     required this.currentMode,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final borderRadius = ResponsiveUtils.getBorderRadius(context);
-    final l10n = AppLocalizations.of(context);
-
-    final isActive = isRunning && isTunEnabled;
-
-    return AnimatedContainer(
-      duration: AnimationUtils.stateChangeDuration,
-      curve: AnimationUtils.curveEmphasized,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(borderRadius),
-        gradient: isActive
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  colorScheme.primaryContainer,
-                  colorScheme.primaryContainer.withValues(alpha: 0.7),
-                ],
-              )
-            : null,
-        color: isActive ? null : colorScheme.surfaceContainerHigh,
-        border: Border.all(
-          color: isActive ? colorScheme.primary : colorScheme.outlineVariant,
-          width: isActive ? 2 : 1,
-        ),
-        boxShadow: isActive
-            ? [
-                BoxShadow(
-                  color: colorScheme.primary.withValues(alpha: 0.2),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            AnimatedContainer(
-              duration: AnimationUtils.stateChangeDuration,
-              curve: AnimationUtils.stateChangeCurve,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? colorScheme.primary
-                    : colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(borderRadius * 0.7),
-              ),
-              child: AnimatedSwitcher(
-                duration: AnimationUtils.iconMorphDuration,
-                transitionBuilder: (child, animation) {
-                  return ScaleTransition(scale: animation, child: child);
-                },
-                child: Icon(
-                  isActive ? Icons.vpn_lock_rounded : Icons.vpn_lock_outlined,
-                  key: ValueKey(isActive),
-                  size: 28,
-                  color: isActive
-                      ? colorScheme.onPrimary
-                      : colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(width: 16),
-            // 文字
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n?.vpnProxy ?? 'VPN Proxy',
-                    style: textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isActive
-                          ? colorScheme.onPrimaryContainer
-                          : colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      AnimatedContainer(
-                        duration: AnimationUtils.durationMedium2,
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isActive
-                              ? Colors.green
-                              : isRunning
-                              ? Colors.orange
-                              : colorScheme.outline,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isActive
-                            ? (currentMode == ProxyMode.global
-                                  ? (l10n?.globalModeRunning ??
-                                        'Global proxy running')
-                                  : (l10n?.ruleModeRunning ??
-                                        'Rule mode running'))
-                            : isRunning
-                            ? 'VPN starting...'
-                            : (l10n?.serviceNotRunning ??
-                                  'Service not running'),
-                        style: textTheme.bodySmall?.copyWith(
-                          color: isActive
-                              ? colorScheme.onPrimaryContainer.withValues(
-                                  alpha: 0.8,
-                                )
-                              : colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            if (isActive)
-              Icon(Icons.check_circle_rounded, color: Colors.green, size: 24)
-            else if (isRunning)
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: colorScheme.primary,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProxyModeSelectorSimple extends StatelessWidget {
+  final bool isRunning;
+  final bool isTunEnabled;
   final ProxyMode currentMode;
-  final bool isEnabled;
-  final bool isLoading;
-  final Function(ProxyMode) onModeSelected;
-
-  const _ProxyModeSelectorSimple({
-    required this.currentMode,
-    required this.isEnabled,
-    required this.isLoading,
-    required this.onModeSelected,
-  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: _ModeButton(
-              icon: Icons.rule_rounded,
-              label: l10n?.ruleMode ?? 'Rule Mode',
-              sublabel: l10n?.smartRouting ?? 'Smart Routing',
-              isSelected: currentMode == ProxyMode.rule,
-              isEnabled: isEnabled,
-              isLoading: isLoading,
-              onTap: () => onModeSelected(ProxyMode.rule),
-              isRecommended: true,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _ModeButton(
-              icon: Icons.public_rounded,
-              label: l10n?.globalProxy ?? 'Global Proxy',
-              sublabel: l10n?.allProxy ?? 'All Proxy',
-              isSelected: currentMode == ProxyMode.global,
-              isEnabled: isEnabled,
-              isLoading: isLoading,
-              onTap: () => onModeSelected(ProxyMode.global),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModeButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String sublabel;
-  final bool isSelected;
-  final bool isEnabled;
-  final bool isLoading;
-  final VoidCallback onTap;
-  final bool isRecommended;
-
-  const _ModeButton({
-    required this.icon,
-    required this.label,
-    required this.sublabel,
-    required this.isSelected,
-    required this.isEnabled,
-    required this.isLoading,
-    required this.onTap,
-    this.isRecommended = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final borderRadius = ResponsiveUtils.getBorderRadius(context);
-    final l10n = AppLocalizations.of(context);
-
-    final isActive = isSelected && isEnabled;
-
-    return ExpressiveButton(
-      onPressed: isLoading ? null : onTap,
-      pressedScale: 0.97,
-      child: AnimatedContainer(
-        duration: AnimationUtils.stateChangeDuration,
-        curve: AnimationUtils.stateChangeCurve,
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(borderRadius),
-          color: isActive
-              ? colorScheme.primaryContainer
-              : colorScheme.surfaceContainerHigh,
-          border: Border.all(
-            color: isActive
-                ? colorScheme.primary
-                : isRecommended && !isEnabled
-                ? colorScheme.primary.withValues(alpha: 0.5)
-                : colorScheme.outlineVariant,
-            width: isActive || (isRecommended && !isEnabled) ? 2 : 1,
-          ),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.15),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
+    final colors = Theme.of(context).colorScheme;
+    final active = isRunning && isTunEnabled;
+    final mode = switch (currentMode) {
+      ProxyMode.rule => l10n?.ruleMode ?? 'Rule Mode',
+      ProxyMode.global => l10n?.globalProxy ?? 'Global Proxy',
+      ProxyMode.direct => l10n?.directModeName ?? 'Direct Mode',
+    };
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          active ? Icons.vpn_lock_outlined : Icons.shield_outlined,
+          color: active ? colors.primary : colors.onSurfaceVariant,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 选中标记或推荐标记 - 放在顶部右侧
-            if (isActive || (isRecommended && !isEnabled))
-              Align(
-                alignment: Alignment.centerRight,
-                child: isActive
-                    ? Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.check_rounded,
-                          size: 12,
-                          color: colorScheme.onPrimary,
-                        ),
-                      )
-                    : Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          l10n?.recommended ?? 'Recommended',
-                          style: textTheme.labelSmall?.copyWith(
-                            color: colorScheme.onPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 9,
-                          ),
-                        ),
-                      ),
-              ),
-            if (isActive || (isRecommended && !isEnabled))
-              const SizedBox(height: 8),
-            // 图标
-            AnimatedContainer(
-              duration: AnimationUtils.durationMedium2,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? colorScheme.primary
-                    : colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(borderRadius * 0.6),
-              ),
-              child: Icon(
-                icon,
-                size: 24,
-                color: isActive
-                    ? colorScheme.onPrimary
-                    : colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: isActive
-                    ? colorScheme.onPrimaryContainer
-                    : colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              sublabel,
-              textAlign: TextAlign.center,
-              style: textTheme.bodySmall?.copyWith(
-                color: isActive
-                    ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
-                    : colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+        title: Text(l10n?.vpnProxy ?? 'VPN Proxy'),
+        subtitle: Text(active ? mode : (l10n?.disabled ?? 'Disabled')),
+        trailing: active
+            ? Icon(Icons.check_rounded, color: colors.primary)
+            : null,
       ),
     );
   }
 }
 
 class _ProxyCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final String description;
-  final bool isEnabled;
-  final bool isLoading;
-
-  /// Whether the switch may be turned *on*. Both settings write a route to the
-  /// local mixed port, so with the engine stopped they would only point this
-  /// machine at a port nobody listens on. Turning one off is always allowed:
-  /// that is the way back from a session that died with the proxy still set.
-  final bool enabled;
-  final Function(bool) onToggle;
-
   const _ProxyCard({
     required this.icon,
     required this.title,
-    required this.subtitle,
     required this.description,
     required this.isEnabled,
     required this.isLoading,
     required this.enabled,
     required this.onToggle,
   });
+  final IconData icon;
+  final String title;
+  final String description;
+  final bool isEnabled;
+  final bool isLoading;
+  final bool enabled;
+  final ValueChanged<bool> onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
-    final borderRadius = ResponsiveUtils.getBorderRadius(context);
-    final spacing = ResponsiveUtils.getSpacing(context);
-    final interactive = (enabled || isEnabled) && !isLoading;
-
-    return Opacity(
-      opacity: enabled || isEnabled ? 1 : 0.55,
-      child: AnimatedContainer(
-        duration: AnimationUtils.stateChangeDuration,
-        curve: AnimationUtils.curveEmphasized,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(borderRadius),
-          gradient: isEnabled
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colorScheme.primaryContainer,
-                    colorScheme.primaryContainer.withValues(alpha: 0.7),
-                  ],
+    final interactive = !isLoading && (enabled || isEnabled);
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      child: LayoutBuilder(
+        builder: (context, constraints) => SwitchListTile(
+          value: isEnabled,
+          onChanged: interactive ? onToggle : null,
+          title: Text(title),
+          subtitle: Text(description),
+          secondary: constraints.maxWidth < 360
+              ? null
+              : isLoading
+              ? SizedBox.square(
+                  dimension: 24,
+                  child: MediaQuery.disableAnimationsOf(context)
+                      ? const Icon(Icons.hourglass_top_rounded)
+                      : const CircularProgressIndicator(strokeWidth: 2),
                 )
-              : null,
-          color: isEnabled ? null : colorScheme.surfaceContainerHigh,
-          border: Border.all(
-            color: isEnabled ? colorScheme.primary : colorScheme.outlineVariant,
-            width: isEnabled ? 2 : 1,
-          ),
-          boxShadow: isEnabled
-              ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(borderRadius),
-          child: InkWell(
-            onTap: interactive ? () => onToggle(!isEnabled) : null,
-            borderRadius: BorderRadius.circular(borderRadius),
-            child: Padding(
-              padding: EdgeInsets.all(spacing * 2),
-              child: Row(
-                children: [
-                  AnimatedContainer(
-                    duration: AnimationUtils.stateChangeDuration,
-                    padding: EdgeInsets.all(spacing * 1.5),
-                    decoration: BoxDecoration(
-                      color: isEnabled
-                          ? colorScheme.primary
-                          : colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(borderRadius * 0.7),
-                    ),
-                    child: Icon(
-                      icon,
-                      size: 24,
-                      color: isEnabled
-                          ? colorScheme.onPrimary
-                          : colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  SizedBox(width: spacing * 1.75),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: isEnabled
-                                ? colorScheme.onPrimaryContainer
-                                : colorScheme.onSurface,
-                          ),
-                        ),
-                        SizedBox(height: spacing * 0.25),
-                        Row(
-                          children: [
-                            AnimatedContainer(
-                              duration: AnimationUtils.durationMedium2,
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: isEnabled
-                                    ? Colors.green
-                                    : colorScheme.outline,
-                              ),
-                            ),
-                            SizedBox(width: spacing * 0.75),
-                            Text(
-                              subtitle,
-                              style: textTheme.bodySmall?.copyWith(
-                                color: isEnabled
-                                    ? colorScheme.onPrimaryContainer.withValues(
-                                        alpha: 0.7,
-                                      )
-                                    : colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (isLoading)
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: isEnabled
-                            ? colorScheme.onPrimaryContainer
-                            : colorScheme.primary,
-                      ),
-                    )
-                  else
-                    Switch(
-                      value: isEnabled,
-                      onChanged: interactive ? onToggle : null,
-                      activeTrackColor: colorScheme.primary,
-                      thumbIcon: WidgetStateProperty.resolveWith((states) {
-                        if (states.contains(WidgetState.selected)) {
-                          return Icon(
-                            Icons.check,
-                            size: 14,
-                            color: colorScheme.onPrimary,
-                          );
-                        }
-                        return null;
-                      }),
-                    ),
-                ],
-              ),
-            ),
+              : Icon(
+                  icon,
+                  color: isEnabled ? colors.primary : colors.onSurfaceVariant,
+                ),
+          shape: Theme.of(context).cardTheme.shape,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
           ),
         ),
       ),

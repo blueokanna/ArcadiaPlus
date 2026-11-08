@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
+import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
+
 import 'dart:typed_data' show BytesBuilder;
 
 import 'package:crypto/crypto.dart';
@@ -224,13 +227,13 @@ class RuleProviderService extends ChangeNotifier {
   static const _requestTimeout = Duration(seconds: 20);
   static const _defaultInterval = Duration(days: 1);
 
-  /// Application support directory, where cached rule sets live.
   static Future<Directory> defaultStorageRoot() =>
       getApplicationSupportDirectory();
 
   final http.Client _client;
   final Future<Directory> Function() _storageRoot;
   Directory? _root;
+  final _updates = SerialTaskQueue();
 
   /// Profile the last [prepare] call belonged to, so a listener can tell
   /// whether the refresh concerns the config it owns.
@@ -263,6 +266,24 @@ class RuleProviderService extends ChangeNotifier {
     bool force = false,
     bool allowNetwork = true,
     Duration budget = const Duration(seconds: 30),
+    void Function(String message)? onWarning,
+  }) => _updates.run(
+    () => _prepare(
+      profileId,
+      yamlContent,
+      force: force,
+      allowNetwork: allowNetwork,
+      budget: budget,
+      onWarning: onWarning,
+    ),
+  );
+
+  Future<RuleProviderReport> _prepare(
+    String profileId,
+    String yamlContent, {
+    required bool force,
+    required bool allowNetwork,
+    required Duration budget,
     void Function(String message)? onWarning,
   }) async {
     final Object? section = _ruleProviderSection(yamlContent);
@@ -298,6 +319,7 @@ class RuleProviderService extends ChangeNotifier {
           directory,
           force: force,
           allowNetwork: allowNetwork,
+          timeout: deadline.difference(DateTime.now()),
           onWarning: onWarning,
         ),
       );
@@ -330,9 +352,11 @@ class RuleProviderService extends ChangeNotifier {
     Directory directory, {
     required bool force,
     required bool allowNetwork,
+    required Duration timeout,
     void Function(String message)? onWarning,
   }) async {
-    final meta = await _readMeta(directory, spec.name);
+    final stored = await _readMeta(directory, spec.name);
+    final meta = _matchesSource(stored, spec) ? stored : null;
     final cachedPath = meta?['path'] as String?;
     final updatedAt = DateTime.tryParse(meta?['updatedAt'] as String? ?? '');
     final interval = spec.intervalSeconds > 0
@@ -379,6 +403,7 @@ class RuleProviderService extends ChangeNotifier {
     return _fromNetwork(
       spec,
       directory,
+      timeout: timeout < _requestTimeout ? timeout : _requestTimeout,
       etag: meta?['etag'] as String?,
       lastModified: meta?['lastModified'] as String?,
       cachedPath: cachedPath,
@@ -417,12 +442,25 @@ class RuleProviderService extends ChangeNotifier {
         throw const FormatException('rule set exceeds the 32 MiB limit');
       }
       final raw = utf8.decode(await source.readAsBytes(), allowMalformed: true);
-      return await _storeNormalised(
+      final state = await _storeNormalised(
         spec,
         directory,
         raw,
-        updatedAt: source.lastModifiedSync(),
+        updatedAt: await source.lastModified(),
       );
+      if (!state.ready) {
+        throw FormatException(state.error ?? 'invalid rule set');
+      }
+      await _writeMeta(directory, spec.name, {
+        'path': state.path,
+        'url': spec.url,
+        'sourcePath': spec.path,
+        'behavior': spec.behavior,
+        'updatedAt': state.updatedAt?.toIso8601String(),
+        'entries': state.entries,
+        'skipped': state.skipped,
+      });
+      return state;
     } catch (error) {
       onWarning?.call('Rule provider "${spec.name}" could not be read: $error');
       final cached = await _cachedState(spec, directory);
@@ -441,6 +479,7 @@ class RuleProviderService extends ChangeNotifier {
   Future<RuleProviderState> _fromNetwork(
     RuleProviderSpec spec,
     Directory directory, {
+    required Duration timeout,
     required String? etag,
     required String? lastModified,
     required String? cachedPath,
@@ -468,12 +507,13 @@ class RuleProviderService extends ChangeNotifier {
         'If-Modified-Since': lastModified,
     };
 
+    final abort = Completer<void>();
+    final timer = Timer(timeout, () => abort.complete());
     try {
-      final streamed = await _client
-          .send(http.Request('GET', uri)..headers.addAll(headers))
-          .timeout(_requestTimeout);
+      final streamed = await _sendSecure(uri, headers, abort.future);
 
       if (streamed.statusCode == 304) {
+        await streamed.stream.listen((_) {}).cancel();
         if (cachedPath == null || !File(cachedPath).existsSync()) {
           return _fallback(
             spec,
@@ -487,6 +527,8 @@ class RuleProviderService extends ChangeNotifier {
         await _writeMeta(directory, spec.name, {
           'path': cachedPath,
           'url': spec.url,
+          'behavior': spec.behavior,
+          'sourcePath': spec.path,
           'etag': etag,
           'lastModified': lastModified,
           'updatedAt': DateTime.now().toIso8601String(),
@@ -504,7 +546,7 @@ class RuleProviderService extends ChangeNotifier {
       }
 
       if (streamed.statusCode != 200) {
-        await streamed.stream.drain<void>();
+        await streamed.stream.listen((_) {}).cancel();
         return _fallback(
           spec,
           cachedPath: cachedPath,
@@ -517,7 +559,7 @@ class RuleProviderService extends ChangeNotifier {
 
       final finalUrl = streamed.request?.url;
       if (finalUrl != null && finalUrl.scheme != 'https') {
-        await streamed.stream.drain<void>();
+        await streamed.stream.listen((_) {}).cancel();
         return _fallback(
           spec,
           cachedPath: cachedPath,
@@ -535,11 +577,22 @@ class RuleProviderService extends ChangeNotifier {
         raw,
         updatedAt: DateTime.now(),
       );
-      if (!state.ready) return state;
+      if (!state.ready) {
+        return _fallback(
+          spec,
+          cachedPath: cachedPath,
+          cachedUpdatedAt: cachedUpdatedAt,
+          cachedEntries: cachedEntries,
+          cachedSkipped: cachedSkipped,
+          error: state.error ?? 'invalid rule set',
+        );
+      }
 
       await _writeMeta(directory, spec.name, {
         'path': state.path,
         'url': spec.url,
+        'behavior': spec.behavior,
+        'sourcePath': spec.path,
         'etag': streamed.headers['etag'],
         'lastModified': streamed.headers['last-modified'],
         'updatedAt': state.updatedAt?.toIso8601String(),
@@ -556,7 +609,42 @@ class RuleProviderService extends ChangeNotifier {
         cachedSkipped: cachedSkipped,
         error: error.toString(),
       );
+    } finally {
+      timer.cancel();
+      if (!abort.isCompleted) abort.complete();
     }
+  }
+
+  Future<http.StreamedResponse> _sendSecure(
+    Uri uri,
+    Map<String, String> headers,
+    Future<void> abort,
+  ) async {
+    var current = uri;
+    for (var redirects = 0; redirects <= 5; redirects++) {
+      final request = http.AbortableRequest('GET', current, abortTrigger: abort)
+        ..followRedirects = false
+        ..headers.addAll(headers);
+      final response = await _client.send(request);
+      if (!const {301, 302, 303, 307, 308}.contains(response.statusCode)) {
+        return response;
+      }
+      await response.stream.listen((_) {}).cancel();
+      final location = response.headers['location'];
+      if (location == null) {
+        throw const FormatException('redirect has no location');
+      }
+      final next = current.resolve(location);
+      if (next.scheme != 'https' ||
+          next.host.isEmpty ||
+          next.userInfo.isNotEmpty) {
+        throw const FormatException(
+          'rule redirects must use HTTPS without credentials',
+        );
+      }
+      current = next;
+    }
+    throw const FormatException('too many rule-provider redirects');
   }
 
   RuleProviderState _fallback(
@@ -609,10 +697,6 @@ class RuleProviderService extends ChangeNotifier {
     required DateTime updatedAt,
   }) async {
     if (_looksBinary(raw)) {
-      // A binary payload reached the normaliser — an MRS set whose URL did
-      // not announce itself, or some other packed format. Writing the
-      // "rules" from it would produce a file of mojibake that matches
-      // nothing and looks like it loaded; reporting is the honest outcome.
       return RuleProviderState(
         name: spec.name,
         behavior: spec.behavior,
@@ -624,10 +708,9 @@ class RuleProviderService extends ChangeNotifier {
             '(MRS?); use a YAML or text source',
       );
     }
-    final normalised = _normalise(raw, spec.behavior);
+    final behavior = spec.behavior;
+    final normalised = await compute(_normalisePayload, (raw, behavior));
     if (normalised.entries == 0) {
-      // The engine rejects a rule set with no usable entries, which would
-      // abort engine start-up; report it instead of writing a file.
       return RuleProviderState(
         name: spec.name,
         behavior: spec.behavior,
@@ -649,13 +732,15 @@ class RuleProviderService extends ChangeNotifier {
       await tmp.rename(file.path);
     }
 
+    final previous = (await _readMeta(directory, spec.name))?['path'];
     final keep = file.uri.pathSegments.last;
     await for (final entity in directory.list()) {
       if (entity is! File) continue;
       final name = entity.uri.pathSegments.last;
       if (name.startsWith('${_safeSegment(spec.name)}.') &&
           name.endsWith('.rules') &&
-          name != keep) {
+          name != keep &&
+          entity.path != previous) {
         try {
           await entity.delete();
         } on FileSystemException catch (error) {
@@ -691,7 +776,11 @@ class RuleProviderService extends ChangeNotifier {
     return replacement * 10 > head.length;
   }
 
-  ({String content, int entries, int skipped}) _normalise(
+  static ({String content, int entries, int skipped}) _normalisePayload(
+    (String, String) input,
+  ) => _normalise(input.$1, input.$2);
+
+  static ({String content, int entries, int skipped}) _normalise(
     String raw,
     String behavior,
   ) {
@@ -735,7 +824,7 @@ class RuleProviderService extends ChangeNotifier {
   /// The engine parses `domain` / `ipcidr` / `classical` providers as plain
   /// line lists; a YAML document fed to it would be read line by line and
   /// produce entries that never match, so the payload is unwrapped here.
-  List<Object?>? _yamlPayload(String raw) {
+  static List<Object?>? _yamlPayload(String raw) {
     final head = raw.length > 4096 ? raw.substring(0, 4096) : raw;
     final looksStructured =
         head.trimLeft().startsWith('{') || head.contains('payload:');
@@ -752,14 +841,12 @@ class RuleProviderService extends ChangeNotifier {
     return null;
   }
 
-  bool _isSupported(String entry, String behavior) {
+  static bool _isSupported(String entry, String behavior) {
     switch (behavior) {
       case 'ipcidr':
         return _cidrPattern.hasMatch(entry);
       case 'classical':
         final parts = entry.split(',');
-        // Anything else is dropped by the engine's classical parser; counting
-        // it here keeps the reported entry count equal to the live rule count.
         return parts.length >= 2 &&
             _classicalTypes.contains(parts.first.trim().toUpperCase());
       case 'domain':
@@ -787,7 +874,8 @@ class RuleProviderService extends ChangeNotifier {
     RuleProviderSpec spec,
     Directory directory,
   ) async {
-    final meta = await _readMeta(directory, spec.name);
+    final stored = await _readMeta(directory, spec.name);
+    final meta = _matchesSource(stored, spec) ? stored : null;
     final path = meta?['path'] as String?;
     if (path == null || !File(path).existsSync()) return null;
     return RuleProviderState(
@@ -799,6 +887,12 @@ class RuleProviderService extends ChangeNotifier {
       path: path,
     );
   }
+
+  bool _matchesSource(Map<String, dynamic>? meta, RuleProviderSpec spec) =>
+      meta != null &&
+      meta['url'] == spec.url &&
+      meta['behavior'] == spec.behavior &&
+      meta['sourcePath'] == spec.path;
 
   Future<Map<String, dynamic>?> _readMeta(
     Directory directory,
@@ -851,6 +945,7 @@ class RuleProviderService extends ChangeNotifier {
 }
 
 String _safeSegment(String value) {
-  final sanitised = value.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-  return sanitised.isEmpty ? 'unnamed' : sanitised;
+  final safe = RegExp(r'^[A-Za-z0-9_-][A-Za-z0-9._-]{0,79}$');
+  if (safe.hasMatch(value)) return value;
+  return 'key_${sha256.convert(utf8.encode(value))}';
 }

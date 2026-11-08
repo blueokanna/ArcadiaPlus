@@ -53,7 +53,7 @@ GoRouter _testRouter() {
 }
 
 void main() {
-  testWidgets('a pushed page slides over the page below, which stays put', (
+  testWidgets('a pushed page uses a platform-interactive Material route', (
     tester,
   ) async {
     final router = _testRouter();
@@ -64,20 +64,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 120));
 
-    // Mid-flight both pages are on screen: the incoming page travels over
-    // the page below instead of replacing it, and it travels (the slide is
-    // not already at rest).
+    // Both pages participate in the platform transition until it settles.
     expect(find.text('RULES'), findsOneWidget);
     expect(find.text('HOME'), findsOneWidget);
-    final slide = tester.widget<SlideTransition>(
-      find
-          .ancestor(
-            of: find.text('RULES'),
-            matching: find.byType(SlideTransition),
-          )
-          .first,
+    expect(
+      ModalRoute.of(tester.element(find.text('RULES'))),
+      isA<PageRoute<void>>(),
     );
-    expect(slide.position.value.dx, greaterThan(0));
 
     await tester.pumpAndSettle();
     expect(find.text('RULES'), findsOneWidget);
@@ -133,7 +126,7 @@ void main() {
     expect(find.text('HOME'), findsNothing);
   });
 
-  testWidgets('a destination settles in from above full size', (tester) async {
+  testWidgets('a destination replacement leaves no back stack', (tester) async {
     final router = _testRouter();
     addTearDown(router.dispose);
     await tester.pumpWidget(MaterialApp.router(routerConfig: router));
@@ -144,15 +137,10 @@ void main() {
 
     // Never below 1.0: a scaled-down page would expose the backdrop around
     // its edges, which is the one thing this motion exists to avoid.
-    final scale = tester.widget<ScaleTransition>(
-      find
-          .ancestor(
-            of: find.text('PROXIES'),
-            matching: find.byType(ScaleTransition),
-          )
-          .first,
+    expect(
+      ModalRoute.of(tester.element(find.text('PROXIES'))),
+      isA<PageRoute<void>>(),
     );
-    expect(scale.scale.value, greaterThanOrEqualTo(1.0));
 
     await tester.pumpAndSettle();
     expect(find.text('PROXIES'), findsOneWidget);
