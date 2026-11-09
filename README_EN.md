@@ -17,6 +17,31 @@ It reads Clash-shaped profiles (`proxies`, `proxy-groups`, `rules`, `rule-provid
 
 The sections below state what the current build actually does, including the platforms where support cannot yet be claimed.
 
+<br>
+
+### 📸 Product Screenshot
+<details open>
+<summary><b>💻 Windows PC </b></summary>
+<br>
+<div align="center">
+  <img width="48%" src="https://github.com/user-attachments/assets/73f4119d-a59e-4d88-b9df-2777ca0ff53b" />
+  <img width="48%" src="https://github.com/user-attachments/assets/e6650f71-1018-46a5-a6a9-8d9d663bb8b3" />
+  <br><br>
+  <img width="48%" src="https://github.com/user-attachments/assets/63ee8199-4e72-4fb9-8ae9-a02689c234ff" />
+  <img width="48%" src="https://github.com/user-attachments/assets/a28545de-b4e5-47a3-b040-80e2136a844c" />
+</div>
+</details>
+<br>
+<details open>
+<summary><b>📱 Android </b></summary>
+<br>
+<div align="center">
+<img width="260" src="https://github.com/user-attachments/assets/21ef5262-a39c-40c6-9565-8ad7b02a5c26" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img width="260" src="https://github.com/user-attachments/assets/a92930ff-03fd-43c2-a210-b08173f1c388" />
+</div>
+</details>
+
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
