@@ -5,20 +5,9 @@
 </p>
 
 <p align="center">
-  Flutter + Rust 跨平台代理客户端<br>
+  Flutter + Rust 跨平台互联网代理客户端<br>
   <a href="README_EN.md">English</a>
 </p>
-
-## 产品截图
-<img width="1198" height="759" alt="5b6daa2b-4b4b-446b-9ecc-0b67b081c79a" src="https://github.com/user-attachments/assets/f3bfff58-499a-40bf-888b-037ec5a5e507" />
-</br>
-<img width="1198" height="759" alt="2de6b2fe-8535-470a-9ea6-d8d5dda4952b" src="https://github.com/user-attachments/assets/e6650f71-1018-46a5-a6a9-8d9d663bb8b3" />
-</br>
-<img width="1198" height="759" alt="image" src="https://github.com/user-attachments/assets/a28545de-b4e5-47a3-b040-80e2136a844c" />
-</br>
-<img width="1198" height="759" alt="image" src="https://github.com/user-attachments/assets/63ee8199-4e72-4fb9-8ae9-a02689c234ff" />
-</br>
-</br>
 
 ## 这是什么
 
@@ -27,6 +16,30 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 它读 Clash 形态的配置（`proxies`、`proxy-groups`、`rules`、`rule-providers`、`dns`），把配置翻译成引擎执行的规则表，并把执行情况显示出来：规则表本身、每条规则的命中次数、转换时丢了什么、规则集上次刷新是什么时候。它不提供服务器、节点或订阅——配置由你准备，合法性由你负责。
 
 下面把当前版本的实际能力写清楚了，包括哪些平台还不能宣称可用。
+
+<br>
+### 📸 产品截图
+<details open>
+<summary><b>💻 Windows 电脑端 </b></summary>
+<br>
+<div align="center">
+  <img width="48%" src="https://github.com/user-attachments/assets/73f4119d-a59e-4d88-b9df-2777ca0ff53b" />
+  <img width="48%" src="https://github.com/user-attachments/assets/e6650f71-1018-46a5-a6a9-8d9d663bb8b3" />
+  <br><br>
+  <img width="48%" src="https://github.com/user-attachments/assets/63ee8199-4e72-4fb9-8ae9-a02689c234ff" />
+  <img width="48%" src="https://github.com/user-attachments/assets/a28545de-b4e5-47a3-b040-80e2136a844c" />
+</div>
+</details>
+<br>
+<details open>
+<summary><b>📱 安卓端 </b></summary>
+<br>
+<div align="center">
+<img width="260" src="https://github.com/user-attachments/assets/21ef5262-a39c-40c6-9565-8ad7b02a5c26" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img width="260" src="https://github.com/user-attachments/assets/a92930ff-03fd-43c2-a210-b08173f1c388" />
+</div>
+</details>
 
 ## 当前实现
 
