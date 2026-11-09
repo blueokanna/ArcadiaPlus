@@ -9,6 +9,17 @@
   <a href="README_EN.md">English</a>
 </p>
 
+## 产品截图
+<img width="1198" height="759" alt="5b6daa2b-4b4b-446b-9ecc-0b67b081c79a" src="https://github.com/user-attachments/assets/f3bfff58-499a-40bf-888b-037ec5a5e507" />
+</br>
+<img width="1198" height="759" alt="2de6b2fe-8535-470a-9ea6-d8d5dda4952b" src="https://github.com/user-attachments/assets/e6650f71-1018-46a5-a6a9-8d9d663bb8b3" />
+</br>
+<img width="1198" height="759" alt="image" src="https://github.com/user-attachments/assets/a28545de-b4e5-47a3-b040-80e2136a844c" />
+</br>
+<img width="1198" height="759" alt="image" src="https://github.com/user-attachments/assets/63ee8199-4e72-4fb9-8ae9-a02689c234ff" />
+</br>
+</br>
+
 ## 这是什么
 
 ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平台接管，Rust 侧只保留一层 FFI，代理引擎、DNS、TUN 数据面与协议实现全部来自 [corduit](https://crates.io/crates/corduit)。
