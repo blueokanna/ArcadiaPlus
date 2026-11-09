@@ -945,6 +945,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     wireObj.download = cst_encode_u_64(apiObj.download);
     wireObj.upload_speed = cst_encode_u_64(apiObj.uploadSpeed);
     wireObj.download_speed = cst_encode_u_64(apiObj.downloadSpeed);
+    wireObj.direct_upload = cst_encode_u_64(apiObj.directUpload);
+    wireObj.direct_download = cst_encode_u_64(apiObj.directDownload);
+    wireObj.proxy_upload = cst_encode_u_64(apiObj.proxyUpload);
+    wireObj.proxy_download = cst_encode_u_64(apiObj.proxyDownload);
   }
 
   @protected
@@ -3974,17 +3978,37 @@ final class wire_cst_traffic_stats extends ffi.Struct {
   @ffi.Uint64()
   external int download_speed;
 
+  @ffi.Uint64()
+  external int direct_upload;
+
+  @ffi.Uint64()
+  external int direct_download;
+
+  @ffi.Uint64()
+  external int proxy_upload;
+
+  @ffi.Uint64()
+  external int proxy_download;
+
   static ffi.Pointer<wire_cst_traffic_stats> $allocate(
     ffi.Allocator $allocator, {
     required int upload,
     required int download,
     required int upload_speed,
     required int download_speed,
+    required int direct_upload,
+    required int direct_download,
+    required int proxy_upload,
+    required int proxy_download,
   }) => $allocator<wire_cst_traffic_stats>()
     ..ref.upload = upload
     ..ref.download = download
     ..ref.upload_speed = upload_speed
-    ..ref.download_speed = download_speed;
+    ..ref.download_speed = download_speed
+    ..ref.direct_upload = direct_upload
+    ..ref.direct_download = direct_download
+    ..ref.proxy_upload = proxy_upload
+    ..ref.proxy_download = proxy_download;
 }
 
 final class wire_cst_traffic_stats_dto extends ffi.Struct {

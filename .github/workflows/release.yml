@@ -21,6 +21,7 @@ jobs:
     outputs:
       tag: ${{ steps.release.outputs.tag }}
       version: ${{ steps.release.outputs.version }}
+      build_number: ${{ steps.release.outputs.build_number }}
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
@@ -36,6 +37,8 @@ jobs:
         run: |
           set -euo pipefail
           version="$(sed -nE 's/^version:[[:space:]]*([0-9]+\.[0-9]+\.[0-9]+)(\+[0-9]+)?$/\1/p' pubspec.yaml)"
+          build_number="$(sed -nE 's/^version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+\+([0-9]+)$/\1/p' pubspec.yaml)"
+          build_number="${build_number:-1}"
           if [[ -z "$version" ]]; then
             echo "pubspec.yaml does not declare a stable MAJOR.MINOR.PATCH version" >&2
             exit 1
@@ -46,17 +49,17 @@ jobs:
               echo "Manual releases must run from the default branch '$DEFAULT_BRANCH'" >&2
               exit 1
             fi
-            tag="v$version"
+            tag="v$version+$build_number"
           else
             tag="$GITHUB_REF_NAME"
           fi
 
-          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Only stable vMAJOR.MINOR.PATCH tags can be released" >&2
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(\+[0-9]+)?$ ]]; then
+            echo "Only stable vMAJOR.MINOR.PATCH[+BUILD] tags can be released" >&2
             exit 1
           fi
-          if [[ "$tag" != "v$version" ]]; then
-            echo "Tag '$tag' does not match the pubspec version 'v$version': bump pubspec.yaml, commit it, and re-tag" >&2
+          if [[ "$tag" != "v$version+$build_number" && !( "$tag" == "v$version" && "$build_number" == 1 ) ]]; then
+            echo "Tag '$tag' does not match pubspec 'v$version+$build_number'" >&2
             exit 1
           fi
 
@@ -72,14 +75,13 @@ jobs:
             exit 1
           fi
 
-          # The pubspec carries a Flutter build suffix (`1.0.5+2`): match the
-          # changelog section with or without it, so a `## 1.0.5+2` heading can
-          # hold the notes for tag v1.0.5. The dots are bracketed so they match
-          # literally instead of as "any character".
-          ver_esc="${version//./[.]}"
-          awk -v version="$ver_esc" '
+          notes_version="$version+$build_number"
+          if [[ "$build_number" == 1 ]] && ! grep -qFx "## $notes_version" CHANGELOG.md; then
+            notes_version="$version"
+          fi
+          awk -v heading="## $notes_version" '
             { sub(/\r$/, "") }
-            found == 0 && $0 ~ ("^## " version "([+][0-9]+)?$") { found=1; next }
+            found == 0 && $0 == heading { found=1; next }
             found && /^## / { exit }
             found { print }
           ' CHANGELOG.md > changelog-section.md
@@ -95,6 +97,12 @@ jobs:
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "version=$version" >> "$GITHUB_OUTPUT"
+          # Legacy tags have no revision in their update identity.
+          if [[ "$tag" == *+* ]]; then
+            echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
+          else
+            echo "build_number=0" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload the release notes
         uses: actions/upload-artifact@v4
@@ -905,6 +913,7 @@ jobs:
         env:
           TAG: ${{ needs.validate.outputs.tag }}
           VERSION: ${{ needs.validate.outputs.version }}
+          BUILD_NUMBER: ${{ needs.validate.outputs.build_number }}
         run: |
           set -euo pipefail
           published_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
@@ -920,12 +929,13 @@ jobs:
           jq -e -n \
             --arg tag "$TAG" \
             --arg version "$VERSION" \
+            --argjson build_number "$BUILD_NUMBER" \
             --arg published_at "$published_at" \
             --argjson android "$(asset android "ArcadiaPlus-${TAG}-android-release.apk")" \
             --argjson windows "$(asset windows "ArcadiaPlus-${TAG}-windows-x64-setup.exe")" \
             --argjson macos "$(asset macos "ArcadiaPlus-${TAG}-macos-universal.dmg")" \
             --argjson linux "$(asset linux "ArcadiaPlus-${TAG}-linux-x64.deb")" \
-            '{schema:1,tag:$tag,version:$version,published_at:$published_at,assets:[$android,$windows,$macos,$linux]}' \
+            '{schema:1,tag:$tag,version:$version,build_number:$build_number,published_at:$published_at,assets:[$android,$windows,$macos,$linux]}' \
             > dist/update-manifest.json
           (cd dist && sha256sum ArcadiaPlus-* update-manifest.json > SHA256SUMS)
           cat dist/update-manifest.json

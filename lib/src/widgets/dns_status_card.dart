@@ -42,7 +42,7 @@ class _DnsStatusCardState extends State<DnsStatusCard> {
         return;
       }
       final status = await (widget.readStatus ?? api.getRecursiveDnsStatus)();
-      if (mounted) {
+      if (mounted && (status != _status || _error != null)) {
         setState(() {
           _status = status;
           _error = null;

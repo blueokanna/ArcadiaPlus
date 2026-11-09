@@ -16,41 +16,62 @@ class SpringPress extends StatefulWidget {
 
 class _SpringPressState extends State<SpringPress>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _scale = AnimationController.unbounded(
-    vsync: this,
-    value: 1,
-  );
+  AnimationController? _scale;
+  double _restingScale = 1;
   bool _reduceMotion = false;
+  bool _visible = true;
   bool _hasDependencies = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final reduced = MediaQuery.disableAnimationsOf(context);
-    if (!_hasDependencies || reduced) {
-      _scale.stop();
-      _scale.value = reduced || !widget.pressed ? 1 : 0.97;
-    } else if (_reduceMotion != reduced) {
+    final visible = TickerMode.valuesOf(context).enabled;
+    final changed = _reduceMotion != reduced || _visible != visible;
+    _reduceMotion = reduced;
+    _visible = visible;
+    if (!_hasDependencies || reduced || !visible) {
+      _settle();
+    } else if (changed) {
       _animateToTarget();
     }
     _hasDependencies = true;
-    _reduceMotion = reduced;
   }
 
   @override
   void didUpdateWidget(SpringPress oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.pressed == widget.pressed || _reduceMotion) return;
-    _animateToTarget();
+    if (oldWidget.pressed == widget.pressed) return;
+    if (_reduceMotion || !_visible) {
+      _settle();
+    } else {
+      _animateToTarget();
+    }
+  }
+
+  double get _target => _reduceMotion || !widget.pressed ? 1 : 0.97;
+
+  void _settle() {
+    _restingScale = _target;
+    _scale?.stop();
+    _scale?.value = _restingScale;
   }
 
   void _animateToTarget() {
-    _scale.animateWith(
+    if ((_scale?.value ?? _restingScale) == _target &&
+        !(_scale?.isAnimating ?? false)) {
+      return;
+    }
+    final scale = _scale ??= AnimationController.unbounded(
+      vsync: this,
+      value: _restingScale,
+    );
+    scale.animateWith(
       SpringSimulation(
         AppMotion.pressSpring,
-        _scale.value,
-        widget.pressed ? 0.97 : 1,
-        _scale.velocity,
+        scale.value,
+        _target,
+        scale.velocity,
         tolerance: const Tolerance(distance: 0.0001, velocity: 0.001),
       ),
     );
@@ -58,11 +79,13 @@ class _SpringPressState extends State<SpringPress>
 
   @override
   void dispose() {
-    _scale.dispose();
+    _scale?.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) =>
-      ScaleTransition(scale: _scale, child: widget.child);
+  Widget build(BuildContext context) => ScaleTransition(
+    scale: _scale ?? AlwaysStoppedAnimation(_restingScale),
+    child: widget.child,
+  );
 }

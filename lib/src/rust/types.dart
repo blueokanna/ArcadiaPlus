@@ -794,12 +794,20 @@ class TrafficStats {
   final BigInt download;
   final BigInt uploadSpeed;
   final BigInt downloadSpeed;
+  final BigInt directUpload;
+  final BigInt directDownload;
+  final BigInt proxyUpload;
+  final BigInt proxyDownload;
 
   const TrafficStats({
     required this.upload,
     required this.download,
     required this.uploadSpeed,
     required this.downloadSpeed,
+    required this.directUpload,
+    required this.directDownload,
+    required this.proxyUpload,
+    required this.proxyDownload,
   });
 
   @override
@@ -807,7 +815,11 @@ class TrafficStats {
       upload.hashCode ^
       download.hashCode ^
       uploadSpeed.hashCode ^
-      downloadSpeed.hashCode;
+      downloadSpeed.hashCode ^
+      directUpload.hashCode ^
+      directDownload.hashCode ^
+      proxyUpload.hashCode ^
+      proxyDownload.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -817,7 +829,11 @@ class TrafficStats {
           upload == other.upload &&
           download == other.download &&
           uploadSpeed == other.uploadSpeed &&
-          downloadSpeed == other.downloadSpeed;
+          downloadSpeed == other.downloadSpeed &&
+          directUpload == other.directUpload &&
+          directDownload == other.directDownload &&
+          proxyUpload == other.proxyUpload &&
+          proxyDownload == other.proxyDownload;
 }
 
 /// Traffic statistics DTO.

@@ -65,11 +65,10 @@ class WallpaperBackdrop extends StatelessWidget {
 
   Widget _buildPicture(BuildContext context, WallpaperProvider wallpaper) {
     final alignment = Alignment(wallpaper.alignmentX, wallpaper.alignmentY);
-    Widget picture = Image.file(
-      File(wallpaper.imagePath!),
+    Widget picture = Image(
+      image: imageProvider(context, wallpaper.imagePath!, zoom: wallpaper.zoom),
       fit: BoxFit.cover,
       alignment: alignment,
-      cacheWidth: decodeWidth(context, zoom: wallpaper.zoom),
       filterQuality: FilterQuality.low,
       gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) {
@@ -104,14 +103,27 @@ class WallpaperBackdrop extends StatelessWidget {
     return picture;
   }
 
-  static int decodeWidth(BuildContext context, {double zoom = 1}) {
+  /// Both dimensions are bounded: a width-only decode can allocate an
+  /// arbitrarily tall bitmap for a panoramic or stitched image. Preview and
+  /// backdrop share the same key and keep the source aspect ratio.
+  static ImageProvider imageProvider(
+    BuildContext context,
+    String path, {
+    double zoom = 1,
+  }) {
     final mediaQuery = MediaQuery.maybeOf(context);
-    if (mediaQuery == null) return maxDecodeWidth;
-    final physicalWidth = (mediaQuery.size.width * mediaQuery.devicePixelRatio)
-        .round();
-    if (physicalWidth <= 0) return maxDecodeWidth;
-    final visibleWidth = (physicalWidth * (zoom < 1 ? 1.0 : zoom)).round();
-    final wanted = visibleWidth < physicalWidth ? physicalWidth : visibleWidth;
-    return wanted < maxDecodeWidth ? wanted : maxDecodeWidth;
+    final physical =
+        (mediaQuery?.size.longestSide ?? 0) *
+        (mediaQuery?.devicePixelRatio ?? 1) *
+        (zoom < 1 ? 1 : zoom);
+    final extent = physical.isFinite && physical > 0
+        ? ((physical / 256).ceil() * 256).clamp(256, maxDecodeWidth)
+        : maxDecodeWidth;
+    return ResizeImage(
+      FileImage(File(path)),
+      width: extent,
+      height: extent,
+      policy: ResizeImagePolicy.fit,
+    );
   }
 }

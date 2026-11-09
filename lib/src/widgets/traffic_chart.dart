@@ -195,6 +195,7 @@ class _IpInfoCache {
 final _ipInfoCache = _IpInfoCache();
 
 class _TrafficChartState extends State<TrafficChart> {
+  final _totalsScrollController = ScrollController();
   Timer? _ipRefreshTimer;
   final _clients = <Dio>{};
   IpInfo? _ipv4Info;
@@ -274,6 +275,7 @@ class _TrafficChartState extends State<TrafficChart> {
 
   @override
   void dispose() {
+    _totalsScrollController.dispose();
     _ipRefreshTimer?.cancel();
     for (final client in _clients) {
       client.close(force: true);
@@ -453,6 +455,7 @@ class _TrafficChartState extends State<TrafficChart> {
     final borderRadius = ResponsiveUtils.getBorderRadius(context);
     final cardPadding = ResponsiveUtils.getCardPadding(context);
     final chartHeight = ResponsiveUtils.getTrafficChartHeight(context);
+    final chinese = l10n?.locale.languageCode == 'zh';
 
     final downloadSpots = trafficHistoryManager.getDownloadSpots();
     final uploadSpots = trafficHistoryManager.getUploadSpots();
@@ -484,24 +487,68 @@ class _TrafficChartState extends State<TrafficChart> {
                 textTheme: textTheme,
                 isActive: widget.uploadSpeed > BigInt.zero,
               ),
+              Tooltip(
+                message: chinese
+                    ? '本次运行经直连出口传输的上传与下载之和，包含局域网及其他直连流量；不是 IP 地理归属统计。'
+                    : 'Session upload + download through direct exits, including LAN and other direct traffic; not IP geolocation.',
+                child: _TrafficStatCard(
+                  icon: Icons.home_work_outlined,
+                  label: chinese ? '国内总流量' : 'Domestic total',
+                  speed: _formatBytes(
+                    widget.trafficStats.directUpload +
+                        widget.trafficStats.directDownload,
+                  ),
+                  total: '',
+                  detail: chinese ? '本次运行 · 直连' : 'Session · Direct',
+                  color: colorScheme.secondary,
+                  colorScheme: colorScheme,
+                  textTheme: textTheme,
+                  isActive: false,
+                ),
+              ),
+              _TrafficStatCard(
+                icon: Icons.public_rounded,
+                label: chinese ? '代理总流量' : 'Proxy total',
+                speed: _formatBytes(
+                  widget.trafficStats.proxyUpload +
+                      widget.trafficStats.proxyDownload,
+                ),
+                total: '',
+                detail: chinese ? '本次运行 · 代理' : 'Session · Proxy',
+                color: colorScheme.primary,
+                colorScheme: colorScheme,
+                textTheme: textTheme,
+                isActive: false,
+              ),
             ];
-            if (constraints.maxWidth < 340 ||
-                MediaQuery.textScalerOf(context).scale(14) > 19) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  cards[0],
-                  SizedBox(height: spacing),
-                  cards[1],
-                ],
-              );
-            }
-            return Row(
-              children: [
-                Expanded(child: cards[0]),
-                SizedBox(width: spacing),
-                Expanded(child: cards[1]),
-              ],
+            final minimumWidth =
+                164.0 *
+                (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
+                  1.0,
+                  2.0,
+                );
+            final width = ((constraints.maxWidth - spacing * 3) / 4).clamp(
+              minimumWidth,
+              double.infinity,
+            );
+            return Scrollbar(
+              controller: _totalsScrollController,
+              thumbVisibility: true,
+              child: SingleChildScrollView(
+                controller: _totalsScrollController,
+                key: const ValueKey('traffic-totals-row'),
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (var i = 0; i < cards.length; i++) ...[
+                      if (i > 0) SizedBox(width: spacing),
+                      SizedBox(width: width, child: cards[i]),
+                    ],
+                  ],
+                ),
+              ),
             );
           },
         ),
@@ -762,6 +809,7 @@ class _TrafficStatCard extends StatelessWidget {
   final String label;
   final String speed;
   final String total;
+  final String? detail;
   final Color color;
   final ColorScheme colorScheme;
   final TextTheme textTheme;
@@ -772,6 +820,7 @@ class _TrafficStatCard extends StatelessWidget {
     required this.label,
     required this.speed,
     required this.total,
+    this.detail,
     required this.color,
     required this.colorScheme,
     required this.textTheme,
@@ -841,7 +890,8 @@ class _TrafficStatCard extends StatelessWidget {
                 SizedBox(width: spacing * 0.5),
                 Expanded(
                   child: Text(
-                    '${AppLocalizations.of(context)?.total ?? "Total"}: $total',
+                    detail ??
+                        '${AppLocalizations.of(context)?.total ?? "Total"}: $total',
                     style: textTheme.labelSmall?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),

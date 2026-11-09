@@ -42,7 +42,9 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
     }
     _syncTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<AppStateProvider>().refreshConnections();
+      if (mounted && _onTop && AppLifecycle.instance.isActive) {
+        context.read<AppStateProvider>().refreshConnections();
+      }
     });
   }
 
@@ -132,17 +134,24 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
           ),
         ],
       ),
-      body: Consumer<AppStateProvider>(
-        builder: (context, appState, child) {
-          if (!appState.isServiceRunning) {
+      body: Selector<AppStateProvider, (bool, List<ActiveConnection>)>(
+        selector: (_, state) =>
+            (state.isServiceRunning, state.activeConnections),
+        shouldRebuild: (previous, next) =>
+            previous.$1 != next.$1 || !identical(previous.$2, next.$2),
+        builder: (context, snapshot, child) {
+          if (!snapshot.$1) {
             return _buildNotRunningView(context);
           }
 
-          if (appState.activeConnections.isEmpty) {
+          if (snapshot.$2.isEmpty) {
             return _buildEmptyView(context);
           }
 
-          return _buildConnectionsList(context, appState);
+          return _buildConnectionsList(
+            context,
+            context.read<AppStateProvider>(),
+          );
         },
       ),
     );
@@ -246,6 +255,10 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
     AppStateProvider appState,
   ) {
     final connections = appState.activeConnections;
+    final indices = <Key, int>{
+      for (var index = 0; index < connections.length; index++)
+        ValueKey(connections[index].id): index,
+    };
     final padding = ResponsiveUtils.getResponsivePadding(context);
     final spacing = ResponsiveUtils.getSpacing(context);
 
@@ -262,24 +275,41 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                 padding.right,
                 spacing * 2,
               ),
-              child: _buildStatsHeader(context, appState),
+              child: Selector<AppStateProvider, (int, BigInt, BigInt)>(
+                selector: (_, state) => (
+                  state.activeConnections.length,
+                  state.totalUploadBytes,
+                  state.totalDownloadBytes,
+                ),
+                builder: (context, _, _) =>
+                    _buildStatsHeader(context, appState),
+              ),
             ),
           ),
           SliverPadding(
             padding: EdgeInsets.symmetric(horizontal: padding.left),
             sliver: SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final connection = connections[index];
-                return StaggeredListItem(
-                  index: index,
-                  delay: const Duration(milliseconds: 30),
-                  duration: AnimationUtils.durationMedium2,
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: spacing * 1.5),
-                    child: _buildConnectionCard(context, connection, appState),
-                  ),
-                );
-              }, childCount: connections.length),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final connection = connections[index];
+                  return StaggeredListItem(
+                    key: ValueKey(connection.id),
+                    index: index,
+                    delay: const Duration(milliseconds: 30),
+                    duration: AnimationUtils.durationMedium2,
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: spacing * 1.5),
+                      child: _buildConnectionCard(
+                        context,
+                        connection,
+                        appState,
+                      ),
+                    ),
+                  );
+                },
+                childCount: connections.length,
+                findChildIndexCallback: (key) => indices[key],
+              ),
             ),
           ),
           SliverToBoxAdapter(child: SizedBox(height: spacing * 2)),
@@ -470,23 +500,33 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                 spacing: spacing,
                 runSpacing: spacing,
                 children: [
+                  if (!const {
+                    'SOCKS5',
+                    'HTTP',
+                    'HTTPS',
+                    'TUN',
+                    '',
+                  }.contains(connection.rule.toUpperCase()))
+                    _buildInfoChip(
+                      context,
+                      icon: Icons.rule_rounded,
+                      label:
+                          '${Localizations.localeOf(context).languageCode == 'zh' ? '规则' : 'Rule'}: ${connection.rule}',
+                      color: colorScheme.tertiary,
+                    ),
                   _buildInfoChip(
                     context,
-                    icon: Icons.rule_rounded,
-                    label: connection.rule,
-                    color: colorScheme.tertiary,
-                  ),
-                  _buildInfoChip(
-                    context,
-                    icon: Icons.security_rounded,
-                    label: '${connection.protocol}/${connection.network}',
+                    icon: Icons.input_rounded,
+                    label:
+                        '${Localizations.localeOf(context).languageCode == 'zh' ? '本机入口' : 'Local inbound'}: ${connection.protocol}/${connection.network}',
                     color: protocolColor,
                   ),
                   if (connection.outboundTag.isNotEmpty)
                     _buildInfoChip(
                       context,
                       icon: Icons.output_rounded,
-                      label: connection.outboundTag,
+                      label:
+                          '${Localizations.localeOf(context).languageCode == 'zh' ? '路由目标' : 'Routing target'}: ${connection.outboundTag}',
                       color: colorScheme.secondary,
                     ),
                 ],
@@ -591,31 +631,14 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
     required Color color,
   }) {
     final textTheme = Theme.of(context).textTheme;
-    final spacing = ResponsiveUtils.getSpacing(context);
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: spacing * 1.25,
-        vertical: spacing * 0.75,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          SizedBox(width: spacing * 0.5),
-          Text(
-            label,
-            style: textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+    return Chip(
+      avatar: Icon(icon, size: 16, color: color),
+      backgroundColor: color.withValues(alpha: 0.1),
+      side: BorderSide(color: color.withValues(alpha: 0.3)),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      labelStyle: textTheme.labelSmall?.copyWith(
+        color: color,
+        fontWeight: FontWeight.w500,
       ),
     );
   }
@@ -744,7 +767,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                         connection.destinationPort.toString(),
                       ),
                       _DetailItem(
-                        'Protocol',
+                        'Local inbound protocol',
                         '${connection.protocol}/${connection.network}',
                       ),
                       if (connection.destinationIp != null &&
@@ -757,12 +780,29 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                     context,
                     title: 'Routing Information',
                     items: [
-                      _DetailItem('Rules', connection.rule),
+                      _DetailItem(
+                        'Recorded rule',
+                        const {
+                              'SOCKS5',
+                              'HTTP',
+                              'HTTPS',
+                              'TUN',
+                              '',
+                            }.contains(connection.rule.toUpperCase())
+                            ? 'Not recorded by the core'
+                            : connection.rule,
+                      ),
                       if (connection.rulePayload.isNotEmpty)
                         _DetailItem('Rule Payload', connection.rulePayload),
                       _DetailItem('Inbound', connection.inboundTag),
-                      _DetailItem('Outbound', connection.outboundTag),
+                      _DetailItem('Routing target', connection.outboundTag),
                     ],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    Localizations.localeOf(context).languageCode == 'zh'
+                        ? 'SOCKS5/TCP 是本机入口，不代表远端代理。路由目标为 DIRECT 时直连；目标为代理组时，还取决于该组选择的成员。'
+                        : 'SOCKS5/TCP is the local inbound, not proof of remote proxying. DIRECT routes directly; a group target depends on its selected member.',
                   ),
                   const SizedBox(height: 20),
                   _buildDetailSection(

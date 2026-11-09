@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:arcadiaplus/src/utils/app_memory_policy.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:arcadiaplus/src/theme/app_theme.dart';
@@ -47,8 +48,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  // Timers and animations consult this before spending CPU, so it has to be
-  // observing before the first screen is built.
+  AppMemoryPolicy.configure(PaintingBinding.instance.imageCache);
   AppLifecycle.instance.start();
   runApp(const ArcadiaPlusBootstrap());
 }
@@ -302,12 +302,6 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
         builder: (lightColorScheme, darkColorScheme) {
           return Consumer2<ThemeProvider, LocaleProvider>(
             builder: (context, themeProvider, localeProvider, child) {
-              // The platform query is asynchronous: this callback first runs
-              // with nulls and again with the palette. Reporting availability
-              // after the frame (a listener cannot notify mid-build) turns
-              // "seen a palette" into a fact the settings switch can rely on,
-              // and a device without dynamic colour gets the explanation that
-              // makes its disabled switch make sense.
               final dynamicAvailable =
                   lightColorScheme != null || darkColorScheme != null;
               if (themeProvider.dynamicColorAvailable != dynamicAvailable) {
@@ -316,8 +310,6 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
                 });
               }
 
-              // Harmonised before use: the raw platform palette is derived
-              // from one colour and can contain pairs that fight each other.
               final lightDynamic = AppTheme.harmonizedDynamic(lightColorScheme);
               final darkDynamic = AppTheme.harmonizedDynamic(darkColorScheme);
 
@@ -336,18 +328,6 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
                       themeProvider.selectedTheme,
                       Brightness.dark,
                     );
-
-              // Only the theme mode is wanted from `AppStateProvider`, and a
-              // `Selector` subscribes to exactly that much of it. Watching the
-              // provider as a whole rebuilt this `MaterialApp` — along with
-              // both `ThemeData` objects and the entire tree below it — once a
-              // second, because the provider notifies on every traffic sample.
-              //
-              // The wallpaper is watched the same way, as one bool: it changes
-              // two things at once — the layer behind the interface, and
-              // whether the interface's own surfaces are veils over it — and a
-              // blur slider that is still being dragged must not rebuild the
-              // app just because the picture changed.
               return Selector<WallpaperProvider, bool>(
                 selector: (_, wallpaper) => wallpaper.isVisible,
                 builder: (context, wallpaperVisible, child) =>
@@ -364,9 +344,6 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
                                 ? AppTheme.withTranslucentSurfaces(darkTheme)
                                 : darkTheme,
                             themeMode: themeMode,
-                            // Light/dark switches cross-fade instead of
-                            // snapping; the emphasized curve is the Material 3
-                            // motion for a transition the user watches.
                             themeAnimationDuration: const Duration(
                               milliseconds: 350,
                             ),
@@ -397,8 +374,6 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
 
 final GoRouter _router = GoRouter(
   navigatorKey: navigatorKey,
-  // Lets a screen learn when it stops being the visible one, so it can put its
-  // polling down instead of running behind whatever is stacked above it.
   observers: [routeObserver],
   routes: [
     ShellRoute(
@@ -440,9 +415,6 @@ final GoRouter _router = GoRouter(
         ),
         GoRoute(
           path: '/logs',
-          // Entered both ways: replaced as a desktop destination, and pushed
-          // from Settings on mobile. The destination motion is the one that
-          // must hold, because a replaced page has nothing underneath it.
           pageBuilder: (context, state) => buildAppPage(
             state,
             const LogsScreen(),

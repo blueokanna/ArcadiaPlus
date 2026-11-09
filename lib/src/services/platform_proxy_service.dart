@@ -11,6 +11,17 @@ import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
 
 enum ProxyMode { global, rule, direct }
 
+/// Mobile VPNs expose rule and global routing; desktop keeps direct mode.
+abstract final class RoutingModes {
+  static List<ProxyMode> available({bool? mobile}) =>
+      (mobile ?? PlatformUtils.isMobile)
+      ? const [ProxyMode.rule, ProxyMode.global]
+      : const [ProxyMode.rule, ProxyMode.global, ProxyMode.direct];
+
+  static ProxyMode restore(ProxyMode mode, {bool? mobile}) =>
+      available(mobile: mobile).contains(mode) ? mode : ProxyMode.rule;
+}
+
 /// Owns the platform's own proxy and tunnel state.
 ///
 /// Every switch in the app is a view of these three facts, and they are only

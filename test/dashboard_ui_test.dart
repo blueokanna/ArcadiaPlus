@@ -93,6 +93,64 @@ void main() {
     ),
   );
 
+  for (final width in [320.0, 480.0, 1200.0]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('traffic totals remain horizontal at $width / $scale', (
+        tester,
+      ) async {
+        tester.view.physicalSize = Size(width, 1000);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          app(
+            TrafficChart(
+              trafficStats: TrafficStats(
+                upload: BigInt.from(4096),
+                download: BigInt.from(8192),
+                uploadSpeed: BigInt.zero,
+                downloadSpeed: BigInt.zero,
+                directUpload: BigInt.from(1024),
+                directDownload: BigInt.from(2048),
+                proxyUpload: BigInt.from(3072),
+                proxyDownload: BigInt.from(6144),
+              ),
+              uploadSpeed: BigInt.zero,
+              downloadSpeed: BigInt.zero,
+              isProxyRunning: false,
+            ),
+            scale: scale,
+          ),
+        );
+        await tester.pump();
+        final labels = ['Download', 'Upload', 'Domestic total', 'Proxy total'];
+        final positions = labels
+            .map(
+              (label) => tester.getTopLeft(
+                find.descendant(
+                  of: find.byKey(const ValueKey('traffic-totals-row')),
+                  matching: find.text(label),
+                ),
+              ),
+            )
+            .toList();
+        for (var index = 1; index < positions.length; index++) {
+          expect(positions[index].dy, positions[0].dy);
+          expect(positions[index].dx, greaterThan(positions[index - 1].dx));
+        }
+        expect(find.text('3.0 KB'), findsOneWidget);
+        expect(find.text('9.0 KB'), findsOneWidget);
+        await tester.drag(
+          find.byKey(const ValueKey('traffic-totals-row')),
+          const Offset(-3000, 0),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Proxy total').hitTestable(), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets('status announces stopping and disables duplicate actions', (
     tester,
   ) async {
@@ -332,6 +390,10 @@ void main() {
     Widget chart(bool running) => app(
       TrafficChart(
         trafficStats: TrafficStats(
+          directUpload: BigInt.zero,
+          directDownload: BigInt.zero,
+          proxyUpload: BigInt.zero,
+          proxyDownload: BigInt.zero,
           upload: BigInt.zero,
           download: BigInt.zero,
           uploadSpeed: BigInt.zero,

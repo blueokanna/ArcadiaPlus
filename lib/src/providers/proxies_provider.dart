@@ -9,6 +9,7 @@ import 'package:arcadiaplus/src/services/proxy_engine_service.dart';
 import 'package:arcadiaplus/src/services/proxy_selection_service.dart';
 import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
 import 'package:arcadiaplus/src/services/proxy_selection_events.dart';
+import 'package:arcadiaplus/src/services/profile_selections.dart';
 
 class LatencyResult {
   final String proxyName;
@@ -38,6 +39,7 @@ class ProxiesProvider extends ChangeNotifier {
   final _operations = SerialTaskQueue();
   final _persistence = SerialTaskQueue();
   ParsedClashConfig? _config;
+  String? _profileId;
   String? _selectedGroupName;
   final Map<String, String> _selectedProxies = {};
   final Map<String, LatencyResult> _latencyResults = {};
@@ -96,6 +98,11 @@ class ProxiesProvider extends ChangeNotifier {
           ? null
           : await StorageService.instance.getProfileConfig(id);
       if (!_current(generation)) return;
+      if (_profileId != id) {
+        _profileId = id;
+        _selectedProxies.clear();
+        _selectedGroupName = null;
+      }
       if (yaml == null) {
         _replaceConfig(null);
         _error = 'No active profile';
@@ -106,12 +113,12 @@ class ProxiesProvider extends ChangeNotifier {
       _replaceConfig(parsed);
       final prefs = await _preferences();
       if (!_current(generation)) return;
-      final savedGroup = prefs.getString('selected_proxy_group');
+      final savedGroup = prefs.getString(ProfileSelections.groupKey(id));
       if (_groupsByName.containsKey(savedGroup)) {
         _selectedGroupName = savedGroup;
       }
       for (final group in proxyGroups) {
-        final saved = prefs.getString('selected_proxy_${group.name}');
+        final saved = prefs.getString(ProfileSelections.key(id, group.name));
         if (saved != null && group.proxies.contains(saved)) {
           _selectedProxies[group.name] = saved;
         }
@@ -260,6 +267,7 @@ class ProxiesProvider extends ChangeNotifier {
 
   Future<void> _saveSelections() async {
     final generation = _generation;
+    final profileId = _profileId;
     final group = _selectedGroupName;
     final groups = _groupsByName.keys.toList(growable: false);
     final selections = Map<String, String>.of(_selectedProxies);
@@ -269,13 +277,16 @@ class ProxiesProvider extends ChangeNotifier {
         final prefs = await _preferences();
         if (!_current(generation)) return;
         if (group != null &&
-            prefs.getString('selected_proxy_group') != group &&
-            !await prefs.setString('selected_proxy_group', group)) {
+            prefs.getString(ProfileSelections.groupKey(profileId)) != group &&
+            !await prefs.setString(
+              ProfileSelections.groupKey(profileId),
+              group,
+            )) {
           throw StateError('Could not save proxy group');
         }
         for (final name in groups) {
           if (!_current(generation)) return;
-          final key = 'selected_proxy_$name';
+          final key = ProfileSelections.key(profileId, name);
           final member = selections[name];
           if (prefs.getString(key) == member) continue;
           final saved = member == null

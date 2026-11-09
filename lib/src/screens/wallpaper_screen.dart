@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -85,7 +84,7 @@ class WallpaperScreen extends StatelessWidget {
                         title: Text(l10n?.wallpaper ?? 'Wallpaper'),
                         subtitle: Text(l10n?.wallpaperDesc ?? ''),
                         leading: _icon(context, Icons.wallpaper_outlined),
-                        trailing: Switch.adaptive(
+                        trailing: Switch(
                           value: wallpaper.settings.enabled,
                           onChanged: wallpaper.setEnabled,
                         ),
@@ -383,11 +382,14 @@ class _FramingPreviewState extends State<_FramingPreview> {
 
   Widget _picture(BuildContext context, WallpaperProvider wallpaper) {
     final alignment = Alignment(wallpaper.alignmentX, wallpaper.alignmentY);
-    Widget picture = Image.file(
-      File(wallpaper.imagePath!),
+    Widget picture = Image(
+      image: WallpaperBackdrop.imageProvider(
+        context,
+        wallpaper.imagePath!,
+        zoom: wallpaper.zoom,
+      ),
       fit: BoxFit.cover,
       alignment: alignment,
-      cacheWidth: WallpaperBackdrop.decodeWidth(context, zoom: wallpaper.zoom),
       filterQuality: FilterQuality.low,
       gaplessPlayback: true,
       errorBuilder: (context, error, stackTrace) => ColoredBox(
@@ -403,8 +405,6 @@ class _FramingPreviewState extends State<_FramingPreview> {
     }
     final blur = wallpaper.blur;
     if (blur > 0) {
-      // The same treatment the backdrop applies, so what is shown here is
-      // what the app will look like rather than an approximation.
       picture = ImageFiltered(
         imageFilter: ui.ImageFilter.blur(
           sigmaX: blur,

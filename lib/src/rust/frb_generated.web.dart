@@ -862,6 +862,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       cst_encode_u_64(raw.download),
       cst_encode_u_64(raw.uploadSpeed),
       cst_encode_u_64(raw.downloadSpeed),
+      cst_encode_u_64(raw.directUpload),
+      cst_encode_u_64(raw.directDownload),
+      cst_encode_u_64(raw.proxyUpload),
+      cst_encode_u_64(raw.proxyDownload),
     ].jsify()!;
   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:arcadiaplus/src/widgets/adaptive_button.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/providers/theme_provider.dart';
 
@@ -59,7 +60,7 @@ class ThemePicker extends StatelessWidget {
                       final selected = provider.selectedTheme == name;
                       return Semantics(
                         selected: selected,
-                        child: FilledButton.tonal(
+                        child: AdaptiveButton(
                           onPressed: () {
                             provider.setUseDynamicColors(false);
                             provider.setTheme(name);

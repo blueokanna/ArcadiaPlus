@@ -24,6 +24,10 @@ import 'package:arcadiaplus/src/rust/types.dart';
 
 // Default traffic stats when service is not running
 final _defaultTrafficStats = TrafficStats(
+  directUpload: BigInt.zero,
+  directDownload: BigInt.zero,
+  proxyUpload: BigInt.zero,
+  proxyDownload: BigInt.zero,
   upload: BigInt.zero,
   download: BigInt.zero,
   uploadSpeed: BigInt.zero,

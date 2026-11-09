@@ -20,10 +20,10 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.3.0 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
-- 配置转换采用显式降级：corduit 无法构建的协议节点会被丢弃、引用回落 `DIRECT`，corduit 没有对应类型的规则会被跳过——每次降级都通过 `onWarning` 上报，不静默处理。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.3.1 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- 运行配置使用严格校验：必要规则集缺失、规则类型不受支持或出口不存在时拒绝启动，不通过跳过规则改变实际分流。离线预览可展示转换警告。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
-- 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的一律是本地 `file` 规则集，刷新失败沿用上一次可用副本，规则集缺失时引用它的 `RULE-SET` 规则按 Clash 语义直接跳过并上报警告，不会拖垮整个配置。
+- 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的是本地 `file` 规则集。下载失败、空内容或存在不支持的条目时保留上一份完整缓存；必要规则集没有有效缓存时拒绝启动，不跳过规则改变分流。
 - GeoIP 数据库随安装包分发（`assets/Country.mmdb`），启动时解包到应用支持目录并注册给引擎；解包或注册失败会记录原因，此时 `GEOIP` 规则不会被匹配——不静默降级。
 - Android、Windows、Linux 共用 Rust TUN 数据包处理器，各平台独立管理设备生命周期。
 - Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/arcadiaplus.png` 统一生成。
@@ -42,17 +42,17 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 | `PROCESS-NAME` / `PROCESS-PATH` | 进程匹配 |
 | `NETWORK` | `tcp` / `udp` |
 | `RULE-SET` | 引用 `rule-providers`；引擎只读本地文件，下载、校验、缓存与刷新都在 Dart 侧完成 |
-| `GEOSITE` | 引擎不带 v2ray geosite 数据库；存在同名 provider 时按 provider 匹配，否则跳过并给出警告 |
+| `GEOSITE` | 按同名 provider 匹配；`cn`、`geolocation-!cn`、`category-ads-all`、`private` 可补齐对应的 Loyalsoldier 数据，其余类别需提供兼容规则集 |
 | `AND` / `OR` / `NOT` | 逻辑组合，支持括号嵌套，如 `AND,((DOMAIN-SUFFIX,a.com),(NETWORK,tcp)),PROXY` |
 | `MATCH` / `FINAL` | 兜底规则 |
 
-转换是**显式降级**：引擎没有对应类型的规则（`SCRIPT`、`PROCESS-PATH-REGEX`、`SUB-RULE`、`IP-SUFFIX` 等）会被跳过，并通过 `onWarning` 上报原因；`mrs` 格式或内容为二进制的规则集不会被半装载。跳过而不近似，是因为近似会把本该被规则保护的流量送出去。
+运行配置遇到不支持的规则（例如 `SCRIPT`、`PROCESS-PATH-REGEX`、`SUB-RULE`）会给出错误并停止加载；不支持的二进制规则集也不会被当作文本装载。更新下载失败时保留最近一次有效缓存，没有有效缓存的必要规则集必须先补齐。
 
 设置页的「规则」入口（`/rules`）显示引擎里的规则表与每条规则的**实时命中次数**、本次转换的全部警告，以及每个规则集的就绪状态、条目数与上次刷新时间。命中次数是这套界面存在的理由：一条从未命中、或命中了一切的规则，可以直接看出来。表是一页一页读的：Rust 侧保留快照、按窗口与搜索返回（顶部每 5 秒静默刷新一次命中数），界面只构建可见行——一份内联了 ACL 的订阅可能有几万条规则，整表一次性送进 UI isolate 再逐行建组件，正是这个诊断页把整个应用拖垮的原因。搜索框在 Rust 侧扫描全表，返回命中总数与前 500 条命中。
 
 ## 协议状态
 
-协议实现位于 corduit 0.3.0，本构建启用其全部 feature（`hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13`…）；本仓库负责把它们接进 Flutter，并对真实服务端的互操作保留验证清单（见下方结语）。
+当前构建使用 Cargo.lock 锁定的 crates.io Corduit 0.3.1，本构建启用 `hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13` 等功能；本仓库负责 Flutter 集成。CI 仅在清单显式声明本地 path 依赖时检出相邻源码仓库。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
@@ -80,6 +80,10 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 | HarmonyOS NEXT | 有 | 不适用 | `VpnExtensionAbility` 隧道 + 引擎数据面已实现 | 需要 HarmonyOS NEXT 真机验证（授权弹窗、隧道与引擎分流），未经真机不得宣称可用 |
 
 ## 路由模式
+
+全局模式使用代理页的 `GLOBAL` 选择组，选择按配置独立保存。订阅未定义该组时，应用用可用节点生成，不把排在首位的国内直连组当作全局出口；无可用节点时拒绝流量。订阅显式定义的 `GLOBAL` 保留其成员和选择，包括用户自行配置的 `DIRECT`。
+
+RecurseX 0.2.4 / courierust 1.1.1 的 DoH、DoH3 当前要求连接 IP 与证书 IP 身份一致，不支持独立的域名身份覆盖。默认使用支持 IP 证书的阿里 DoH 地址。已知公共 DNS 的旧写法转换为同一服务商的兼容加密端点，并记录转换警告；未知私有 DoH 配置会明确报错，需使用该服务商支持的 IP 端点或 DoT/DoQ，不能通过关闭证书校验绕过。
 
 `rule` / `global` / `direct` 的判定全部在引擎里完成：inbound、TUN 数据面与 Android VPN 都把连接交给同一个路由器，所以切换模式从不需要重建隧道。
 
@@ -176,7 +180,7 @@ flowchart TB
     %% Engine Layer
     %% =========================
     subgraph ENGINE["③ 核心引擎层"]
-        CORDUIT["corduit 0.3.0<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
+        CORDUIT["corduit 0.3.1<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
     end
 
     %% =========================
@@ -192,7 +196,7 @@ flowchart TB
     %% Optional DNS Resolver
     %% =========================
     subgraph OPTIONAL["⑤ 可选本地递归 DNS"]
-        RECURSE["recurse-x 0.2.3<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
+        RECURSE["recurse-x 0.2.4<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
     end
 
     %% Main call path
@@ -223,6 +227,10 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 - HarmonyOS NEXT：DevEco Studio 5.0.5+（或与 CI 相同的 command-line-tools）与 CPF-Flutter 的 Flutter OHOS SDK；HAP 同时由 GitHub Actions 的 `ohos` 作业构建，见 [ohos/README.md](ohos/README.md)
 
 ## 构建与检查
+
+将 `ArcadiaPlus` 和 `Corduit` 放在同一父目录下，`rust/Cargo.toml` 通过 `../../Corduit` 引用核心。CI 和发布任务也会检出 Corduit，优先使用版本对应的标签；没有标签时使用默认分支并校验版本。因此核心改动必须先推送到 Corduit 仓库，再触发依赖它的应用构建。本项目不维护 vendor 副本。
+
+首页四项流量指标始终横向排列，窄屏可横向滚动。「国内总流量」按直连出口统计，包含局域网和其他直连目的地，不是按 IP 国家归属计算；「代理总流量」按实际代理出口统计。两项都是本次核心运行期间的上传、下载有效载荷之和，包含已关闭的短连接和 UDP，不包含协议封装开销。
 
 ```bash
 flutter pub get
@@ -283,6 +291,4 @@ HarmonyOS NEXT 的 HAP 由 CI 的 `ohos` 与 [ohos/README.md](ohos/README.md) �
 - **必须保留署名通知。** 分发本软件或其任何部分时，必须随附 `LICENSE` 全文（或上述官方链接），以及其中的 `Required Notice: Copyright 2026 blueokanna and HyphenTeam (https://github.com/blueokanna/ArcadiaPlus)`（见 *Notices*）。
 - **无担保、无责任**（在法律允许范围内），并且末尾那段附加条款把同样的限制延伸到「他人用本软件（或其改动/衍生作品）从事违法行为」的情形（见 `LICENSE` 末尾 *Additional Term Adopted by the Licensor*）。
 
-本轮修复、依赖兼容说明及未验证范围见 [验证记录](docs/validation-2026-11.md)。
-
-Material 3 界面、节点状态管理、NextJson 0.1.5 适配和最新验证结果见 [修订记录](docs/ui-motion-2026-11.md)。
+本轮修复、依赖兼容说明及未验证范围见 [验证记录](docs/validation-2026-11.md)。Material 3 界面、节点状态管理、NextJson 0.1.5 适配和最新验证结果见 [修订记录](docs/ui-motion-2026-11.md)。

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:arcadiaplus/src/utils/release_version.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -108,7 +109,11 @@ class UpdateService {
 
   Future<AvailableUpdate?> checkForUpdate() async {
     final package = await PackageInfo.fromPlatform();
-    final currentVersion = _SemanticVersion.parse(package.version);
+    final currentVersion = ReleaseVersion.installed(
+      package.version,
+      package.buildNumber,
+      android: Platform.isAndroid,
+    );
     final releaseResponse = await _client
         .get(
           Uri.parse(_latestReleaseApi),
@@ -130,10 +135,10 @@ class UpdateService {
     if (release['draft'] == true || release['prerelease'] == true) return null;
 
     final tag = release['tag_name'] as String?;
-    if (tag == null || !RegExp(r'^v\d+\.\d+\.\d+$').hasMatch(tag)) {
+    if (tag == null || !RegExp(r'^v\d+\.\d+\.\d+(?:\+\d+)?$').hasMatch(tag)) {
       return null;
     }
-    final version = _SemanticVersion.parse(tag.substring(1));
+    final version = ReleaseVersion.parse(tag.substring(1));
     if (version.compareTo(currentVersion) <= 0) return null;
 
     final releaseDate = DateTime.parse(release['published_at'] as String)
@@ -153,6 +158,11 @@ class UpdateService {
     final manifestUri = Uri.parse(
       manifestReleaseAsset['browser_download_url'] as String,
     );
+    if (!_isReleaseAsset(manifestUri, tag)) {
+      throw const FormatException(
+        'Update manifest is not part of this release',
+      );
+    }
     final manifestResponse = await _client
         .get(manifestUri, headers: const {'User-Agent': 'ArcadiaPlus-Updater'})
         .timeout(const Duration(seconds: 15));
@@ -166,7 +176,8 @@ class UpdateService {
     if (manifest['schema'] != 1 || manifest['tag'] != tag) {
       throw const FormatException('Update manifest tag or schema mismatch');
     }
-    if (manifest['version'] != version.toString()) {
+    if (manifest['version'] != version.base ||
+        (manifest['build_number'] ?? 0) != version.build) {
       throw const FormatException('Update manifest version mismatch');
     }
 
@@ -195,6 +206,12 @@ class UpdateService {
     if (assetJson == null) return null;
 
     final name = assetJson['name'] as String;
+    if (name.isEmpty ||
+        name == '.' ||
+        name == '..' ||
+        RegExp(r'[<>:"/\\|?*\x00-\x1f]').hasMatch(name)) {
+      throw const FormatException('Unsafe update filename');
+    }
     final url = Uri.parse(assetJson['url'] as String);
     final checksum = (assetJson['sha256'] as String).toLowerCase();
     if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(checksum)) {
@@ -206,13 +223,14 @@ class UpdateService {
         .firstWhere(
           (asset) =>
               asset?['name'] == name &&
-              asset?['browser_download_url'] == url.toString(),
+              asset?['browser_download_url'] is String &&
+              _sameAsset(
+                Uri.parse(asset!['browser_download_url'] as String),
+                url,
+              ),
           orElse: () => null,
         );
-    if (matchingReleaseAsset == null ||
-        url.scheme != 'https' ||
-        url.host != 'github.com' ||
-        !url.path.startsWith('/$repositorySlug/releases/download/$tag/')) {
+    if (matchingReleaseAsset == null || !_isReleaseAsset(url, tag)) {
       throw const FormatException('Update asset is not part of this release');
     }
 
@@ -259,6 +277,26 @@ class UpdateService {
     if (await destination.exists()) await destination.delete();
     return partial.rename(destination.path);
   }
+
+  static bool _isReleaseAsset(Uri uri, String tag) =>
+      uri.scheme == 'https' &&
+      uri.host == 'github.com' &&
+      uri.port == 443 &&
+      uri.userInfo.isEmpty &&
+      !uri.hasQuery &&
+      !uri.hasFragment &&
+      uri.pathSegments.length == 6 &&
+      uri.pathSegments.take(5).join('/') ==
+          '$repositorySlug/releases/download/$tag';
+
+  static bool _sameAsset(Uri left, Uri right) =>
+      left.scheme == right.scheme &&
+      left.host == right.host &&
+      left.port == right.port &&
+      left.userInfo == right.userInfo &&
+      left.pathSegments.join('\u0000') == right.pathSegments.join('\u0000') &&
+      left.query == right.query &&
+      left.fragment == right.fragment;
 
   Future<bool> install(File file, AvailableUpdate update) async {
     if (!Platform.isAndroid) {
@@ -336,36 +374,4 @@ class UpdateService {
     );
     await prefs.setString('update.acceptedSha256', checksum);
   }
-}
-
-class _SemanticVersion implements Comparable<_SemanticVersion> {
-  const _SemanticVersion(this.major, this.minor, this.patch);
-
-  final int major;
-  final int minor;
-  final int patch;
-
-  factory _SemanticVersion.parse(String value) {
-    final match = RegExp(r'^(\d+)\.(\d+)\.(\d+)$').firstMatch(value);
-    if (match == null) {
-      throw FormatException('Invalid semantic version: $value');
-    }
-    return _SemanticVersion(
-      int.parse(match.group(1)!),
-      int.parse(match.group(2)!),
-      int.parse(match.group(3)!),
-    );
-  }
-
-  @override
-  int compareTo(_SemanticVersion other) {
-    final majorResult = major.compareTo(other.major);
-    if (majorResult != 0) return majorResult;
-    final minorResult = minor.compareTo(other.minor);
-    if (minorResult != 0) return minorResult;
-    return patch.compareTo(other.patch);
-  }
-
-  @override
-  String toString() => '$major.$minor.$patch';
 }

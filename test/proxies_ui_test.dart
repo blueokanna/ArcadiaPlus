@@ -111,7 +111,7 @@ proxy-groups:
           );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
-          expect(find.byType(ChoiceChip), findsNWidgets(2));
+          expect(find.byType(ChoiceChip), findsNWidgets(3));
           final semantics = tester.ensureSemantics();
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));

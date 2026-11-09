@@ -8,6 +8,7 @@ import 'package:arcadiaplus/src/services/dns_upstreams.dart';
 import 'package:arcadiaplus/src/services/system_dns_service.dart';
 import 'package:arcadiaplus/src/utils/navigation.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadiaplus/src/widgets/settings_choice_tile.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
 /// Display name for a `dns.enhanced_mode` value.
@@ -71,6 +72,11 @@ class DnsSettingsScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (dnsSettings.saveError != null)
+                _Notice(
+                  message:
+                      '${Localizations.localeOf(context).languageCode == 'zh' ? 'DNS 设置未保存，保留原设置' : 'DNS settings were not saved; previous settings retained'}: ${dnsSettings.saveError}',
+                ),
               _SectionHeader(
                 title: l10n?.basicSettings ?? 'Basic Settings',
                 icon: Icons.settings_outlined,
@@ -87,7 +93,7 @@ class DnsSettingsScreen extends StatelessWidget {
                                 'on this page',
                       ),
                       leading: _leadingIcon(context, Icons.dns_outlined),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: dnsSettings.overrideDns,
                         onChanged: dnsSettings.setOverrideDns,
                       ),
@@ -108,7 +114,7 @@ class DnsSettingsScreen extends StatelessWidget {
                             ? Theme.of(context).colorScheme.primary
                             : Theme.of(context).colorScheme.error,
                       ),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: dnsSettings.enable,
                         onChanged: dnsSettings.setEnable,
                       ),
@@ -156,7 +162,23 @@ class DnsSettingsScreen extends StatelessWidget {
                 elevation: 0,
                 child: Column(
                   children: [
-                    const _AppendSystemDnsTile(),
+                    SwitchListTile(
+                      title: Text(
+                        Localizations.localeOf(context).languageCode == 'zh'
+                            ? '加密 DNS 保护'
+                            : 'Encrypted DNS protection',
+                      ),
+                      subtitle: Text(
+                        Localizations.localeOf(context).languageCode == 'zh'
+                            ? '下次启动生效：仅使用证书校验的加密上游与启动解析，忽略明文 DNS 和本机根递归；失败不回退到运营商 DNS。常见国内域名默认使用阿里加密 DNS，显式域名策略优先。DNS 服务商仍可看到查询，直连目标 IP 仍可被网络观察。'
+                            : 'Applies on next start: certificate-verified encrypted DNS and bootstrap only, without plaintext or local root recursion fallback. Common domestic domains default to AliDNS; explicit domain policies take precedence. Resolvers still see queries and direct destination IPs remain observable.',
+                      ),
+                      secondary: const Icon(Icons.enhanced_encryption_outlined),
+                      value: dnsSettings.requireEncryptedDns,
+                      onChanged: dnsSettings.setRequireEncryptedDns,
+                    ),
+                    if (!dnsSettings.requireEncryptedDns)
+                      const _AppendSystemDnsTile(),
                     _divider(),
                     AdaptiveListTile(
                       title: Text(
@@ -168,14 +190,16 @@ class DnsSettingsScreen extends StatelessWidget {
                                 'instead of forwarding to upstream servers',
                       ),
                       leading: _leadingIcon(context, Icons.hub_outlined),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: dnsSettings.useRecursiveResolver,
-                        onChanged: dnsSettings.setUseRecursiveResolver,
+                        onChanged: dnsSettings.requireEncryptedDns
+                            ? null
+                            : dnsSettings.setUseRecursiveResolver,
                       ),
                     ),
                     const DnsStatusCard(),
                     _divider(),
-                    AdaptiveListTile(
+                    SettingsChoiceTile(
                       title: Text(l10n?.dnsMode ?? 'DNS Mode'),
                       subtitle: Text(
                         _modeDescription(dnsSettings.dnsMode, l10n),
@@ -301,7 +325,7 @@ class _AppendSystemDnsTile extends StatelessWidget {
           Icons.add_circle_outline,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
-        trailing: Switch.adaptive(value: false, onChanged: null),
+        trailing: Switch(value: false, onChanged: null),
         enabled: false,
       );
     }
@@ -316,7 +340,7 @@ class _AppendSystemDnsTile extends StatelessWidget {
           Icons.add_circle_outline,
           color: Theme.of(context).colorScheme.primary,
         ),
-        trailing: Switch.adaptive(
+        trailing: Switch(
           value: generalSettings.appendSystemDns,
           onChanged: (value) {
             generalSettings.setAppendSystemDns(value);
@@ -349,17 +373,16 @@ class _ModePicker extends StatelessWidget {
         color: colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: DropdownButton<String>(
-        value: value,
-        underline: const SizedBox.shrink(),
-        isDense: true,
-        borderRadius: BorderRadius.circular(12),
-        dropdownColor: colorScheme.surfaceContainerHigh,
-        items: [
+      child: DropdownMenu<String>(
+        initialSelection: value,
+        width: 170,
+        requestFocusOnTap: false,
+
+        dropdownMenuEntries: [
           for (final mode in DnsSettingsProvider.modes)
-            DropdownMenuItem(value: mode, child: Text(_modeLabel(mode))),
+            DropdownMenuEntry(value: mode, label: _modeLabel(mode)),
         ],
-        onChanged: (next) {
+        onSelected: (next) {
           if (next != null) onChanged(next);
         },
       ),
@@ -383,11 +406,13 @@ class _SectionHeader extends StatelessWidget {
         children: [
           Icon(icon, size: 20, color: colorScheme.primary),
           const SizedBox(width: 8),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: colorScheme.primary,
+          Expanded(
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: colorScheme.primary,
+              ),
             ),
           ),
         ],

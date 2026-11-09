@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:arcadiaplus/src/widgets/material_press.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
 class AdaptiveListTile extends StatelessWidget {
@@ -105,54 +106,58 @@ class AdaptiveListTile extends StatelessWidget {
     final effectiveHoverColor =
         hoverColor ?? colorScheme.onSurface.withValues(alpha: 0.04);
 
-    return ListTile(
-      leading: leading,
-      title: title,
-      subtitle: subtitle,
-      trailing: trailing,
-      isThreeLine: isThreeLine,
-      dense: dense,
-      visualDensity: isAdaptive == true ? adaptiveDensity : visualDensity,
-      shape:
-          shape ??
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-              PlatformUtils.isDesktop ? 8 : 12,
+    return MaterialPress(
+      enabled: enabled && (onTap != null || onLongPress != null),
+      builder: (states) => ListTile(
+        statesController: states,
+        leading: leading,
+        title: title,
+        subtitle: subtitle,
+        trailing: trailing,
+        isThreeLine: isThreeLine,
+        dense: dense,
+        visualDensity: isAdaptive == true ? adaptiveDensity : visualDensity,
+        shape:
+            shape ??
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(
+                PlatformUtils.isDesktop ? 8 : 12,
+              ),
             ),
-          ),
-      style: style,
-      selectedColor: selectedColor ?? colorScheme.primary,
-      iconColor: iconColor ?? colorScheme.onSurfaceVariant,
-      textColor: textColor ?? colorScheme.onSurface,
-      titleTextStyle: titleTextStyle,
-      subtitleTextStyle: subtitleTextStyle?.copyWith(
-        color: colorScheme.onSurfaceVariant,
+        style: style,
+        selectedColor: selectedColor ?? colorScheme.primary,
+        iconColor: iconColor ?? colorScheme.onSurfaceVariant,
+        textColor: textColor ?? colorScheme.onSurface,
+        titleTextStyle: titleTextStyle,
+        subtitleTextStyle: subtitleTextStyle?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+        ),
+        leadingAndTrailingTextStyle: leadingAndTrailingTextStyle,
+        contentPadding: isAdaptive == true ? adaptivePadding : contentPadding,
+        enabled: enabled,
+        onTap: onTap,
+        onLongPress: PlatformUtils.shouldShowContextMenu() ? onLongPress : null,
+        mouseCursor:
+            mouseCursor ??
+            (PlatformUtils.isDesktop
+                ? SystemMouseCursors.click
+                : MouseCursor.defer),
+        selected: selected,
+        focusColor: focusColor ?? colorScheme.primary.withValues(alpha: 0.12),
+        hoverColor: effectiveHoverColor,
+        splashColor: splashColor ?? colorScheme.primary.withValues(alpha: 0.08),
+        focusNode: focusNode,
+        autofocus: autofocus,
+        tileColor: effectiveTileColor,
+        selectedTileColor: effectiveSelectedTileColor,
+        enableFeedback: enableFeedback ?? PlatformUtils.isMobile,
+        horizontalTitleGap:
+            horizontalTitleGap ?? (PlatformUtils.isDesktop ? 16 : 12),
+        minVerticalPadding: isAdaptive == true
+            ? adaptiveMinVerticalPadding
+            : minVerticalPadding,
+        minLeadingWidth: minLeadingWidth ?? (PlatformUtils.isDesktop ? 48 : 40),
       ),
-      leadingAndTrailingTextStyle: leadingAndTrailingTextStyle,
-      contentPadding: isAdaptive == true ? adaptivePadding : contentPadding,
-      enabled: enabled,
-      onTap: onTap,
-      onLongPress: PlatformUtils.shouldShowContextMenu() ? onLongPress : null,
-      mouseCursor:
-          mouseCursor ??
-          (PlatformUtils.isDesktop
-              ? SystemMouseCursors.click
-              : MouseCursor.defer),
-      selected: selected,
-      focusColor: focusColor ?? colorScheme.primary.withValues(alpha: 0.12),
-      hoverColor: effectiveHoverColor,
-      splashColor: splashColor ?? colorScheme.primary.withValues(alpha: 0.08),
-      focusNode: focusNode,
-      autofocus: autofocus,
-      tileColor: effectiveTileColor,
-      selectedTileColor: effectiveSelectedTileColor,
-      enableFeedback: enableFeedback ?? PlatformUtils.isMobile,
-      horizontalTitleGap:
-          horizontalTitleGap ?? (PlatformUtils.isDesktop ? 16 : 12),
-      minVerticalPadding: isAdaptive == true
-          ? adaptiveMinVerticalPadding
-          : minVerticalPadding,
-      minLeadingWidth: minLeadingWidth ?? (PlatformUtils.isDesktop ? 48 : 40),
     );
   }
 }

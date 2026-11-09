@@ -9,6 +9,7 @@ import 'package:arcadiaplus/src/providers/update_provider.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
 import 'package:arcadiaplus/src/services/update_service.dart';
 import 'package:arcadiaplus/src/utils/navigation.dart';
+import 'package:arcadiaplus/src/utils/release_version.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/utils/update_error_messages.dart';
 import 'package:arcadiaplus/src/widgets/license_viewer.dart';
@@ -275,8 +276,11 @@ class _AboutScreenState extends State<AboutScreen> {
     final package = _packageInfo;
     final version = package == null
         ? '—'
-        : '${package.version}'
-              '${package.buildNumber.isEmpty ? '' : ' (build ${package.buildNumber})'}';
+        : ReleaseVersion.installed(
+            package.version,
+            package.buildNumber,
+            android: Platform.isAndroid,
+          ).toString();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -400,7 +404,11 @@ class _AboutScreenState extends State<AboutScreen> {
         label: l10n?.version ?? 'Version',
         value: package == null
             ? '—'
-            : '${package.version}+${package.buildNumber}',
+            : ReleaseVersion.installed(
+                package.version,
+                package.buildNumber,
+                android: Platform.isAndroid,
+              ).toString(),
       ),
       (
         icon: Icons.apps_outlined,

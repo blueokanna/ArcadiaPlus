@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.8+2
+
+- Use the published Corduit 0.3.1 release; skip the sibling checkout in CI when Cargo resolves the registry package.
+- Share interruptible spring feedback across Material buttons and settings tiles. Allocate press controllers on interaction, stop hidden-route motion, and preserve connection-row state across reordering. Traffic counters no longer rebuild the full connection list.
+- Bound retained mobile image-cache data to 32 MiB and wallpaper decoding to 2048 pixels on both axes. Share preview/backdrop decode keys and parse canonical quoted rule sets without retaining a full YAML tree. These bounds do not cap total process memory; device RSS/PSS still requires measurement.
+- Align the bridge and engine on RecurseX 0.2.4 and zip 9.5.0. Supply system trust roots for encrypted DNS, including bootstrap and fallback resolvers; prefer the Android Conscrypt APEX certificate store when available.
+- Migrate untouched DNS defaults to compatible IP-authenticated DoH endpoints. Report same-operator compatibility conversions for known public resolvers and refuse unsupported private DoH identities instead of disabling certificate verification.
+- Give global mode its own persisted `GLOBAL` selector rather than selecting the first subscription group. Preserve explicitly declared `GLOBAL` groups; refuse implicit direct fallback when no proxy is available. Reject empty runtime groups and partial rule-set updates, retaining the previous complete cache.
+- Count direct and proxy payload bytes at the actual outbound, including short TCP connections and UDP; keep all four dashboard traffic cards in one horizontal row.
+- Prioritise encrypted domestic DNS endpoints for the untouched default list and common domestic domains. Preserve explicit domain policies and custom resolver lists. Windows network checks cover rule-selected direct HTTPS; they do not establish Android application compatibility.
+- Separate local SOCKS5 ingress from routing targets in connection details. An ingress protocol is no longer presented as a matched routing rule.
+- Isolate proxy selections by profile and restore selectors before starting listeners. Materialise supported GEOSITE categories from Loyalsoldier rule sets; refuse incomplete routing data instead of silently skipping required rules. Refresh independent providers with bounded concurrency and retain the last valid cache on download failure.
+- Enable encrypted DNS protection by default, including encrypted bootstrap and domain policies. Exclude plaintext fallbacks, system DNS and local root recursion while protection is enabled. This protects the core's DNS transport, not destination IPs or queries from the chosen DNS provider.
+- Compare Flutter build revisions as well as semantic versions, decode Android version codes for display, and publish revision-specific release tags and update manifests.
+- Keep rule and global modes on mobile, retain desktop direct mode, and replace adaptive switches and legacy dropdowns with Material 3 controls. Keep connection animation state attached to connection IDs.
+
 ## 1.0.8
 
 - Upgrade Corduit to 0.3.0 and both Rust crates to edition 2024, with Rust 1.88 as the tested minimum. Dependency resolution respects that minimum; CI checks Windows, Linux and Android separately.

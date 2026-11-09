@@ -246,9 +246,9 @@ dependencies = [
 
 [[package]]
 name = "corduit"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "37f8bb5bafb5b4d716843d45cbd06b6c7e61be1a64e50206e71f247daa062d79"
+checksum = "dbfff6dc9e76333d5757fab891621c3cbf2767aa2b569b325a087f7f2f7082db"
 dependencies = [
  "bitflags 2.13.2",
  "bytes",
@@ -1146,9 +1146,9 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 
 [[package]]
 name = "recurse-x"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c77a3949b1647447b698fa899efec77f729bb312b420af4a8e82731fcdb64ac3"
+checksum = "86f532d49bc2f4b5fb6cb6c7dd567d18bd334a5fe5c5faf47e291dd4e3142e82"
 dependencies = [
  "courierust",
  "nextjson",
@@ -2136,9 +2136,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "9.4.2"
+version = "9.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df3845f734baabdd02de353a20580e30ceccd03897def44a4eb8e9654992e294"
+checksum = "0700e6c427aff64acdbf02e85fbfd946c2ee12319d1af013092f3a2178914ff8"
 dependencies = [
  "constant_time_eq",
  "crc32fast",

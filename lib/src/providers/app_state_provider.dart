@@ -13,6 +13,8 @@ import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
 import 'package:arcadiaplus/src/services/native_core_service.dart';
 import 'package:arcadiaplus/src/services/rule_provider_service.dart';
 import 'package:arcadiaplus/src/services/system_dns_service.dart';
+import 'package:arcadiaplus/src/services/profile_selections.dart';
+import 'package:arcadiaplus/src/services/proxy_engine_service.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
@@ -304,8 +306,6 @@ class AppStateProvider extends ChangeNotifier {
       final generalSettings = await StorageService.instance
           .getGeneralSettings();
 
-      // Bringing the resolver up is only worth anything when the engine that
-      // queries it is about to run.
       if (startResolver && !PlatformUtils.isOHOS) {
         await _ensureRecursiveDns();
       }
@@ -318,6 +318,11 @@ class AppStateProvider extends ChangeNotifier {
 
       debugPrint('Calling initializeCorduit...');
       await initializeCorduit(configJson: jsonConfig);
+      await ProfileSelections.restore(
+        activeProfileId,
+        jsonConfig,
+        const NativeProxyEngine(),
+      );
       _activeProfileId = activeProfileId;
       _appliedConfigJson = jsonConfig;
       _ruleSetReport = report;
@@ -329,6 +334,7 @@ class AppStateProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e, stackTrace) {
       debugPrint('Failed to initialize from active profile: $e');
+      _configWarnings = List.unmodifiable([..._configWarnings, e.toString()]);
       debugPrint('Stack trace: $stackTrace');
       _isInitialized = false;
     } finally {
@@ -345,8 +351,12 @@ class AppStateProvider extends ChangeNotifier {
     bool forceRuleSets = false,
   }) async {
     final warnings = <String>[];
+    if (PlatformUtils.isMobile && generalSettings.mode == 'direct') {
+      generalSettings = generalSettings.copyWith(mode: 'rule');
+    }
     final dnsSettings = await StorageService.instance.getDnsSettings();
-    final systemDnsServers = generalSettings.appendSystemDns
+    final systemDnsServers =
+        generalSettings.appendSystemDns && !dnsSettings.requireEncryptedDns
         ? await SystemDnsService.instance.read()
         : const <String>[];
     final report = await RuleProviderService.instance.prepare(
@@ -426,11 +436,16 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _applyReload(String config) async {
     if (!PlatformUtils.isOHOS) {
       await reloadCorduit(configJson: config);
+      if (_activeProfileId != null) {
+        await ProfileSelections.restore(
+          _activeProfileId!,
+          config,
+          const NativeProxyEngine(),
+        );
+      }
       _appliedConfigJson = config;
       return;
     }
-    // The VPN extension owns the listeners. Until it supports reload IPC,
-    // replace that instance rather than reloading the dormant UI mirror.
     final platform = PlatformProxyService.instance;
     final previous = _appliedConfigJson;
     if (!await platform.disableTunMode()) {
@@ -453,7 +468,8 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _ensureRecursiveDns() async {
     try {
       final dnsSettings = await StorageService.instance.getDnsSettings();
-      if (!dnsSettings.useRecursiveResolver) {
+      if (!dnsSettings.useRecursiveResolver ||
+          dnsSettings.requireEncryptedDns) {
         await _stopRecursiveDns();
         return;
       }
@@ -520,6 +536,13 @@ class AppStateProvider extends ChangeNotifier {
       (mode) => mode.name == generalSettings.mode,
       orElse: () => ProxyMode.rule,
     );
+    final restoredMode = RoutingModes.restore(_proxyMode);
+    if (restoredMode != _proxyMode) {
+      _proxyMode = restoredMode;
+      await StorageService.instance.saveGeneralSettings(
+        generalSettings.copyWith(mode: restoredMode.name),
+      );
+    }
     if (NativeCoreService.instance.isReady) {
       await PlatformProxyService.instance.configureProxyMode(_proxyMode);
     }
@@ -552,6 +575,7 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<bool> _setProxyMode(ProxyMode mode) async {
     await _initialization;
+    if (!RoutingModes.available().contains(mode)) return false;
     if (_proxyMode == mode) return true;
 
     final previousMode = _proxyMode;
@@ -758,7 +782,7 @@ class AppStateProvider extends ChangeNotifier {
       _isInitialized = false;
       _proxyStatus = null;
       _trafficStats = null;
-      _activeConnections.clear();
+      _activeConnections = const [];
       _totalConnections = BigInt.zero;
       _activeConnectionCount = BigInt.zero;
       _totalUploadBytes = BigInt.zero;
@@ -779,7 +803,7 @@ class AppStateProvider extends ChangeNotifier {
       _isInitialized = false;
       _currentUploadSpeed = BigInt.zero;
       _currentDownloadSpeed = BigInt.zero;
-      _activeConnections.clear();
+      _activeConnections = const [];
       _totalConnections = BigInt.zero;
       _activeConnectionCount = BigInt.zero;
     } finally {
@@ -880,7 +904,6 @@ class AppStateProvider extends ChangeNotifier {
       return;
     }
 
-    // Prevent concurrent refresh calls which can cause connection count issues
     if (_isRefreshing) {
       return;
     }
@@ -897,9 +920,6 @@ class AppStateProvider extends ChangeNotifier {
           _proxyStatus = status;
           changed = true;
         }
-
-        // Only update isServiceRunning from proxyStatus if we got a valid
-        // response and the service was not just started (to avoid races).
         if (_proxyStatus != null) {
           if (_proxyStatus!.running) {
             if (!_isServiceRunning) {
@@ -908,8 +928,6 @@ class AppStateProvider extends ChangeNotifier {
               _syncTimers();
             }
           } else if (_isServiceRunning && !_isLoading) {
-            // The proxy reports not running but we think it is: either it was
-            // stopped from outside or it died. Stop the poll and say so.
             debugPrint(
               'WARNING: Proxy reports not running, but _isServiceRunning is true',
             );
@@ -969,11 +987,6 @@ class AppStateProvider extends ChangeNotifier {
   bool _isRefreshingConnections = false;
 
   /// Re-read the connection list and the lifetime counters that head it.
-  ///
-  /// Driven by the connections screen while it is on top. A full connection
-  /// list is the most expensive thing the bridge can be asked for, and both
-  /// halves of the answer only exist to fill a screen nobody else can see, so
-  /// neither belongs on a tick that runs everywhere.
   Future<void> refreshConnections() async {
     if (!NativeCoreService.instance.isReady || !_isServiceRunning) return;
     if (_isRefreshingConnections) return;
@@ -983,11 +996,10 @@ class AppStateProvider extends ChangeNotifier {
 
       final connections = await getActiveConnections();
       if (!listEquals(connections, _activeConnections)) {
-        _activeConnections = connections;
+        _activeConnections = List.unmodifiable(connections);
         changed = true;
       }
 
-      // (total_count, total_upload, total_download, active_count)
       final stats = await getConnectionStats();
       if (stats.$1 != _totalConnections) {
         _totalConnections = stats.$1;
@@ -1086,13 +1098,11 @@ class AppStateProvider extends ChangeNotifier {
 
   Future<void> closeAllActiveConnections() async {
     if (!NativeCoreService.instance.isReady) return;
-    // Use the new Rust API to close all connections at once
     try {
       await closeAllConnections();
       await _refreshStatus();
     } catch (e) {
       debugPrint('Failed to close all connections: $e');
-      // Fallback to closing one by one
       for (final connection in _activeConnections) {
         try {
           await closeActiveConnectionById(connection.id);
@@ -1184,6 +1194,7 @@ class AppStateProvider extends ChangeNotifier {
     recursiveDnsAddress: input.$4,
     systemDnsServers: input.$5,
     ruleProviderPaths: input.$6,
+    requireCompleteRules: true,
     onWarning: warnings.add,
   );
   return (json, warnings);

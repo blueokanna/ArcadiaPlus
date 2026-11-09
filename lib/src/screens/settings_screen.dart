@@ -9,6 +9,7 @@ import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
 import 'package:arcadiaplus/src/providers/update_provider.dart';
 import 'package:arcadiaplus/src/providers/wallpaper_provider.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadiaplus/src/widgets/settings_choice_tile.dart';
 import 'package:arcadiaplus/src/widgets/license_viewer.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
@@ -74,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   color: colorScheme.surfaceContainerLow,
                   child: Column(
                     children: [
-                      AdaptiveListTile(
+                      SettingsChoiceTile(
                         title: Text(l10n?.themeMode ?? 'Theme Mode'),
                         subtitle: Text(
                           _getThemeModeText(appState.themeMode, l10n),
@@ -96,27 +97,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             color: colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: DropdownButton<ThemeMode>(
-                            value: appState.themeMode,
-                            underline: const SizedBox.shrink(),
-                            isDense: true,
-                            borderRadius: BorderRadius.circular(12),
-                            dropdownColor: colorScheme.surfaceContainerHigh,
-                            items: [
-                              DropdownMenuItem(
+                          child: DropdownMenu<ThemeMode>(
+                            initialSelection: appState.themeMode,
+                            width: 170,
+                            requestFocusOnTap: false,
+
+                            dropdownMenuEntries: [
+                              DropdownMenuEntry(
                                 value: ThemeMode.system,
-                                child: Text(l10n?.system ?? 'Follow System'),
+                                label: l10n?.system ?? 'Follow System',
                               ),
-                              DropdownMenuItem(
+                              DropdownMenuEntry(
                                 value: ThemeMode.light,
-                                child: Text(l10n?.light ?? 'Light'),
+                                label: l10n?.light ?? 'Light',
                               ),
-                              DropdownMenuItem(
+                              DropdownMenuEntry(
                                 value: ThemeMode.dark,
-                                child: Text(l10n?.dark ?? 'Dark'),
+                                label: l10n?.dark ?? 'Dark',
                               ),
                             ],
-                            onChanged: (value) {
+                            onSelected: (value) {
                               if (value != null) appState.setThemeMode(value);
                             },
                           ),
@@ -207,7 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           Icons.color_lens_outlined,
                           color: colorScheme.primary,
                         ),
-                        trailing: Switch.adaptive(
+                        trailing: Switch(
                           value: themeProvider.useDynamicColors,
                           onChanged:
                               themeProvider.dynamicColorAvailable == false
@@ -253,7 +253,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               Icons.vibration_outlined,
                               color: colorScheme.primary,
                             ),
-                            trailing: Switch.adaptive(
+                            trailing: Switch(
                               value: generalSettings.hapticFeedbackEnabled,
                               onChanged: (value) {
                                 generalSettings.setHapticFeedbackEnabled(value);
@@ -404,7 +404,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Icons.settings_system_daydream_outlined,
                             color: colorScheme.primary,
                           ),
-                          trailing: Switch.adaptive(
+                          trailing: Switch(
                             value: appState.autoSystemProxy,
                             onChanged: (value) =>
                                 appState.setAutoSystemProxy(value),

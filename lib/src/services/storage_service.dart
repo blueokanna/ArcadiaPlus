@@ -39,12 +39,21 @@ class DnsSettings {
 
   /// The upstreams a fresh install starts with.
   ///
-  /// Two public DoH resolvers that are reachable almost everywhere, plus the
-  /// two large Chinese operators so a user behind a network that drops the
-  /// first pair still resolves. Four is not a statement about how many are
-  /// ideal — it is one working entry per failure mode this app has actually
-  /// seen, and the editor offers more in one tap.
+  /// Encrypted literal endpoints avoid hostname bootstrap delays. Domestic
+  /// resolvers lead so direct traffic receives nearby CDN answers.
   static const List<String> defaultNameservers = [
+    'https://223.5.5.5/dns-query',
+    'https://223.6.6.6/dns-query',
+    'tls://dot.pub',
+  ];
+
+  static const _revisionThreeNameservers = [
+    'https://223.5.5.5/dns-query#dns.alidns.com',
+    'https://223.6.6.6/dns-query#dns.alidns.com',
+    'https://doh.pub/dns-query',
+  ];
+
+  static const _revisionTwoNameservers = [
     'https://dns.cloudflare.com/dns-query',
     'https://dns.google/dns-query',
     'https://doh.pub/dns-query',
@@ -60,7 +69,7 @@ class DnsSettings {
 
   /// Bumped when [defaultNameservers] grows. Records on disk carry the value
   /// they were written with, so the migration below runs once per install.
-  static const int nameserverDefaultsRevision = 2;
+  static const int nameserverDefaultsRevision = 4;
 
   /// The revision this record was written with.
   final int nameserversRevision;
@@ -69,6 +78,7 @@ class DnsSettings {
   final bool overrideDns;
   final String listen;
   final bool useRecursiveResolver;
+  final bool requireEncryptedDns;
   final String dnsMode;
   final List<String> nameservers;
   final List<String> fallback;
@@ -88,6 +98,7 @@ class DnsSettings {
     this.overrideDns = false,
     this.listen = '127.0.0.1:53',
     this.useRecursiveResolver = false,
+    this.requireEncryptedDns = true,
     this.dnsMode = defaultMode,
     this.nameservers = defaultNameservers,
     this.fallback = const [],
@@ -103,6 +114,7 @@ class DnsSettings {
     'overrideDns': overrideDns,
     'listen': listen,
     'useRecursiveResolver': useRecursiveResolver,
+    'requireEncryptedDns': requireEncryptedDns,
     'dnsMode': dnsMode,
     'nameservers': nameservers,
     'fallback': fallback,
@@ -115,6 +127,7 @@ class DnsSettings {
     overrideDns: json['overrideDns'] as bool? ?? false,
     listen: json['listen'] as String? ?? '127.0.0.1:53',
     useRecursiveResolver: json['useRecursiveResolver'] as bool? ?? false,
+    requireEncryptedDns: json['requireEncryptedDns'] as bool? ?? true,
     dnsMode: normaliseMode(json['dnsMode']),
     nameservers: (json['nameservers'] as List?)?.cast<String>() ?? const [],
     fallback: (json['fallback'] as List?)?.cast<String>() ?? const [],
@@ -143,8 +156,15 @@ class DnsSettings {
     if (nameserversRevision >= nameserverDefaultsRevision) return this;
 
     final untouched =
-        nameservers.length == _legacyDefaultNameservers.length &&
-        nameservers.toSet().containsAll(_legacyDefaultNameservers);
+        [
+          _legacyDefaultNameservers,
+          _revisionTwoNameservers,
+          _revisionThreeNameservers,
+        ].any(
+          (previous) =>
+              nameservers.length == previous.length &&
+              nameservers.toSet().containsAll(previous),
+        );
 
     return copyWith(
       nameservers: untouched ? defaultNameservers : nameservers,
@@ -157,6 +177,7 @@ class DnsSettings {
     bool? overrideDns,
     String? listen,
     bool? useRecursiveResolver,
+    bool? requireEncryptedDns,
     String? dnsMode,
     List<String>? nameservers,
     List<String>? fallback,
@@ -168,6 +189,7 @@ class DnsSettings {
       overrideDns: overrideDns ?? this.overrideDns,
       listen: listen ?? this.listen,
       useRecursiveResolver: useRecursiveResolver ?? this.useRecursiveResolver,
+      requireEncryptedDns: requireEncryptedDns ?? this.requireEncryptedDns,
       dnsMode: dnsMode ?? this.dnsMode,
       nameservers: nameservers ?? this.nameservers,
       fallback: fallback ?? this.fallback,
@@ -798,7 +820,10 @@ class StorageService {
   }
 
   Future<void> saveDnsSettings(DnsSettings settings) async {
-    await _prefs?.setString('dnsSettings', jsonEncode(settings.toJson()));
+    final prefs = _prefs ??= await SharedPreferences.getInstance();
+    if (!await prefs.setString('dnsSettings', jsonEncode(settings.toJson()))) {
+      throw StateError('DNS settings could not be saved');
+    }
   }
 
   // ==================== General Settings ====================

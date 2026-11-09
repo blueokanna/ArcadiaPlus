@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
+import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
 
 /// Owns the DNS settings that the engine can actually carry.
 class DnsSettingsProvider extends ChangeNotifier {
@@ -12,22 +13,49 @@ class DnsSettingsProvider extends ChangeNotifier {
 
   DnsSettings _settings = DnsSettings();
   bool _isLoading = false;
+  bool _disposed = false;
+  String? _saveError;
+  final _writes = SerialTaskQueue();
+  late final Future<void> _loaded;
+  final Future<DnsSettings> Function() _read;
+  final Future<void> Function(DnsSettings) _write;
 
   DnsSettings get settings => _settings;
   bool get isLoading => _isLoading;
+  String? get saveError => _saveError;
 
   // Convenience getters
   bool get enable => _settings.enable;
   bool get overrideDns => _settings.overrideDns;
   String get listen => _settings.listen;
-  bool get useRecursiveResolver => _settings.useRecursiveResolver;
+  bool get useRecursiveResolver =>
+      _settings.useRecursiveResolver && !_settings.requireEncryptedDns;
+  bool get requireEncryptedDns => _settings.requireEncryptedDns;
+
+  Future<void> setRequireEncryptedDns(bool value) =>
+      _update((s) => s.copyWith(requireEncryptedDns: value));
   String get dnsMode => _settings.dnsMode;
   List<String> get nameservers => _settings.nameservers;
   List<String> get fallback => _settings.fallback;
   List<String> get bootstrap => _settings.bootstrap;
 
-  DnsSettingsProvider() {
-    _loadSettings();
+  DnsSettingsProvider({
+    Future<DnsSettings> Function()? read,
+    Future<void> Function(DnsSettings)? write,
+  }) : _read = read ?? StorageService.instance.getDnsSettings,
+       _write = write ?? StorageService.instance.saveDnsSettings {
+    _loaded = _loadSettings();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   Future<void> _loadSettings() async {
@@ -35,20 +63,12 @@ class DnsSettingsProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _settings = await StorageService.instance.getDnsSettings();
+      _settings = await _read();
     } catch (e) {
       debugPrint('Failed to load DNS settings: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
-    }
-  }
-
-  Future<void> _saveSettings() async {
-    try {
-      await StorageService.instance.saveDnsSettings(_settings);
-    } catch (e) {
-      debugPrint('Failed to save DNS settings: $e');
     }
   }
 
@@ -92,22 +112,15 @@ class DnsSettingsProvider extends ChangeNotifier {
   /// single notification cover a whole batch — and the list is only replaced
   /// when something was actually missing.
   Future<void> addNameservers(Iterable<String> servers) async {
-    final additions = <String>[];
-    for (final server in servers) {
-      final trimmed = server.trim();
-      if (trimmed.isEmpty) continue;
-      if (_settings.nameservers.contains(trimmed)) continue;
-      if (additions.contains(trimmed)) continue;
-      additions.add(trimmed);
-    }
-    if (additions.isEmpty) return;
-    await setNameservers([..._settings.nameservers, ...additions]);
+    final additions = servers.toList(growable: false);
+    await _update(
+      (s) => s.copyWith(nameservers: _merge(s.nameservers, additions)),
+    );
   }
 
   Future<void> removeNameserver(String server) async {
-    if (!_settings.nameservers.contains(server)) return;
-    await setNameservers(
-      _settings.nameservers.where((entry) => entry != server).toList(),
+    await _update(
+      (s) => s.copyWith(nameservers: _without(s.nameservers, server)),
     );
   }
 
@@ -121,23 +134,12 @@ class DnsSettingsProvider extends ChangeNotifier {
   /// in one write and one notification, for the same reason as
   /// [addNameservers].
   Future<void> addFallbacks(Iterable<String> servers) async {
-    final additions = <String>[];
-    for (final server in servers) {
-      final trimmed = server.trim();
-      if (trimmed.isEmpty) continue;
-      if (_settings.fallback.contains(trimmed)) continue;
-      if (additions.contains(trimmed)) continue;
-      additions.add(trimmed);
-    }
-    if (additions.isEmpty) return;
-    await setFallback([..._settings.fallback, ...additions]);
+    final additions = servers.toList(growable: false);
+    await _update((s) => s.copyWith(fallback: _merge(s.fallback, additions)));
   }
 
   Future<void> removeFallback(String server) async {
-    if (!_settings.fallback.contains(server)) return;
-    await setFallback(
-      _settings.fallback.where((entry) => entry != server).toList(),
-    );
+    await _update((s) => s.copyWith(fallback: _without(s.fallback, server)));
   }
 
   Future<void> setBootstrap(List<String> value) async {
@@ -146,24 +148,24 @@ class DnsSettingsProvider extends ChangeNotifier {
 
   /// Adds every entry of [servers] that is not already in the bootstrap list.
   Future<void> addBootstrap(Iterable<String> servers) async {
-    final additions = <String>[];
-    for (final server in servers) {
-      final trimmed = server.trim();
-      if (trimmed.isEmpty) continue;
-      if (_settings.bootstrap.contains(trimmed)) continue;
-      if (additions.contains(trimmed)) continue;
-      additions.add(trimmed);
-    }
-    if (additions.isEmpty) return;
-    await setBootstrap([..._settings.bootstrap, ...additions]);
+    final additions = servers.toList(growable: false);
+    await _update((s) => s.copyWith(bootstrap: _merge(s.bootstrap, additions)));
   }
 
   Future<void> removeBootstrap(String server) async {
-    if (!_settings.bootstrap.contains(server)) return;
-    await setBootstrap(
-      _settings.bootstrap.where((entry) => entry != server).toList(),
-    );
+    await _update((s) => s.copyWith(bootstrap: _without(s.bootstrap, server)));
   }
+
+  static List<String> _merge(
+    List<String> current,
+    Iterable<String> additions,
+  ) => List.unmodifiable({
+    ...current,
+    ...additions.map((s) => s.trim()).where((s) => s.isNotEmpty),
+  });
+
+  static List<String> _without(List<String> current, String server) =>
+      List.unmodifiable(current.where((entry) => entry != server));
 
   /// Applies [change] and persists it, but only when it produces a different
   /// record.
@@ -171,13 +173,20 @@ class DnsSettingsProvider extends ChangeNotifier {
   /// A provider that notifies on every write rebuilds every `Consumer` that
   /// watches it — here, the whole settings list — even when the user re-picked
   /// the value that was already selected.
-  Future<void> _update(DnsSettings Function(DnsSettings current) change) async {
-    final next = change(_settings);
-    if (_sameAs(next)) return;
-    _settings = next;
-    await _saveSettings();
-    notifyListeners();
-  }
+  Future<void> _update(DnsSettings Function(DnsSettings current) change) =>
+      _writes.run(() async {
+        await _loaded;
+        final next = change(_settings);
+        if (_sameAs(next)) return;
+        try {
+          await _write(next);
+          _settings = next;
+          _saveError = null;
+        } catch (error) {
+          _saveError = error.toString();
+        }
+        notifyListeners();
+      });
 
   bool _sameAs(DnsSettings other) {
     final current = _settings;
@@ -185,6 +194,7 @@ class DnsSettingsProvider extends ChangeNotifier {
         current.overrideDns == other.overrideDns &&
         current.listen == other.listen &&
         current.useRecursiveResolver == other.useRecursiveResolver &&
+        current.requireEncryptedDns == other.requireEncryptedDns &&
         current.dnsMode == other.dnsMode &&
         current.nameserversRevision == other.nameserversRevision &&
         listEquals(current.nameservers, other.nameservers) &&

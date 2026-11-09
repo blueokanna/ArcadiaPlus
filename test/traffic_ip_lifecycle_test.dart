@@ -54,6 +54,10 @@ void main() {
         body: SingleChildScrollView(
           child: TrafficChart(
             trafficStats: TrafficStats(
+              directUpload: BigInt.zero,
+              directDownload: BigInt.zero,
+              proxyUpload: BigInt.zero,
+              proxyDownload: BigInt.zero,
               upload: BigInt.zero,
               download: BigInt.zero,
               uploadSpeed: BigInt.zero,
@@ -115,6 +119,10 @@ void main() {
           body: SingleChildScrollView(
             child: TrafficChart(
               trafficStats: TrafficStats(
+                directUpload: BigInt.zero,
+                directDownload: BigInt.zero,
+                proxyUpload: BigInt.zero,
+                proxyDownload: BigInt.zero,
                 upload: BigInt.zero,
                 download: BigInt.zero,
                 uploadSpeed: BigInt.zero,

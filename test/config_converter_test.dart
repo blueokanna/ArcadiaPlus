@@ -771,6 +771,7 @@ rules: []
         convert(
               yaml,
               dnsSettings: DnsSettings(
+                requireEncryptedDns: false,
                 overrideDns: true,
                 nameservers: const ['223.5.5.5'],
                 bootstrap: const ['119.29.29.29'],

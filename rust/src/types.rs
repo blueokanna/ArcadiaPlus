@@ -32,6 +32,10 @@ pub struct TrafficStats {
     pub download: u64,
     pub upload_speed: u64,
     pub download_speed: u64,
+    pub direct_upload: u64,
+    pub direct_download: u64,
+    pub proxy_upload: u64,
+    pub proxy_download: u64,
 }
 
 /// Connection information.
@@ -334,11 +338,17 @@ impl From<engine::ProxyStatus> for ProxyStatus {
 
 impl From<engine::TrafficStats> for TrafficStats {
     fn from(value: engine::TrafficStats) -> Self {
+        let (direct_upload, direct_download, proxy_upload, proxy_download) =
+            engine::engine::global_tracker().route_totals();
         Self {
             upload: value.upload,
             download: value.download,
             upload_speed: value.upload_speed,
             download_speed: value.download_speed,
+            direct_upload,
+            direct_download,
+            proxy_upload,
+            proxy_download,
         }
     }
 }

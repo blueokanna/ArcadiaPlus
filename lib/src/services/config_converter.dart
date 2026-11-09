@@ -1,6 +1,9 @@
 import 'dart:convert';
 
 import 'package:yaml/yaml.dart';
+import 'package:arcadiaplus/src/services/encrypted_dns_policy.dart';
+import 'package:arcadiaplus/src/services/dns_transport_compatibility.dart';
+import 'package:arcadiaplus/src/services/rule_catalog.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
 
 /// Parsed proxy information for UI display
@@ -166,6 +169,21 @@ class ConfigConverter {
       }
 
       // Parse rules
+      // Expose the same dedicated selector that the runtime converter emits.
+      // Subscription order must not make a domestic DIRECT group global.
+      if (!proxyGroups.any((group) => group.name == 'GLOBAL')) {
+        final (outbounds, _) = _extractOutbounds(config);
+        final global = outbounds.singleWhere((item) => item['tag'] == 'GLOBAL');
+        final options = jsonDecode(global['options'] as String) as Map;
+        proxyGroups.add(
+          ParsedProxyGroup(
+            name: 'GLOBAL',
+            type: 'select',
+            proxies: List<String>.from(options['outbounds'] as List),
+          ),
+        );
+      }
+
       final rules = <String>[];
       final rulesList = config['rules'] as List? ?? [];
       for (final rule in rulesList) {
@@ -200,9 +218,8 @@ class ConfigConverter {
   ///
   /// [ruleProviderPaths] maps a `rule-providers` name onto the local file the
   /// `RuleProviderService` has already downloaded and normalised. Providers
-  /// without a local copy are dropped together with the `RULE-SET` rules that
-  /// reference them, which is how Clash behaves with an unloaded provider:
-  /// the rule simply does not match and evaluation falls through.
+  /// without a local copy may be omitted for offline previews. Runtime callers
+  /// must set [requireCompleteRules] so missing data cannot change routing.
   static String convertClashYamlToJson(
     String yamlContent, {
     GeneralSettings? generalSettings,
@@ -210,6 +227,7 @@ class ConfigConverter {
     String? recursiveDnsAddress,
     List<String> systemDnsServers = const [],
     Map<String, String>? ruleProviderPaths,
+    bool requireCompleteRules = false,
     void Function(String message)? onWarning,
   }) {
     try {
@@ -218,7 +236,16 @@ class ConfigConverter {
         throw Exception('Empty YAML content');
       }
 
-      final config = _convertToMap(yamlMap);
+      final parsed = _convertToMap(yamlMap);
+      final config = requireCompleteRules
+          ? RuleCatalog.expand(parsed as Map)
+          : parsed;
+      if (requireCompleteRules) {
+        RuleCatalog.requireAvailable(
+          config as Map,
+          ruleProviderPaths?.keys.toSet() ?? {},
+        );
+      }
       final arcadiaplusConfig = _convertClashToArcadiaPlus(
         config,
         generalSettings: generalSettings,
@@ -226,6 +253,7 @@ class ConfigConverter {
         recursiveDnsAddress: recursiveDnsAddress,
         systemDnsServers: systemDnsServers,
         ruleProviderPaths: ruleProviderPaths,
+        requireCompleteRules: requireCompleteRules,
         onWarning: onWarning,
       );
 
@@ -264,10 +292,12 @@ class ConfigConverter {
     String? recursiveDnsAddress,
     List<String> systemDnsServers = const [],
     Map<String, String>? ruleProviderPaths,
+    bool requireCompleteRules = false,
     void Function(String message)? onWarning,
   }) {
     final (outbounds, availableOutbounds) = _extractOutbounds(
       clash,
+      strict: requireCompleteRules,
       onWarning: onWarning,
     );
 
@@ -276,6 +306,9 @@ class ConfigConverter {
       localPaths: ruleProviderPaths,
       onWarning: onWarning,
     );
+    if (requireCompleteRules) {
+      RuleCatalog.requireAvailable(clash, availableRuleSets);
+    }
 
     return {
       'general': _extractGeneralConfig(
@@ -285,6 +318,7 @@ class ConfigConverter {
       ),
       'dns': _extractDnsConfig(
         clash,
+        strict: requireCompleteRules,
         dnsSettings: dnsSettings,
         recursiveDnsAddress: recursiveDnsAddress,
         systemDnsServers: systemDnsServers,
@@ -296,6 +330,7 @@ class ConfigConverter {
         clash,
         availableOutbounds: availableOutbounds,
         availableRuleSets: availableRuleSets,
+        strict: requireCompleteRules,
         onWarning: onWarning,
       ),
       'rule_providers': ruleProviders,
@@ -480,6 +515,7 @@ class ConfigConverter {
   /// local resolvers but not a public DoH endpoint keeps working.
   static Map<String, dynamic> _extractDnsConfig(
     Map<String, dynamic> clash, {
+    bool strict = false,
     DnsSettings? dnsSettings,
     String? recursiveDnsAddress,
     List<String> systemDnsServers = const [],
@@ -511,7 +547,9 @@ class ConfigConverter {
     // A running RecurseX front-end stays authoritative: put it first and
     // every forwarded query becomes a recursive one, with the configured
     // upstreams kept behind it as fallbacks.
-    final nameservers = recursiveDnsAddress == null
+    final nameservers =
+        recursiveDnsAddress == null ||
+            (dnsSettings?.requireEncryptedDns ?? false)
         ? withSystemDns
         : [recursiveDnsAddress, ...withSystemDns];
 
@@ -572,7 +610,7 @@ class ConfigConverter {
         ? const <String, String>{}
         : _extractHosts(dns['hosts']);
 
-    return {
+    final result = <String, dynamic>{
       'enable': override ? dnsSettings.enable : (dns['enable'] ?? true),
       'listen': override
           ? dnsSettings.listen
@@ -596,6 +634,12 @@ class ConfigConverter {
       if (useHosts is bool) 'use_hosts': useHosts,
       if (hosts.isNotEmpty) 'hosts': hosts,
     };
+    final protected = dnsSettings?.requireEncryptedDns == true
+        ? EncryptedDnsPolicy.apply(result, onWarning: onWarning)
+        : result;
+    return strict
+        ? DnsTransportCompatibility.apply(protected, onWarning: onWarning)
+        : protected;
   }
 
   /// The engine's spelling of a routing mode.
@@ -853,6 +897,7 @@ class ConfigConverter {
   /// rule targets are filtered against that tag set.
   static (List<Map<String, dynamic>>, Set<String>) _extractOutbounds(
     Map<String, dynamic> clash, {
+    bool strict = false,
     void Function(String message)? onWarning,
   }) {
     final outbounds = <Map<String, dynamic>>[];
@@ -884,6 +929,10 @@ class ConfigConverter {
         final proxyType =
             proxyMap['type']?.toString().toLowerCase() ?? 'unknown';
         final name = proxyMap['name']?.toString() ?? 'proxy';
+        if (const {'DIRECT', 'REJECT', 'GLOBAL'}.contains(name) ||
+            outbounds.any((item) => item['tag'] == name)) {
+          throw FormatException('Duplicate or reserved proxy name: "$name"');
+        }
         final mappedType = _mapProxyType(proxyType);
 
         if (mappedType == null) {
@@ -894,13 +943,6 @@ class ConfigConverter {
           );
           continue;
         }
-
-        // A Shadowsocks node whose `plugin` is set speaks a different wire
-        // than plain ss: obfs, v2ray-plugin and shadow-tls all shape the
-        // stream the server expects to receive. The engine implements those
-        // three (SIP003 plus its own shadow-tls client); anything else is
-        // refused here by name, because dialling it as plain Shadowsocks
-        // connects and then fails every request.
         if (mappedType == 'shadowsocks') {
           final plugin =
               proxyMap['plugin']?.toString().trim().toLowerCase() ?? '';
@@ -952,29 +994,40 @@ class ConfigConverter {
           'port': proxyMap['port'] is int
               ? proxyMap['port']
               : int.tryParse(proxyMap['port']?.toString() ?? ''),
-          // corduit's FFI contract takes the protocol options as a JSON
-          // string and decodes them into the engine's option map, keeping
-          // the original Clash names (cipher, uuid, alterId, ws-opts, ...).
           'options': jsonEncode(options),
         });
       }
     }
 
-    // Everything the finished config will declare, groups included: a group
-    // may legitimately point at another group.
     final declared = <String>{'DIRECT', 'REJECT'};
     for (final outbound in outbounds) {
       declared.add(outbound['tag'] as String);
     }
+    final globalMembers = outbounds
+        .where(
+          (item) =>
+              item['outbound_type'] != 'direct' &&
+              item['outbound_type'] != 'reject',
+        )
+        .map((item) => item['tag'] as String)
+        .toList(growable: false);
     for (final group in proxyGroups) {
       if (group is Map) {
         final groupName = (_convertToMap(group) as Map<String, dynamic>)['name']
             ?.toString();
         if (groupName != null && groupName.isNotEmpty) {
+          if (declared.contains(groupName)) {
+            throw FormatException(
+              'Duplicate or reserved proxy group: "$groupName"',
+            );
+          }
           declared.add(groupName);
         }
       }
     }
+
+    final hasGlobal = declared.contains('GLOBAL');
+    declared.add('GLOBAL');
 
     // Convert proxy groups to selector outbounds
     for (final group in proxyGroups) {
@@ -1022,6 +1075,11 @@ class ConfigConverter {
         }
 
         // Build options map for group
+        if (strict && members.isEmpty) {
+          throw FormatException(
+            'Proxy group "$name" has no usable members; refusing to replace it with DIRECT.',
+          );
+        }
         final optionsMap = <String, dynamic>{
           'outbounds': members.isEmpty ? const ['DIRECT'] : members,
         };
@@ -1042,6 +1100,18 @@ class ConfigConverter {
       }
     }
 
+    if (!hasGlobal) {
+      outbounds.add({
+        'outbound_type': 'selector',
+        'tag': 'GLOBAL',
+        'server': null,
+        'port': null,
+        'options': jsonEncode({
+          'outbounds': globalMembers.isEmpty ? const ['REJECT'] : globalMembers,
+        }),
+      });
+      declared.add('GLOBAL');
+    }
     return (outbounds, declared);
   }
 
@@ -1258,11 +1328,6 @@ class ConfigConverter {
     }
     if (outboundType == 'hysteria') {
       _moveAlias(options, const ['auth_str'], 'auth-str');
-      // Hysteria 1's `obfs` carries the XPlus password itself. Profiles
-      // written against the hysteria2 spelling put the method name there and
-      // the password beside it, so that pair is folded back onto the password
-      // (and refusing modes like faketcp stays the engine's call, message and
-      // all).
       final method = options['obfs']?.toString().trim().toLowerCase() ?? '';
       if (method == 'xplus') {
         final password = options['obfs-password']?.toString().trim() ?? '';
@@ -1271,9 +1336,6 @@ class ConfigConverter {
         }
       }
       options.remove('obfs-password');
-      // `up`/`down` are written with a unit (“50 Mbps”). They are advisory
-      // (the server accounts, this client does not shape), so the number is
-      // extracted and the unit dropped rather than the field being lost.
       for (final key in const ['up', 'down']) {
         final normalised = _bandwidthToMbps(options[key]);
         if (normalised != null) {
@@ -1319,16 +1381,19 @@ class ConfigConverter {
     Map<String, dynamic> clash, {
     required Set<String> availableOutbounds,
     required Set<String> availableRuleSets,
+    bool strict = false,
     void Function(String message)? onWarning,
   }) {
     final rules = <Map<String, dynamic>>[];
     final clashRules = clash['rules'] as List? ?? [];
-
-    // corduit validates cross references, so a target that does not exist
-    // has to become DIRECT here or the whole config is rejected.
     String resolveTarget(String target, String source) {
       if (availableOutbounds.contains(target)) {
         return target;
+      }
+      if (strict) {
+        throw FormatException(
+          'Rule "$source" targets unavailable outbound "$target"',
+        );
       }
       onWarning?.call(
         'Rule "$source" targets "$target", which the config does not '
@@ -1338,6 +1403,9 @@ class ConfigConverter {
     }
 
     for (final rule in clashRules) {
+      if (strict && (rule is! String || _splitRuleFields(rule).length < 2)) {
+        throw FormatException('Malformed routing rule: $rule');
+      }
       if (rule is String) {
         final parts = _splitRuleFields(rule);
         if (parts.length >= 2) {
@@ -1349,6 +1417,9 @@ class ConfigConverter {
           final mappedType = _mapRuleType(ruleType);
 
           if (mappedType == null) {
+            if (strict) {
+              throw FormatException('Unsupported routing rule: $rule');
+            }
             onWarning?.call(
               'Rule "$rule" uses "$ruleType", which corduit has no rule type '
               'for; the rule was skipped.',
@@ -1356,12 +1427,6 @@ class ConfigConverter {
             continue;
           }
 
-          // A `GEOSITE` entry names a category in the v2ray geosite database,
-          // a data set this engine does not ship. As a rule type it reads the
-          // category as a rule-provider name, so the entry is usable when the
-          // profile itself defines a provider under that name — and must be
-          // skipped otherwise: matching it against nothing would route the
-          // traffic the rule was written to protect.
           if (mappedType == 'geosite' && !availableRuleSets.contains(payload)) {
             onWarning?.call(
               'Rule "$rule" references the geosite category "$payload", which '
@@ -1370,10 +1435,6 @@ class ConfigConverter {
             continue;
           }
 
-          // The engine rejects a RULE-SET naming an unconfigured provider, and
-          // a provider without a local copy was dropped above. Skipping the
-          // rule keeps the rest of the profile usable and matches Clash's
-          // behaviour for a provider that never loaded.
           if (mappedType == 'rule_set' &&
               !availableRuleSets.contains(payload)) {
             onWarning?.call(
@@ -1383,10 +1444,6 @@ class ConfigConverter {
             continue;
           }
 
-          // A logical rule matches on the shape of the traffic rather than on
-          // one field, and its condition is a parenthesised list of sub-rules
-          // rather than a single payload. The engine models exactly that with
-          // nested child rules, so the list is converted instead of dropped.
           if (mappedType == 'and' ||
               mappedType == 'or' ||
               mappedType == 'not') {
@@ -1395,6 +1452,9 @@ class ConfigConverter {
               availableRuleSets: availableRuleSets,
             );
             if (children == null) {
+              if (strict) {
+                throw FormatException('Invalid logical routing rule: $rule');
+              }
               onWarning?.call(
                 'Rule "$rule" has a condition this build cannot read; the '
                 'rule was skipped.',
@@ -1402,6 +1462,11 @@ class ConfigConverter {
               continue;
             }
             if (mappedType == 'not' && children.length != 1) {
+              if (strict) {
+                throw FormatException(
+                  'NOT requires exactly one condition: $rule',
+                );
+              }
               onWarning?.call(
                 'Rule "$rule" negates ${children.length} conditions; NOT '
                 'takes exactly one, so the rule was skipped.',
@@ -1424,10 +1489,6 @@ class ConfigConverter {
             'payload': payload,
             'outbound': resolveTarget(outbound, rule),
             'process_name': null,
-            // `no-resolve` travels with the rule: an IP rule carrying it may
-            // only see the address the client supplied, never one the router
-            // resolved — which is also what lets the router skip the lookup
-            // entirely for a connection such a rule decides.
             if (parts
                 .skip(3)
                 .any((flag) => flag.trim().toLowerCase() == 'no-resolve'))
@@ -1509,8 +1570,6 @@ class ConfigConverter {
       if (char == ')') {
         depth--;
         if (depth == 0) {
-          // The closing bracket must end the text; anything after it means the
-          // condition is not the list the caller thinks it is.
           return i == text.length - 1 ? text.substring(1, i) : null;
         }
       }
@@ -1580,8 +1639,6 @@ class ConfigConverter {
       final fields = _splitRuleFields(body);
       if (fields.length < 2) return null;
       final childType = _mapRuleType(fields[0].trim());
-      // The payload may itself contain commas — a port list, a regex — and
-      // each of them belongs to the condition's field, not to the list.
       final childPayload = fields.sublist(1).join(',').trim();
       if (childType == null) return null;
 

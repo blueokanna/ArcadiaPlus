@@ -106,7 +106,7 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                                 : colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        trailing: Switch.adaptive(
+                        trailing: Switch(
                           value: networkSettings.systemProxy,
                           // Turning one off has to work even with the engine
                           // stopped: that is the way back from a session that
@@ -291,7 +291,7 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                               : colorScheme.onSurfaceVariant,
                         ),
                       ),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: networkSettings.tunEnabled,
                         // Same rule as the system proxy: down is always
                         // available, up needs the engine.

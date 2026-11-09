@@ -72,7 +72,7 @@ class _AdvancedConfigScreenState extends State<AdvancedConfigScreen> {
                         Icons.multiple_stop_outlined,
                         color: colorScheme.primary,
                       ),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: settings.tcpConcurrent,
                         onChanged: (v) => settings.setTcpConcurrent(v),
                       ),
@@ -124,7 +124,7 @@ class _AdvancedConfigScreenState extends State<AdvancedConfigScreen> {
                         Icons.sync_outlined,
                         color: colorScheme.primary,
                       ),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: settings.unifiedDelay,
                         onChanged: (v) => settings.setUnifiedDelay(v),
                       ),
@@ -156,7 +156,7 @@ class _AdvancedConfigScreenState extends State<AdvancedConfigScreen> {
                         Icons.search_outlined,
                         color: colorScheme.primary,
                       ),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: settings.findProcess,
                         onChanged: (v) => settings.setFindProcess(v),
                       ),

@@ -83,31 +83,109 @@ void main() {
     expect(requested, hasLength(1));
   });
 
-  test(
-    'keeps plain line lists and drops comments and invalid entries',
-    () async {
-      final client = MockClient((request) async {
-        return http.Response(
-          '# comment\n'
-          '10.0.0.0/8\n'
-          '// another comment\n'
-          '192.168.0.0/16\n'
-          'not-a-cidr\n',
-          200,
-        );
-      });
-
-      final report = await serviceWith(client)
-          .prepare('profile-1', httpProfile(behavior: 'ipcidr'));
-
-      final state = report.states.single;
-      expect(state.ready, isTrue, reason: state.error ?? '');
-      expect(state.entries, 2);
-      expect(state.skipped, 1);
-      expect(
-        File(state.path!).readAsStringSync(),
-        '10.0.0.0/8\n192.168.0.0/16\n',
+  test('keeps plain line lists and removes only comments', () async {
+    final client = MockClient((request) async {
+      return http.Response(
+        '# comment\n'
+        '10.0.0.0/8\n'
+        '// another comment\n'
+        '192.168.0.0/16\n',
+        200,
       );
+    });
+
+    final report = await serviceWith(client)
+        .prepare('profile-1', httpProfile(behavior: 'ipcidr'));
+
+    final state = report.states.single;
+    expect(state.ready, isTrue, reason: state.error ?? '');
+    expect(state.entries, 2);
+    expect(state.skipped, 0);
+    expect(
+      File(state.path!).readAsStringSync(),
+      '10.0.0.0/8\n192.168.0.0/16\n',
+    );
+  });
+
+  test('partial refresh keeps the complete previous set', () async {
+    var calls = 0;
+    final service = serviceWith(
+      MockClient(
+        (_) async => http.Response(
+          calls++ == 0 ? '10.0.0.0/8\n' : '192.168.0.0/16\ninvalid-cidr\n',
+          200,
+        ),
+      ),
+    );
+    addTearDown(service.dispose);
+    final first = await service.prepare(
+      'partial',
+      httpProfile(behavior: 'ipcidr'),
+    );
+    final second = await service.prepare(
+      'partial',
+      httpProfile(behavior: 'ipcidr'),
+      force: true,
+    );
+    expect(second.paths, first.paths);
+    expect(second.states.single.error, contains('incomplete rule set'));
+    expect(File(second.paths['reject']!).readAsStringSync(), '10.0.0.0/8\n');
+  });
+
+  for (final invalid in [
+    '<html>error</html>',
+    'full:',
+    '+.',
+    'a..example',
+    'https://example.com',
+  ]) {
+    test(
+      'invalid domain payload cannot replace the last good set: $invalid',
+      () async {
+        var calls = 0;
+        final service = serviceWith(
+          MockClient(
+            (_) async => http.Response(
+              calls++ == 0 ? 'safe.example\n' : 'new.example\n$invalid\n',
+              200,
+            ),
+          ),
+        );
+        addTearDown(service.dispose);
+        final first = await service.prepare('domain', httpProfile());
+        final second = await service.prepare(
+          'domain',
+          httpProfile(),
+          force: true,
+        );
+        expect(second.paths, first.paths);
+        expect(second.states.single.error, contains('incomplete rule set'));
+      },
+    );
+  }
+
+  test(
+    'legacy partial caches are not reused as complete routing data',
+    () async {
+      final service = serviceWith(
+        MockClient((_) async => http.Response('safe.example\n', 200)),
+      );
+      addTearDown(service.dispose);
+      final first = await service.prepare('legacy-partial', httpProfile());
+      final metadata = File(
+        '${File(first.paths['reject']!).parent.path}/reject.meta.json',
+      );
+      final stored =
+          jsonDecode(await metadata.readAsString()) as Map<String, dynamic>;
+      stored['skipped'] = 1;
+      await metadata.writeAsString(jsonEncode(stored));
+      final offline = await service.prepare(
+        'legacy-partial',
+        httpProfile(),
+        allowNetwork: false,
+      );
+      expect(offline.paths, isEmpty);
+      expect(offline.states.single.ready, false);
     },
   );
 
@@ -197,7 +275,7 @@ void main() {
 
     final state = report.states.single;
     expect(state.ready, isFalse);
-    expect(state.error, contains('https'));
+    expect(state.error, contains('HTTPS'));
     expect(calls, 0);
   });
 
@@ -460,12 +538,10 @@ void main() {
       'cidr',
       httpProfile(behavior: 'ipcidr'),
     );
-    expect(report.states.single.entries, 2);
-    expect(report.states.single.skipped, 4);
-    expect(
-      File(report.paths['reject']!).readAsStringSync(),
-      '192.168.0.0/16\n2001:db8::/32\n',
-    );
+    expect(report.states.single.ready, isFalse);
+    expect(report.paths, isEmpty);
+    expect(report.states.single.error, contains('incomplete rule set'));
+    expect(report.states.single.error, contains('4 unsupported entries'));
   });
 
   test(

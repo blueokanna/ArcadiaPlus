@@ -2862,13 +2862,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TrafficStats dco_decode_traffic_stats(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 4)
-      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return TrafficStats(
       upload: dco_decode_u_64(arr[0]),
       download: dco_decode_u_64(arr[1]),
       uploadSpeed: dco_decode_u_64(arr[2]),
       downloadSpeed: dco_decode_u_64(arr[3]),
+      directUpload: dco_decode_u_64(arr[4]),
+      directDownload: dco_decode_u_64(arr[5]),
+      proxyUpload: dco_decode_u_64(arr[6]),
+      proxyDownload: dco_decode_u_64(arr[7]),
     );
   }
 
@@ -3658,11 +3662,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_download = sse_decode_u_64(deserializer);
     var var_uploadSpeed = sse_decode_u_64(deserializer);
     var var_downloadSpeed = sse_decode_u_64(deserializer);
+    var var_directUpload = sse_decode_u_64(deserializer);
+    var var_directDownload = sse_decode_u_64(deserializer);
+    var var_proxyUpload = sse_decode_u_64(deserializer);
+    var var_proxyDownload = sse_decode_u_64(deserializer);
     return TrafficStats(
       upload: var_upload,
       download: var_download,
       uploadSpeed: var_uploadSpeed,
       downloadSpeed: var_downloadSpeed,
+      directUpload: var_directUpload,
+      directDownload: var_directDownload,
+      proxyUpload: var_proxyUpload,
+      proxyDownload: var_proxyDownload,
     );
   }
 
@@ -4340,6 +4352,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_64(self.download, serializer);
     sse_encode_u_64(self.uploadSpeed, serializer);
     sse_encode_u_64(self.downloadSpeed, serializer);
+    sse_encode_u_64(self.directUpload, serializer);
+    sse_encode_u_64(self.directDownload, serializer);
+    sse_encode_u_64(self.proxyUpload, serializer);
+    sse_encode_u_64(self.proxyDownload, serializer);
   }
 
   @protected

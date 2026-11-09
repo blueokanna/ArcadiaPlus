@@ -145,7 +145,8 @@ void main() {
       return engine.selections[group];
     };
     await provider.syncSelectionsToRust();
-    expect(engine.calls, ['node1', 'node0']);
+    expect(engine.calls, ['node1', 'node0', 'node0']);
+    expect(engine.selections['GLOBAL'], 'node0');
     expect(provider.getSelectedProxyForGroup('route'), 'node0');
     expect(provider.error, contains('Previous selection restored'));
   });

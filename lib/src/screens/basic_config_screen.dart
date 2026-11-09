@@ -5,6 +5,7 @@ import 'package:arcadiaplus/src/providers/app_state_provider.dart';
 import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
 import 'package:arcadiaplus/src/utils/navigation.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_list_tile.dart';
+import 'package:arcadiaplus/src/widgets/settings_choice_tile.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
 class BasicConfigScreen extends StatefulWidget {
@@ -109,7 +110,7 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                 color: colorScheme.surfaceContainerLow,
                 child: Column(
                   children: [
-                    AdaptiveListTile(
+                    SettingsChoiceTile(
                       title: Text(l10n?.mode ?? 'Mode'),
                       subtitle: Text(_getModeText(settings.mode, l10n)),
                       leading: Icon(
@@ -125,26 +126,31 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                           color: colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: DropdownButton<String>(
-                          value: appState.proxyMode.name,
-                          underline: const SizedBox.shrink(),
-                          isDense: true,
-                          borderRadius: BorderRadius.circular(12),
-                          items: [
-                            DropdownMenuItem(
+                        child: DropdownMenu<String>(
+                          initialSelection: RoutingModes.restore(
+                            appState.proxyMode,
+                          ).name,
+                          width: 170,
+                          requestFocusOnTap: false,
+
+                          dropdownMenuEntries: [
+                            DropdownMenuEntry(
                               value: 'rule',
-                              child: Text(l10n?.ruleMode ?? 'Rule'),
+                              label: l10n?.ruleMode ?? 'Rule',
                             ),
-                            DropdownMenuItem(
+                            DropdownMenuEntry(
                               value: 'global',
-                              child: Text(l10n?.globalProxy ?? 'Global'),
+                              label: l10n?.globalProxy ?? 'Global',
                             ),
-                            DropdownMenuItem(
-                              value: 'direct',
-                              child: Text(l10n?.direct ?? 'Direct'),
-                            ),
+                            if (RoutingModes.available().contains(
+                              ProxyMode.direct,
+                            ))
+                              DropdownMenuEntry(
+                                value: 'direct',
+                                label: l10n?.direct ?? 'Direct',
+                              ),
                           ],
-                          onChanged: (value) async {
+                          onSelected: (value) async {
                             if (value == null) return;
                             final messenger = ScaffoldMessenger.of(context);
                             final mode = ProxyMode.values.byName(value);
@@ -169,7 +175,7 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                       ),
                     ),
                     const Divider(height: 1, indent: 16, endIndent: 16),
-                    AdaptiveListTile(
+                    SettingsChoiceTile(
                       title: Text(l10n?.logLevel ?? 'Log Level'),
                       subtitle: Text(settings.logLevel.toUpperCase()),
                       leading: Icon(
@@ -185,38 +191,20 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                           color: colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: DropdownButton<String>(
-                          value: settings.logLevel,
-                          underline: const SizedBox.shrink(),
-                          isDense: true,
-                          borderRadius: BorderRadius.circular(12),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'silent',
-                              child: Text('SILENT'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'error',
-                              child: Text('ERROR'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'warn',
-                              child: Text('WARN'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'info',
-                              child: Text('INFO'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'debug',
-                              child: Text('DEBUG'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'trace',
-                              child: Text('TRACE'),
-                            ),
+                        child: DropdownMenu<String>(
+                          initialSelection: settings.logLevel,
+                          width: 170,
+                          requestFocusOnTap: false,
+
+                          dropdownMenuEntries: const [
+                            DropdownMenuEntry(value: 'silent', label: 'SILENT'),
+                            DropdownMenuEntry(value: 'error', label: 'ERROR'),
+                            DropdownMenuEntry(value: 'warn', label: 'WARN'),
+                            DropdownMenuEntry(value: 'info', label: 'INFO'),
+                            DropdownMenuEntry(value: 'debug', label: 'DEBUG'),
+                            DropdownMenuEntry(value: 'trace', label: 'TRACE'),
                           ],
-                          onChanged: (v) async {
+                          onSelected: (v) async {
                             if (v == null) return;
                             final messenger = ScaffoldMessenger.of(context);
                             await settings.setLogLevel(v);
@@ -261,7 +249,7 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                         Icons.six_k_outlined,
                         color: colorScheme.primary,
                       ),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: settings.ipv6,
                         onChanged: (v) => settings.setIpv6(v),
                       ),
@@ -280,7 +268,7 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                         Icons.lan_outlined,
                         color: colorScheme.primary,
                       ),
-                      trailing: Switch.adaptive(
+                      trailing: Switch(
                         value: settings.allowLan,
                         onChanged: (v) => settings.setAllowLan(v),
                       ),

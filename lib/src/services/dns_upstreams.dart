@@ -52,7 +52,7 @@ DnsUpstreamKind classifyUpstream(String address) {
   final schemeEnd = value.indexOf('://');
   if (schemeEnd > 0) {
     return switch (value.substring(0, schemeEnd)) {
-      'http' || 'https' => DnsUpstreamKind.doh,
+      'https' => DnsUpstreamKind.doh,
       'h3' => DnsUpstreamKind.doh3,
       'tls' => DnsUpstreamKind.dot,
       'quic' => DnsUpstreamKind.quic,
@@ -143,30 +143,21 @@ class DnsPreset {
 /// already know which resolver they want, not a directory.
 const List<DnsPreset> dnsPresets = [
   DnsPreset(
-    'https://dns.cloudflare.com/dns-query',
+    'https://1.1.1.1/dns-query',
     'Cloudflare',
     DnsPresetTag.recommended,
   ),
   DnsPreset(
-    'https://dns.google/dns-query',
+    'https://8.8.8.8/dns-query',
     'Google Public DNS',
     DnsPresetTag.recommended,
   ),
   DnsPreset('tls://1.1.1.1', 'Cloudflare', DnsPresetTag.privacy),
-  DnsPreset('https://dns.quad9.net/dns-query', 'Quad9', DnsPresetTag.privacy),
+  DnsPreset('tls://dns.quad9.net', 'Quad9', DnsPresetTag.privacy),
+  DnsPreset('tls://family.adguard-dns.com', 'AdGuard DNS', DnsPresetTag.family),
+  DnsPreset('tls://dot.pub', 'DNSPod', DnsPresetTag.domestic),
   DnsPreset(
-    'https://dns.adguard-dns.com/dns-query',
-    'AdGuard DNS',
-    DnsPresetTag.family,
-  ),
-  DnsPreset(
-    'https://doh.opendns.com/dns-query',
-    'OpenDNS',
-    DnsPresetTag.family,
-  ),
-  DnsPreset('https://doh.pub/dns-query', 'DNSPod', DnsPresetTag.domestic),
-  DnsPreset(
-    'https://dns.alidns.com/dns-query',
+    'https://223.5.5.5/dns-query',
     'Alibaba Public DNS',
     DnsPresetTag.domestic,
   ),

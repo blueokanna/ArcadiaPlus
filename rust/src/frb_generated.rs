@@ -2754,11 +2754,19 @@ impl SseDecode for crate::types::TrafficStats {
         let mut var_download = <u64>::sse_decode(deserializer);
         let mut var_uploadSpeed = <u64>::sse_decode(deserializer);
         let mut var_downloadSpeed = <u64>::sse_decode(deserializer);
+        let mut var_directUpload = <u64>::sse_decode(deserializer);
+        let mut var_directDownload = <u64>::sse_decode(deserializer);
+        let mut var_proxyUpload = <u64>::sse_decode(deserializer);
+        let mut var_proxyDownload = <u64>::sse_decode(deserializer);
         return crate::types::TrafficStats {
             upload: var_upload,
             download: var_download,
             upload_speed: var_uploadSpeed,
             download_speed: var_downloadSpeed,
+            direct_upload: var_directUpload,
+            direct_download: var_directDownload,
+            proxy_upload: var_proxyUpload,
+            proxy_download: var_proxyDownload,
         };
     }
 }
@@ -3290,6 +3298,10 @@ impl flutter_rust_bridge::IntoDart for crate::types::TrafficStats {
             self.download.into_into_dart().into_dart(),
             self.upload_speed.into_into_dart().into_dart(),
             self.download_speed.into_into_dart().into_dart(),
+            self.direct_upload.into_into_dart().into_dart(),
+            self.direct_download.into_into_dart().into_dart(),
+            self.proxy_upload.into_into_dart().into_dart(),
+            self.proxy_download.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3854,6 +3866,10 @@ impl SseEncode for crate::types::TrafficStats {
         <u64>::sse_encode(self.download, serializer);
         <u64>::sse_encode(self.upload_speed, serializer);
         <u64>::sse_encode(self.download_speed, serializer);
+        <u64>::sse_encode(self.direct_upload, serializer);
+        <u64>::sse_encode(self.direct_download, serializer);
+        <u64>::sse_encode(self.proxy_upload, serializer);
+        <u64>::sse_encode(self.proxy_download, serializer);
     }
 }
 
@@ -4393,6 +4409,10 @@ mod io {
                 download: self.download.cst_decode(),
                 upload_speed: self.upload_speed.cst_decode(),
                 download_speed: self.download_speed.cst_decode(),
+                direct_upload: self.direct_upload.cst_decode(),
+                direct_download: self.direct_download.cst_decode(),
+                proxy_upload: self.proxy_upload.cst_decode(),
+                proxy_download: self.proxy_download.cst_decode(),
             }
         }
     }
@@ -4806,6 +4826,10 @@ mod io {
                 download: Default::default(),
                 upload_speed: Default::default(),
                 download_speed: Default::default(),
+                direct_upload: Default::default(),
+                direct_download: Default::default(),
+                proxy_upload: Default::default(),
+                proxy_download: Default::default(),
             }
         }
     }
@@ -5909,6 +5933,10 @@ mod io {
         download: u64,
         upload_speed: u64,
         download_speed: u64,
+        direct_upload: u64,
+        direct_download: u64,
+        proxy_upload: u64,
+        proxy_download: u64,
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
@@ -6643,8 +6671,8 @@ mod web {
                 .unwrap();
             assert_eq!(
                 self_.length(),
-                4,
-                "Expected 4 elements, got {}",
+                8,
+                "Expected 8 elements, got {}",
                 self_.length()
             );
             crate::types::TrafficStats {
@@ -6652,6 +6680,10 @@ mod web {
                 download: self_.get(1).cst_decode(),
                 upload_speed: self_.get(2).cst_decode(),
                 download_speed: self_.get(3).cst_decode(),
+                direct_upload: self_.get(4).cst_decode(),
+                direct_download: self_.get(5).cst_decode(),
+                proxy_upload: self_.get(6).cst_decode(),
+                proxy_download: self_.get(7).cst_decode(),
             }
         }
     }

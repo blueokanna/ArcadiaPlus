@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:yaml/yaml.dart';
+import 'package:arcadiaplus/src/services/rule_catalog.dart';
 
 /// A `rule-providers` entry exactly as the profile declares it.
 @immutable
@@ -295,33 +296,36 @@ class RuleProviderService extends ChangeNotifier {
 
     final deadline = DateTime.now().add(budget);
     final states = <RuleProviderState>[];
-    for (final spec in specs) {
+    Future<RuleProviderState> prepareOne(RuleProviderSpec spec) async {
       if (DateTime.now().isAfter(deadline)) {
         onWarning?.call(
           'Rule provider "${spec.name}" was skipped: refresh budget exhausted.',
         );
-        states.add(
-          await _cachedState(spec, directory) ??
-              RuleProviderState(
-                name: spec.name,
-                behavior: spec.behavior,
-                entries: 0,
-                skipped: 0,
-                updatedAt: null,
-                error: 'not downloaded yet',
-              ),
-        );
-        continue;
+        return await _cachedState(spec, directory) ??
+            RuleProviderState(
+              name: spec.name,
+              behavior: spec.behavior,
+              entries: 0,
+              skipped: 0,
+              updatedAt: null,
+              error: 'not downloaded yet',
+            );
       }
-      states.add(
-        await _materialise(
-          spec,
-          directory,
-          force: force,
-          allowNetwork: allowNetwork,
-          timeout: deadline.difference(DateTime.now()),
-          onWarning: onWarning,
-        ),
+      return _materialise(
+        spec,
+        directory,
+        force: force,
+        allowNetwork: allowNetwork,
+        timeout: deadline.difference(DateTime.now()),
+        onWarning: onWarning,
+      );
+    }
+
+    // Bound network concurrency and preserve declaration order. A slow first
+    // provider must not consume the entire refresh budget for every other set.
+    for (var offset = 0; offset < specs.length; offset += 3) {
+      states.addAll(
+        await Future.wait(specs.skip(offset).take(3).map(prepareOne)),
       );
     }
 
@@ -333,7 +337,7 @@ class RuleProviderService extends ChangeNotifier {
       if (!state.ready) {
         onWarning?.call(
           'Rule provider "${state.name}" is unavailable (${state.error}); '
-          'rules referencing it fall through.',
+          'the profile cannot start until required routing data is available.',
         );
       } else if (state.skipped > 0) {
         onWarning?.call(
@@ -488,14 +492,17 @@ class RuleProviderService extends ChangeNotifier {
     required int cachedSkipped,
   }) async {
     final uri = Uri.tryParse(spec.url!);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+    if (uri == null ||
+        uri.scheme != 'https' ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty) {
       return _fallback(
         spec,
         cachedPath: cachedPath,
         cachedUpdatedAt: cachedUpdatedAt,
         cachedEntries: cachedEntries,
         cachedSkipped: cachedSkipped,
-        error: 'url must be https: ${spec.url}',
+        error: 'rule URL must use HTTPS without credentials',
       );
     }
 
@@ -710,14 +717,17 @@ class RuleProviderService extends ChangeNotifier {
     }
     final behavior = spec.behavior;
     final normalised = await compute(_normalisePayload, (raw, behavior));
-    if (normalised.entries == 0) {
+    if (normalised.entries == 0 || normalised.skipped != 0) {
       return RuleProviderState(
         name: spec.name,
         behavior: spec.behavior,
         entries: 0,
         skipped: normalised.skipped,
         updatedAt: null,
-        error: 'no usable rules (${normalised.skipped} entries skipped)',
+        error: normalised.entries == 0 && normalised.skipped == 0
+            ? 'no usable rules'
+            : 'incomplete rule set: ${normalised.skipped} unsupported entries; '
+                  'refusing to publish partial routing data',
       );
     }
     final bytes = utf8.encode(normalised.content);
@@ -824,10 +834,9 @@ class RuleProviderService extends ChangeNotifier {
   }
 
   /// Returns the `payload:` list when [raw] is a YAML/JSON rule-set document.
-  ///
-  /// Malformed structured input must never fall through to the plain-text
-  /// parser: that would replace a valid cache with YAML syntax posing as rules.
-  static List<Object?>? _yamlPayload(String raw) {
+  static Iterable<Object?>? _yamlPayload(String raw) {
+    final quoted = _quotedPayload(raw);
+    if (quoted != null) return quoted;
     final lines = LineSplitter.split(raw);
     final first = lines
         .map((line) => line.trim())
@@ -853,6 +862,30 @@ class RuleProviderService extends ChangeNotifier {
     throw const FormatException('rule document must contain a payload array');
   }
 
+  /// Published domain/CIDR sets commonly contain hundreds of thousands of
+  /// single-quoted scalars. Recognise only that exact, unambiguous subset so
+  /// parsing does not retain a YAML node tree alongside the normalised rules.
+  /// Anything more complex still goes through the full YAML parser.
+  static Iterable<String>? _quotedPayload(String raw) {
+    final lines = LineSplitter.split(raw);
+    final iterator = lines.iterator;
+    if (!iterator.moveNext() || iterator.current != 'payload:') return null;
+    while (iterator.moveNext()) {
+      final line = iterator.current;
+      if (line.isEmpty) continue;
+      if (!line.startsWith("  - '") ||
+          !line.endsWith("'") ||
+          line.length < 7 ||
+          line.indexOf("'", 5) != line.length - 1) {
+        return null;
+      }
+    }
+    return lines
+        .skip(1)
+        .where((line) => line.isNotEmpty)
+        .map((line) => line.substring(5, line.length - 1));
+  }
+
   static bool _isSupported(String entry, String behavior) {
     switch (behavior) {
       case 'ipcidr':
@@ -866,7 +899,28 @@ class RuleProviderService extends ChangeNotifier {
             _isCidr(parts[1].trim());
       case 'domain':
       default:
-        return !_whitespace.hasMatch(entry);
+        for (final prefix in const ['regexp:', 'regex:', 'keyword:']) {
+          if (entry.startsWith(prefix)) {
+            return entry.length > prefix.length;
+          }
+        }
+        var domain = entry;
+        for (final prefix in const ['full:', '+.', '.']) {
+          if (domain.startsWith(prefix)) {
+            domain = domain.substring(prefix.length);
+            break;
+          }
+        }
+        if (domain.endsWith('.')) {
+          domain = domain.substring(0, domain.length - 1);
+        }
+        return domain.isNotEmpty &&
+            domain.length <= 253 &&
+            domain
+                .split('.')
+                .every(
+                  (label) => label.length <= 63 && _domainLabel.hasMatch(label),
+                );
     }
   }
 
@@ -893,7 +947,9 @@ class RuleProviderService extends ChangeNotifier {
   }
 
   static final _prefixLength = RegExp(r'^\d{1,3}$');
-  static final _whitespace = RegExp(r'\s');
+  static final _domainLabel = RegExp(
+    r'^[a-zA-Z0-9_](?:[a-zA-Z0-9_-]*[a-zA-Z0-9_])?$',
+  );
 
   Future<RuleProviderState?> _cachedState(
     RuleProviderSpec spec,
@@ -915,6 +971,8 @@ class RuleProviderService extends ChangeNotifier {
 
   bool _matchesSource(Map<String, dynamic>? meta, RuleProviderSpec spec) =>
       meta != null &&
+      (meta['skipped'] as int? ?? 0) == 0 &&
+      (meta['entries'] as int? ?? 0) > 0 &&
       meta['url'] == spec.url &&
       meta['behavior'] == spec.behavior &&
       meta['sourcePath'] == spec.path;
@@ -952,7 +1010,7 @@ class RuleProviderService extends ChangeNotifier {
   Object? _ruleProviderSection(String yamlContent) {
     final document = loadYaml(yamlContent);
     if (document is! Map) return null;
-    return document['rule-providers'] ?? document['rule_providers'];
+    return RuleCatalog.expand(document)['rule-providers'];
   }
 
   /// Removes every cached copy belonging to a deleted profile.
