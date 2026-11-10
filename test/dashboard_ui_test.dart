@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:arcadiaplus/src/widgets/expressive_action.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -164,7 +165,7 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.byType(FilledButton));
+    await tester.tap(find.byType(ExpressiveAction));
     expect(taps, 1);
     await tester.pumpWidget(
       app(
@@ -175,7 +176,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Stopping...'), findsNWidgets(2));
     expect(
-      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      tester.widget<ExpressiveAction>(find.byType(ExpressiveAction)).onPressed,
       isNull,
     );
     expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -238,11 +239,9 @@ void main() {
       await tester.pumpWidget(app(RoutingModeSelector(mode: mode)));
       expect(
         tester
-            .widget<SegmentedButton<ProxyMode>>(
-              find.byType(SegmentedButton<ProxyMode>),
-            )
-            .onSelectionChanged,
-        isNull,
+            .widgetList<ExpressiveAction>(find.byType(ExpressiveAction))
+            .every((button) => button.onPressed == null),
+        isTrue,
       );
     },
   );

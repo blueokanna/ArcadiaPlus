@@ -1511,7 +1511,7 @@ class ResponsiveUtils {
     return 4;
   }
 
-  static double getBorderRadius(BuildContext context) => 20;
+  static double getBorderRadius(BuildContext context) => 28;
 
   static BorderRadius getCardBorderRadius(BuildContext context) {
     return BorderRadius.circular(getBorderRadius(context));

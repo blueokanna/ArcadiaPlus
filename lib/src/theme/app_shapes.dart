@@ -9,7 +9,7 @@ abstract final class AppShapes {
 
   /// Containers are distinct from the tighter corners of form controls.
   static const RoundedRectangleBorder card = RoundedRectangleBorder(
-    borderRadius: BorderRadius.all(Radius.circular(20)),
+    borderRadius: extraLarge,
   );
   static const RoundedRectangleBorder control = RoundedRectangleBorder(
     borderRadius: medium,

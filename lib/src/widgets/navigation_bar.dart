@@ -83,7 +83,7 @@ class AppNavigationBar extends StatelessWidget {
         _navigateToScreen(context, index);
       },
       labelType: NavigationRailLabelType.all,
-      backgroundColor: colorScheme.surface,
+      backgroundColor: colorScheme.surfaceContainerLow,
       indicatorColor: colorScheme.secondaryContainer,
       selectedIconTheme: IconThemeData(
         color: colorScheme.onSecondaryContainer,
@@ -147,47 +147,54 @@ class AppNavigationBar extends StatelessWidget {
     int currentIndex,
     AppLocalizations? l10n,
   ) {
-    return NavigationBar(
-      selectedIndex: currentIndex,
-      onDestinationSelected: (index) {
-        AnimationUtils.selectionHaptic();
-        onDestinationSelected?.call(index);
-        _navigateToScreen(context, index);
-      },
-      backgroundColor: colorScheme.surface,
-      indicatorColor: colorScheme.secondaryContainer,
-      surfaceTintColor: Colors.transparent,
-      shadowColor: Colors.transparent,
-      height: 80,
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      animationDuration: AppMotion.duration(context),
-      destinations: [
-        NavigationDestination(
-          icon: const Icon(Icons.home_outlined),
-          selectedIcon: const Icon(Icons.home),
-          label: l10n?.home ?? 'Home',
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(32),
+        child: NavigationBar(
+          selectedIndex: currentIndex,
+          onDestinationSelected: (index) {
+            AnimationUtils.selectionHaptic();
+            onDestinationSelected?.call(index);
+            _navigateToScreen(context, index);
+          },
+          backgroundColor: colorScheme.surfaceContainerLow,
+          indicatorColor: colorScheme.secondaryContainer,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          height: 80,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          animationDuration: AppMotion.duration(context),
+          destinations: [
+            NavigationDestination(
+              icon: const Icon(Icons.home_outlined),
+              selectedIcon: const Icon(Icons.home),
+              label: l10n?.home ?? 'Home',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.public_outlined),
+              selectedIcon: const Icon(Icons.public),
+              label: l10n?.proxies ?? 'Proxies',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.folder_outlined),
+              selectedIcon: const Icon(Icons.folder),
+              label: l10n?.profiles ?? 'Profiles',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.link_outlined),
+              selectedIcon: const Icon(Icons.link),
+              label: l10n?.connectionsShort ?? 'Conns',
+            ),
+            NavigationDestination(
+              icon: const Icon(Icons.settings_outlined),
+              selectedIcon: const Icon(Icons.settings),
+              label: l10n?.settings ?? 'Settings',
+            ),
+          ],
         ),
-        NavigationDestination(
-          icon: const Icon(Icons.public_outlined),
-          selectedIcon: const Icon(Icons.public),
-          label: l10n?.proxies ?? 'Proxies',
-        ),
-        NavigationDestination(
-          icon: const Icon(Icons.folder_outlined),
-          selectedIcon: const Icon(Icons.folder),
-          label: l10n?.profiles ?? 'Profiles',
-        ),
-        NavigationDestination(
-          icon: const Icon(Icons.link_outlined),
-          selectedIcon: const Icon(Icons.link),
-          label: l10n?.connectionsShort ?? 'Conns',
-        ),
-        NavigationDestination(
-          icon: const Icon(Icons.settings_outlined),
-          selectedIcon: const Icon(Icons.settings),
-          label: l10n?.settings ?? 'Settings',
-        ),
-      ],
+      ),
     );
   }
 

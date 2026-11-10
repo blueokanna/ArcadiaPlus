@@ -56,6 +56,7 @@ class AppStateProvider extends ChangeNotifier {
 
   // Address of the running RecurseX recursive resolver, when enabled
   String? _recursiveDnsAddress;
+  String? _recursiveDnsWarning;
 
   // Current speed values (from Rust tracker)
   BigInt _currentUploadSpeed = BigInt.zero;
@@ -350,7 +351,7 @@ class AppStateProvider extends ChangeNotifier {
     GeneralSettings generalSettings, {
     bool forceRuleSets = false,
   }) async {
-    final warnings = <String>[];
+    final warnings = <String>[?_recursiveDnsWarning];
     if (PlatformUtils.isMobile && generalSettings.mode == 'direct') {
       generalSettings = generalSettings.copyWith(mode: 'rule');
     }
@@ -466,6 +467,7 @@ class AppStateProvider extends ChangeNotifier {
   }
 
   Future<void> _ensureRecursiveDns() async {
+    _recursiveDnsWarning = null;
     try {
       final dnsSettings = await StorageService.instance.getDnsSettings();
       if (!dnsSettings.useRecursiveResolver ||
@@ -486,11 +488,14 @@ class AppStateProvider extends ChangeNotifier {
       );
     } catch (e) {
       _recursiveDnsAddress = null;
-      debugPrint('Failed to start the recursive resolver: $e');
+      _recursiveDnsWarning =
+          'Local recursive DNS is unavailable; configured upstreams remain active: $e';
+      debugPrint(_recursiveDnsWarning);
     }
   }
 
   Future<void> _stopRecursiveDns() async {
+    _recursiveDnsWarning = null;
     try {
       await stopRecursiveDns();
     } catch (e) {

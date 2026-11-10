@@ -501,11 +501,13 @@ class ArcadiaPlusVpnService : VpnService() {
                             .setSession("ArcadiaPlus")
                             .setMtu(1500)
                             .addAddress("198.18.0.1", 16)
+                            .addAddress("fd7a:115c:a1e0::1", 126)
                             .addDnsServer("198.18.0.2")
                             .setBlocking(false)
 
             builder.addRoute("0.0.0.0", 0)
-            Log.d(TAG, "Added route: 0.0.0.0/0 (all traffic)")
+            builder.addRoute("::", 0)
+            Log.d(TAG, "Added routes: 0.0.0.0/0 and ::/0 (dual-stack traffic)")
 
             if (!_captureLan) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

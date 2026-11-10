@@ -88,38 +88,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               : Icons.brightness_auto_outlined,
                           color: colorScheme.primary,
                         ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DropdownMenu<ThemeMode>(
-                            initialSelection: appState.themeMode,
-                            width: 170,
-                            requestFocusOnTap: false,
+                        trailing: DropdownMenu<ThemeMode>(
+                          initialSelection: appState.themeMode,
+                          width: 170,
+                          requestFocusOnTap: false,
 
-                            dropdownMenuEntries: [
-                              DropdownMenuEntry(
-                                value: ThemeMode.system,
-                                label: l10n?.system ?? 'Follow System',
-                              ),
-                              DropdownMenuEntry(
-                                value: ThemeMode.light,
-                                label: l10n?.light ?? 'Light',
-                              ),
-                              DropdownMenuEntry(
-                                value: ThemeMode.dark,
-                                label: l10n?.dark ?? 'Dark',
-                              ),
-                            ],
-                            onSelected: (value) {
-                              if (value != null) appState.setThemeMode(value);
-                            },
-                          ),
+                          dropdownMenuEntries: [
+                            DropdownMenuEntry(
+                              value: ThemeMode.system,
+                              label: l10n?.system ?? 'Follow System',
+                            ),
+                            DropdownMenuEntry(
+                              value: ThemeMode.light,
+                              label: l10n?.light ?? 'Light',
+                            ),
+                            DropdownMenuEntry(
+                              value: ThemeMode.dark,
+                              label: l10n?.dark ?? 'Dark',
+                            ),
+                          ],
+                          onSelected: (value) {
+                            if (value != null) appState.setThemeMode(value);
+                          },
                         ),
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),

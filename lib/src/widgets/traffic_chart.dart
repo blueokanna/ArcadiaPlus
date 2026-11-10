@@ -848,14 +848,14 @@ class _TrafficStatCard extends StatelessWidget {
               children: [
                 AnimatedContainer(
                   duration: AppMotion.duration(context, AppMotion.short),
-                  padding: EdgeInsets.all(spacing * 0.8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: isActive ? 0.16 : 0.08),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, size: 18, color: color),
                 ),
-                SizedBox(width: spacing),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     label,

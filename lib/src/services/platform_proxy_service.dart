@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ffi';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -8,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:arcadiaplus/src/rust/api.dart' as rust_api;
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
+
+import 'windows_system_proxy.dart';
 
 enum ProxyMode { global, rule, direct }
 
@@ -46,6 +47,7 @@ class PlatformProxyService extends ChangeNotifier {
   ProxyMode _currentProxyMode = ProxyMode.rule;
   int _vpnFd = -1;
   final _modeChanges = SerialTaskQueue();
+  final _windowsProxy = WindowsSystemProxy();
 
   bool get systemProxyEnabled => _systemProxyEnabled;
   bool get tunModeEnabled => _tunModeEnabled;
@@ -294,9 +296,8 @@ class PlatformProxyService extends ChangeNotifier {
   /// left alone — it is machine-wide configuration that services and system
   /// components depend on, and hijacking it is not this app's business.
   ///
-  /// The bypass list is written in WinINET's dialect, and the change is
-  /// broadcast afterwards; see [expandBypassForGlobMatching] and
-  /// [_broadcastWinInetChange] for why both are necessary.
+  /// The bypass list uses WinINET's dialect. The native connection API
+  /// updates the settings and notifies WinINET before read-back verification.
   Future<bool> _enableWindowsSystemProxy(
     String host,
     int port,
@@ -314,34 +315,7 @@ class PlatformProxyService extends ChangeNotifier {
     final override = _uniquePreservingOrder(entries).join(';');
 
     try {
-      await _snapshotWindowsProxySettings();
-      // Order is the contract: the server and the bypass list land *before*
-      // the switch is thrown. Written the other way round, a failure between
-      // the writes leaves WinINET "enabled" with no server behind it —
-      // Windows Settings then shows a switch that promises browsing and an
-      // address box that cannot deliver it, which is exactly the
-      // "the proxy is on but nothing works" report this ordering prevents.
-      final serverApplied = [
-        await _regAdd('ProxyServer', 'REG_SZ', endpoint),
-        await _regAdd('ProxyOverride', 'REG_SZ', override),
-      ];
-      if (!serverApplied.every((write) => write)) {
-        debugPrint('Windows system proxy server could not be written');
-        _publish(systemProxy: await _readWindowsProxyEnabled());
-        return false;
-      }
-
-      // Remembered so a refused switch write restores the machine instead of
-      // leaving a half-applied configuration behind.
-      final previousEnable =
-          (await _regQuery('ProxyEnable'))?['value'] ?? '0x0';
-      if (!await _regAdd('ProxyEnable', 'REG_DWORD', '1')) {
-        debugPrint('Windows system proxy could not be switched on');
-        await _regAdd('ProxyEnable', 'REG_DWORD', previousEnable);
-        _publish(systemProxy: await _readWindowsProxyEnabled());
-        return false;
-      }
-      _broadcastWinInetChange();
+      await _windowsProxy.enable(endpoint, override);
       _publish(systemProxy: true);
       return true;
     } catch (e) {
@@ -352,25 +326,11 @@ class PlatformProxyService extends ChangeNotifier {
 
   Future<bool> _disableWindowsSystemProxy() async {
     try {
-      if (await _restoreWindowsProxySettings()) {
-        // The user's own settings are back in force. What that leaves enabled
-        // is theirs, not ours, so the call succeeded either way.
-        _broadcastWinInetChange();
-        _publish(systemProxy: await _readWindowsProxyEnabled());
-        return true;
-      }
-
-      // No usable snapshot: switch the proxy off rather than leaving the
-      // machine pointed at a port nobody listens on. The user's own
-      // ProxyServer value stays in the registry, just disabled.
-      await _regAdd('ProxyEnable', 'REG_DWORD', '0');
-      _broadcastWinInetChange();
-      final enabled = await _readWindowsProxyEnabled();
-      _publish(systemProxy: enabled);
-      return !enabled;
+      await _windowsProxy.disable();
+      _publish(systemProxy: await _readWindowsProxyEnabled());
+      return true;
     } catch (e) {
       debugPrint('Windows proxy disable error: $e');
-      _publish(systemProxy: false);
       return false;
     }
   }
@@ -1433,77 +1393,6 @@ class PlatformProxyService extends ChangeNotifier {
     return unique;
   }
 
-  // ==================== Windows registry helpers ====================
-
-  static const String _internetSettingsKey =
-      r'HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings';
-  static const List<String> _windowsProxyValues = [
-    'ProxyEnable',
-    'ProxyServer',
-    'ProxyOverride',
-  ];
-
-  Future<bool> _regAdd(String name, String type, String value) async {
-    final result = await Process.run('reg', [
-      'add',
-      _internetSettingsKey,
-      '/v',
-      name,
-      '/t',
-      type,
-      '/d',
-      value,
-      '/f',
-    ]);
-    if (result.exitCode != 0) {
-      debugPrint('reg add $name failed: ${result.stderr}');
-      return false;
-    }
-    return true;
-  }
-
-  Future<bool> _regDelete(String name) async {
-    final result = await Process.run('reg', [
-      'delete',
-      _internetSettingsKey,
-      '/v',
-      name,
-      '/f',
-    ]);
-    if (result.exitCode != 0) {
-      debugPrint('reg delete $name failed: ${result.stderr}');
-      return false;
-    }
-    return true;
-  }
-
-  /// Reads one value of the WinINET proxy settings, or `null` when it is unset.
-  Future<Map<String, String>?> _regQuery(String name) async {
-    final result = await Process.run('reg', [
-      'query',
-      _internetSettingsKey,
-      '/v',
-      name,
-    ]);
-    if (result.exitCode != 0) return null;
-
-    final pattern = RegExp(
-      '^\\s+${RegExp.escape(name)}\\s+(REG_\\w+)\\s+(.*)\$',
-      multiLine: true,
-    );
-    final match = pattern.firstMatch(result.stdout.toString());
-    if (match == null) return null;
-    return {'type': match.group(1)!, 'value': match.group(2)!.trim()};
-  }
-
-  /// Whether a `ProxyEnable` value as `reg query` prints it means "on".
-  ///
-  /// `reg query` renders a `REG_DWORD` in hexadecimal — a proxy that is
-  /// switched on reads back as `0x1`, not `1` — and a value written by another
-  /// tool may arrive in either spelling. Comparing the text against `'1'`
-  /// alone read every enabled proxy as disabled, so the quick-actions card and
-  /// the network screen both said "disabled" while traffic was demonstrably
-  /// going through this app's own port.
   static bool proxyEnableIsOn(String? raw) {
     final text = (raw ?? '').trim().toLowerCase();
     if (text.isEmpty) return false;
@@ -1513,151 +1402,8 @@ class PlatformProxyService extends ChangeNotifier {
     return int.tryParse(text) == 1;
   }
 
-  /// Whether WinINET currently has a **usable** proxy switched on.
-  ///
-  /// `ProxyEnable=1` with no `ProxyServer` is a half-written setting: Windows
-  /// Settings shows the switch on and the address empty, and applications
-  /// still reach the network directly. Reporting that as "off" keeps this
-  /// app's own switch aligned with its promise — the registry state is what
-  /// it is, but "on" must mean "traffic goes through a proxy".
-  Future<bool> _readWindowsProxyEnabled() async {
-    final enable = await _regQuery('ProxyEnable');
-    if (!proxyEnableIsOn(enable?['value'])) return false;
-    final server = (await _regQuery('ProxyServer'))?['value'];
-    return server != null && server.trim().isNotEmpty;
-  }
+  Future<bool> _readWindowsProxyEnabled() async =>
+      WindowsSystemProxy.enabled(await _windowsProxy.read());
 
-  // ---- Telling WinINET's clients the settings moved ------------------------
-
-  static const int _internetOptionRefresh = 37;
-  static const int _internetOptionSettingsChanged = 39;
-
-  /// Whether WinINET's proxy server points at [port] on whichever host.
-  ///
-  /// The value is either `host:port`, a bare host (default port), or one
-  /// `scheme=host:port` entry per scheme separated by semicolons.
-  Future<bool> _windowsProxyTargets(int port) async {
-    final server = (await _regQuery('ProxyServer'))?['value'];
-    if (server == null) return false;
-
-    for (final entry in server.split(';')) {
-      final endpoint = entry.contains('=')
-          ? entry.split('=').last.trim()
-          : entry.trim();
-      if (endpoint.endsWith(':$port')) return true;
-    }
-    return false;
-  }
-
-  static bool _wininetUnavailable = false;
-  static int Function(Pointer<Void>, int, Pointer<Void>, int)?
-  _internetSetOption;
-
-  /// `InternetSetOptionW(NULL, …)` is how a WinINET configuration change is
-  /// announced, and writing the registry values is only half of applying it:
-  /// every application that caches its proxy configuration — every browser —
-  /// keeps dialling the old endpoint until this notification arrives. Without
-  /// it, a proxy this app just enabled looks like it does nothing until the
-  /// browser is restarted, which is the classic "the switch is on but the
-  /// traffic is not" report.
-  void _broadcastWinInetChange() {
-    if (!Platform.isWindows) return;
-    final setOption = _loadInternetSetOption();
-    if (setOption == null) return;
-    // Documented order: SETTINGS_CHANGED makes applications re-read, REFRESH
-    // makes the proxy resolver drop its own cached answer.
-    for (final option in const [
-      _internetOptionSettingsChanged,
-      _internetOptionRefresh,
-    ]) {
-      final applied = setOption(nullptr, option, nullptr, 0);
-      if (applied == 0) {
-        debugPrint('InternetSetOption($option) reported failure');
-      }
-    }
-  }
-
-  /// Binds `wininet.dll` once, and remembers a failure so it is not retried on
-  /// every proxy change.
-  static int Function(Pointer<Void>, int, Pointer<Void>, int)?
-  _loadInternetSetOption() {
-    if (_wininetUnavailable) return null;
-    final cached = _internetSetOption;
-    if (cached != null) return cached;
-
-    try {
-      final library = DynamicLibrary.open('wininet.dll');
-      final setOption = library
-          .lookupFunction<
-            Int32 Function(Pointer<Void>, Uint32, Pointer<Void>, Uint32),
-            int Function(Pointer<Void>, int, Pointer<Void>, int)
-          >('InternetSetOptionW');
-      _internetSetOption = setOption;
-      return setOption;
-    } catch (error) {
-      _wininetUnavailable = true;
-      debugPrint(
-        'wininet.dll could not be loaded; proxy changes will not be '
-        'broadcast to running applications: $error',
-      );
-      return null;
-    }
-  }
-
-  Future<File> _windowsProxySnapshotFile() async {
-    final support = await getApplicationSupportDirectory();
-    return File(
-      '${support.path}${Platform.pathSeparator}windows-proxy-snapshot.json',
-    );
-  }
-
-  /// Records the current WinINET proxy values before this app changes them.
-  /// An existing snapshot is kept, so a second enable cannot overwrite the
-  /// user's original settings with values this app wrote earlier.
-  Future<void> _snapshotWindowsProxySettings() async {
-    final file = await _windowsProxySnapshotFile();
-    if (file.existsSync()) return;
-
-    final snapshot = <String, Map<String, String>?>{};
-    for (final name in _windowsProxyValues) {
-      snapshot[name] = await _regQuery(name);
-    }
-    await file.writeAsString(jsonEncode(snapshot), flush: true);
-  }
-
-  /// Puts the snapshot back and drops it. Returns false when there was no
-  /// snapshot to restore.
-  Future<bool> _restoreWindowsProxySettings() async {
-    final file = await _windowsProxySnapshotFile();
-    if (!file.existsSync()) return false;
-
-    final decoded = jsonDecode(await file.readAsString());
-    if (decoded is! Map) {
-      debugPrint('Windows proxy snapshot is malformed; clearing it');
-      await file.delete();
-      return false;
-    }
-
-    var restored = true;
-    for (final name in _windowsProxyValues) {
-      final record = decoded[name];
-      if (record is Map) {
-        restored =
-            await _regAdd(
-              name,
-              record['type']?.toString() ?? 'REG_SZ',
-              record['value']?.toString() ?? '',
-            ) &&
-            restored;
-      } else {
-        restored = await _regDelete(name) && restored;
-      }
-    }
-    if (restored) {
-      await file.delete();
-    } else {
-      debugPrint('Windows proxy settings could not be fully restored');
-    }
-    return restored;
-  }
+  Future<bool> _windowsProxyTargets(int port) => _windowsProxy.targets(port);
 }

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:arcadiaplus/src/widgets/expressive_action.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -378,16 +379,17 @@ rules:
           ),
         ),
       );
-      final picker = tester.widget<SegmentedButton<ProxyMode>>(
-        find.byType(SegmentedButton<ProxyMode>),
-      );
+      expect(find.text('Direct Mode'), mobile ? findsNothing : findsOneWidget);
+      final selected = tester
+          .widgetList<ExpressiveAction>(find.byType(ExpressiveAction))
+          .where((button) => button.selected);
+      expect(selected, hasLength(1));
       expect(
-        picker.segments.map((s) => s.value).contains(ProxyMode.direct),
-        !mobile,
-      );
-      expect(
-        picker.selected.single,
-        mobile ? ProxyMode.rule : ProxyMode.direct,
+        find.descendant(
+          of: find.byWidget(selected.single),
+          matching: find.text(mobile ? 'Rule Mode' : 'Direct Mode'),
+        ),
+        findsOneWidget,
       );
       expect(tester.takeException(), isNull);
     });

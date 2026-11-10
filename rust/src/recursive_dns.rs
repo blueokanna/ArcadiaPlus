@@ -136,6 +136,7 @@ pub fn start(listen: &str, cache_path: Option<&str>) -> Result<String, String> {
         return Ok(service.address());
     }
 
+    corduit::dns::transport::install();
     let requested = requested_address(listen)?;
     let mut config = resolver_config();
     if let Some(path) = cache_path.filter(|path| !path.is_empty()) {

@@ -27,9 +27,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v5
 
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
-
       - name: Reclaim disk space this build does not need
         run: |
           set -euo pipefail
@@ -149,9 +146,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v5
 
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
-
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -160,6 +154,16 @@ jobs:
 
       - name: Check Rust formatting
         run: cargo fmt --all -- --check
+
+      - name: Set up dependency graph checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify locked networking dependencies
+        run: |
+          python ../scripts/check_engine_dependencies.py
+          python -m unittest discover -s ../scripts/tests -p 'test_*.py'
 
       - name: Lint Rust workspace
         run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
@@ -177,7 +181,6 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v5
-      - uses: ./.github/actions/checkout-engine
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
           targets: aarch64-linux-android
@@ -206,9 +209,6 @@ jobs:
     steps:
       - name: Checkout source
         uses: actions/checkout@v5
-
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
 
       - name: Reclaim disk space this build does not need
         run: |

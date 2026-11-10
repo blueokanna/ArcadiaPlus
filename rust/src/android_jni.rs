@@ -13,7 +13,7 @@
 
 #![cfg(target_os = "android")]
 
-use jni::JNIEnv;
+use jni::EnvUnowned;
 use jni::objects::JObject;
 
 /// Called by `ArcadiaPlusVpnService` when the service starts.
@@ -21,7 +21,7 @@ use jni::objects::JObject;
 pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeInitRustBridge<
     'local,
 >(
-    env: JNIEnv<'local>,
+    env: EnvUnowned<'local>,
     vpn_service: JObject<'local>,
 ) {
     corduit::android_jni::Java_com_blueokanna_corduit_CorduitVpnService_nativeInitRustBridge(
@@ -35,7 +35,7 @@ pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nat
 pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeClearRustBridge<
     'local,
 >(
-    env: JNIEnv<'local>,
+    env: EnvUnowned<'local>,
     vpn_service: JObject<'local>,
 ) {
     let _ = std::panic::catch_unwind(|| {
@@ -51,7 +51,7 @@ pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nat
 /// A Flutter TUN-only toggle calls nativeClearRustBridge and keeps listeners up.
 #[unsafe(no_mangle)]
 pub extern "system" fn Java_com_blueokanna_arcadiaplus_ArcadiaPlusVpnService_nativeStopProxy(
-    _env: JNIEnv<'_>,
+    _env: EnvUnowned<'_>,
     _service: JObject<'_>,
 ) {
     let _ = std::panic::catch_unwind(|| {

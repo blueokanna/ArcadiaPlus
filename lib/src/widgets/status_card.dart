@@ -4,7 +4,9 @@ import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/theme/app_motion.dart';
-import 'package:arcadiaplus/src/widgets/adaptive_button.dart';
+
+import 'expressive_action.dart';
+import 'expressive_status_shape.dart';
 
 /// A stable control surface: only the state content changes, never the card's
 /// scale. Running is a persistent state and does not require a repeating ticker.
@@ -35,130 +37,116 @@ class StatusCard extends StatelessWidget {
     final foreground = isRunning ? colors.onPrimaryContainer : colors.onSurface;
     final duration = AppMotion.duration(context);
 
+    final artwork = ExcludeSemantics(
+      child: ExpressiveStatusShape(
+        running: isRunning,
+        child: AnimatedContainer(
+          duration: duration,
+          width: 64,
+          height: 64,
+          color: isRunning ? colors.primary : colors.surfaceContainerHighest,
+          child: Icon(
+            isRunning ? Icons.check_rounded : Icons.power_settings_new_rounded,
+            color: isRunning ? colors.onPrimary : colors.onSurfaceVariant,
+            size: 30,
+          ),
+        ),
+      ),
+    );
+    final label = Text(
+      l10n?.serviceStatus ?? 'Service status',
+      style: theme.textTheme.labelMedium?.copyWith(color: foreground),
+    );
+    final state = Semantics(
+      liveRegion: true,
+      child: AnimatedDefaultTextStyle(
+        duration: duration,
+        style: theme.textTheme.headlineSmall!.copyWith(
+          color: foreground,
+          fontWeight: FontWeight.w700,
+        ),
+        child: Text(status, key: ValueKey(status)),
+      ),
+    );
     return AnimatedContainer(
       duration: duration,
       curve: AppMotion.curve,
       decoration: BoxDecoration(
         color: isRunning ? colors.primaryContainer : colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              ExcludeSemantics(
-                child: AnimatedContainer(
-                  duration: duration,
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isRunning
-                        ? colors.primary
-                        : colors.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Icon(
-                    isRunning
-                        ? Icons.check_rounded
-                        : Icons.power_settings_new_rounded,
-                    color: isRunning
-                        ? colors.onPrimary
-                        : colors.onSurfaceVariant,
-                    size: 26,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth < 280 ||
+                  MediaQuery.textScalerOf(context).scale(16) > 22) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      l10n?.serviceStatus ?? 'Service status',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: foreground,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(child: label),
+                        const SizedBox(width: 12),
+                        artwork,
+                      ],
                     ),
-                    Semantics(
-                      liveRegion: true,
-                      child: AnimatedSwitcher(
-                        duration: duration,
-                        child: Text(
-                          status,
-                          key: ValueKey(status),
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: foreground,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 8),
+                    state,
                   ],
-                ),
-              ),
-              if (isLoading) ...[
-                const SizedBox(width: 12),
-                SizedBox.square(
-                  dimension: 22,
-                  child: MediaQuery.disableAnimationsOf(context)
-                      ? Icon(
-                          Icons.hourglass_top_rounded,
-                          size: 22,
-                          color: foreground,
-                        )
-                      : CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: foreground,
-                        ),
-                ),
-              ],
-            ],
+                );
+              }
+              return Row(
+                children: [
+                  artwork,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [label, state],
+                    ),
+                  ),
+                  if (isLoading && !MediaQuery.disableAnimationsOf(context))
+                    const SizedBox.square(
+                      dimension: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: AdaptiveButton(
-              onPressed: isLoading
-                  ? null
-                  : () {
-                      AnimationUtils.mediumHaptic();
-                      onStartStop();
-                    },
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(48, 52),
-                backgroundColor: isRunning ? colors.surface : colors.primary,
-                foregroundColor: isRunning
-                    ? colors.onSurface
-                    : colors.onPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
+          ExpressiveAction(
+            selected: !isRunning,
+            onPressed: isLoading
+                ? null
+                : () {
+                    AnimationUtils.mediumHaptic();
+                    onStartStop();
+                  },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
+                  size: 22,
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                    size: 22,
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    isLoading
+                        ? status
+                        : isRunning
+                        ? (l10n?.stopService ?? 'Stop Service')
+                        : (l10n?.startService ?? 'Start Service'),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(width: 10),
-                  Flexible(
-                    child: Text(
-                      isLoading
-                          ? status
-                          : isRunning
-                          ? (l10n?.stopService ?? 'Stop Service')
-                          : (l10n?.startService ?? 'Start Service'),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],

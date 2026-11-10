@@ -119,8 +119,6 @@ jobs:
       - name: Checkout tagged source
         uses: actions/checkout@v5
 
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -149,8 +147,15 @@ jobs:
             echo "Using the default pub host (pub.dev)"
           fi
 
+      - name: Set up dependency graph checks
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Resolve dependencies and test
         run: |
+          python scripts/check_engine_dependencies.py
+          python -m unittest discover -s scripts/tests -p 'test_*.py'
           flutter pub get --enforce-lockfile
           dart format --output=none --set-exit-if-changed lib test
           flutter analyze
@@ -171,9 +176,6 @@ jobs:
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
-
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
 
       - name: Reclaim disk space this build does not need
         run: |
@@ -313,9 +315,6 @@ jobs:
       - name: Checkout tagged source
         uses: actions/checkout@v5
 
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -420,9 +419,6 @@ jobs:
       - name: Checkout tagged source
         uses: actions/checkout@v5
 
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
-
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -485,9 +481,6 @@ jobs:
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
-
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
 
       - name: Install the Linux desktop build dependencies
         run: |
@@ -590,9 +583,6 @@ jobs:
     steps:
       - name: Checkout tagged source
         uses: actions/checkout@v5
-
-      - name: Check out the proxy engine the bridge points at
-        uses: ./.github/actions/checkout-engine
 
       - name: Reclaim disk space this build does not need
         run: |
