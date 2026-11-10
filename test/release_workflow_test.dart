@@ -4,6 +4,31 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:yaml/yaml.dart';
 
 void main() {
+  test('the current app revision has release notes before tagging', () {
+    final pubspec =
+        loadYaml(File('pubspec.yaml').readAsStringSync()) as YamlMap;
+    final version = (pubspec['version'] as String).split('+');
+    final revision = version.length == 2 ? version[1] : '1';
+    final lines = File('CHANGELOG.md').readAsLinesSync();
+    var heading = '## ${version[0]}+$revision';
+    if (revision == '1' && !lines.contains(heading)) {
+      heading = '## ${version[0]}';
+    }
+    expect(
+      lines,
+      contains(heading),
+      reason: 'Write release notes when bumping pubspec.yaml',
+    );
+    final entries = lines
+        .skip(lines.indexOf(heading) + 1)
+        .takeWhile((line) => !line.startsWith('## '));
+    expect(
+      entries.any((line) => line.startsWith('- ') && line.trim().length > 2),
+      isTrue,
+      reason: '$heading must describe this revision, not the previous release',
+    );
+  });
+
   test('stable release supports manual and tag triggers', () {
     final source = File('.github/workflows/release.yml').readAsStringSync();
     final workflow = loadYaml(source) as YamlMap;

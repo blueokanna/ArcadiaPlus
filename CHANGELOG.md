@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.9+1
+
+- Upgrade to the published Corduit 0.3.2 and RecurseX 0.2.5 packages. Remove the sibling engine checkout from CI and verify registry checksums and shared dependency identities without vendoring source code.
+- Adapt Android VPN JNI entry points to JNI 0.22 and register the core DNS transport before initializing local recursion, so resolver sockets use the configured outbound transport.
+- Update Windows system proxy settings through WinINET, with a persisted restore snapshot, change notifications and read-back checks. Restore the previous PAC and auto-detection settings when disabling the proxy; retain the snapshot if restoration fails.
+- Use Material 3 Expressive actions and animated status shapes. Remove overlapping settings controls and duplicate status transitions, and improve dashboard layouts for narrow screens and larger text.
+- Separate the Expressive component implementation for the Flutter OHOS SDK. HarmonyOS uses SDK Material 3 controls compatible with Dart 3.11.5, while desktop and Android retain the standalone Material UI library. Run analysis and widget tests against the OHOS SDK before building the HAP.
+
 ## 1.0.8+2
 
 - Use the published Corduit 0.3.1 release; skip the sibling checkout in CI when Cargo resolves the registry package.
