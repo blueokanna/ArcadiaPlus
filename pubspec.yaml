@@ -22,7 +22,8 @@ dependencies:
   # Material Design 3 and UI components
   material_design_icons_flutter: ^7.0.7296
   dynamic_color: ^1.9.0
-  material_ui: ^1.11.0
+  arcadia_expressive:
+    path: packages/arcadia_expressive
   material_new_shapes: ^1.0.0
 
   # State management

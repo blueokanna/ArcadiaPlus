@@ -62,7 +62,31 @@ ohos/
 - 设置 `OHOS_NDK` 指向 SDK 的 `native` 目录（如 `…/sdk/default/openharmony/native`），
   或让脚本自行探测常见安装路径。
 
-### 1. 构建 Rust 引擎（两个产物）
+### 1. 选择鸿蒙依赖并构建 Rust 引擎
+
+请在独立构建副本中执行下列命令，`flutter` 必须指向固定的
+`3.41.10-ohos-1.0.0` 工具链。先配置 `DEVECO_SDK_HOME` 为 DevEco 的 `sdk`
+目录，再选择鸿蒙依赖；CI 和 release 使用同一脚本。
+
+```bash
+python scripts/prepare_ohos_pubspec.py --dart-version 3.11.5 --flutter-version 3.41.10-ohos-1.0.0
+flutter pub get
+flutter analyze --no-pub lib test
+flutter test --no-pub
+```
+
+脚本只修改构建副本的 SDK 范围和 `arcadia_expressive` 路径。
+鸿蒙使用 `ohos/compat/arcadia_expressive`：基于 SDK Material 3 的按钮，保留
+选择状态、按压形状过渡、焦点、无障碍语义和减少动画支持。桌面和 Android
+使用 `packages/arcadia_expressive`，继续采用 `material_ui` 的 Expressive 变体。
+状态图形与应用其余动画仍共用同一份实现。两个包都是应用自身的适配层，
+没有复制第三方源码，也不覆盖第三方包的 SDK 约束。
+
+`material_ui 1.11.0` 要求 Dart 3.13 / Flutter 3.47，无法在鸿蒙 SDK 的
+Dart 3.11.5 上运行。仅放宽根 `pubspec.yaml`、使用运行时平台判断，或照
+解析器提示降级到 `material_ui 0.0.1`，都不能保留现有组件接口并解决兼容性。
+
+随后构建引擎：
 
 ```bash
 bash ohos/scripts/build-rust-ohos.sh
@@ -158,10 +182,11 @@ HarmonyOS NEXT 真机。
   （`flutterEngine.getPlugins()?.add(...)`）。UI 进程侧不存在需要手工接线的
   对接点；若后续引入带 ohos 平台的 pub 插件，生成器会走常规
   GeneratedPluginRegistrant 路径。
-- **CI 上的 Dart 版本差**：`flutter_flutter` 落后上游（3.41.9），其 Dart 早于
-  `pubspec.yaml` 里 3.47.x 线的约束。CI 在作业内把 `environment.sdk/flutter`
-  放宽到检出 SDK 实际报告的版本，改动只存在于 runner 工作区并打印 `git diff`，
-  不提交；`pubspec.lock` 同理不参与 OHOS 作业的 `--enforce-lockfile`。
+- **CI 上的 Dart 版本差**：固定 OHOS 工具链基于 Flutter 3.41.9，使用 Dart
+  3.11.5。准备脚本检查工具链版本并选择鸿蒙 SDK 范围及组件适配包；不支持的
+  SDK 线直接报错。修改只存在于构建工作区并打印 `git diff`。上游
+  `pubspec.lock` 不作为鸿蒙的强制锁文件，pub 按声明的约束重新解析，随后
+  使用鸿蒙工具链分析和测试代码。
 
 ## CI（GitHub Actions）
 
@@ -172,7 +197,7 @@ HarmonyOS NEXT 真机。
 |--------|------|
 | `.github/actions/setup-ohos` | 下载/校验 command-line-tools（SHA-256；内含完整且自洽的 HarmonyOS 5.1.0 SDK：`openharmony` + `hms`），按原样解包并断言 SDK 两半齐备，导出 `DEVECO_SDK_HOME` / `OHOS_NDK` |
 | `.github/actions/checkout-flutter-ohos` | 检出固定 tag 的 `flutter_flutter`（唯一能执行 `flutter build hap` 的 SDK） |
-| `.github/actions/prepare-ohos-build` | 防漂移校验 `compatibleSdkVersion` 保持 fork 模板为 CI SDK 提供的值（`5.1.0(18)`，且不设 `targetSdkVersion`；漂移会让 hvigor 以 00303082/00306042 提前失败）、放宽 pubspec 约束到 fork 的 Dart 线、`flutter pub get` |
+| `.github/actions/prepare-ohos-build` | 校验 `compatibleSdkVersion` 为 `5.1.0(18)` 且不设 `targetSdkVersion`；选择鸿蒙依赖、解析、分析和测试；预热并修补 embedding HAR |
 
 随后依次是 `ohos/scripts/build-rust-ohos.sh` 与 `flutter build hap --release [--no-codesign]`，
 收尾用 `unzip -l` 断言 HAP 内确实含有

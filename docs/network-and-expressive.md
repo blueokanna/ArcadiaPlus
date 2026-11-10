@@ -39,7 +39,7 @@ Windows 增加 IPv6 半默认捕获路由，Android VPN 增加 IPv6 地址与默
 
 ## 界面与动效
 
-主操作和模式选择使用 `material_ui` 的 `material3Expressive` 组件变体。状态图形使用 `material_new_shapes` 的 square / cookie9Sided 形状插值，切换时从当前值和速度继续弹簧运动。图形通过 clipper 重绘，空闲时没有循环动画；系统减少动画设置和 `TickerMode` 都会停止该运动。
+桌面和 Android 的主操作、模式选择使用 `material_ui` 的 `material3Expressive` 组件变体。鸿蒙 Flutter 3.41 使用独立的应用适配包，通过 SDK Material 3 按钮实现选择状态和按压形状过渡；两套实现遵循同一交互接口并运行相同测试。状态图形共用 `material_new_shapes` 的 square / cookie9Sided 形状插值，切换时从当前值和速度继续弹簧运动。图形通过 clipper 重绘，空闲时没有循环动画；系统减少动画设置和 `TickerMode` 都会停止该运动。
 
 主题菜单移除双层填充，状态文字移除叠加的出入场副本，按钮不再额外包一层按压缩放。卡片统一圆角，移动导航增加安全区，窄屏与大字体下状态和模式控制自动纵向排列。
 

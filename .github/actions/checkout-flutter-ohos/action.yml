@@ -17,9 +17,8 @@ inputs:
   version:
     description: >-
       Release tag of gitcode.com/CPF-Flutter/flutter_flutter to check out.
-      Keep this in one place: the app's `environment.sdk`/`environment.flutter`
-      constraints are tightened against the Dart/Framework version this tag
-      reports, and the workflows derive those bounds from the checked-out SDK.
+      Keep this aligned with scripts/prepare_ohos_pubspec.py, which checks the
+      reported Dart/Framework versions against the tested OHOS build profile.
     required: false
     default: 3.41.10-ohos-1.0.0
 

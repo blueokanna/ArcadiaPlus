@@ -146,7 +146,9 @@ void main() {
       expect(prepare, contains('OHOS targetSdkVersion reappeared'));
       expect(prepare, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
       expect(setup, isNot(contains('OHOS_SDK_COMPATIBLE_VERSION')));
-      expect(prepare, contains("""(?:'[^']*'|"[^"]*")"""));
+      expect(prepare, contains('scripts/prepare_ohos_pubspec.py'));
+      expect(prepare, contains('analyze --no-pub lib test'));
+      expect(prepare, contains('test --no-pub'));
     },
   );
 

@@ -3,16 +3,18 @@ description: >-
   Points pub at the host recorded in pubspec.lock, checks that the checked-in
   HarmonyOS product versions still match what the pinned fork template ships
   for the provisioned SDK (an M.S.F(api) compatibleSdkVersion and no
-  targetSdkVersion), widens the pubspec SDK bounds to the Flutter OHOS fork's
-  Dart line, and resolves dependencies. Shared by the CI and release HAP jobs
-  so both build under identical rules.
+  targetSdkVersion), selects the tested SDK bounds and first-party Expressive
+  adapter for the Flutter OHOS fork, and resolves dependencies. Shared by the
+  CI and release HAP jobs so both build under identical rules.
 
-# Why the pubspec bounds are rewritten
+# Why the build profile is selected
 # ------------------------------------
 # `environment.sdk`/`environment.flutter` describe the stable Flutter line this
 # repository develops against (3.47.x). The only toolchain that can build a HAP
 # is the Flutter OHOS fork, whose releases trail upstream, so its Dart SDK is
-# older than what those bounds allow. The rewrite happens in the runner's
+# older than what those bounds allow. Its first-party component adapter uses
+# SDK Material instead of importing material_ui (which requires Dart 3.13).
+# No third-party SDK constraints are overridden. Selection happens in the runner's
 # working tree, is printed with `git diff`, and is never committed.
 
 inputs:
@@ -39,7 +41,7 @@ runs:
           echo "Using the default pub host (pub.dev)"
         fi
 
-    - name: Check the product SDK versions and widen the fork's Dart line
+    - name: Check the product SDK versions and select the OHOS profile
       shell: bash
       env:
         FLUTTER_COMMAND: ${{ inputs.flutter-command }}
@@ -96,40 +98,8 @@ runs:
         fi
         echo "Flutter OHOS fork reports Flutter $framework / Dart $dart"
 
-        python3 - "$dart" "$framework" <<'PY'
-        import re
-        import sys
-
-        dart, framework = sys.argv[1], sys.argv[2]
-        path = "pubspec.yaml"
-        text = open(path, encoding="utf-8").read()
-        text, sdk_hits = re.subn(
-            r"^  sdk:.*$",
-            f"  sdk: '>={dart} <4.0.0'",
-            text,
-            count=1,
-            flags=re.M,
-        )
-        # The bound is written with single or double quotes depending on who
-        # last touched the file — YAML treats them alike, and an editor that
-        # flips them must not take the whole job down — so the pattern
-        # accepts either spelling of the same line.
-        text, flutter_hits = re.subn(
-            r"""^  flutter: (?:'[^']*'|"[^"]*").*$""",
-            f"  flutter: '>={framework}'",
-            text,
-            count=1,
-            flags=re.M,
-        )
-        if sdk_hits != 1 or flutter_hits != 1:
-            raise SystemExit(
-                "pubspec.yaml did not look as expected "
-                f"(environment.sdk={sdk_hits}, environment.flutter={flutter_hits}: "
-                "each bound must match exactly one line, and the flutter bound "
-                "must be quoted with ' or \")"
-            )
-        open(path, "w", encoding="utf-8").write(text)
-        PY
+        python3 scripts/prepare_ohos_pubspec.py \
+          --dart-version "$dart" --flutter-version "$framework"
         git --no-pager diff -- pubspec.yaml
 
     - name: Resolve dependencies for the OHOS SDK line
@@ -143,6 +113,16 @@ runs:
         # fork's older Dart cannot satisfy. pub re-resolves in the working tree
         # only; nothing here is committed.
         "$FLUTTER_COMMAND" pub get
+
+    - name: Analyze and test against the OHOS Flutter SDK
+      shell: bash
+      env:
+        FLUTTER_COMMAND: ${{ inputs.flutter-command }}
+      run: |
+        set -euo pipefail
+        # Upstream analysis cannot catch APIs missing from the older fork.
+        "$FLUTTER_COMMAND" analyze --no-pub lib test
+        "$FLUTTER_COMMAND" test --no-pub
 
     - name: Warm and patch the OHOS embedding har
       shell: bash
