@@ -536,22 +536,28 @@ class ConfigConverter {
         ? dnsSettings.nameservers
         : _toStringList(dns['nameserver']);
     final effectiveConfigured = configured.isEmpty
-        ? const ['8.8.8.8', '1.1.1.1']
+        ? (dnsSettings?.requireEncryptedDns == true
+              ? EncryptedDnsPolicy.defaults
+              : const ['8.8.8.8', '1.1.1.1'])
         : configured;
 
     final withSystemDns = <String>[...effectiveConfigured];
-    for (final server in systemDnsServers) {
+    for (final server
+        in dnsSettings?.requireEncryptedDns == true
+            ? const <String>[]
+            : systemDnsServers) {
       if (!withSystemDns.contains(server)) withSystemDns.add(server);
     }
 
-    // A running RecurseX front-end stays authoritative: put it first and
-    // every forwarded query becomes a recursive one, with the configured
-    // upstreams kept behind it as fallbacks.
-    final nameservers =
-        recursiveDnsAddress == null ||
-            (dnsSettings?.requireEncryptedDns ?? false)
-        ? withSystemDns
-        : [recursiveDnsAddress, ...withSystemDns];
+    // RecurseX treats a loopback-first group as ordered, with a reserved
+    // recovery budget and a brief failure cooldown. Keep that contract intact;
+    // splitting it into separate groups loses the loopback recovery state.
+    final recursive =
+        recursiveDnsAddress != null &&
+        !(dnsSettings?.requireEncryptedDns ?? false);
+    final nameservers = recursive
+        ? [recursiveDnsAddress, ...withSystemDns]
+        : withSystemDns;
 
     final fallback = override
         ? dnsSettings.fallback
@@ -634,12 +640,14 @@ class ConfigConverter {
       if (useHosts is bool) 'use_hosts': useHosts,
       if (hosts.isNotEmpty) 'hosts': hosts,
     };
-    final protected = dnsSettings?.requireEncryptedDns == true
-        ? EncryptedDnsPolicy.apply(result, onWarning: onWarning)
+    // Known same-operator hostname endpoints can become verified IP endpoints
+    // before checking that bootstrap never requires system DNS.
+    final compatible = strict
+        ? DnsTransportCompatibility.apply(result, onWarning: onWarning)
         : result;
-    return strict
-        ? DnsTransportCompatibility.apply(protected, onWarning: onWarning)
-        : protected;
+    return dnsSettings?.requireEncryptedDns == true
+        ? EncryptedDnsPolicy.apply(compatible, onWarning: onWarning)
+        : compatible;
   }
 
   /// The engine's spelling of a routing mode.

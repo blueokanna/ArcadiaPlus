@@ -4955,8 +4955,8 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
         'profile. Everything below applies once the switch is on.',
     'recursiveResolver': 'Recursive Resolver',
     'recursiveResolverDesc':
-        'Answer from the DNS root on this machine (RecurseX) instead of '
-        'forwarding to the nameservers above',
+        'Prefer local root recursion (RecurseX); keep configured DNS servers '
+        'as recovery upstreams. Applies on next service start.',
     'appendSystemDnsUnsupported':
         'This platform does not expose its resolvers to applications, so this '
         'setting has no effect here',
@@ -5209,7 +5209,8 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsBehaviour': 'DNS 行为',
     'dnsOverrideOffNotice': '“覆盖 DNS” 关闭时，引擎使用当前订阅里的 DNS 段；开关打开后，下面的设置才会生效。',
     'recursiveResolver': '本机递归解析',
-    'recursiveResolverDesc': '不转发给上面的服务器，直接在本机从 DNS 根开始解析（RecurseX）',
+    'recursiveResolverDesc':
+        '优先在本机从 DNS 根递归解析（RecurseX），不可用时使用已配置的 DNS；下次启动服务生效',
     'appendSystemDnsUnsupported': '该平台不向应用暴露系统解析器，此开关在这里不会生效',
     'dnsQuickAdd': '快捷添加',
     'dnsPresetRecommended': '推荐',
@@ -5229,7 +5230,8 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsBehaviour': 'DNS 行為',
     'dnsOverrideOffNotice': '「覆寫 DNS」關閉時，引擎使用目前訂閱的 DNS 區段；開關開啟後，下方設定才會生效。',
     'recursiveResolver': '本機遞迴解析',
-    'recursiveResolverDesc': '不轉發給上方伺服器，直接在本機從 DNS 根開始解析（RecurseX）',
+    'recursiveResolverDesc':
+        '優先在本機從 DNS 根遞迴解析（RecurseX），不可用時使用已設定的 DNS；下次啟動服務生效',
     'appendSystemDnsUnsupported': '此平台不向應用程式公開系統解析器，這個開關在這裡不會生效',
     'dnsQuickAdd': '快速新增',
     'dnsPresetRecommended': '推薦',

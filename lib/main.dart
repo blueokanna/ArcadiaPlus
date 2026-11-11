@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:arcadiaplus/src/widgets/app_motion_scope.dart';
 import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:flutter/services.dart';
 import 'package:arcadiaplus/src/utils/app_memory_policy.dart';
@@ -358,8 +359,10 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
                             ],
                             supportedLocales: AppLocalizations.supportedLocales,
                             routerConfig: _router,
-                            builder: (context, child) => WallpaperBackdrop(
-                              child: child ?? const SizedBox.shrink(),
+                            builder: (context, child) => AppMotionScope(
+                              child: WallpaperBackdrop(
+                                child: child ?? const SizedBox.shrink(),
+                              ),
                             ),
                           ),
                     ),

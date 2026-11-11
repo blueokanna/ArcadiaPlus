@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 556028991;
+  int get rustContentHash => 1581887764;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -84,6 +84,8 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
 abstract class RustLibApi extends BaseApi {
   Future<void> crateApiClearAndroidVpnFd();
+
+  Future<void> crateApiClearDnsQueryEvents();
 
   Future<void> crateApiClearLogs();
 
@@ -124,6 +126,8 @@ abstract class RustLibApi extends BaseApi {
   Future<ProxyStatus> crateApiGetCorduitStatus();
 
   Future<DnsConfigDto> crateApiGetDnsConfig();
+
+  Future<DnsQuerySnapshot> crateApiGetDnsQueryEvents();
 
   Future<ExternalControllerStatus> crateApiGetExternalControllerStatus();
 
@@ -334,6 +338,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiClearAndroidVpnFdConstMeta =>
       const TaskConstMeta(debugName: "clear_android_vpn_fd", argNames: []);
+
+  @override
+  Future<void> crateApiClearDnsQueryEvents() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__clear_dns_query_events(port_);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_unit,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiClearDnsQueryEventsConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiClearDnsQueryEventsConstMeta =>
+      const TaskConstMeta(debugName: "clear_dns_query_events", argNames: []);
 
   @override
   Future<void> crateApiClearLogs() {
@@ -769,6 +794,27 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   TaskConstMeta get kCrateApiGetDnsConfigConstMeta =>
       const TaskConstMeta(debugName: "get_dns_config", argNames: []);
+
+  @override
+  Future<DnsQuerySnapshot> crateApiGetDnsQueryEvents() {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          return wire.wire__crate__api__get_dns_query_events(port_);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_dns_query_snapshot,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiGetDnsQueryEventsConstMeta,
+        argValues: [],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiGetDnsQueryEventsConstMeta =>
+      const TaskConstMeta(debugName: "get_dns_query_events", argNames: []);
 
   @override
   Future<ExternalControllerStatus> crateApiGetExternalControllerStatus() {
@@ -2481,6 +2527,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DnsQueryEvent dco_decode_dns_query_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return DnsQueryEvent(
+      id: dco_decode_u_64(arr[0]),
+      completedAtMs: dco_decode_u_64(arr[1]),
+      domain: dco_decode_String(arr[2]),
+      queryType: dco_decode_String(arr[3]),
+      path: dco_decode_String(arr[4]),
+      answers: dco_decode_list_String(arr[5]),
+      outcome: dco_decode_String(arr[6]),
+      fromCache: dco_decode_bool(arr[7]),
+      stale: dco_decode_bool(arr[8]),
+      elapsedUs: dco_decode_u_64(arr[9]),
+      truncated: dco_decode_bool(arr[10]),
+    );
+  }
+
+  @protected
+  DnsQuerySnapshot dco_decode_dns_query_snapshot(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return DnsQuerySnapshot(
+      events: dco_decode_list_dns_query_event(arr[0]),
+      total: dco_decode_u_64(arr[1]),
+      dropped: dco_decode_u_64(arr[2]),
+    );
+  }
+
+  @protected
   ExternalControllerStatus dco_decode_external_controller_status(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -2566,6 +2646,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<ConnectionInfo> dco_decode_list_connection_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_connection_info).toList();
+  }
+
+  @protected
+  List<DnsQueryEvent> dco_decode_list_dns_query_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_dns_query_event).toList();
   }
 
   @protected
@@ -3135,6 +3221,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DnsQueryEvent sse_decode_dns_query_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_u_64(deserializer);
+    var var_completedAtMs = sse_decode_u_64(deserializer);
+    var var_domain = sse_decode_String(deserializer);
+    var var_queryType = sse_decode_String(deserializer);
+    var var_path = sse_decode_String(deserializer);
+    var var_answers = sse_decode_list_String(deserializer);
+    var var_outcome = sse_decode_String(deserializer);
+    var var_fromCache = sse_decode_bool(deserializer);
+    var var_stale = sse_decode_bool(deserializer);
+    var var_elapsedUs = sse_decode_u_64(deserializer);
+    var var_truncated = sse_decode_bool(deserializer);
+    return DnsQueryEvent(
+      id: var_id,
+      completedAtMs: var_completedAtMs,
+      domain: var_domain,
+      queryType: var_queryType,
+      path: var_path,
+      answers: var_answers,
+      outcome: var_outcome,
+      fromCache: var_fromCache,
+      stale: var_stale,
+      elapsedUs: var_elapsedUs,
+      truncated: var_truncated,
+    );
+  }
+
+  @protected
+  DnsQuerySnapshot sse_decode_dns_query_snapshot(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_events = sse_decode_list_dns_query_event(deserializer);
+    var var_total = sse_decode_u_64(deserializer);
+    var var_dropped = sse_decode_u_64(deserializer);
+    return DnsQuerySnapshot(
+      events: var_events,
+      total: var_total,
+      dropped: var_dropped,
+    );
+  }
+
+  @protected
   ExternalControllerStatus sse_decode_external_controller_status(
     SseDeserializer deserializer,
   ) {
@@ -3259,6 +3387,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <ConnectionInfo>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_connection_info(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<DnsQueryEvent> sse_decode_list_dns_query_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <DnsQueryEvent>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_dns_query_event(deserializer));
     }
     return ans_;
   }
@@ -3929,6 +4071,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_dns_query_event(
+    DnsQueryEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.id, serializer);
+    sse_encode_u_64(self.completedAtMs, serializer);
+    sse_encode_String(self.domain, serializer);
+    sse_encode_String(self.queryType, serializer);
+    sse_encode_String(self.path, serializer);
+    sse_encode_list_String(self.answers, serializer);
+    sse_encode_String(self.outcome, serializer);
+    sse_encode_bool(self.fromCache, serializer);
+    sse_encode_bool(self.stale, serializer);
+    sse_encode_u_64(self.elapsedUs, serializer);
+    sse_encode_bool(self.truncated, serializer);
+  }
+
+  @protected
+  void sse_encode_dns_query_snapshot(
+    DnsQuerySnapshot self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_dns_query_event(self.events, serializer);
+    sse_encode_u_64(self.total, serializer);
+    sse_encode_u_64(self.dropped, serializer);
+  }
+
+  @protected
   void sse_encode_external_controller_status(
     ExternalControllerStatus self,
     SseSerializer serializer,
@@ -4028,6 +4200,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_connection_info(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_dns_query_event(
+    List<DnsQueryEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_dns_query_event(item, serializer);
     }
   }
 

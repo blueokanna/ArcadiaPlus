@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — Corduit 0.3.3 adaptation
+
+- Validate encrypted DNS across primary, recovery, policy and bootstrap roles. Preserve private resolver boundaries and fallback filters; remove implicit public domain routes and system DNS additions under encryption.
+- Retain loopback-first recursive recovery, validate startup answers against the requested alias chain, and reject hostname listen addresses without resolving them.
+- Gate view animations centrally by lifecycle, share Material route timelines, and move capsule navigation indicators without per-frame layout. Refine interruptible shape and icon transitions. A stopped dashboard no longer probes the direct IP.
+- Isolate recursive startup probes so a late first reply cannot invalidate the next attempt. Add DNS privacy, lifecycle and tablet landscape regressions; verified public DoH and the corrected root-recursion startup probe on the test host.
+
+## 1.0.9+4
+
+- Fix recursive DNS retry starvation, retry blocked UDP over TCP within the same deadline, and reject truncated answers when TCP recovery fails. Reserve time for configured alternatives and briefly bypass an unreachable loopback resolver; network changes reset the cooldown.
+- Use the sibling RecurseX 0.2.6 and Corduit repositories directly, with one shared DNS/socket/JNI identity. Remove the resolver source copy. CI requires explicit reviewed engine commit SHAs.
+- Tighten DNS record admission, alias-negative caching and DNSSEC trust reporting in RecurseX; retain failed explicit DNS routes in Corduit and require LAN permission for private DNS clients.
+- Replace DNS log parsing with bounded, structured resolver observations: actual answers, cache state, errors and elapsed time. Add domain search, cache/failure filters, selectable details and history clearing. The view distinguishes resolver calls from Fake-IP synthesis and reports skipped observations.
+
 ## 1.0.9+3
 
 - Replace the decorative dashboard emblem and duplicate full-width action with one compact, morphing Material shape control. Move exit IP, provider and sourced network-risk classification into the status card; incomplete responses remain unknown.

@@ -97,6 +97,7 @@ void main() {
   for (final (size, platform) in [
     (const Size(390, 844), TargetPlatform.android),
     (const Size(800, 1280), TargetPlatform.android),
+    (const Size(1280, 800), TargetPlatform.android),
     (const Size(1440, 960), TargetPlatform.windows),
   ]) {
     for (final brightness in Brightness.values) {

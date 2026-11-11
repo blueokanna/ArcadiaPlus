@@ -2,6 +2,7 @@ import copy
 import importlib.util
 from pathlib import Path
 import unittest
+import tempfile
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'check_engine_dependencies.py'
 SPEC = importlib.util.spec_from_file_location('engine_dependencies', SCRIPT)
@@ -82,6 +83,36 @@ class DependencyChecks(unittest.TestCase):
         self.metadata['resolve'] = None
         with self.assertRaisesRegex(ValueError, 'resolved bridge graph'):
             engine.validate_graph(self.metadata, self.expected)
+
+    def test_only_the_expected_sibling_path_can_replace_recursex(self):
+        sibling = Path(__file__).resolve().parent / 'RecurseX'
+        package = self.metadata['packages'][1]
+        package.update(source=None, manifest_path=str(sibling / 'Cargo.toml'))
+        self.lock['package'][1].pop('source')
+        self.lock['package'][1].pop('checksum')
+        self.assertEqual(engine.validate_lock(self.lock, {'recurse-x': '0.2.5'}), self.expected)
+        engine.validate_graph(self.metadata, self.expected, {'recurse-x': sibling})
+        package['manifest_path'] = str(sibling.parent / 'unexpected/Cargo.toml')
+        with self.assertRaisesRegex(ValueError, 'unexpected source'):
+            engine.validate_graph(self.metadata, self.expected, {'recurse-x': sibling})
+
+    def test_workspace_rejects_non_sibling_patch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rust = root / 'ArcadiaPlus/rust'
+            rust.mkdir(parents=True)
+            patches = {'corduit': {'path': '../../Corduit'},
+                       'recurse-x': {'path': '../../RecurseX'}}
+            manifest = {'patch': {'crates-io': patches}}
+            for name, folder in [('corduit', 'Corduit'), ('recurse-x', 'RecurseX')]:
+                target = root / folder
+                target.mkdir()
+                (target / 'Cargo.toml').write_text(
+                    f'[package]\nname = "{name}"\nversion = "0.2.6"\n', encoding='utf-8')
+            self.assertEqual(set(engine.workspace_sources(rust, manifest)), {'corduit', 'recurse-x'})
+            patches['recurse-x']['path'] = '../copied-resolver'
+            with self.assertRaisesRegex(ValueError, 'sibling repository patch'):
+                engine.workspace_sources(rust, manifest)
 
 
 if __name__ == '__main__':

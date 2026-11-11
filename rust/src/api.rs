@@ -43,6 +43,7 @@ where
 /// level afterwards — see [`crate::logging`].
 #[frb(init)]
 pub fn init_app() {
+    recurse_x::observation::configure(256);
     let _ = crate::logging::init(crate::logging::LogFilter::UpTo(tracing::Level::INFO));
     // Do not mutate process environment variables after worker threads start.
     // Backtrace capture respects the environment supplied when the app starts.
@@ -405,6 +406,22 @@ pub async fn stop_recursive_dns() -> std::result::Result<(), String> {
 #[frb]
 pub async fn get_recursive_dns_status() -> std::result::Result<RecursiveDnsStatus, String> {
     run(|| Ok::<RecursiveDnsStatus, String>(recursive_dns::status())).await
+}
+
+/// Bounded completed resolver calls, independent of the engine log level.
+#[frb]
+pub async fn get_dns_query_events() -> std::result::Result<DnsQuerySnapshot, String> {
+    run(|| Ok::<_, String>(DnsQuerySnapshot::from(recurse_x::observation::snapshot()))).await
+}
+
+/// Clear in-memory query history without touching DNS caches or active traffic.
+#[frb]
+pub async fn clear_dns_query_events() -> std::result::Result<(), String> {
+    run(|| {
+        recurse_x::observation::configure(256);
+        Ok::<_, String>(())
+    })
+    .await
 }
 
 // ============== Logs & diagnostics ==============

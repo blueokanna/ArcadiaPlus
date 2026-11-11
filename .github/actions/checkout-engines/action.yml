@@ -1,0 +1,23 @@
+name: Check out pinned sibling engines
+description: Fetch reviewed engine commits into sibling repositories, without source copies in this app.
+inputs:
+  recursex-revision:
+    description: Full commit SHA containing the reviewed RecurseX changes
+    required: true
+  corduit-revision:
+    description: Full commit SHA containing the reviewed Corduit changes
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Prepare Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Fetch pinned sources
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      env:
+        RECURSEX_REVISION: ${{ inputs.recursex-revision }}
+        CORDUIT_REVISION: ${{ inputs.corduit-revision }}
+      run: python scripts/checkout_engines.py

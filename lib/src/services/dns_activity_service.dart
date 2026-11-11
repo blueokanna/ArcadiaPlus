@@ -7,41 +7,19 @@ import '../rust/types.dart';
 import '../utils/app_lifecycle.dart';
 import 'native_core_service.dart';
 
-class DnsQueryObservation {
-  const DnsQueryObservation({
-    required this.time,
-    required this.domain,
-    required this.type,
-  });
-  final String time;
-  final String domain;
-  final String type;
-
-  // This is the actual Corduit TUN ingress event, not an inferred TCP hostname.
-  static final _event = RegExp(
-    r'^\[([^\]]+)\] \[INFO\] DNS query received: ([^\s]+) \((A|AAAA|[A-Za-z0-9_]+)\)$',
-  );
-  static DnsQueryObservation? parse(String line) {
-    final match = _event.firstMatch(line);
-    if (match == null || match[2]!.length > 254) return null;
-    return DnsQueryObservation(
-      time: match[1]!,
-      domain: match[2]!,
-      type: match[3]!,
-    );
-  }
-}
-
-typedef DnsActivitySnapshot = ({List<String> logs, RecursiveDnsStatus status});
+typedef DnsActivitySnapshot = ({
+  DnsQuerySnapshot queries,
+  RecursiveDnsStatus status,
+});
 typedef DnsActivityReader = Future<DnsActivitySnapshot?> Function();
 
 Future<DnsActivitySnapshot?> readDnsActivity() async {
   if (!NativeCoreService.instance.isReady) return null;
-  final logs = api.getLogs(lines: 500);
+  final queries = api.getDnsQueryEvents();
   final status = api.getRecursiveDnsStatus();
-  final values = await Future.wait<Object>([logs, status]);
+  final values = await Future.wait<Object>([queries, status]);
   return (
-    logs: values[0] as List<String>,
+    queries: values[0] as DnsQuerySnapshot,
     status: values[1] as RecursiveDnsStatus,
   );
 }
@@ -49,14 +27,21 @@ Future<DnsActivitySnapshot?> readDnsActivity() async {
 /// Bounded snapshots only. Polling is scoped to a visible DNS panel, and pauses
 /// with the application. Counts refer to retained events, not lifetime traffic.
 class DnsActivityController extends ChangeNotifier {
-  DnsActivityController({this.reader = readDnsActivity}) {
+  DnsActivityController({
+    this.reader = readDnsActivity,
+    this.clearer = api.clearDnsQueryEvents,
+  }) {
     AppLifecycle.instance.active.addListener(_sync);
   }
   final DnsActivityReader reader;
-  List<DnsQueryObservation> records = const [];
+  final Future<void> Function() clearer;
+  List<DnsQueryEvent> records = const [];
+  BigInt total = BigInt.zero;
+  BigInt dropped = BigInt.zero;
   RecursiveDnsStatus? status;
   bool failed = false;
   bool loading = false;
+  bool clearing = false;
   bool _visible = false;
   bool _disposed = false;
   int _generation = 0;
@@ -81,7 +66,11 @@ class DnsActivityController extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
-    if (_disposed || !_visible || !AppLifecycle.instance.isActive || loading) {
+    if (_disposed ||
+        !_visible ||
+        !AppLifecycle.instance.isActive ||
+        loading ||
+        clearing) {
       return;
     }
     final generation = _generation;
@@ -89,13 +78,11 @@ class DnsActivityController extends ChangeNotifier {
     try {
       final value = await reader();
       if (_disposed || generation != _generation) return;
-      final parsed =
-          value?.logs
-              .map(DnsQueryObservation.parse)
-              .whereType<DnsQueryObservation>()
-              .toList() ??
-          [];
-      records = List.unmodifiable(parsed.reversed.take(80));
+      records = List.unmodifiable(
+        value?.queries.events.reversed.take(80) ?? const <DnsQueryEvent>[],
+      );
+      total = value?.queries.total ?? BigInt.zero;
+      dropped = value?.queries.dropped ?? BigInt.zero;
       status = value?.status;
       failed = false;
     } catch (_) {
@@ -103,6 +90,26 @@ class DnsActivityController extends ChangeNotifier {
     } finally {
       loading = false;
       if (!_disposed && generation == _generation) notifyListeners();
+    }
+  }
+
+  Future<void> clear() async {
+    if (_disposed || clearing) return;
+    _generation++;
+    clearing = true;
+    notifyListeners();
+    try {
+      await clearer();
+      if (_disposed) return;
+      records = const [];
+      total = BigInt.zero;
+      dropped = BigInt.zero;
+      failed = false;
+    } catch (_) {
+      if (!_disposed) failed = true;
+    } finally {
+      clearing = false;
+      if (!_disposed) notifyListeners();
     }
   }
 

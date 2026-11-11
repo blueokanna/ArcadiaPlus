@@ -4,6 +4,7 @@ import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/theme/app_motion.dart';
+import 'package:arcadiaplus/src/theme/app_shapes.dart';
 
 import 'expressive_status_shape.dart';
 
@@ -44,7 +45,7 @@ class StatusCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: c.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: AppShapes.extraLarge,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,7 +61,9 @@ class StatusCard extends StatelessWidget {
               ),
               Semantics(
                 liveRegion: true,
-                child: Container(
+                child: AnimatedContainer(
+                  duration: AppMotion.duration(context),
+                  curve: AppMotion.standardCurve,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 9,
                     vertical: 4,
@@ -117,13 +120,29 @@ class StatusCard extends StatelessWidget {
                         ),
                         padding: EdgeInsets.zero,
                       ),
-                      icon: Icon(
-                        isLoading
-                            ? Icons.hourglass_top_rounded
-                            : isRunning
-                            ? Icons.pause_rounded
-                            : Icons.play_arrow_rounded,
-                        size: 28,
+                      icon: AnimatedSwitcher(
+                        duration: AppMotion.duration(context, AppMotion.short),
+                        switchInCurve: AppMotion.standardCurve,
+                        switchOutCurve: Curves.easeOut,
+                        transitionBuilder: (child, animation) => FadeTransition(
+                          opacity: animation,
+                          child: ScaleTransition(
+                            scale: Tween<double>(
+                              begin: .8,
+                              end: 1,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        ),
+                        child: Icon(
+                          isLoading
+                              ? Icons.hourglass_top_rounded
+                              : isRunning
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                          size: 28,
+                          key: ValueKey((isRunning, isLoading)),
+                        ),
                       ),
                     ),
                   ),

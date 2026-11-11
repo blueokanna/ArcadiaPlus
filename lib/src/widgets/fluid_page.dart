@@ -24,6 +24,8 @@ class _FluidPageState extends State<FluidPage>
     curve: AppMotion.curve,
   );
   bool _started = false;
+  Animation<double>? _routeAnimation;
+  bool _timelineSelected = false;
   @override
   void initState() {
     super.initState();
@@ -37,6 +39,22 @@ class _FluidPageState extends State<FluidPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (!_timelineSelected) {
+      _timelineSelected = true;
+      final route = ModalRoute.of(context)?.animation;
+      // The first route is already complete when mounted; give it one finite
+      // entrance. Pushed routes keep the navigator's interactive timeline.
+      if (route != null && route.status != AnimationStatus.completed) {
+        _routeAnimation = route;
+      }
+    }
+    // A Material route already owns the page transition. Share its timeline
+    // with shape reveals instead of stacking another fade/slide over it.
+    if (_routeAnimation != null) {
+      _controller.value = 1;
+      _started = true;
+      return;
+    }
     if (MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled ||
         !AppLifecycle.instance.isActive) {
@@ -58,17 +76,21 @@ class _FluidPageState extends State<FluidPage>
 
   @override
   Widget build(BuildContext context) => _FluidScope(
-    animation: _curve,
-    child: FadeTransition(
-      opacity: Tween<double>(begin: .65, end: 1).animate(_curve),
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, .012),
-          end: Offset.zero,
-        ).animate(_curve),
-        child: widget.child,
-      ),
-    ),
+    animation: MediaQuery.disableAnimationsOf(context)
+        ? const AlwaysStoppedAnimation(1.0)
+        : _routeAnimation ?? _curve,
+    child: _routeAnimation != null
+        ? widget.child
+        : FadeTransition(
+            opacity: Tween<double>(begin: .65, end: 1).animate(_curve),
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, .012),
+                end: Offset.zero,
+              ).animate(_curve),
+              child: widget.child,
+            ),
+          ),
   );
 }
 

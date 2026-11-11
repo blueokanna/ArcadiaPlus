@@ -18,6 +18,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
+      - name: Check out pinned sibling engines
+        uses: ./.github/actions/checkout-engines
+        with:
+          recursex-revision: ${{ vars.RECURSEX_REVISION }}
+          corduit-revision: ${{ vars.CORDUIT_REVISION }}
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: '1.97.0'

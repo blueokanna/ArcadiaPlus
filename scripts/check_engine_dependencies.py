@@ -1,4 +1,4 @@
-"""Verify locked registry dependencies and shared DNS/JNI identities."""
+"""Verify sibling engine sources and shared DNS, socket-factory and JNI identities."""
 
 import argparse
 import json
@@ -28,13 +28,33 @@ def validate_manifest(manifest):
             raise ValueError(f'{name} must use a crates.io version dependency')
 
 
-def validate_lock(lock):
+def workspace_sources(rust, manifest):
+    sources = {'corduit': rust.parent.parent / 'Corduit',
+               'recurse-x': rust.parent.parent / 'RecurseX'}
+    patches = manifest.get('patch', {}).get('crates-io', {})
+    for name, directory in sources.items():
+        patch = patches.get(name, {})
+        if (set(patch) != {'path'} or
+                (rust / patch['path']).resolve() != directory.resolve()):
+            raise ValueError(f'{name}: expected the sibling repository patch')
+        package = read_toml(directory / 'Cargo.toml')['package']
+        if package['name'] != name:
+            raise ValueError(f'{name}: sibling repository package mismatch')
+    return sources
+
+
+def validate_lock(lock, local_versions=None):
     expected = {}
     for name in PACKAGES:
         entries = [entry for entry in lock.get('package', []) if entry['name'] == name]
         if len(entries) != 1:
             raise ValueError(f'{name}: expected one locked package, found {len(entries)}')
         entry = entries[0]
+        if name in (local_versions or {}):
+            if entry.get('source') is not None or entry['version'] != local_versions[name]:
+                raise ValueError(f'{name}: expected the sibling repository version')
+            expected[name] = entry['version']
+            continue
         if (entry.get('source') != REGISTRY
                 or not re.fullmatch(r'[0-9a-f]{64}', entry.get('checksum', ''))):
             raise ValueError(f'{name}: expected a checksummed crates.io release')
@@ -42,7 +62,7 @@ def validate_lock(lock):
     return expected
 
 
-def validate_graph(metadata, expected):
+def validate_graph(metadata, expected, local_paths=None):
     resolve = metadata.get('resolve')
     if not resolve or not resolve.get('root'):
         raise ValueError('Cargo metadata must include the resolved bridge graph')
@@ -54,7 +74,12 @@ def validate_graph(metadata, expected):
         if len(packages) != 1:
             raise ValueError(f'{name}: expected one shared package, found {len(packages)}')
         package = packages[0]
-        if package['source'] != REGISTRY or package['version'] != version:
+        source_matches = package['source'] == REGISTRY
+        if name in (local_paths or {}):
+            source_matches = (package['source'] is None and
+                              Path(package['manifest_path']).resolve() ==
+                              (local_paths[name] / 'Cargo.toml').resolve())
+        if not source_matches or package['version'] != version:
             raise ValueError(f'{name}: Cargo resolved an unexpected source: {package["id"]}')
         identities[name] = package['id']
 
@@ -85,16 +110,21 @@ def main():
     parser.add_argument('--offline', action='store_true')
     options = parser.parse_args()
     rust = Path(__file__).resolve().parents[1] / 'rust'
-    validate_manifest(read_toml(rust / 'Cargo.toml'))
-    expected = validate_lock(read_toml(rust / 'Cargo.lock'))
+    manifest = read_toml(rust / 'Cargo.toml')
+    validate_manifest(manifest)
+    sources = workspace_sources(rust, manifest)
+    versions = {name: read_toml(path / 'Cargo.toml')['package']['version']
+                for name, path in sources.items()}
+    expected = validate_lock(read_toml(rust / 'Cargo.lock'), versions)
     command = ['cargo', 'metadata', '--manifest-path', str(rust / 'Cargo.toml'),
                '--format-version=1', '--locked', '--all-features']
     if options.offline:
         command.append('--offline')
     result = subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8')
-    validate_graph(json.loads(result.stdout), expected)
+    validate_graph(json.loads(result.stdout), expected, sources)
     for name, version in expected.items():
-        print(f'{name} {version}: one checksummed crates.io package')
+        source = str(sources[name]) if name in sources else 'checksummed crates.io package'
+        print(f'{name} {version}: one {source}')
     print('Shared RecurseX, Courierust and Android JNI identities verified')
 
 

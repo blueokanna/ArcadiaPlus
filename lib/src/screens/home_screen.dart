@@ -295,18 +295,22 @@ class _StatusSectionState extends State<_StatusSection> {
         _exit.configure(
           useProxy: snapshot.isRunning,
           port: port,
-          active: active,
+          // Opening a stopped dashboard must not disclose the direct IP to a
+          // third-party enrichment service. Probe only through the live proxy.
+          active: active && snapshot.isRunning,
         );
         return StatusCard(
-          identity: ListenableBuilder(
-            listenable: _exit,
-            builder: (context, _) => ExitIdentity(
-              report: _exit.report,
-              loading: _exit.loading,
-              failed: _exit.failed,
-              onRefresh: _exit.refresh,
-            ),
-          ),
+          identity: !snapshot.isRunning
+              ? null
+              : ListenableBuilder(
+                  listenable: _exit,
+                  builder: (context, _) => ExitIdentity(
+                    report: _exit.report,
+                    loading: _exit.loading,
+                    failed: _exit.failed,
+                    onRefresh: _exit.refresh,
+                  ),
+                ),
           isRunning: snapshot.isRunning,
           isLoading: snapshot.isLoading,
           onStartStop: () {

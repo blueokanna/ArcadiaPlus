@@ -284,36 +284,42 @@ class _DestinationStripState extends State<_DestinationStrip>
             return RepaintBoundary(
               child: Stack(
                 children: [
-                  AnimatedBuilder(
-                    animation: _position,
-                    builder: (context, child) {
-                      final position = _position.value.clamp(
-                        0.0,
-                        buttons.length - 1.0,
-                      );
-                      return Positioned(
-                        left: widget.vertical
-                            ? 0
-                            : (reverse
-                                      ? buttons.length - 1 - position
-                                      : position) *
-                                  cellWidth,
-                        top: widget.vertical ? position * widget.extent : 0,
-                        width: cellWidth,
-                        height: widget.extent,
-                        child: child!,
-                      );
-                    },
-                    child: Padding(
-                      padding: widget.expanded
-                          ? const EdgeInsets.symmetric(vertical: 4)
-                          : const EdgeInsets.symmetric(horizontal: 2),
-                      child: DecoratedBox(
-                        key: const ValueKey('navigation-indicator'),
-                        decoration: BoxDecoration(
-                          color: colors.secondaryContainer,
-                          borderRadius: BorderRadius.circular(
-                            widget.expanded ? 18 : 30,
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    width: cellWidth,
+                    height: widget.extent,
+                    child: AnimatedBuilder(
+                      animation: _position,
+                      builder: (context, child) {
+                        final position = _position.value.clamp(
+                          0.0,
+                          buttons.length - 1.0,
+                        );
+                        return Transform.translate(
+                          offset: Offset(
+                            widget.vertical
+                                ? 0
+                                : (reverse
+                                          ? buttons.length - 1 - position
+                                          : position) *
+                                      cellWidth,
+                            widget.vertical ? position * widget.extent : 0,
+                          ),
+                          child: child!,
+                        );
+                      },
+                      child: Padding(
+                        padding: widget.expanded
+                            ? const EdgeInsets.symmetric(vertical: 4)
+                            : const EdgeInsets.symmetric(horizontal: 2),
+                        child: DecoratedBox(
+                          key: const ValueKey('navigation-indicator'),
+                          decoration: BoxDecoration(
+                            color: colors.secondaryContainer,
+                            borderRadius: BorderRadius.circular(
+                              widget.expanded ? 18 : 30,
+                            ),
                           ),
                         ),
                       ),

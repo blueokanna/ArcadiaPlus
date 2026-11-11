@@ -268,6 +268,14 @@ Future<void> stopRecursiveDns() =>
 Future<RecursiveDnsStatus> getRecursiveDnsStatus() =>
     RustLib.instance.api.crateApiGetRecursiveDnsStatus();
 
+/// Bounded completed resolver calls, independent of the engine log level.
+Future<DnsQuerySnapshot> getDnsQueryEvents() =>
+    RustLib.instance.api.crateApiGetDnsQueryEvents();
+
+/// Clear in-memory query history without touching DNS caches or active traffic.
+Future<void> clearDnsQueryEvents() =>
+    RustLib.instance.api.crateApiClearDnsQueryEvents();
+
 Future<List<String>> getLogs({int? lines}) =>
     RustLib.instance.api.crateApiGetLogs(lines: lines);
 

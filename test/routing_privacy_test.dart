@@ -26,7 +26,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('domestic DNS defaults respect explicit equivalent suffix policies', () {
+  test('encryption adds no unrequested public domain policies', () {
     final config = jsonDecode(
       ConfigConverter.convertClashYamlToJson('''
 dns:
@@ -37,7 +37,8 @@ rules: []
 ''', dnsSettings: DnsSettings()),
     ) as Map;
     final policies = config['dns']['nameserver_policy'] as Map;
-    expect(policies['+.qq.com'], EncryptedDnsPolicy.defaults);
+    expect(policies.containsKey('+.qq.com'), false);
+    expect(policies, hasLength(1));
     expect(policies['bilibili.com'], ['https://9.9.9.9/dns-query']);
     expect(policies.containsKey('+.bilibili.com'), false);
   });
@@ -144,11 +145,11 @@ rules: []
           '''
 dns:
   enable: false
-  nameserver: [192.168.1.1, https://dns.example/dns-query]
+  nameserver: [https://dns.example/dns-query]
   fallback: [8.8.8.8, tls://1.1.1.1]
   default-nameserver: [223.5.5.5]
   nameserver-policy:
-    '+.example.com': [tcp://192.168.1.1]
+    '+.example.com': [tls://private.example]
 rules: [MATCH,DIRECT]
 ''',
           dnsSettings: DnsSettings(),
@@ -159,9 +160,11 @@ rules: [MATCH,DIRECT]
       final dns = config['dns'] as Map;
       expect(dns['enable'], true);
       expect(dns['nameservers'], ['https://dns.example/dns-query']);
-      expect(dns['fallback'], ['tls://1.1.1.1']);
-      expect(dns['default_nameserver'], EncryptedDnsPolicy.defaults);
-      expect(dns['nameserver_policy']['+.example.com'], dns['nameservers']);
+      expect(dns['fallback'], ['https://8.8.8.8/dns-query', 'tls://1.1.1.1']);
+      expect(dns['default_nameserver'], [EncryptedDnsPolicy.defaults.first]);
+      expect(dns['nameserver_policy']['+.example.com'], [
+        'tls://private.example',
+      ]);
       expect(jsonEncode(dns), isNot(contains('192.168.1.1')));
       expect(jsonEncode(dns), isNot(contains('127.0.0.1:5353')));
     },

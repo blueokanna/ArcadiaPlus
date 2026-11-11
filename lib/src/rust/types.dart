@@ -300,6 +300,90 @@ class DnsFallbackFilterDto {
           domain == other.domain;
 }
 
+class DnsQueryEvent {
+  final BigInt id;
+  final BigInt completedAtMs;
+  final String domain;
+  final String queryType;
+  final String path;
+  final List<String> answers;
+  final String outcome;
+  final bool fromCache;
+  final bool stale;
+  final BigInt elapsedUs;
+  final bool truncated;
+
+  const DnsQueryEvent({
+    required this.id,
+    required this.completedAtMs,
+    required this.domain,
+    required this.queryType,
+    required this.path,
+    required this.answers,
+    required this.outcome,
+    required this.fromCache,
+    required this.stale,
+    required this.elapsedUs,
+    required this.truncated,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      completedAtMs.hashCode ^
+      domain.hashCode ^
+      queryType.hashCode ^
+      path.hashCode ^
+      answers.hashCode ^
+      outcome.hashCode ^
+      fromCache.hashCode ^
+      stale.hashCode ^
+      elapsedUs.hashCode ^
+      truncated.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DnsQueryEvent &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          completedAtMs == other.completedAtMs &&
+          domain == other.domain &&
+          queryType == other.queryType &&
+          path == other.path &&
+          answers == other.answers &&
+          outcome == other.outcome &&
+          fromCache == other.fromCache &&
+          stale == other.stale &&
+          elapsedUs == other.elapsedUs &&
+          truncated == other.truncated;
+}
+
+/// Completed resolver calls. This is not a count of intercepted DNS packets.
+class DnsQuerySnapshot {
+  final List<DnsQueryEvent> events;
+  final BigInt total;
+  final BigInt dropped;
+
+  const DnsQuerySnapshot({
+    required this.events,
+    required this.total,
+    required this.dropped,
+  });
+
+  @override
+  int get hashCode => events.hashCode ^ total.hashCode ^ dropped.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DnsQuerySnapshot &&
+          runtimeType == other.runtimeType &&
+          events == other.events &&
+          total == other.total &&
+          dropped == other.dropped;
+}
+
 /// Clash-compatible dashboard API status. The secret is never reported.
 class ExternalControllerStatus {
   /// Whether the controller's accept loop is running.

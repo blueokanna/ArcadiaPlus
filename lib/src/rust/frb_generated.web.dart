@@ -62,6 +62,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DnsFallbackFilterDto dco_decode_dns_fallback_filter_dto(dynamic raw);
 
   @protected
+  DnsQueryEvent dco_decode_dns_query_event(dynamic raw);
+
+  @protected
+  DnsQuerySnapshot dco_decode_dns_query_snapshot(dynamic raw);
+
+  @protected
   ExternalControllerStatus dco_decode_external_controller_status(dynamic raw);
 
   @protected
@@ -90,6 +96,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ConnectionInfo> dco_decode_list_connection_info(dynamic raw);
+
+  @protected
+  List<DnsQueryEvent> dco_decode_list_dns_query_event(dynamic raw);
 
   @protected
   List<LatencyTestResult> dco_decode_list_latency_test_result(dynamic raw);
@@ -248,6 +257,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  DnsQueryEvent sse_decode_dns_query_event(SseDeserializer deserializer);
+
+  @protected
+  DnsQuerySnapshot sse_decode_dns_query_snapshot(SseDeserializer deserializer);
+
+  @protected
   ExternalControllerStatus sse_decode_external_controller_status(
     SseDeserializer deserializer,
   );
@@ -284,6 +299,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ConnectionInfo> sse_decode_list_connection_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<DnsQueryEvent> sse_decode_list_dns_query_event(
     SseDeserializer deserializer,
   );
 
@@ -545,6 +565,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   }
 
   @protected
+  JSAny cst_encode_dns_query_event(DnsQueryEvent raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_u_64(raw.id),
+      cst_encode_u_64(raw.completedAtMs),
+      cst_encode_String(raw.domain),
+      cst_encode_String(raw.queryType),
+      cst_encode_String(raw.path),
+      cst_encode_list_String(raw.answers),
+      cst_encode_String(raw.outcome),
+      cst_encode_bool(raw.fromCache),
+      cst_encode_bool(raw.stale),
+      cst_encode_u_64(raw.elapsedUs),
+      cst_encode_bool(raw.truncated),
+    ].jsify()!;
+  }
+
+  @protected
+  JSAny cst_encode_dns_query_snapshot(DnsQuerySnapshot raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return [
+      cst_encode_list_dns_query_event(raw.events),
+      cst_encode_u_64(raw.total),
+      cst_encode_u_64(raw.dropped),
+    ].jsify()!;
+  }
+
+  @protected
   JSAny cst_encode_external_controller_status(ExternalControllerStatus raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return [
@@ -609,6 +657,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   JSAny cst_encode_list_connection_info(List<ConnectionInfo> raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return raw.map(cst_encode_connection_info).toList().jsify()!;
+  }
+
+  @protected
+  JSAny cst_encode_list_dns_query_event(List<DnsQueryEvent> raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return raw.map(cst_encode_dns_query_event).toList().jsify()!;
   }
 
   @protected
@@ -979,6 +1033,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_dns_query_event(DnsQueryEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_dns_query_snapshot(
+    DnsQuerySnapshot self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_external_controller_status(
     ExternalControllerStatus self,
     SseSerializer serializer,
@@ -1023,6 +1086,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_connection_info(
     List<ConnectionInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_dns_query_event(
+    List<DnsQueryEvent> self,
     SseSerializer serializer,
   );
 
@@ -1200,6 +1269,9 @@ class RustLibWire implements BaseWire {
   void wire__crate__api__clear_android_vpn_fd(NativePortType port_) =>
       wasmModule.wire__crate__api__clear_android_vpn_fd(port_);
 
+  void wire__crate__api__clear_dns_query_events(NativePortType port_) =>
+      wasmModule.wire__crate__api__clear_dns_query_events(port_);
+
   void wire__crate__api__clear_logs(NativePortType port_) =>
       wasmModule.wire__crate__api__clear_logs(port_);
 
@@ -1270,6 +1342,9 @@ class RustLibWire implements BaseWire {
 
   void wire__crate__api__get_dns_config(NativePortType port_) =>
       wasmModule.wire__crate__api__get_dns_config(port_);
+
+  void wire__crate__api__get_dns_query_events(NativePortType port_) =>
+      wasmModule.wire__crate__api__get_dns_query_events(port_);
 
   void wire__crate__api__get_external_controller_status(NativePortType port_) =>
       wasmModule.wire__crate__api__get_external_controller_status(port_);
@@ -1613,6 +1688,8 @@ external RustLibWasmModule get wasmModule;
 extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__api__clear_android_vpn_fd(NativePortType port_);
 
+  external void wire__crate__api__clear_dns_query_events(NativePortType port_);
+
   external void wire__crate__api__clear_logs(NativePortType port_);
 
   external void wire__crate__api__clear_vpn_fd(NativePortType port_);
@@ -1666,6 +1743,8 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
   external void wire__crate__api__get_corduit_status(NativePortType port_);
 
   external void wire__crate__api__get_dns_config(NativePortType port_);
+
+  external void wire__crate__api__get_dns_query_events(NativePortType port_);
 
   external void wire__crate__api__get_external_controller_status(
     NativePortType port_,

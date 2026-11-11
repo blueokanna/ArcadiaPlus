@@ -60,6 +60,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DnsFallbackFilterDto dco_decode_dns_fallback_filter_dto(dynamic raw);
 
   @protected
+  DnsQueryEvent dco_decode_dns_query_event(dynamic raw);
+
+  @protected
+  DnsQuerySnapshot dco_decode_dns_query_snapshot(dynamic raw);
+
+  @protected
   ExternalControllerStatus dco_decode_external_controller_status(dynamic raw);
 
   @protected
@@ -88,6 +94,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ConnectionInfo> dco_decode_list_connection_info(dynamic raw);
+
+  @protected
+  List<DnsQueryEvent> dco_decode_list_dns_query_event(dynamic raw);
 
   @protected
   List<LatencyTestResult> dco_decode_list_latency_test_result(dynamic raw);
@@ -246,6 +255,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  DnsQueryEvent sse_decode_dns_query_event(SseDeserializer deserializer);
+
+  @protected
+  DnsQuerySnapshot sse_decode_dns_query_snapshot(SseDeserializer deserializer);
+
+  @protected
   ExternalControllerStatus sse_decode_external_controller_status(
     SseDeserializer deserializer,
   );
@@ -282,6 +297,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<ConnectionInfo> sse_decode_list_connection_info(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<DnsQueryEvent> sse_decode_list_dns_query_event(
     SseDeserializer deserializer,
   );
 
@@ -505,6 +525,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     final ans = wire.cst_new_list_connection_info(raw.length);
     for (var i = 0; i < raw.length; ++i) {
       cst_api_fill_to_wire_connection_info(raw[i], ans.ref.ptr[i]);
+    }
+    return ans;
+  }
+
+  @protected
+  ffi.Pointer<wire_cst_list_dns_query_event> cst_encode_list_dns_query_event(
+    List<DnsQueryEvent> raw,
+  ) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    final ans = wire.cst_new_list_dns_query_event(raw.length);
+    for (var i = 0; i < raw.length; ++i) {
+      cst_api_fill_to_wire_dns_query_event(raw[i], ans.ref.ptr[i]);
     }
     return ans;
   }
@@ -738,6 +770,34 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     wireObj.geoip_code = cst_encode_opt_String(apiObj.geoipCode);
     wireObj.ipcidr = cst_encode_list_String(apiObj.ipcidr);
     wireObj.domain = cst_encode_list_String(apiObj.domain);
+  }
+
+  @protected
+  void cst_api_fill_to_wire_dns_query_event(
+    DnsQueryEvent apiObj,
+    wire_cst_dns_query_event wireObj,
+  ) {
+    wireObj.id = cst_encode_u_64(apiObj.id);
+    wireObj.completed_at_ms = cst_encode_u_64(apiObj.completedAtMs);
+    wireObj.domain = cst_encode_String(apiObj.domain);
+    wireObj.query_type = cst_encode_String(apiObj.queryType);
+    wireObj.path = cst_encode_String(apiObj.path);
+    wireObj.answers = cst_encode_list_String(apiObj.answers);
+    wireObj.outcome = cst_encode_String(apiObj.outcome);
+    wireObj.from_cache = cst_encode_bool(apiObj.fromCache);
+    wireObj.stale = cst_encode_bool(apiObj.stale);
+    wireObj.elapsed_us = cst_encode_u_64(apiObj.elapsedUs);
+    wireObj.truncated = cst_encode_bool(apiObj.truncated);
+  }
+
+  @protected
+  void cst_api_fill_to_wire_dns_query_snapshot(
+    DnsQuerySnapshot apiObj,
+    wire_cst_dns_query_snapshot wireObj,
+  ) {
+    wireObj.events = cst_encode_list_dns_query_event(apiObj.events);
+    wireObj.total = cst_encode_u_64(apiObj.total);
+    wireObj.dropped = cst_encode_u_64(apiObj.dropped);
   }
 
   @protected
@@ -1055,6 +1115,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_dns_query_event(DnsQueryEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_dns_query_snapshot(
+    DnsQuerySnapshot self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_external_controller_status(
     ExternalControllerStatus self,
     SseSerializer serializer,
@@ -1099,6 +1168,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_connection_info(
     List<ConnectionInfo> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_dns_query_event(
+    List<DnsQueryEvent> self,
     SseSerializer serializer,
   );
 
@@ -1480,6 +1555,21 @@ class RustLibWire implements BaseWire {
   late final _cst_new_list_connection_info = _cst_new_list_connection_infoPtr
       .asFunction<ffi.Pointer<wire_cst_list_connection_info> Function(int)>();
 
+  ffi.Pointer<wire_cst_list_dns_query_event> cst_new_list_dns_query_event(
+    int len,
+  ) {
+    return _cst_new_list_dns_query_event(len);
+  }
+
+  late final _cst_new_list_dns_query_eventPtr =
+      _lookup<
+        ffi.NativeFunction<
+          ffi.Pointer<wire_cst_list_dns_query_event> Function(ffi.Int32)
+        >
+      >('frbgen_arcadiaplus_cst_new_list_dns_query_event');
+  late final _cst_new_list_dns_query_event = _cst_new_list_dns_query_eventPtr
+      .asFunction<ffi.Pointer<wire_cst_list_dns_query_event> Function(int)>();
+
   ffi.Pointer<wire_cst_list_latency_test_result>
   cst_new_list_latency_test_result(int len) {
     return _cst_new_list_latency_test_result(len);
@@ -1660,6 +1750,18 @@ class RustLibWire implements BaseWire {
       );
   late final _wire__crate__api__clear_android_vpn_fd =
       _wire__crate__api__clear_android_vpn_fdPtr
+          .asFunction<void Function(int)>();
+
+  void wire__crate__api__clear_dns_query_events(int port_) {
+    return _wire__crate__api__clear_dns_query_events(port_);
+  }
+
+  late final _wire__crate__api__clear_dns_query_eventsPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__clear_dns_query_events',
+      );
+  late final _wire__crate__api__clear_dns_query_events =
+      _wire__crate__api__clear_dns_query_eventsPtr
           .asFunction<void Function(int)>();
 
   void wire__crate__api__clear_logs(int port_) {
@@ -1931,6 +2033,18 @@ class RustLibWire implements BaseWire {
       );
   late final _wire__crate__api__get_dns_config =
       _wire__crate__api__get_dns_configPtr.asFunction<void Function(int)>();
+
+  void wire__crate__api__get_dns_query_events(int port_) {
+    return _wire__crate__api__get_dns_query_events(port_);
+  }
+
+  late final _wire__crate__api__get_dns_query_eventsPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Int64)>>(
+        'frbgen_arcadiaplus_wire__crate__api__get_dns_query_events',
+      );
+  late final _wire__crate__api__get_dns_query_events =
+      _wire__crate__api__get_dns_query_eventsPtr
+          .asFunction<void Function(int)>();
 
   void wire__crate__api__get_external_controller_status(int port_) {
     return _wire__crate__api__get_external_controller_status(port_);
@@ -3317,6 +3431,82 @@ final class wire_cst_dns_fallback_filter_dto extends ffi.Struct {
     ..ref.domain = domain;
 }
 
+final class wire_cst_dns_query_event extends ffi.Struct {
+  @ffi.Uint64()
+  external int id;
+
+  @ffi.Uint64()
+  external int completed_at_ms;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> domain;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> query_type;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> path;
+
+  external ffi.Pointer<wire_cst_list_String> answers;
+
+  external ffi.Pointer<wire_cst_list_prim_u_8_strict> outcome;
+
+  @ffi.Bool()
+  external bool from_cache;
+
+  @ffi.Bool()
+  external bool stale;
+
+  @ffi.Uint64()
+  external int elapsed_us;
+
+  @ffi.Bool()
+  external bool truncated;
+
+  static ffi.Pointer<wire_cst_dns_query_event> $allocate(
+    ffi.Allocator $allocator, {
+    required int id,
+    required int completed_at_ms,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> domain,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> query_type,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> path,
+    required ffi.Pointer<wire_cst_list_String> answers,
+    required ffi.Pointer<wire_cst_list_prim_u_8_strict> outcome,
+    required bool from_cache,
+    required bool stale,
+    required int elapsed_us,
+    required bool truncated,
+  }) => $allocator<wire_cst_dns_query_event>()
+    ..ref.id = id
+    ..ref.completed_at_ms = completed_at_ms
+    ..ref.domain = domain
+    ..ref.query_type = query_type
+    ..ref.path = path
+    ..ref.answers = answers
+    ..ref.outcome = outcome
+    ..ref.from_cache = from_cache
+    ..ref.stale = stale
+    ..ref.elapsed_us = elapsed_us
+    ..ref.truncated = truncated;
+}
+
+final class wire_cst_dns_query_snapshot extends ffi.Struct {
+  external ffi.Pointer<wire_cst_list_dns_query_event> events;
+
+  @ffi.Uint64()
+  external int total;
+
+  @ffi.Uint64()
+  external int dropped;
+
+  static ffi.Pointer<wire_cst_dns_query_snapshot> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_list_dns_query_event> events,
+    required int total,
+    required int dropped,
+  }) => $allocator<wire_cst_dns_query_snapshot>()
+    ..ref.events = events
+    ..ref.total = total
+    ..ref.dropped = dropped;
+}
+
 final class wire_cst_external_controller_status extends ffi.Struct {
   @ffi.Bool()
   external bool running;
@@ -3462,6 +3652,21 @@ final class wire_cst_list_connection_info extends ffi.Struct {
     required ffi.Pointer<wire_cst_connection_info> ptr,
     required int len,
   }) => $allocator<wire_cst_list_connection_info>()
+    ..ref.ptr = ptr
+    ..ref.len = len;
+}
+
+final class wire_cst_list_dns_query_event extends ffi.Struct {
+  external ffi.Pointer<wire_cst_dns_query_event> ptr;
+
+  @ffi.Int32()
+  external int len;
+
+  static ffi.Pointer<wire_cst_list_dns_query_event> $allocate(
+    ffi.Allocator $allocator, {
+    required ffi.Pointer<wire_cst_dns_query_event> ptr,
+    required int len,
+  }) => $allocator<wire_cst_list_dns_query_event>()
     ..ref.ptr = ptr
     ..ref.len = len;
 }

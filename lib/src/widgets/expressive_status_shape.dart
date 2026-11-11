@@ -28,7 +28,7 @@ class _ExpressiveStatusShapeState extends State<ExpressiveStatusShape>
       ? 1
       : 0;
   static final _morph = Morph(
-    MaterialShapes.cookie12Sided,
+    MaterialShapes.cookie6Sided,
     MaterialShapes.cookie9Sided,
   );
   late final _progress = AnimationController.unbounded(
@@ -38,6 +38,7 @@ class _ExpressiveStatusShapeState extends State<ExpressiveStatusShape>
 
   void _update() {
     final target = _target;
+    if (_progress.value == target && !_progress.isAnimating) return;
     if (MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled) {
       _progress.value = target;
@@ -78,8 +79,12 @@ class _ExpressiveStatusShapeState extends State<ExpressiveStatusShape>
   }
 
   @override
-  Widget build(BuildContext context) =>
-      ClipPath(clipper: _StatusClipper(_morph, _progress), child: widget.child);
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: ClipPath(
+      clipper: _StatusClipper(_morph, _progress),
+      child: widget.child,
+    ),
+  );
 }
 
 class _StatusClipper extends CustomClipper<Path> {

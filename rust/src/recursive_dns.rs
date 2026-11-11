@@ -28,12 +28,9 @@
 //!
 //! # Idle cost
 //!
-//! Everything below the lifecycle blocks rather than polls: the receiver pool
-//! parks in `recv_from`, the handlers park on their queue, the accept loop
-//! parks in `accept`. An idle front-end costs no wake-ups at all, and [`stop`]
-//! is what makes the workers move — a one-byte datagram for the receivers, a
-//! self-connect for the accept loop, a flag plus a queue notification for
-//! everything else.
+//! Socket and queue waits use RecurseX's bounded shutdown polling. Idle loops
+//! can wake every 100 ms; this is not a zero-wakeup service. An in-progress
+//! resolution may finish within its remaining deadline before workers join.
 //!
 //! The resolver is created in [`start`] and torn down in [`stop`], so its
 //! cache lasts exactly as long as one run of the proxy. That is deliberate:
@@ -43,7 +40,7 @@
 //! started with the proxy and stopped with it, so the cache is warm exactly
 //! while it is worth having.
 
-use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::SocketAddr;
 use std::thread::JoinHandle;
 
 use parking_lot::Mutex;
@@ -225,6 +222,13 @@ pub fn start_checked(listen: &str, cache_path: Option<&str>) -> Result<String, S
 
 /// Ask the just-bound front-end one real question.
 fn canary_resolution(address: &str) -> Result<(), String> {
+    canary_resolution_with_timeout(address, CANARY_ATTEMPT_TIMEOUT)
+}
+
+fn canary_resolution_with_timeout(
+    address: &str,
+    timeout: std::time::Duration,
+) -> Result<(), String> {
     let target: SocketAddr = address
         .parse()
         .map_err(|error| format!("the bound address '{address}' does not parse: {error}"))?;
@@ -233,17 +237,23 @@ fn canary_resolution(address: &str) -> Result<(), String> {
     } else {
         "[::]:0"
     };
-    let socket = std::net::UdpSocket::bind(bind)
-        .map_err(|error| format!("the canary socket could not bind: {error}"))?;
-    socket
-        .set_read_timeout(Some(CANARY_ATTEMPT_TIMEOUT))
-        .map_err(|error| format!("the canary socket has no timeout: {error}"))?;
-
-    socket
-        .connect(target)
-        .map_err(|error| format!("cannot connect canary: {error}"))?;
     let mut last = String::new();
+    let mut probes = Vec::with_capacity(CANARY_NAMES.len());
     for (index, name) in CANARY_NAMES.iter().enumerate() {
+        // Separate source ports prevent a late answer to the first probe from
+        // consuming the second probe's receive and producing a false failure.
+        let socket = std::net::UdpSocket::bind(bind)
+            .map_err(|error| format!("the canary socket could not bind: {error}"))?;
+        socket
+            .set_read_timeout(Some(timeout))
+            .map_err(|error| format!("the canary socket has no timeout: {error}"))?;
+        socket
+            .connect(target)
+            .map_err(|error| format!("cannot connect canary: {error}"))?;
+        // Keep previous sockets bound until all attempts finish so an OS
+        // cannot recycle the first source port for the second attempt.
+        probes.push(socket);
+        let socket = probes.last().expect("the probe socket was just stored");
         let id = 0x5A00u16 + index as u16;
         let query = build_query(id, name)?;
         if let Err(error) = socket.send(&query) {
@@ -253,7 +263,17 @@ fn canary_resolution(address: &str) -> Result<(), String> {
         let mut response = [0u8; 1232];
         match socket.recv(&mut response) {
             Ok(len) if validate_response(id, name, &response[..len]) => return Ok(()),
-            Ok(_) => last = format!("{name}: the answer was empty or malformed"),
+            Ok(len) => {
+                last = match Message::parse(&response[..len]) {
+                    Ok(message) => format!(
+                        "{name}: probe rejected (rcode={}, answers={}, truncated={})",
+                        response[3] & 0x0f,
+                        message.answers.len(),
+                        message.flags.tc
+                    ),
+                    Err(error) => format!("{name}: malformed response: {error}"),
+                };
+            }
             Err(error) => last = format!("{name}: {error}"),
         }
     }
@@ -287,18 +307,50 @@ fn validate_response(id: u16, name: &str, packet: &[u8]) -> bool {
     let Ok(name) = Name::from_ascii(name) else {
         return false;
     };
-    message.id == id
+    let envelope_valid = message.id == id
         && message.flags.qr
         && !message.flags.tc
         && packet[3] & 0x0f == 0
         && message.questions.len() == 1
         && message
             .question()
-            .is_some_and(|q| q.qname == name && q.qtype == RrType::A && q.qclass == RrClass::IN)
-        && message
-            .answers
-            .iter()
-            .any(|r| matches!(r.rdata, RData::A(_)))
+            .is_some_and(|q| q.qname == name && q.qtype == RrType::A && q.qclass == RrClass::IN);
+    if !envelope_valid {
+        return false;
+    }
+    // An unrelated address is not evidence that the requested name resolved.
+    // Walk only the answer's CNAME chain, with a bound and explicit loop check.
+    let mut current = name;
+    let mut visited = Vec::new();
+    for _ in 0..=16 {
+        if visited.contains(&current) {
+            return false;
+        }
+        visited.push(current.clone());
+        if message.answers.iter().any(|r| {
+            r.name == current
+                && r.class == RrClass::IN
+                && r.rr_type == RrType::A
+                && matches!(r.rdata, RData::A(ip) if !ip.is_unspecified() &&
+                !ip.is_loopback() && !ip.is_multicast())
+        }) {
+            return true;
+        }
+        let next = message.answers.iter().find_map(|r| {
+            if r.name != current || r.class != RrClass::IN || r.rr_type != RrType::CNAME {
+                return None;
+            }
+            match &r.rdata {
+                RData::Cname(target) => Some(target.clone()),
+                _ => None,
+            }
+        });
+        match next {
+            Some(target) => current = target,
+            None => return false,
+        }
+    }
+    false
 }
 
 /// Whether the front-end is accepting queries, and where.
@@ -338,11 +390,9 @@ pub fn status() -> RecursiveDnsStatus {
 /// resolver with the LAN is a feature with its own access control if it is ever
 /// wanted, not something a listen string should grant by accident.
 fn requested_address(listen: &str) -> Result<SocketAddr, String> {
-    let address = listen
-        .to_socket_addrs()
-        .map_err(|error| format!("invalid listen address '{listen}': {error}"))?
-        .next()
-        .ok_or_else(|| format!("listen address '{listen}' did not resolve"))?;
+    let address: SocketAddr = listen
+        .parse()
+        .map_err(|error| format!("invalid listen address '{listen}': {error}"))?;
 
     if address.ip().is_loopback() {
         return Ok(address);
@@ -478,6 +528,88 @@ mod tests {
             "www.qq.com",
             &response.to_bytes().unwrap()
         ));
+    }
+
+    #[test]
+    fn canary_rejects_unrelated_addresses_and_accepts_a_bound_alias() {
+        let mut response = Message::parse(&build_query(7, "probe.test").unwrap()).unwrap();
+        response.flags.qr = true;
+        response.answers.push(recurse_x::Record {
+            name: Name::from_ascii("target.test").unwrap(),
+            rr_type: RrType::A,
+            class: RrClass::IN,
+            ttl: 60,
+            rdata: RData::A("1.1.1.1".parse().unwrap()),
+        });
+        assert!(!validate_response(
+            7,
+            "probe.test",
+            &response.to_bytes().unwrap()
+        ));
+        response.answers.push(recurse_x::Record {
+            name: Name::from_ascii("probe.test").unwrap(),
+            rr_type: RrType::CNAME,
+            class: RrClass::IN,
+            ttl: 60,
+            rdata: RData::Cname(Name::from_ascii("target.test").unwrap()),
+        });
+        assert!(validate_response(
+            7,
+            "probe.test",
+            &response.to_bytes().unwrap()
+        ));
+        response.answers[0].class = RrClass(3);
+        assert!(!validate_response(
+            7,
+            "probe.test",
+            &response.to_bytes().unwrap()
+        ));
+        response.answers[0].class = RrClass::IN;
+        response.answers[0].rdata = RData::A("0.0.0.0".parse().unwrap());
+        assert!(!validate_response(
+            7,
+            "probe.test",
+            &response.to_bytes().unwrap()
+        ));
+    }
+
+    #[test]
+    fn listen_validation_never_resolves_a_hostname() {
+        assert!(requested_address("localhost:53").is_err());
+        assert!(requested_address("private.example:53").is_err());
+        assert!(requested_address("127.0.0.1:0").is_ok());
+        assert!(requested_address("[::1]:0").is_ok());
+    }
+
+    #[test]
+    fn late_first_probe_cannot_consume_the_second_answer() {
+        let server = UdpSocket::bind("127.0.0.1:0").unwrap();
+        server
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .unwrap();
+        let address = server.local_addr().unwrap().to_string();
+        let worker = std::thread::spawn(move || {
+            let mut bytes = [0; 1232];
+            let (size, first) = server.recv_from(&mut bytes).unwrap();
+            let mut late = Message::parse(&bytes[..size]).unwrap();
+            let (size, second) = server.recv_from(&mut bytes).unwrap();
+            assert_ne!(first.port(), second.port());
+            late.flags.qr = true;
+            server.send_to(&late.to_bytes().unwrap(), first).unwrap();
+            let mut reply = Message::parse(&bytes[..size]).unwrap();
+            reply.flags.qr = true;
+            reply.answers.push(recurse_x::Record {
+                name: reply.question().unwrap().qname.clone(),
+                rr_type: RrType::A,
+                class: RrClass::IN,
+                ttl: 60,
+                rdata: RData::A("1.1.1.1".parse().unwrap()),
+            });
+            server.send_to(&reply.to_bytes().unwrap(), second).unwrap();
+        });
+        let result = canary_resolution_with_timeout(&address, Duration::from_millis(150));
+        worker.join().unwrap();
+        assert!(result.is_ok(), "{result:?}");
     }
 
     #[test]

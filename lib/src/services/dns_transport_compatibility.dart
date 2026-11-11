@@ -1,6 +1,6 @@
 import 'dart:io';
 
-/// RecurseX 0.2.4 pins HTTP DNS to an IP certificate identity. DoT/DoQ still
+/// RecurseX 0.2.6 pins HTTP DNS to an IP certificate identity. DoT/DoQ still
 /// support a separate dial address and hostname. Never disable verification
 /// or replace an unknown private resolver with a public service to work around it.
 abstract final class DnsTransportCompatibility {
@@ -37,7 +37,7 @@ abstract final class DnsTransportCompatibility {
           identity == null ||
           host.address != identity.address) {
         throw const FormatException(
-          'RecurseX 0.2.4 requires DoH/DoH3 to use an IP address with a matching IP certificate. '
+          'RecurseX 0.2.6 requires DoH/DoH3 to use an IP address with a matching IP certificate. '
           'Use a verified IP endpoint or this resolver\'s DoT/DoQ endpoint; custom resolvers are not replaced automatically.',
         );
       }

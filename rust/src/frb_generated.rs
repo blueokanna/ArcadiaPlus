@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueNom,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 556028991;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1581887764;
 
 // Section: executor
 
@@ -63,6 +63,28 @@ fn wire__crate__api__clear_android_vpn_fd_impl(
                         let output_ok = Ok::<_, ()>({
                             crate::api::clear_android_vpn_fd().await;
                         })?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__clear_dns_query_events_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "clear_dns_query_events",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::clear_dns_query_events().await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -500,6 +522,28 @@ fn wire__crate__api__get_dns_config_impl(port_: flutter_rust_bridge::for_generat
                 transform_result_dco::<_, _, String>(
                     (move || async move {
                         let output_ok = crate::api::get_dns_config().await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__get_dns_query_events_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "get_dns_query_events",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::get_dns_query_events().await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -2241,6 +2285,50 @@ impl SseDecode for crate::types::DnsFallbackFilterDto {
     }
 }
 
+impl SseDecode for crate::types::DnsQueryEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_id = <u64>::sse_decode(deserializer);
+        let mut var_completedAtMs = <u64>::sse_decode(deserializer);
+        let mut var_domain = <String>::sse_decode(deserializer);
+        let mut var_queryType = <String>::sse_decode(deserializer);
+        let mut var_path = <String>::sse_decode(deserializer);
+        let mut var_answers = <Vec<String>>::sse_decode(deserializer);
+        let mut var_outcome = <String>::sse_decode(deserializer);
+        let mut var_fromCache = <bool>::sse_decode(deserializer);
+        let mut var_stale = <bool>::sse_decode(deserializer);
+        let mut var_elapsedUs = <u64>::sse_decode(deserializer);
+        let mut var_truncated = <bool>::sse_decode(deserializer);
+        return crate::types::DnsQueryEvent {
+            id: var_id,
+            completed_at_ms: var_completedAtMs,
+            domain: var_domain,
+            query_type: var_queryType,
+            path: var_path,
+            answers: var_answers,
+            outcome: var_outcome,
+            from_cache: var_fromCache,
+            stale: var_stale,
+            elapsed_us: var_elapsedUs,
+            truncated: var_truncated,
+        };
+    }
+}
+
+impl SseDecode for crate::types::DnsQuerySnapshot {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_events = <Vec<crate::types::DnsQueryEvent>>::sse_decode(deserializer);
+        let mut var_total = <u64>::sse_decode(deserializer);
+        let mut var_dropped = <u64>::sse_decode(deserializer);
+        return crate::types::DnsQuerySnapshot {
+            events: var_events,
+            total: var_total,
+            dropped: var_dropped,
+        };
+    }
+}
+
 impl SseDecode for crate::types::ExternalControllerStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -2361,6 +2449,18 @@ impl SseDecode for Vec<crate::types::ConnectionInfo> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::types::ConnectionInfo>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::types::DnsQueryEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::types::DnsQueryEvent>::sse_decode(deserializer));
         }
         return ans_;
     }
@@ -3016,6 +3116,55 @@ impl flutter_rust_bridge::IntoIntoDart<crate::types::DnsFallbackFilterDto>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::DnsQueryEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id.into_into_dart().into_dart(),
+            self.completed_at_ms.into_into_dart().into_dart(),
+            self.domain.into_into_dart().into_dart(),
+            self.query_type.into_into_dart().into_dart(),
+            self.path.into_into_dart().into_dart(),
+            self.answers.into_into_dart().into_dart(),
+            self.outcome.into_into_dart().into_dart(),
+            self.from_cache.into_into_dart().into_dart(),
+            self.stale.into_into_dart().into_dart(),
+            self.elapsed_us.into_into_dart().into_dart(),
+            self.truncated.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::types::DnsQueryEvent {}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::DnsQueryEvent>
+    for crate::types::DnsQueryEvent
+{
+    fn into_into_dart(self) -> crate::types::DnsQueryEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::types::DnsQuerySnapshot {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.events.into_into_dart().into_dart(),
+            self.total.into_into_dart().into_dart(),
+            self.dropped.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::types::DnsQuerySnapshot
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::types::DnsQuerySnapshot>
+    for crate::types::DnsQuerySnapshot
+{
+    fn into_into_dart(self) -> crate::types::DnsQuerySnapshot {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::types::ExternalControllerStatus {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -3479,6 +3628,32 @@ impl SseEncode for crate::types::DnsFallbackFilterDto {
     }
 }
 
+impl SseEncode for crate::types::DnsQueryEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.id, serializer);
+        <u64>::sse_encode(self.completed_at_ms, serializer);
+        <String>::sse_encode(self.domain, serializer);
+        <String>::sse_encode(self.query_type, serializer);
+        <String>::sse_encode(self.path, serializer);
+        <Vec<String>>::sse_encode(self.answers, serializer);
+        <String>::sse_encode(self.outcome, serializer);
+        <bool>::sse_encode(self.from_cache, serializer);
+        <bool>::sse_encode(self.stale, serializer);
+        <u64>::sse_encode(self.elapsed_us, serializer);
+        <bool>::sse_encode(self.truncated, serializer);
+    }
+}
+
+impl SseEncode for crate::types::DnsQuerySnapshot {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::types::DnsQueryEvent>>::sse_encode(self.events, serializer);
+        <u64>::sse_encode(self.total, serializer);
+        <u64>::sse_encode(self.dropped, serializer);
+    }
+}
+
 impl SseEncode for crate::types::ExternalControllerStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3570,6 +3745,16 @@ impl SseEncode for Vec<crate::types::ConnectionInfo> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::types::ConnectionInfo>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::types::DnsQueryEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::types::DnsQueryEvent>::sse_encode(item, serializer);
         }
     }
 }
@@ -4082,6 +4267,34 @@ mod io {
             }
         }
     }
+    impl CstDecode<crate::types::DnsQueryEvent> for wire_cst_dns_query_event {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::DnsQueryEvent {
+            crate::types::DnsQueryEvent {
+                id: self.id.cst_decode(),
+                completed_at_ms: self.completed_at_ms.cst_decode(),
+                domain: self.domain.cst_decode(),
+                query_type: self.query_type.cst_decode(),
+                path: self.path.cst_decode(),
+                answers: self.answers.cst_decode(),
+                outcome: self.outcome.cst_decode(),
+                from_cache: self.from_cache.cst_decode(),
+                stale: self.stale.cst_decode(),
+                elapsed_us: self.elapsed_us.cst_decode(),
+                truncated: self.truncated.cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::DnsQuerySnapshot> for wire_cst_dns_query_snapshot {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::DnsQuerySnapshot {
+            crate::types::DnsQuerySnapshot {
+                events: self.events.cst_decode(),
+                total: self.total.cst_decode(),
+                dropped: self.dropped.cst_decode(),
+            }
+        }
+    }
     impl CstDecode<crate::types::ExternalControllerStatus> for wire_cst_external_controller_status {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> crate::types::ExternalControllerStatus {
@@ -4152,6 +4365,16 @@ mod io {
     impl CstDecode<Vec<crate::types::ConnectionInfo>> for *mut wire_cst_list_connection_info {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> Vec<crate::types::ConnectionInfo> {
+            let vec = unsafe {
+                let wrap = flutter_rust_bridge::for_generated::box_from_leak_ptr(self);
+                flutter_rust_bridge::for_generated::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            };
+            vec.into_iter().map(CstDecode::cst_decode).collect()
+        }
+    }
+    impl CstDecode<Vec<crate::types::DnsQueryEvent>> for *mut wire_cst_list_dns_query_event {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> Vec<crate::types::DnsQueryEvent> {
             let vec = unsafe {
                 let wrap = flutter_rust_bridge::for_generated::box_from_leak_ptr(self);
                 flutter_rust_bridge::for_generated::vec_from_leak_ptr(wrap.ptr, wrap.len)
@@ -4555,6 +4778,42 @@ mod io {
             Self::new_with_null_ptr()
         }
     }
+    impl NewWithNullPtr for wire_cst_dns_query_event {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                id: Default::default(),
+                completed_at_ms: Default::default(),
+                domain: core::ptr::null_mut(),
+                query_type: core::ptr::null_mut(),
+                path: core::ptr::null_mut(),
+                answers: core::ptr::null_mut(),
+                outcome: core::ptr::null_mut(),
+                from_cache: Default::default(),
+                stale: Default::default(),
+                elapsed_us: Default::default(),
+                truncated: Default::default(),
+            }
+        }
+    }
+    impl Default for wire_cst_dns_query_event {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
+    impl NewWithNullPtr for wire_cst_dns_query_snapshot {
+        fn new_with_null_ptr() -> Self {
+            Self {
+                events: core::ptr::null_mut(),
+                total: Default::default(),
+                dropped: Default::default(),
+            }
+        }
+    }
+    impl Default for wire_cst_dns_query_snapshot {
+        fn default() -> Self {
+            Self::new_with_null_ptr()
+        }
+    }
     impl NewWithNullPtr for wire_cst_external_controller_status {
         fn new_with_null_ptr() -> Self {
             Self {
@@ -4891,6 +5150,11 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__clear_dns_query_events(port_: i64) {
+        wire__crate__api__clear_dns_query_events_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__clear_logs(port_: i64) {
         wire__crate__api__clear_logs_impl(port_)
     }
@@ -5000,6 +5264,11 @@ mod io {
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_dns_config(port_: i64) {
         wire__crate__api__get_dns_config_impl(port_)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__get_dns_query_events(port_: i64) {
+        wire__crate__api__get_dns_query_events_impl(port_)
     }
 
     #[unsafe(no_mangle)]
@@ -5511,6 +5780,20 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_dns_query_event(
+        len: i32,
+    ) -> *mut wire_cst_list_dns_query_event {
+        let wrap = wire_cst_list_dns_query_event {
+            ptr: flutter_rust_bridge::for_generated::new_leak_vec_ptr(
+                <wire_cst_dns_query_event>::new_with_null_ptr(),
+                len,
+            ),
+            len,
+        };
+        flutter_rust_bridge::for_generated::new_leak_box_ptr(wrap)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_cst_new_list_latency_test_result(
         len: i32,
     ) -> *mut wire_cst_list_latency_test_result {
@@ -5705,6 +5988,28 @@ mod io {
     }
     #[repr(C)]
     #[derive(Clone, Copy)]
+    pub struct wire_cst_dns_query_event {
+        id: u64,
+        completed_at_ms: u64,
+        domain: *mut wire_cst_list_prim_u_8_strict,
+        query_type: *mut wire_cst_list_prim_u_8_strict,
+        path: *mut wire_cst_list_prim_u_8_strict,
+        answers: *mut wire_cst_list_String,
+        outcome: *mut wire_cst_list_prim_u_8_strict,
+        from_cache: bool,
+        stale: bool,
+        elapsed_us: u64,
+        truncated: bool,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_dns_query_snapshot {
+        events: *mut wire_cst_list_dns_query_event,
+        total: u64,
+        dropped: u64,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
     pub struct wire_cst_external_controller_status {
         running: bool,
         addr: *mut wire_cst_list_prim_u_8_strict,
@@ -5753,6 +6058,12 @@ mod io {
     #[derive(Clone, Copy)]
     pub struct wire_cst_list_connection_info {
         ptr: *mut wire_cst_connection_info,
+        len: i32,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_list_dns_query_event {
+        ptr: *mut wire_cst_dns_query_event,
         len: i32,
     }
     #[repr(C)]
@@ -6136,6 +6447,56 @@ mod web {
             }
         }
     }
+    impl CstDecode<crate::types::DnsQueryEvent>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::DnsQueryEvent {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                11,
+                "Expected 11 elements, got {}",
+                self_.length()
+            );
+            crate::types::DnsQueryEvent {
+                id: self_.get(0).cst_decode(),
+                completed_at_ms: self_.get(1).cst_decode(),
+                domain: self_.get(2).cst_decode(),
+                query_type: self_.get(3).cst_decode(),
+                path: self_.get(4).cst_decode(),
+                answers: self_.get(5).cst_decode(),
+                outcome: self_.get(6).cst_decode(),
+                from_cache: self_.get(7).cst_decode(),
+                stale: self_.get(8).cst_decode(),
+                elapsed_us: self_.get(9).cst_decode(),
+                truncated: self_.get(10).cst_decode(),
+            }
+        }
+    }
+    impl CstDecode<crate::types::DnsQuerySnapshot>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> crate::types::DnsQuerySnapshot {
+            let self_ = self
+                .dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap();
+            assert_eq!(
+                self_.length(),
+                3,
+                "Expected 3 elements, got {}",
+                self_.length()
+            );
+            crate::types::DnsQuerySnapshot {
+                events: self_.get(0).cst_decode(),
+                total: self_.get(1).cst_decode(),
+                dropped: self_.get(2).cst_decode(),
+            }
+        }
+    }
     impl CstDecode<crate::types::ExternalControllerStatus>
         for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
     {
@@ -6245,6 +6606,18 @@ mod web {
     {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> Vec<crate::types::ConnectionInfo> {
+            self.dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
+                .unwrap()
+                .iter()
+                .map(CstDecode::cst_decode)
+                .collect()
+        }
+    }
+    impl CstDecode<Vec<crate::types::DnsQueryEvent>>
+        for flutter_rust_bridge::for_generated::wasm_bindgen::JsValue
+    {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> Vec<crate::types::DnsQueryEvent> {
             self.dyn_into::<flutter_rust_bridge::for_generated::js_sys::Array>()
                 .unwrap()
                 .iter()
@@ -6834,6 +7207,13 @@ mod web {
     }
 
     #[wasm_bindgen]
+    pub fn wire__crate__api__clear_dns_query_events(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+    ) {
+        wire__crate__api__clear_dns_query_events_impl(port_)
+    }
+
+    #[wasm_bindgen]
     pub fn wire__crate__api__clear_logs(port_: flutter_rust_bridge::for_generated::MessagePort) {
         wire__crate__api__clear_logs_impl(port_)
     }
@@ -6971,6 +7351,13 @@ mod web {
         port_: flutter_rust_bridge::for_generated::MessagePort,
     ) {
         wire__crate__api__get_dns_config_impl(port_)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__get_dns_query_events(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+    ) {
+        wire__crate__api__get_dns_query_events_impl(port_)
     }
 
     #[wasm_bindgen]

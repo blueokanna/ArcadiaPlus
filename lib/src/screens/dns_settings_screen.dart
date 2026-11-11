@@ -171,8 +171,8 @@ class DnsSettingsScreen extends StatelessWidget {
                       ),
                       subtitle: Text(
                         Localizations.localeOf(context).languageCode == 'zh'
-                            ? '下次启动生效：仅使用证书校验的加密上游与启动解析，忽略明文 DNS 和本机根递归；失败不回退到运营商 DNS。常见国内域名默认使用阿里加密 DNS，显式域名策略优先。DNS 服务商仍可看到查询，直连目标 IP 仍可被网络观察。'
-                            : 'Applies on next start: certificate-verified encrypted DNS and bootstrap only, without plaintext or local root recursion fallback. Common domestic domains default to AliDNS; explicit domain policies take precedence. Resolvers still see queries and direct destination IPs remain observable.',
+                            ? '下次启动生效。所有 DNS 路径加密并校验证书；不兼容的配置会报错，不会回退到明文或系统 DNS。'
+                            : 'Verified encryption on every DNS path. Incompatible settings fail explicitly. Applies on next start.',
                       ),
                       secondary: const Icon(Icons.enhanced_encryption_outlined),
                       value: dnsSettings.requireEncryptedDns,
@@ -186,9 +186,9 @@ class DnsSettingsScreen extends StatelessWidget {
                         l10n?.recursiveResolver ?? 'Recursive Resolver',
                       ),
                       subtitle: Text(
-                        l10n?.recursiveResolverDesc ??
-                            'Resolve from the DNS root locally (RecurseX) '
-                                'instead of forwarding to upstream servers',
+                        Localizations.localeOf(context).languageCode == 'zh'
+                            ? '优先从根服务器递归解析，失败时使用已配置上游。需要 UDP/TCP 53 可达；关闭加密保护后才可启用。'
+                            : 'Prefer root recursion; configured servers recover failures. Requires UDP/TCP 53 and encrypted protection off.',
                       ),
                       leading: _leadingIcon(context, Icons.hub_outlined),
                       trailing: Switch(

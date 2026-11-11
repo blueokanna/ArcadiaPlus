@@ -32,8 +32,12 @@ class DnsSettingsProvider extends ChangeNotifier {
       _settings.useRecursiveResolver && !_settings.requireEncryptedDns;
   bool get requireEncryptedDns => _settings.requireEncryptedDns;
 
-  Future<void> setRequireEncryptedDns(bool value) =>
-      _update((s) => s.copyWith(requireEncryptedDns: value));
+  Future<void> setRequireEncryptedDns(bool value) => _update(
+    (s) => s.copyWith(
+      requireEncryptedDns: value,
+      useRecursiveResolver: value ? false : s.useRecursiveResolver,
+    ),
+  );
   String get dnsMode => _settings.dnsMode;
   List<String> get nameservers => _settings.nameservers;
   List<String> get fallback => _settings.fallback;
@@ -87,7 +91,14 @@ class DnsSettingsProvider extends ChangeNotifier {
 
   /// Starts or stops the RecurseX front-end on the next start.
   Future<void> setUseRecursiveResolver(bool value) async {
-    await _update((s) => s.copyWith(useRecursiveResolver: value));
+    await _update((s) {
+      if (value && s.requireEncryptedDns) {
+        throw StateError(
+          'Disable encrypted DNS protection before enabling root recursion.',
+        );
+      }
+      return s.copyWith(useRecursiveResolver: value);
+    });
   }
 
   /// `normal`, `redir-host` or `fake-ip`; anything else is refused rather than
@@ -176,9 +187,9 @@ class DnsSettingsProvider extends ChangeNotifier {
   Future<void> _update(DnsSettings Function(DnsSettings current) change) =>
       _writes.run(() async {
         await _loaded;
-        final next = change(_settings);
-        if (_sameAs(next)) return;
         try {
+          final next = change(_settings);
+          if (_sameAs(next)) return;
           await _write(next);
           _settings = next;
           _saveError = null;

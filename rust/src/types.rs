@@ -608,6 +608,55 @@ pub(crate) fn convert_vec<S, T: From<S>>(source: Vec<S>) -> Vec<T> {
     source.into_iter().map(T::from).collect()
 }
 
+/// Completed resolver calls. This is not a count of intercepted DNS packets.
+#[derive(Clone, Debug)]
+pub struct DnsQuerySnapshot {
+    pub events: Vec<DnsQueryEvent>,
+    pub total: u64,
+    pub dropped: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct DnsQueryEvent {
+    pub id: u64,
+    pub completed_at_ms: u64,
+    pub domain: String,
+    pub query_type: String,
+    pub path: String,
+    pub answers: Vec<String>,
+    pub outcome: String,
+    pub from_cache: bool,
+    pub stale: bool,
+    pub elapsed_us: u64,
+    pub truncated: bool,
+}
+
+impl From<recurse_x::observation::QuerySnapshot> for DnsQuerySnapshot {
+    fn from(value: recurse_x::observation::QuerySnapshot) -> Self {
+        Self {
+            total: value.total,
+            dropped: value.dropped,
+            events: value
+                .events
+                .into_iter()
+                .map(|e| DnsQueryEvent {
+                    id: e.id,
+                    completed_at_ms: e.completed_at_ms,
+                    domain: e.name,
+                    query_type: e.rr_type,
+                    path: e.path,
+                    answers: e.answers,
+                    outcome: e.outcome,
+                    from_cache: e.from_cache,
+                    stale: e.stale,
+                    elapsed_us: e.elapsed_us,
+                    truncated: e.truncated,
+                })
+                .collect(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

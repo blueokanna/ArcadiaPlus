@@ -20,27 +20,32 @@ RecursiveDnsStatus get _status => RecursiveDnsStatus(
   failures: BigInt.one,
 );
 
+DnsQueryEvent event(
+  String domain,
+  int id, {
+  bool cached = false,
+  String outcome = 'NOERROR',
+}) => DnsQueryEvent(
+  id: BigInt.from(id),
+  completedAtMs: BigInt.from(1794373200000),
+  domain: domain,
+  queryType: 'AAAA',
+  path: 'recursive',
+  answers: outcome == 'NOERROR' ? ['2001:db8::42'] : [],
+  outcome: outcome,
+  fromCache: cached,
+  stale: false,
+  elapsedUs: BigInt.from(12500),
+  truncated: false,
+);
+DnsQuerySnapshot snapshot(List<DnsQueryEvent> events) => DnsQuerySnapshot(
+  events: events,
+  total: BigInt.from(events.length),
+  dropped: BigInt.zero,
+);
+
 void main() {
   setUpAll(loadAppFonts);
-  test('only actual TUN query events produce rows', () {
-    final row = DnsQueryObservation.parse(
-      '[2026-11-11 05:00:00] [INFO] DNS query received: example.com (AAAA)',
-    );
-    expect(row?.domain, 'example.com');
-    expect(row?.type, 'AAAA');
-    expect(
-      DnsQueryObservation.parse(
-        '[2026-11-11 05:00:00] [INFO] TCP example.com:443',
-      ),
-      isNull,
-    );
-    expect(
-      DnsQueryObservation.parse(
-        '[2026-11-11 05:00:00] [INFO] DNS A query: example.com -> 198.18.0.2 (Fake-IP allocated)',
-      ),
-      isNull,
-    );
-  });
   testWidgets('query snapshots are bounded and polling stops when hidden', (
     tester,
   ) async {
@@ -49,11 +54,7 @@ void main() {
       reader: () async {
         reads++;
         return (
-          logs: List.generate(
-            100,
-            (i) =>
-                '[2026-11-11 05:00:00] [INFO] DNS query received: n$i.example (A)',
-          ),
+          queries: snapshot(List.generate(100, (i) => event('n$i.example', i))),
           status: _status,
         );
       },
@@ -74,11 +75,71 @@ void main() {
     controller.setVisible(true);
     await tester.pump(const Duration(milliseconds: 1));
     controller.setVisible(false);
-    pending.complete((logs: <String>[], status: _status));
+    pending.complete((queries: snapshot([]), status: _status));
     await tester.pump(const Duration(milliseconds: 1));
     expect(controller.status, isNull);
     controller.dispose();
   });
+  testWidgets('clearing history invalidates an in-flight snapshot', (
+    tester,
+  ) async {
+    final pending = Completer<DnsActivitySnapshot?>();
+    var clears = 0;
+    final controller = DnsActivityController(
+      reader: () => pending.future,
+      clearer: () async {
+        clears++;
+      },
+    );
+    controller.setVisible(true);
+    await tester.pump(const Duration(milliseconds: 1));
+    await controller.clear();
+    pending.complete((
+      queries: snapshot([event('old.example', 1)]),
+      status: _status,
+    ));
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(clears, 1);
+    expect(controller.records, isEmpty);
+    expect(controller.total, BigInt.zero);
+    controller.dispose();
+  });
+  testWidgets(
+    'real result fields support cache and error filters and details',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: DnsActivityPanel(
+                reader: () async => (
+                  queries: snapshot([
+                    event('cached.example', 1, cached: true),
+                    event('failed.example', 2, outcome: 'Timeout'),
+                    event('absent.example', 3, outcome: 'NXDOMAIN'),
+                  ]),
+                  status: _status,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.textContaining('2001:db8::42'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Failed'));
+      await tester.pumpAndSettle();
+      expect(find.text('failed.example'), findsOneWidget);
+      expect(find.text('cached.example'), findsNothing);
+      expect(find.text('absent.example'), findsNothing);
+      await tester.tap(find.text('failed.example'));
+      await tester.pumpAndSettle();
+      expect(find.text('DNS query details'), findsOneWidget);
+      expect(find.textContaining('13 ms'), findsWidgets);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
   for (final (width, scale) in [(320.0, 2.0), (1000.0, 2.0), (1000.0, 1.0)]) {
     testWidgets('DNS event table wraps at $width / $scale', (tester) async {
       tester.view.devicePixelRatio = 1;
@@ -97,9 +158,7 @@ void main() {
               body: SingleChildScrollView(
                 child: DnsActivityPanel(
                   reader: () async => (
-                    logs: [
-                      '[2026-11-11 05:00:00] [INFO] DNS query received: very.long.example.com (AAAA)',
-                    ],
+                    queries: snapshot([event('very.long.example.com', 1)]),
                     status: _status,
                   ),
                 ),
