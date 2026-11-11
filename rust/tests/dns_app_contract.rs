@@ -88,11 +88,49 @@ fn public_https_dns_uses_the_actual_corduit_resolver() {
 }
 
 #[test]
-#[ignore = "public network: requires reachable authoritative UDP/TCP 53"]
-fn local_root_recursion_passes_the_application_startup_probe() {
-    let result = rust_lib_arcadiaplus::recursive_dns::start_checked("127.0.0.1:0", None);
-    if result.is_ok() {
-        rust_lib_arcadiaplus::recursive_dns::stop().unwrap();
+fn local_recursion_is_ready_without_contacting_a_public_probe() {
+    use rust_lib_arcadiaplus::{api, recursive_dns};
+    // Exercise the application's blocking-worker API, not just its bind helper.
+    struct Cleanup;
+    impl Drop for Cleanup {
+        fn drop(&mut self) {
+            let _ = recursive_dns::stop();
+        }
     }
-    result.expect("root recursion startup probe");
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    let address = runtime
+        .block_on(api::start_recursive_dns("127.0.0.1:0".into(), None))
+        .unwrap();
+    let _cleanup = Cleanup;
+    let status = runtime.block_on(api::get_recursive_dns_status()).unwrap();
+    assert!(status.running);
+    assert_eq!(status.listen.as_deref(), Some(address.as_str()));
+    assert_eq!(
+        status.upstream_queries, 0,
+        "startup must not probe external websites"
+    );
+    let client = UdpSocket::bind("127.0.0.1:0").unwrap();
+    client
+        .set_read_timeout(Some(Duration::from_secs(3)))
+        .unwrap();
+    client.connect(&address).unwrap();
+    client.send(&[0x12, 0x34, 0x01, 0x00]).unwrap();
+    let mut response = [0; 512];
+    let size = client.recv(&mut response).unwrap();
+    assert!(size >= 12);
+    assert_eq!(&response[..2], &[0x12, 0x34]);
+    assert_eq!(
+        response[3] & 0x0f,
+        1,
+        "ready listener answers FORMERR locally"
+    );
+    runtime.block_on(api::stop_recursive_dns()).unwrap();
+    assert!(
+        !runtime
+            .block_on(api::get_recursive_dns_status())
+            .unwrap()
+            .running
+    );
 }

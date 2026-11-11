@@ -1,3 +1,5 @@
+import '../widgets/page_insets.dart';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -30,7 +32,7 @@ class _AdvancedConfigScreenState extends State<AdvancedConfigScreen> {
             ),
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: PageInsets.scroll(context, const EdgeInsets.all(16)),
             children: [
               // TCP 设置
               _buildSectionHeader(

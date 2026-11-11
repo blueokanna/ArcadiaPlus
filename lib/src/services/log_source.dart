@@ -1,6 +1,7 @@
 import 'package:arcadiaplus/src/rust/api.dart' as api;
 
 import 'native_core_service.dart';
+import 'service_diagnostics.dart';
 
 abstract interface class LogSource {
   Future<List<String>> read();
@@ -17,14 +18,24 @@ class NativeLogSource implements LogSource {
   }
 
   @override
-  Future<List<String>> read() {
+  Future<List<String>> read() async {
+    if (!NativeCoreService.instance.isReady &&
+        ServiceDiagnostics.entries.isNotEmpty) {
+      return ServiceDiagnostics.entries;
+    }
     _checkReady();
-    return api.getLogs(lines: 1000);
+    final entries = [
+      ...await api.getLogs(lines: 1000),
+      ...ServiceDiagnostics.entries,
+    ]..sort();
+    return entries.length > 1000
+        ? entries.sublist(entries.length - 1000)
+        : entries;
   }
 
   @override
-  Future<void> clear() {
-    _checkReady();
-    return api.clearLogs();
+  Future<void> clear() async {
+    if (NativeCoreService.instance.isReady) await api.clearLogs();
+    ServiceDiagnostics.clear();
   }
 }

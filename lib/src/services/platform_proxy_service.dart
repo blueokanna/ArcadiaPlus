@@ -441,6 +441,7 @@ class PlatformProxyService extends ChangeNotifier {
     ProxyMode mode = ProxyMode.rule,
     bool allowLan = true,
   }) async {
+    _lastTunError = null;
     try {
       debugPrint('=== _enableAndroidVpn: Starting with mode=$mode ===');
 
@@ -480,6 +481,7 @@ class PlatformProxyService extends ChangeNotifier {
           'allowLan': allowLan,
         });
       } on PlatformException catch (e) {
+        _lastTunError = '${e.code}: ${e.message ?? 'VPN request failed'}';
         debugPrint(
           '_enableAndroidVpn: PlatformException during startVpn: ${e.code} - ${e.message}',
         );
@@ -499,6 +501,8 @@ class PlatformProxyService extends ChangeNotifier {
         errorMsg = result['error'] as String?;
 
         if (!success || fd < 0) {
+          _lastTunError =
+              errorMsg ?? 'Android returned no usable VPN descriptor';
           debugPrint(
             '_enableAndroidVpn: Android VPN start failed - success=$success, fd=$fd, error=$errorMsg',
           );
@@ -555,6 +559,7 @@ class PlatformProxyService extends ChangeNotifier {
         );
 
         if (!vpnStarted) {
+          _lastTunError = 'Android VPN packet processor did not start';
           debugPrint(
             '_enableAndroidVpn: Rust VPN packet processing failed to start',
           );
@@ -570,6 +575,7 @@ class PlatformProxyService extends ChangeNotifier {
           return false;
         }
       } catch (e, stackTrace) {
+        _lastTunError = e.toString();
         debugPrint('_enableAndroidVpn: Failed to start Rust VPN: $e');
         debugPrint('Stack trace: $stackTrace');
         // Cleanup Android side VPN
@@ -586,6 +592,7 @@ class PlatformProxyService extends ChangeNotifier {
       );
       return true;
     } on PlatformException catch (e) {
+      _lastTunError = '${e.code}: ${e.message ?? 'VPN request failed'}';
       debugPrint(
         '_enableAndroidVpn: PlatformException: ${e.code} - ${e.message}',
       );
@@ -593,6 +600,7 @@ class PlatformProxyService extends ChangeNotifier {
       _publish(tunEnabled: false);
       return false;
     } catch (e, stackTrace) {
+      _lastTunError = e.toString();
       debugPrint('_enableAndroidVpn: Unexpected error: $e');
       debugPrint('Stack trace: $stackTrace');
       _vpnFd = -1;

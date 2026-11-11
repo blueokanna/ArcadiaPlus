@@ -45,13 +45,29 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.3.1 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.3.4 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 运行配置使用严格校验：必要规则集缺失、规则类型不受支持或出口不存在时拒绝启动，不通过跳过规则改变实际分流。离线预览可展示转换警告。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的是本地 `file` 规则集。下载失败、空内容或存在不支持的条目时保留上一份完整缓存；必要规则集没有有效缓存时拒绝启动，不跳过规则改变分流。
 - GeoIP 数据库随安装包分发（`assets/Country.mmdb`），启动时解包到应用支持目录并注册给引擎；解包或注册失败会记录原因，此时 `GEOIP` 规则不会被匹配——不静默降级。
 - Android、Windows、Linux 共用 Rust TUN 数据包处理器，各平台独立管理设备生命周期。
 - Windows、macOS、Linux、Android、iOS、HarmonyOS NEXT 的应用图标均由 `assets/arcadiaplus.png` 统一生成。
+
+## 启动诊断与界面行为
+
+启动失败先看首页保留的错误详情。配置转换和 VPN 建立的原始错误会写入日志；清理动作不会再把原因替换成“没有可用配置”。只有引擎确认运行、Android VPN 数据面建立成功后，首页才显示运行中。
+
+新安装及没有保存加密选项的旧配置默认遵循订阅 DNS；已经保存的严格加密选项保持不变。配置没有 DNS 上游时，应用仍使用内置的加密地址。“优先加密 DNS”将已知公共解析器升级到同一服务商的验证端点，同时保留订阅的私有和未支持地址，因此可能仍有明文查询，也可与本机递归共用。“禁止明文 DNS（严格）”是单独的约束，覆盖主解析器、备用解析器、引导解析器和域名策略，启用前检查兼容性；检查不通过则保留原模式。DNS 设置页使用运行时转换器检查当前配置，并提供启动／重启应用按钮。
+
+已知公共解析器只升级到同一服务商的证书验证端点。例如 `119.29.29.29` 使用 DNSPod 的 DoT 服务，以 `dot.pub` 验证证书；服务身份见 [腾讯云接入文档](https://cloud.tencent.com/document/product/302/110784)。订阅若依赖 `tcp://私有解析器:8080`，严格加密模式仍会拒绝启动。此时需要订阅方提供加密端点，或由用户关闭保护以保留订阅解析规则。关闭保护可能使用明文 DNS，不会关闭 TLS 证书校验，也不会把私有解析规则替换成公共 DNS。
+
+本机递归随代理启动、停止，仅监听回环地址。UDP 与 TCP 都绑定成功才发布地址，不再以两个固定网站是否可达决定销毁服务。转发层保留本地优先、失败恢复预算和短暂冷却机制；网络限制导致递归失败时，仍由订阅上游接替。DNS 页分别显示设置、监听状态和实际查询计数：监听就绪不等于解析成功，递归也不等于传输加密。启动异常同时进入日志与状态卡。
+
+VPN 的 DNS 应答区分 NODATA、NXDOMAIN 与查询失败：域名存在但没有 AAAA 记录时返回 NOERROR 空答，域名不存在时返回 NXDOMAIN，超时等故障才返回 SERVFAIL。Corduit 的适配层保留这个类型信息，不再把正常空答记录成解析错误，也不因空答绕过订阅策略查询系统 DNS。
+
+节点页的“自动”按可用宽度决定列数，“一列 / 两列”严格采用用户选择；窄卡片将名称移到图标下方，并随文字缩放增加高度。手机导航悬浮于完整页面之上，仅对底栏范围做背景模糊；列表末尾与浮动按钮使用同一份导航避让尺寸。列表入场复用页面时间线，不为每行分配动画控制器或延迟计时器；应用后台状态与系统减少动态效果设置仍由全局动效开关控制。渲染耗时需要在目标设备的 profile 模式下测量，不能用动画测试通过代替性能数据。
+
+Material Shape 变形集中在 `ExpressiveShape` 与 `AnimatedExpressiveShape`：前者复用页面时间线，后者用于状态切换，首次变化时才创建控制器。首页状态、空状态、节点选中标记和 DNS 状态使用同一套缓存形状与弹簧参数。连续操作从当前进度和速度继续，动画只更新裁剪区域；静止状态不循环播放。
 
 ## 规则
 
@@ -77,7 +93,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 
 ## 协议状态
 
-当前构建使用 Cargo.lock 锁定的 crates.io Corduit 0.3.1，本构建启用 `hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13` 等功能；本仓库负责 Flutter 集成。CI 仅在清单显式声明本地 path 依赖时检出相邻源码仓库。
+当前构建使用 Corduit 0.3.4，通过 `[patch.crates-io]` 指向相邻源码仓库；`Cargo.lock` 固定包版本，`scripts/engine_revisions.json` 固定 CI 使用的提交。本构建启用 `hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13` 等功能。CI 按固定提交检出相邻仓库，并检查解析器、套接字工厂和 JNI 的依赖身份一致。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
@@ -108,7 +124,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 
 全局模式使用代理页的 `GLOBAL` 选择组，选择按配置独立保存。订阅未定义该组时，应用用可用节点生成，不把排在首位的国内直连组当作全局出口；无可用节点时拒绝流量。订阅显式定义的 `GLOBAL` 保留其成员和选择，包括用户自行配置的 `DIRECT`。
 
-RecurseX 0.2.4 / courierust 1.1.1 的 DoH、DoH3 当前要求连接 IP 与证书 IP 身份一致，不支持独立的域名身份覆盖。默认使用支持 IP 证书的阿里 DoH 地址。已知公共 DNS 的旧写法转换为同一服务商的兼容加密端点，并记录转换警告；未知私有 DoH 配置会明确报错，需使用该服务商支持的 IP 端点或 DoT/DoQ，不能通过关闭证书校验绕过。
+RecurseX 0.2.6 / courierust 1.1.2 的 DoH、DoH3 当前要求连接 IP 与证书 IP 身份一致，不支持独立的域名身份覆盖。默认使用支持 IP 证书的阿里 DoH 地址。已知公共 DNS 的旧写法转换为同一服务商的兼容加密端点，并记录转换警告；未知私有 DoH 配置会明确报错，需使用该服务商支持的 IP 端点或 DoT/DoQ，不能通过关闭证书校验绕过。
 
 `rule` / `global` / `direct` 的判定全部在引擎里完成：inbound、TUN 数据面与 Android VPN 都把连接交给同一个路由器，所以切换模式从不需要重建隧道。
 
@@ -205,7 +221,7 @@ flowchart TB
     %% Engine Layer
     %% =========================
     subgraph ENGINE["③ 核心引擎层"]
-        CORDUIT["corduit 0.3.1<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
+        CORDUIT["corduit 0.3.4<br/><br/>配置 · 路由 · 出入站 · DNS · TUN<br/>全部协议与核心网络逻辑"]
     end
 
     %% =========================
@@ -221,7 +237,7 @@ flowchart TB
     %% Optional DNS Resolver
     %% =========================
     subgraph OPTIONAL["⑤ 可选本地递归 DNS"]
-        RECURSE["recurse-x 0.2.4<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
+        RECURSE["recurse-x 0.2.6<br/><br/>本地递归解析器本体<br/>+<br/>UDP / TCP DNS 服务"]
     end
 
     %% Main call path
@@ -253,7 +269,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 
 ## 构建与检查
 
-将 `ArcadiaPlus` 和 `Corduit` 放在同一父目录下，`rust/Cargo.toml` 通过 `../../Corduit` 引用核心。CI 和发布任务也会检出 Corduit，优先使用版本对应的标签；没有标签时使用默认分支并校验版本。因此核心改动必须先推送到 Corduit 仓库，再触发依赖它的应用构建。本项目不维护 vendor 副本。
+将 `ArcadiaPlus`、`Corduit` 与 `RecurseX` 放在同一父目录下。`rust/Cargo.toml` 声明版本并用两个 `[patch.crates-io]` 引用相邻仓库。本项目不维护 vendor 副本。修改引擎版本时，同步更新锁文件和 `scripts/engine_revisions.json`，再运行 `python scripts/check_engine_dependencies.py --offline`；检查会验证本地构建和 CI 固定提交的包版本，避免本机通过、CI 检出旧版本。
 
 首页四项流量指标始终横向排列，窄屏可横向滚动。「国内总流量」按直连出口统计，包含局域网和其他直连目的地，不是按 IP 国家归属计算；「代理总流量」按实际代理出口统计。两项都是本次核心运行期间的上传、下载有效载荷之和，包含已关闭的短连接和 UDP，不包含协议封装开销。
 
@@ -292,7 +308,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT 的 HAP 由 CI 的 `ohos` 与 [ohos/README.md](ohos/README.md) 的 DevEco/hvigor 流程构建。CI 除构建外还会断言 HAP 内确实含有 `libapp.so`、`librust_lib_arcadiaplus.so` 与 `libarcadia_core.so`——构建通过只证明打包链路正确；VPN 数据面（授权弹窗、隧道、引擎分流）仍按该文档的真机清单逐项验证。
 
-`rust/Cargo.toml` 通过 `path = "../../Corduit"` 引用同级目录中的引擎仓库，并声明所需的引擎版本。引擎与本应用同步演进，因此每个工作流都会先执行 `.github/actions/checkout-engine`：它从 `rust/Cargo.toml` 读出版本要求，把引擎检出到 `path` 指向的兄弟目录，优先 checkout 同名 `v<版本>` 标签，没有标签时跟随引擎仓库的默认分支并给出警告，最后校验引擎自己声明的版本与要求一致——不一致就失败，绝不拿一个来源不明的引擎把 CI 刷成绿色。发布引擎时请打 `v<版本>` 标签，CI 才会被钉在不可变修订上。
+CI 与发布工作流使用 `.github/actions/checkout-engines`，只检出 `scripts/engine_revisions.json` 中的完整提交号，不回退到分支 HEAD 或缺失标签。先将引擎提交推送到远端，再更新应用的固定点；本地未提交的核心代码不会出现在 GitHub runner 上。`--verify-local` 只读取现有 Git 对象中的清单，不重置或覆盖开发目录。
 
 ## 免责声明
 

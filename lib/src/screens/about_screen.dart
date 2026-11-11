@@ -1,3 +1,5 @@
+import '../widgets/page_insets.dart';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -70,7 +72,10 @@ class _AboutScreenState extends State<AboutScreen> {
         ),
       ),
       body: ListView(
-        padding: ResponsiveUtils.getResponsivePadding(context),
+        padding: PageInsets.scroll(
+          context,
+          ResponsiveUtils.getResponsivePadding(context),
+        ),
         children: [
           _buildHeader(context, colorScheme, textTheme, l10n),
           SizedBox(height: ResponsiveUtils.getSpacing(context) * 3),

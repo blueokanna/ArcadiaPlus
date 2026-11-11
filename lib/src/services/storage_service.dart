@@ -79,6 +79,7 @@ class DnsSettings {
   final String listen;
   final bool useRecursiveResolver;
   final bool requireEncryptedDns;
+  final bool preferEncryptedDns;
   final String dnsMode;
   final List<String> nameservers;
   final List<String> fallback;
@@ -98,7 +99,8 @@ class DnsSettings {
     this.overrideDns = false,
     this.listen = '127.0.0.1:53',
     this.useRecursiveResolver = false,
-    this.requireEncryptedDns = true,
+    this.requireEncryptedDns = false,
+    this.preferEncryptedDns = false,
     this.dnsMode = defaultMode,
     this.nameservers = defaultNameservers,
     this.fallback = const [],
@@ -115,6 +117,7 @@ class DnsSettings {
     'listen': listen,
     'useRecursiveResolver': useRecursiveResolver,
     'requireEncryptedDns': requireEncryptedDns,
+    'preferEncryptedDns': preferEncryptedDns,
     'dnsMode': dnsMode,
     'nameservers': nameservers,
     'fallback': fallback,
@@ -127,7 +130,10 @@ class DnsSettings {
     overrideDns: json['overrideDns'] as bool? ?? false,
     listen: json['listen'] as String? ?? '127.0.0.1:53',
     useRecursiveResolver: json['useRecursiveResolver'] as bool? ?? false,
-    requireEncryptedDns: json['requireEncryptedDns'] as bool? ?? true,
+    // Missing preference means follow the subscription. Never turn an
+    // explicitly persisted privacy choice off during an upgrade.
+    requireEncryptedDns: json['requireEncryptedDns'] as bool? ?? false,
+    preferEncryptedDns: json['preferEncryptedDns'] as bool? ?? false,
     dnsMode: normaliseMode(json['dnsMode']),
     nameservers: (json['nameservers'] as List?)?.cast<String>() ?? const [],
     fallback: (json['fallback'] as List?)?.cast<String>() ?? const [],
@@ -178,6 +184,7 @@ class DnsSettings {
     String? listen,
     bool? useRecursiveResolver,
     bool? requireEncryptedDns,
+    bool? preferEncryptedDns,
     String? dnsMode,
     List<String>? nameservers,
     List<String>? fallback,
@@ -190,6 +197,7 @@ class DnsSettings {
       listen: listen ?? this.listen,
       useRecursiveResolver: useRecursiveResolver ?? this.useRecursiveResolver,
       requireEncryptedDns: requireEncryptedDns ?? this.requireEncryptedDns,
+      preferEncryptedDns: preferEncryptedDns ?? this.preferEncryptedDns,
       dnsMode: dnsMode ?? this.dnsMode,
       nameservers: nameservers ?? this.nameservers,
       fallback: fallback ?? this.fallback,

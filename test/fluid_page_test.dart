@@ -2,8 +2,72 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:arcadiaplus/src/widgets/fluid_page.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+import 'package:arcadiaplus/src/utils/animation_utils.dart';
 
 void main() {
+  testWidgets(
+    'short empty-state labels stay centered across the full viewport',
+    (tester) async {
+      tester.view.physicalSize = const Size(380, 820);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Column(
+              children: [
+                Expanded(
+                  child: FluidEmptyState(
+                    icon: Icons.power_off,
+                    title: 'Stopped',
+                    message: 'Start service',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      expect(tester.getCenter(find.text('Stopped')).dx, closeTo(190, .1));
+      expect(
+        tester.getCenter(find.byIcon(Icons.power_off)).dx,
+        closeTo(190, .1),
+      );
+    },
+  );
+
+  testWidgets('visible rows share the page clock without delayed tickers', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FluidPage(
+          child: Column(
+            children: [
+              for (var i = 0; i < 8; i++)
+                StaggeredListItem(index: i, child: Text('row $i')),
+            ],
+          ),
+        ),
+      ),
+    );
+    final rows = tester
+        .widgetList<FadeTransition>(
+          find.descendant(
+            of: find.byType(StaggeredListItem),
+            matching: find.byType(FadeTransition),
+          ),
+        )
+        .toList();
+    expect(rows.length, 8);
+    expect(
+      rows.every((row) => identical(row.opacity, rows.first.opacity)),
+      isTrue,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.binding.transientCallbackCount, 0);
+  });
   for (final reduced in [false, true]) {
     testWidgets('finite fluid entry respects reduced motion=$reduced', (
       tester,

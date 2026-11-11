@@ -107,6 +107,16 @@ class ParsedClashConfig {
 
 /// Converts Clash YAML configuration to ArcadiaPlus JSON format
 class ConfigConverter {
+  /// Checks only DNS, using the same boundary as runtime conversion. This can
+  /// run before startup without downloading rule sets or exposing node secrets.
+  static void validateDns(String yamlContent, DnsSettings settings) {
+    final parsed = _convertToMap(loadYaml(yamlContent));
+    if (parsed is! Map<String, dynamic>) {
+      throw const FormatException('The profile must contain a YAML mapping.');
+    }
+    _extractDnsConfig(parsed, strict: true, dnsSettings: settings);
+  }
+
   /// Parse Clash YAML config for UI display
   static ParsedClashConfig parseClashConfig(String yamlContent) {
     try {
@@ -536,9 +546,7 @@ class ConfigConverter {
         ? dnsSettings.nameservers
         : _toStringList(dns['nameserver']);
     final effectiveConfigured = configured.isEmpty
-        ? (dnsSettings?.requireEncryptedDns == true
-              ? EncryptedDnsPolicy.defaults
-              : const ['8.8.8.8', '1.1.1.1'])
+        ? EncryptedDnsPolicy.defaults
         : configured;
 
     final withSystemDns = <String>[...effectiveConfigured];
@@ -645,8 +653,13 @@ class ConfigConverter {
     final compatible = strict
         ? DnsTransportCompatibility.apply(result, onWarning: onWarning)
         : result;
-    return dnsSettings?.requireEncryptedDns == true
-        ? EncryptedDnsPolicy.apply(compatible, onWarning: onWarning)
+    return dnsSettings?.requireEncryptedDns == true ||
+            dnsSettings?.preferEncryptedDns == true
+        ? EncryptedDnsPolicy.apply(
+            compatible,
+            strict: dnsSettings!.requireEncryptedDns,
+            onWarning: onWarning,
+          )
         : compatible;
   }
 

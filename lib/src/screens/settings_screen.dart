@@ -1,3 +1,5 @@
+import '../widgets/page_insets.dart';
+
 import 'package:arcadiaplus/src/widgets/theme_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -62,7 +64,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onRefresh: () async => await appState.refreshStatus(),
             child: ListView(
               physics: PlatformUtils.getScrollPhysics(),
-              padding: PlatformUtils.getPlatformPadding(context),
+              padding: PageInsets.scroll(
+                context,
+                PlatformUtils.getPlatformPadding(context),
+              ),
               children: [
                 // 外观设置
                 _buildSectionHeader(

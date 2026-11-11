@@ -1,6 +1,10 @@
 import 'package:arcadiaplus/src/theme/app_typography.dart';
 
 import 'dart:async';
+
+import '../widgets/page_insets.dart';
+import '../theme/app_motion.dart';
+
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show listEquals;
@@ -384,7 +388,10 @@ class _LogsScreenState extends State<LogsScreen> {
                       : ListView.builder(
                           controller: _scrollController,
                           physics: PlatformUtils.getScrollPhysics(),
-                          padding: const EdgeInsets.all(8),
+                          padding: PageInsets.scroll(
+                            context,
+                            const EdgeInsets.fromLTRB(8, 8, 8, 72),
+                          ),
                           itemCount: filteredLogs.length,
                           itemBuilder: (context, index) {
                             final log = filteredLogs[index];
@@ -412,18 +419,21 @@ class _LogsScreenState extends State<LogsScreen> {
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton.small(
-        onPressed: () {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        },
-        tooltip: 'Scroll to bottom',
-        child: const Icon(Icons.arrow_downward),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: PageInsets.bottomOf(context)),
+        child: FloatingActionButton.small(
+          onPressed: () {
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: AppMotion.duration(context),
+                curve: Curves.easeOut,
+              );
+            }
+          },
+          tooltip: 'Scroll to bottom',
+          child: const Icon(Icons.arrow_downward),
+        ),
       ),
     );
   }

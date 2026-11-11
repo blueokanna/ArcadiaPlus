@@ -8,8 +8,11 @@ abstract final class EncryptedDnsPolicy {
     'https://223.6.6.6/dns-query',
   ];
 
-  // These operators offer certificate-verified HTTPS on the same literal IP.
+  // Same-operator upgrades only. DNSPod documents dot.pub as its TLS identity:
+  // https://cloud.tencent.com/document/product/302/110784
+  // The literal dial address avoids an unencrypted hostname bootstrap.
   static const _upgrades = {
+    '119.29.29.29': 'tls://1.12.12.12#dot.pub',
     '223.5.5.5': 'https://223.5.5.5/dns-query',
     '223.6.6.6': 'https://223.6.6.6/dns-query',
     '1.1.1.1': 'https://1.1.1.1/dns-query',
@@ -18,8 +21,6 @@ abstract final class EncryptedDnsPolicy {
 
   static bool accepts(String value, {bool literal = false}) {
     try {
-      // Uri normalizes an explicit :0 away for schemes without a registered
-      // default port. Corduit rejects it, so inspect the original spelling.
       if (RegExp(r':0+(?:[/#?]|$)').hasMatch(value)) return false;
       final uri = Uri.tryParse(value);
       if (uri == null) return false;
@@ -52,8 +53,10 @@ abstract final class EncryptedDnsPolicy {
 
   static Map<String, dynamic> apply(
     Map<String, dynamic> config, {
+    bool strict = true,
     void Function(String)? onWarning,
   }) {
+    final unsupported = <String>{};
     List<String> encrypted(Object? raw, String role, {bool literal = false}) {
       final source = (raw as List?)?.cast<String>() ?? const <String>[];
       final accepted = <String>{};
@@ -61,16 +64,27 @@ abstract final class EncryptedDnsPolicy {
         final value = entry.trim();
         final upgraded = _upgrades[value] ?? value;
         if (!accepts(upgraded, literal: literal)) {
-          throw FormatException(
-            'Encrypted DNS: $role contains an unsupported endpoint. '
-            'Configure certificate-verified DoH/DoT/DoQ for this resolver'
-            '${literal ? ' using a literal bootstrap address' : ''}, '
-            'or explicitly disable encrypted DNS protection.',
+          if (!strict) {
+            accepted.add(value);
+            onWarning?.call(
+              'DNS preference kept a subscription endpoint in $role; this path may be plaintext.',
+            );
+            continue;
+          }
+          // Collect every incompatible role in one pass. Never return a
+          // partially filtered configuration or include URI credentials in logs.
+          final uri = Uri.tryParse(value);
+          final label = uri != null && uri.userInfo.isNotEmpty
+              ? '${uri.scheme}://${uri.host}'
+              : value.replaceAll(RegExp(r'[\x00-\x1f\x7f]'), ' ');
+          unsupported.add(
+            '$role: ${label.length > 160 ? label.substring(0, 160) : label}',
           );
+          continue;
         }
         if (upgraded != value) {
           onWarning?.call(
-            'Encrypted DNS upgraded $role to HTTPS on the same IP.',
+            'Encrypted DNS upgraded $role using the same operator with certificate verification.',
           );
         }
         accepted.add(upgraded);
@@ -89,6 +103,28 @@ abstract final class EncryptedDnsPolicy {
     final ownLiterals = selected
         .where((s) => accepts(s, literal: true))
         .toList();
+    final policy = <String, List<String>>{
+      for (final entry in (config['nameserver_policy'] as Map).entries)
+        entry.key as String: encrypted(entry.value, 'nameserver-policy'),
+    };
+    if (!strict) {
+      return {
+        ...config,
+        'nameservers': selected,
+        'fallback': fallback,
+        'default_nameserver': bootstrap,
+        'nameserver_policy': policy,
+      };
+    }
+    if (unsupported.isNotEmpty) {
+      throw FormatException(
+        'Encrypted DNS requires verified DoH/DoT/DoQ on every path. '
+        'Incompatible endpoints: ${unsupported.take(12).join('; ')}'
+        '${unsupported.length > 12 ? '; …' : ''}. '
+        'Keep private DNS rules intact: configure their encrypted endpoints '
+        'or turn off encrypted DNS protection to use subscription DNS.',
+      );
+    }
     if (bootstrap.isEmpty && ownLiterals.isEmpty) {
       throw const FormatException(
         'Encrypted DNS: hostname-only resolvers need an explicit encrypted '
@@ -101,10 +137,7 @@ abstract final class EncryptedDnsPolicy {
       'nameservers': selected,
       'fallback': fallback,
       'default_nameserver': bootstrap.isEmpty ? ownLiterals : bootstrap,
-      'nameserver_policy': {
-        for (final entry in (config['nameserver_policy'] as Map).entries)
-          entry.key: encrypted(entry.value, 'nameserver-policy'),
-      },
+      'nameserver_policy': policy,
     };
   }
 }

@@ -6,9 +6,24 @@ import 'package:arcadiaplus/src/rust/types.dart';
 import 'package:arcadiaplus/src/services/native_core_service.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 
+import 'expressive_shape.dart';
+
 class DnsStatusCard extends StatefulWidget {
-  const DnsStatusCard({super.key, this.readStatus});
+  const DnsStatusCard({
+    super.key,
+    this.readStatus,
+    this.enabled,
+    this.encrypted = false,
+    this.busy = false,
+    this.serviceRunning,
+    this.startupError,
+  });
   final Future<RecursiveDnsStatus> Function()? readStatus;
+  final bool? enabled;
+  final bool encrypted;
+  final bool busy;
+  final bool? serviceRunning;
+  final String? startupError;
   @override
   State<DnsStatusCard> createState() => _DnsStatusCardState();
 }
@@ -32,6 +47,15 @@ class _DnsStatusCardState extends State<DnsStatusCard> {
     super.didChangeDependencies();
     _visible = TickerMode.valuesOf(context).enabled;
     _sync();
+  }
+
+  @override
+  void didUpdateWidget(DnsStatusCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.busy != widget.busy ||
+        oldWidget.serviceRunning != widget.serviceRunning) {
+      _refresh();
+    }
   }
 
   void _sync() {
@@ -88,7 +112,22 @@ class _DnsStatusCardState extends State<DnsStatusCard> {
           children: [
             Row(
               children: [
-                const Icon(Icons.hub_outlined),
+                AnimatedExpressiveShape(
+                  progress: status?.running == true ? 1 : 0,
+                  pair: ExpressiveShapePair.activity,
+                  child: ColoredBox(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    child: SizedBox.square(
+                      dimension: 40,
+                      child: Icon(
+                        Icons.hub_outlined,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSecondaryContainer,
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -104,19 +143,35 @@ class _DnsStatusCardState extends State<DnsStatusCard> {
               ],
             ),
             Text(
-              _error ??
-                  (status == null
-                      ? (zh ? '等待核心就绪' : 'Waiting for the core')
-                      : status.running
+              widget.startupError ??
+                  _error ??
+                  (widget.busy
+                      ? (zh ? '正在应用 DNS 设置…' : 'Applying DNS settings…')
+                      : status?.running == true
                       ? (zh
-                            ? '运行中 · ${status.listen}'
-                            : 'Running · ${status.listen}')
+                            ? '监听中 · ${status!.listen}'
+                            : 'Listening · ${status!.listen}')
+                      : widget.encrypted
+                      ? (zh
+                            ? '严格加密模式已开启，本机递归已禁用。'
+                            : 'Local recursion is disabled by strict encryption.')
+                      : widget.enabled == false
+                      ? (zh ? '本机递归已关闭。' : 'Local recursion is disabled.')
+                      : widget.enabled == true && widget.serviceRunning != true
+                      ? (zh
+                            ? '已启用；启动服务后监听。'
+                            : 'Enabled; starts with the proxy service.')
+                      : status == null
+                      ? (zh ? '等待核心就绪' : 'Waiting for the core')
                       : (zh
-                            ? '本地递归未运行；不代表转发 DNS 已停止。设置将在下次启动代理时应用。'
-                            : 'Local recursion is stopped; forwarding DNS may still be active. Settings apply on the next proxy start.')),
+                            ? '本机递归未运行。请应用设置；若仍失败，请查看 DNS 启动日志。'
+                            : 'Local recursion is stopped. Apply settings; check DNS startup logs if it still fails.')),
             ),
             if (status != null && status.running) ...[
               const SizedBox(height: 12),
+              Text(
+                zh ? '监听就绪不代表每次解析都成功。递归失败时由配置中的上游接替。' : 'A ready listener does not guarantee every lookup succeeds. Configured upstreams recover recursive failures.',
+              ),
               Wrap(
                 spacing: 16,
                 runSpacing: 8,
@@ -126,7 +181,12 @@ class _DnsStatusCardState extends State<DnsStatusCard> {
                   Text(
                     '${zh ? '上游请求' : 'Upstream queries'} ${status.upstreamQueries}',
                   ),
-                  Text('${zh ? '失败' : 'Failures'} ${status.failures}'),
+                  Tooltip(
+                    message: zh ? '核心计数包含部分 NODATA / NXDOMAIN，不等于网络失败次数。' : 'The core counter includes some NODATA / NXDOMAIN replies; it is not a network failure count.',
+                    child: Text(
+                      '${zh ? '错误/负答' : 'Errors / negative replies'} ${status.failures}',
+                    ),
+                  ),
                 ],
               ),
             ],

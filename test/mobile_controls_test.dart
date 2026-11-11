@@ -112,7 +112,7 @@ void main() {
     expect(find.text('Queries 42'), findsOneWidget);
     expect(find.text('Cache hits 31'), findsOneWidget);
     expect(find.text('Upstream queries 18'), findsOneWidget);
-    expect(find.text('Failures 1'), findsOneWidget);
+    expect(find.text('Errors / negative replies 1'), findsOneWidget);
     expect(
       find.textContaining('does not validate an anchored DNSSEC chain'),
       findsOneWidget,
@@ -253,13 +253,15 @@ void main() {
       final tiles = find.byType(ProxyNodeTile);
       expect(
         tester.getTopLeft(tiles.at(0)).dy,
-        lessThan(tester.getTopLeft(tiles.at(1)).dy),
+        tester.getTopLeft(tiles.at(1)).dy,
       );
       expect(
         (await SharedPreferences.getInstance()).getInt('proxy_node_columns'),
         2,
       );
-      // Preserve the preference without forcing unreadable narrow cards.
+      await capture(tester, boundary, 'phone-two-columns-$scale');
+      expect(tester.takeException(), isNull);
+      // Explicit columns survive rotation and preference restoration.
       tester.view.physicalSize = const Size(1200, 900);
       await tester.pumpAndSettle();
       expect(

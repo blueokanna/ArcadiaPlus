@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:arcadiaplus/src/theme/app_motion.dart';
 
+import '../widgets/fluid_page.dart';
+
 /// Shared motion tokens and optional platform feedback. Press physics lives in
 /// SpringPress; color and decoration transitions use bounded Material curves.
 abstract final class AnimationUtils {
@@ -61,35 +63,42 @@ class StaggeredListItem extends StatefulWidget {
 
 class _StaggeredListItemState extends State<StaggeredListItem>
     with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late CurvedAnimation _curve;
+  AnimationController? _controller;
+  CurvedAnimation? _curve;
   Timer? _entrance;
   bool _started = false;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  @override
-  void initState() {
-    super.initState();
+  void _initializeStandalone() {
+    if (_controller != null) return;
     _controller = AnimationController(vsync: this, duration: widget.duration);
-    _curve = CurvedAnimation(parent: _controller, curve: widget.curve);
+    _curve = CurvedAnimation(parent: _controller!, curve: widget.curve);
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_curve);
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_curve!);
 
     _slideAnimation = Tween<Offset>(
       begin: widget.slideOffset,
       end: Offset.zero,
-    ).animate(_curve);
+    ).animate(_curve!);
+    if (_started) _controller!.value = 1;
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (FluidPage.animationOf(context) != null) {
+      _entrance?.cancel();
+      _controller?.value = 1;
+      _started = true;
+      return;
+    }
+    _initializeStandalone();
     if (MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled ||
         widget.index >= 8) {
       _entrance?.cancel();
-      _controller.value = 1;
+      _controller!.value = 1;
       _started = true;
     } else if (!_started) {
       _started = true;
@@ -100,9 +109,9 @@ class _StaggeredListItemState extends State<StaggeredListItem>
         80000,
       );
       if (micros == 0) {
-        _controller.forward();
+        _controller!.forward();
       } else {
-        _entrance = Timer(Duration(microseconds: micros), _controller.forward);
+        _entrance = Timer(Duration(microseconds: micros), _controller!.forward);
       }
     }
   }
@@ -110,26 +119,47 @@ class _StaggeredListItemState extends State<StaggeredListItem>
   @override
   void didUpdateWidget(StaggeredListItem oldWidget) {
     super.didUpdateWidget(oldWidget);
-    _controller.duration = widget.duration;
-    _curve.curve = widget.curve;
+    if (_controller == null) return;
+    _controller!.duration = widget.duration;
+    _curve!.curve = widget.curve;
     if (oldWidget.slideOffset != widget.slideOffset) {
       _slideAnimation = Tween<Offset>(
         begin: widget.slideOffset,
         end: Offset.zero,
-      ).animate(_curve);
+      ).animate(_curve!);
     }
   }
 
   @override
   void dispose() {
     _entrance?.cancel();
-    _curve.dispose();
-    _controller.dispose();
+    _curve?.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final shared = FluidPage.animationOf(context);
+    if (shared != null) {
+      // Rows share the route clock. Scrolling never starts another controller
+      // or delay timer, and a reversed route keeps the elements in phase.
+      final visible =
+          MediaQuery.disableAnimationsOf(context) ||
+          !TickerMode.valuesOf(context).enabled ||
+          widget.index >= 8;
+      final progress = visible ? const AlwaysStoppedAnimation(1.0) : shared;
+      return FadeTransition(
+        opacity: progress,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: widget.slideOffset,
+            end: Offset.zero,
+          ).animate(progress),
+          child: widget.child,
+        ),
+      );
+    }
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(position: _slideAnimation, child: widget.child),

@@ -394,7 +394,7 @@ pub async fn start_recursive_dns(
     listen: String,
     cache_path: Option<String>,
 ) -> std::result::Result<String, String> {
-    run(move || recursive_dns::start_checked(&listen, cache_path.as_deref())).await
+    run(move || recursive_dns::start(&listen, cache_path.as_deref())).await
 }
 
 /// Stop the recursive resolver front-end.

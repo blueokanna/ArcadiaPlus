@@ -1,3 +1,5 @@
+import '../widgets/page_insets.dart';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -48,8 +50,6 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
-    // Only this one flag is wanted, so the screen does not rebuild on every
-    // traffic sample the provider publishes.
     final isServiceRunning = context.select<AppStateProvider, bool>(
       (appState) => appState.isServiceRunning,
     );
@@ -68,7 +68,7 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
             ),
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: PageInsets.scroll(context, const EdgeInsets.all(16)),
             children: [
               // 系统代理
               if (networkSettings.supportsSystemProxy) ...[
@@ -108,9 +108,6 @@ class _NetworkSettingsScreenState extends State<NetworkSettingsScreen> {
                         ),
                         trailing: Switch(
                           value: networkSettings.systemProxy,
-                          // Turning one off has to work even with the engine
-                          // stopped: that is the way back from a session that
-                          // died with the proxy still pointed at our port.
                           onChanged:
                               ((isServiceRunning ||
                                       networkSettings.systemProxy) &&

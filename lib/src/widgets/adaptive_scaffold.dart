@@ -4,6 +4,8 @@ import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/widgets/navigation_bar.dart';
 
+import 'page_insets.dart';
+
 class AdaptiveScaffold extends StatelessWidget {
   final Widget body;
   final PreferredSizeWidget? appBar;
@@ -88,9 +90,16 @@ class AdaptiveScaffold extends StatelessWidget {
       // Mobile: Use bottom navigation with safe area handling
       return Scaffold(
         appBar: appBar,
-        // Routed pages own their Scaffold and may specify explicit list padding.
-        // Reserve the floating bar here, including for their local FABs.
-        body: SafeArea(top: false, left: false, right: false, child: body),
+        body: Builder(
+          builder: (context) => PageInsets(
+            bottom: MediaQuery.paddingOf(context).bottom,
+            child: MediaQuery.removePadding(
+              context: context,
+              removeBottom: true,
+              child: body,
+            ),
+          ),
+        ),
         floatingActionButton: floatingActionButton,
         floatingActionButtonLocation:
             floatingActionButtonLocation ?? PlatformUtils.getFabLocation(),

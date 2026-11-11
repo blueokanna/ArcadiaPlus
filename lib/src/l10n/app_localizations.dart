@@ -4952,7 +4952,7 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
     'dnsBehaviour': 'DNS Behaviour',
     'dnsOverrideOffNotice':
         'Override DNS is off, so the engine uses the DNS section of the active '
-        'profile. Everything below applies once the switch is on.',
+        'profile. Encryption preferences and local recursion apply independently.',
     'recursiveResolver': 'Recursive Resolver',
     'recursiveResolverDesc':
         'Prefer local root recursion (RecurseX); keep configured DNS servers '
@@ -5207,7 +5207,7 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
   },
   'zh_CN': {
     'dnsBehaviour': 'DNS 行为',
-    'dnsOverrideOffNotice': '“覆盖 DNS” 关闭时，引擎使用当前订阅里的 DNS 段；开关打开后，下面的设置才会生效。',
+    'dnsOverrideOffNotice': '“覆盖 DNS” 关闭时使用订阅里的 DNS 配置；加密偏好和本机递归选项仍独立生效。',
     'recursiveResolver': '本机递归解析',
     'recursiveResolverDesc':
         '优先在本机从 DNS 根递归解析（RecurseX），不可用时使用已配置的 DNS；下次启动服务生效',
@@ -5228,7 +5228,7 @@ const Map<String, Map<String, String>> _dnsScreenStrings = {
   },
   'zh_TW': {
     'dnsBehaviour': 'DNS 行為',
-    'dnsOverrideOffNotice': '「覆寫 DNS」關閉時，引擎使用目前訂閱的 DNS 區段；開關開啟後，下方設定才會生效。',
+    'dnsOverrideOffNotice': '「覆寫 DNS」關閉時使用訂閱的 DNS 設定；加密偏好與本機遞迴選項仍獨立生效。',
     'recursiveResolver': '本機遞迴解析',
     'recursiveResolverDesc':
         '優先在本機從 DNS 根遞迴解析（RecurseX），不可用時使用已設定的 DNS；下次啟動服務生效',

@@ -83,7 +83,7 @@ void main() {
         );
         expect(tester.binding.transientCallbackCount, 0);
         expect(tester.takeException(), isNull);
-        // The shell reserves bar space even when a routed page does not use SafeArea.
+        // The floating bar overlays the full-height page viewport.
         final body = tester.getRect(
           find
               .ancestor(
@@ -95,7 +95,8 @@ void main() {
         final bar = tester.getRect(
           find.byKey(const ValueKey('floating-navigation')),
         );
-        expect(body.bottom, lessThanOrEqualTo(bar.top));
+        expect(body.bottom, 844);
+        expect(body.bottom, greaterThan(bar.bottom));
         await tester.pumpWidget(const SizedBox.shrink());
       },
     );

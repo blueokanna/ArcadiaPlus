@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
 import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
+
+import '../services/dns_configuration_validator.dart';
 
 /// Owns the DNS settings that the engine can actually carry.
 class DnsSettingsProvider extends ChangeNotifier {
@@ -14,14 +18,17 @@ class DnsSettingsProvider extends ChangeNotifier {
   DnsSettings _settings = DnsSettings();
   bool _isLoading = false;
   bool _disposed = false;
+  int _pendingWrites = 0;
   String? _saveError;
   final _writes = SerialTaskQueue();
   late final Future<void> _loaded;
   final Future<DnsSettings> Function() _read;
   final Future<void> Function(DnsSettings) _write;
+  final Future<void> Function(DnsSettings) _validateStrict;
 
   DnsSettings get settings => _settings;
   bool get isLoading => _isLoading;
+  bool get isSaving => _pendingWrites > 0;
   String? get saveError => _saveError;
 
   // Convenience getters
@@ -31,13 +38,22 @@ class DnsSettingsProvider extends ChangeNotifier {
   bool get useRecursiveResolver =>
       _settings.useRecursiveResolver && !_settings.requireEncryptedDns;
   bool get requireEncryptedDns => _settings.requireEncryptedDns;
+  bool get preferEncryptedDns =>
+      _settings.preferEncryptedDns || _settings.requireEncryptedDns;
 
-  Future<void> setRequireEncryptedDns(bool value) => _update(
-    (s) => s.copyWith(
-      requireEncryptedDns: value,
-      useRecursiveResolver: value ? false : s.useRecursiveResolver,
-    ),
+  Future<void> setPreferEncryptedDns(bool value) => _update(
+    (s) => s.copyWith(preferEncryptedDns: value, requireEncryptedDns: false),
   );
+
+  Future<void> setRequireEncryptedDns(bool value) => _update((s) async {
+    final next = s.copyWith(
+      requireEncryptedDns: value,
+      preferEncryptedDns: value || s.preferEncryptedDns,
+      useRecursiveResolver: value ? false : s.useRecursiveResolver,
+    );
+    if (value) await _validateStrict(next);
+    return next;
+  });
   String get dnsMode => _settings.dnsMode;
   List<String> get nameservers => _settings.nameservers;
   List<String> get fallback => _settings.fallback;
@@ -46,10 +62,19 @@ class DnsSettingsProvider extends ChangeNotifier {
   DnsSettingsProvider({
     Future<DnsSettings> Function()? read,
     Future<void> Function(DnsSettings)? write,
+    Future<void> Function(DnsSettings)? validateStrict,
   }) : _read = read ?? StorageService.instance.getDnsSettings,
-       _write = write ?? StorageService.instance.saveDnsSettings {
+       _write = write ?? StorageService.instance.saveDnsSettings,
+       _validateStrict =
+           validateStrict ?? DnsConfigurationValidator.validateActiveProfile {
     _loaded = _loadSettings();
   }
+
+  /// An application action must observe all writes already queued by the UI.
+  Future<bool> waitUntilSaved() => _writes.run(() async {
+    await _loaded;
+    return _saveError == null;
+  });
 
   @override
   void notifyListeners() {
@@ -184,20 +209,28 @@ class DnsSettingsProvider extends ChangeNotifier {
   /// A provider that notifies on every write rebuilds every `Consumer` that
   /// watches it — here, the whole settings list — even when the user re-picked
   /// the value that was already selected.
-  Future<void> _update(DnsSettings Function(DnsSettings current) change) =>
-      _writes.run(() async {
-        await _loaded;
-        try {
-          final next = change(_settings);
-          if (_sameAs(next)) return;
+  Future<void> _update(
+    FutureOr<DnsSettings> Function(DnsSettings current) change,
+  ) {
+    _pendingWrites++;
+    notifyListeners();
+    return _writes.run(() async {
+      await _loaded;
+      try {
+        final next = await change(_settings);
+        if (!_sameAs(next)) {
           await _write(next);
           _settings = next;
-          _saveError = null;
-        } catch (error) {
-          _saveError = error.toString();
         }
+        _saveError = null;
+      } catch (error) {
+        _saveError = error.toString();
+      } finally {
+        _pendingWrites--;
         notifyListeners();
-      });
+      }
+    });
+  }
 
   bool _sameAs(DnsSettings other) {
     final current = _settings;
@@ -206,6 +239,7 @@ class DnsSettingsProvider extends ChangeNotifier {
         current.listen == other.listen &&
         current.useRecursiveResolver == other.useRecursiveResolver &&
         current.requireEncryptedDns == other.requireEncryptedDns &&
+        current.preferEncryptedDns == other.preferEncryptedDns &&
         current.dnsMode == other.dnsMode &&
         current.nameserversRevision == other.nameserversRevision &&
         listEquals(current.nameservers, other.nameservers) &&

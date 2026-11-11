@@ -1,3 +1,4 @@
+import '../widgets/page_insets.dart';
 import '../widgets/fluid_page.dart';
 import '../widgets/dns_activity_panel.dart';
 
@@ -140,6 +141,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
         ],
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -169,8 +171,11 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
           ),
           Expanded(
             child: _dns
-                ? const SingleChildScrollView(
-                    padding: EdgeInsets.all(12),
+                ? SingleChildScrollView(
+                    padding: PageInsets.scroll(
+                      context,
+                      const EdgeInsets.all(12),
+                    ),
                     child: DnsActivityPanel(),
                   )
                 : Selector<AppStateProvider, (bool, List<ActiveConnection>)>(
@@ -290,7 +295,9 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
               ),
             ),
           ),
-          SliverToBoxAdapter(child: SizedBox(height: spacing * 2)),
+          SliverToBoxAdapter(
+            child: SizedBox(height: spacing * 2 + PageInsets.bottomOf(context)),
+          ),
         ],
       ),
     );

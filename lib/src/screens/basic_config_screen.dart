@@ -1,3 +1,5 @@
+import '../widgets/page_insets.dart';
+
 import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -34,7 +36,7 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
             ),
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: PageInsets.scroll(context, const EdgeInsets.all(16)),
             children: [
               // 端口设置
               _buildSectionHeader(
@@ -112,116 +114,124 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
                 child: Column(
                   children: [
                     SettingsChoiceTile(
+                      compact: true,
                       title: Text(l10n?.mode ?? 'Mode'),
                       subtitle: Text(_getModeText(settings.mode, l10n)),
                       leading: Icon(
                         Icons.swap_horiz_outlined,
                         color: colorScheme.primary,
                       ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                      trailing: DropdownMenu<String>(
+                        initialSelection: RoutingModes.restore(
+                          appState.proxyMode,
+                        ).name,
+                        width: 120,
+                        inputDecorationTheme: InputDecorationTheme(
+                          isDense: true,
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                          ),
+                          constraints: const BoxConstraints(minHeight: 48),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownMenu<String>(
-                          initialSelection: RoutingModes.restore(
-                            appState.proxyMode,
-                          ).name,
-                          width: 170,
-                          requestFocusOnTap: false,
+                        requestFocusOnTap: false,
 
-                          dropdownMenuEntries: [
+                        dropdownMenuEntries: [
+                          DropdownMenuEntry(
+                            value: 'rule',
+                            label: l10n?.ruleMode ?? 'Rule',
+                          ),
+                          DropdownMenuEntry(
+                            value: 'global',
+                            label: l10n?.globalProxy ?? 'Global',
+                          ),
+                          if (RoutingModes.available().contains(
+                            ProxyMode.direct,
+                          ))
                             DropdownMenuEntry(
-                              value: 'rule',
-                              label: l10n?.ruleMode ?? 'Rule',
+                              value: 'direct',
+                              label: l10n?.direct ?? 'Direct',
                             ),
-                            DropdownMenuEntry(
-                              value: 'global',
-                              label: l10n?.globalProxy ?? 'Global',
-                            ),
-                            if (RoutingModes.available().contains(
-                              ProxyMode.direct,
-                            ))
-                              DropdownMenuEntry(
-                                value: 'direct',
-                                label: l10n?.direct ?? 'Direct',
-                              ),
-                          ],
-                          onSelected: (value) async {
-                            if (value == null) return;
-                            final messenger = ScaffoldMessenger.of(context);
-                            final mode = ProxyMode.values.byName(value);
-                            final applied = await appState.setProxyMode(mode);
-                            if (!mounted) return;
-                            if (applied) {
-                              await settings.setMode(value);
-                            } else {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '${l10n?.failed ?? 'Failed'}: '
-                                    '${l10n?.mode ?? 'Mode'} $value',
-                                  ),
-                                  behavior: SnackBarBehavior.floating,
-                                  backgroundColor: colorScheme.error,
+                        ],
+                        onSelected: (value) async {
+                          if (value == null) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          final mode = ProxyMode.values.byName(value);
+                          final applied = await appState.setProxyMode(mode);
+                          if (!mounted) return;
+                          if (applied) {
+                            await settings.setMode(value);
+                          } else {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${l10n?.failed ?? 'Failed'}: '
+                                  '${l10n?.mode ?? 'Mode'} $value',
                                 ),
-                              );
-                            }
-                          },
-                        ),
+                                behavior: SnackBarBehavior.floating,
+                                backgroundColor: colorScheme.error,
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ),
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     SettingsChoiceTile(
+                      compact: true,
                       title: Text(l10n?.logLevel ?? 'Log Level'),
                       subtitle: Text(settings.logLevel.toUpperCase()),
                       leading: Icon(
                         Icons.description_outlined,
                         color: colorScheme.primary,
                       ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                      trailing: DropdownMenu<String>(
+                        initialSelection: settings.logLevel,
+                        width: 120,
+                        inputDecorationTheme: InputDecorationTheme(
+                          isDense: true,
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                          ),
+                          constraints: const BoxConstraints(minHeight: 48),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: DropdownMenu<String>(
-                          initialSelection: settings.logLevel,
-                          width: 170,
-                          requestFocusOnTap: false,
+                        requestFocusOnTap: false,
 
-                          dropdownMenuEntries: const [
-                            DropdownMenuEntry(value: 'silent', label: 'SILENT'),
-                            DropdownMenuEntry(value: 'error', label: 'ERROR'),
-                            DropdownMenuEntry(value: 'warn', label: 'WARN'),
-                            DropdownMenuEntry(value: 'info', label: 'INFO'),
-                            DropdownMenuEntry(value: 'debug', label: 'DEBUG'),
-                            DropdownMenuEntry(value: 'trace', label: 'TRACE'),
-                          ],
-                          onSelected: (v) async {
-                            if (v == null) return;
-                            final messenger = ScaffoldMessenger.of(context);
-                            await settings.setLogLevel(v);
-                            if (await appState.applyLogLevel(v)) return;
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '${l10n?.failed ?? 'Failed'}: '
-                                  '${l10n?.logLevel ?? 'Log Level'} $v',
-                                ),
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: colorScheme.error,
+                        dropdownMenuEntries: const [
+                          DropdownMenuEntry(value: 'silent', label: 'SILENT'),
+                          DropdownMenuEntry(value: 'error', label: 'ERROR'),
+                          DropdownMenuEntry(value: 'warn', label: 'WARN'),
+                          DropdownMenuEntry(value: 'info', label: 'INFO'),
+                          DropdownMenuEntry(value: 'debug', label: 'DEBUG'),
+                          DropdownMenuEntry(value: 'trace', label: 'TRACE'),
+                        ],
+                        onSelected: (v) async {
+                          if (v == null) return;
+                          final messenger = ScaffoldMessenger.of(context);
+                          await settings.setLogLevel(v);
+                          if (await appState.applyLogLevel(v)) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${l10n?.failed ?? 'Failed'}: '
+                                '${l10n?.logLevel ?? 'Log Level'} $v',
                               ),
-                            );
-                          },
-                        ),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: colorScheme.error,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],

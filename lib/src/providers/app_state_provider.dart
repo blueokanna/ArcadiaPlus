@@ -14,6 +14,7 @@ import 'package:arcadiaplus/src/services/native_core_service.dart';
 import 'package:arcadiaplus/src/services/rule_provider_service.dart';
 import 'package:arcadiaplus/src/services/system_dns_service.dart';
 import 'package:arcadiaplus/src/services/profile_selections.dart';
+import 'package:arcadiaplus/src/services/service_diagnostics.dart';
 import 'package:arcadiaplus/src/services/proxy_engine_service.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
@@ -32,6 +33,8 @@ class AppStateProvider extends ChangeNotifier {
   List<ActiveConnection> _activeConnections = [];
   SystemInfo? _systemInfo;
   bool _isLoading = false;
+  String? _serviceError;
+  String? _initializationError;
   String _version = '';
   String _buildInfo = '';
   ProxyMode _proxyMode = ProxyMode.rule;
@@ -71,6 +74,7 @@ class AppStateProvider extends ChangeNotifier {
   // rule set refreshes and for detecting whether a reload is needed.
   String? _activeProfileId;
   String? _appliedConfigJson;
+  DnsSettings? _appliedDnsSettings;
   bool _isInitializingProfile = false;
 
   // Tick counter that paces the slower per-second polls
@@ -91,6 +95,8 @@ class AppStateProvider extends ChangeNotifier {
   BigInt get totalDownloadBytes => _totalDownloadBytes;
   SystemInfo? get systemInfo => _systemInfo;
   bool get isLoading => _isLoading;
+  String? get serviceError => _serviceError;
+  String? get recursiveDnsWarning => _recursiveDnsWarning;
   bool get autoSystemProxy => _autoSystemProxy;
   bool get autoVpnClose => _autoVpnClose;
   ProxyMode get proxyMode => _proxyMode;
@@ -278,6 +284,7 @@ class AppStateProvider extends ChangeNotifier {
   Future<void> _initializeFromActiveProfile({
     bool startResolver = false,
   }) async {
+    _initializationError = null;
     if (!NativeCoreService.instance.isReady) {
       debugPrint('Cannot initialize from profile: RustLib not initialized');
       _isInitialized = false;
@@ -306,15 +313,17 @@ class AppStateProvider extends ChangeNotifier {
 
       final generalSettings = await StorageService.instance
           .getGeneralSettings();
+      final dnsSettings = await StorageService.instance.getDnsSettings();
 
       if (startResolver && !PlatformUtils.isOHOS) {
-        await _ensureRecursiveDns();
+        await _ensureRecursiveDns(dnsSettings);
       }
 
       final (jsonConfig, report) = await _generateConfig(
         activeProfileId,
         configContent,
         generalSettings,
+        dnsSettings: dnsSettings,
       );
 
       debugPrint('Calling initializeCorduit...');
@@ -326,6 +335,7 @@ class AppStateProvider extends ChangeNotifier {
       });
       _activeProfileId = activeProfileId;
       _appliedConfigJson = jsonConfig;
+      _appliedDnsSettings = dnsSettings;
       _ruleSetReport = report;
       _isInitialized = true;
       _syncTimers();
@@ -334,6 +344,7 @@ class AppStateProvider extends ChangeNotifier {
       );
       notifyListeners();
     } catch (e, stackTrace) {
+      _initializationError = e.toString();
       debugPrint('Failed to initialize from active profile: $e');
       _configWarnings = List.unmodifiable([..._configWarnings, e.toString()]);
       debugPrint('Stack trace: $stackTrace');
@@ -350,12 +361,13 @@ class AppStateProvider extends ChangeNotifier {
     String configContent,
     GeneralSettings generalSettings, {
     bool forceRuleSets = false,
+    DnsSettings? dnsSettings,
   }) async {
     final warnings = <String>[?_recursiveDnsWarning];
     if (PlatformUtils.isMobile && generalSettings.mode == 'direct') {
       generalSettings = generalSettings.copyWith(mode: 'rule');
     }
-    final dnsSettings = await StorageService.instance.getDnsSettings();
+    dnsSettings ??= await StorageService.instance.getDnsSettings();
     final systemDnsServers =
         generalSettings.appendSystemDns && !dnsSettings.requireEncryptedDns
         ? await SystemDnsService.instance.read()
@@ -415,6 +427,8 @@ class AppStateProvider extends ChangeNotifier {
         configContent,
         generalSettings,
         forceRuleSets: force,
+        // A rule refresh must not apply DNS preferences promised for next start.
+        dnsSettings: _isServiceRunning ? _appliedDnsSettings : null,
       );
       _ruleSetReport = report;
 
@@ -466,10 +480,9 @@ class AppStateProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> _ensureRecursiveDns() async {
+  Future<void> _ensureRecursiveDns(DnsSettings dnsSettings) async {
     _recursiveDnsWarning = null;
     try {
-      final dnsSettings = await StorageService.instance.getDnsSettings();
       if (!dnsSettings.useRecursiveResolver ||
           dnsSettings.requireEncryptedDns) {
         await _stopRecursiveDns();
@@ -490,6 +503,7 @@ class AppStateProvider extends ChangeNotifier {
       _recursiveDnsAddress = null;
       _recursiveDnsWarning =
           'Local recursive DNS is unavailable; configured upstreams remain active: $e';
+      ServiceDiagnostics.warning(_recursiveDnsWarning!);
       debugPrint(_recursiveDnsWarning);
     }
   }
@@ -642,11 +656,16 @@ class AppStateProvider extends ChangeNotifier {
     await _initialization;
     if (_isServiceRunning) return true;
     if (!NativeCoreService.instance.isReady) {
+      _serviceError =
+          NativeCoreService.instance.lastError ?? 'Native core is not ready';
+      ServiceDiagnostics.failure(_serviceError!);
+      notifyListeners();
       debugPrint('Cannot start service: RustLib not initialized');
       return false;
     }
 
     _isLoading = true;
+    _serviceError = null;
     notifyListeners();
 
     try {
@@ -654,7 +673,9 @@ class AppStateProvider extends ChangeNotifier {
       await _initializeFromActiveProfile(startResolver: true);
 
       if (!_isInitialized) {
-        throw StateError('No usable profile is selected');
+        throw StateError(
+          _initializationError ?? 'No usable profile is selected',
+        );
       }
 
       debugPrint('Starting ArcadiaPlus proxy...');
@@ -672,28 +693,13 @@ class AppStateProvider extends ChangeNotifier {
         throw StateError('Cannot apply the selected routing mode');
       }
 
-      // Set running state immediately after successful start
-      _isServiceRunning = true;
-      _syncTimers();
-      notifyListeners();
-
-      // Wait a moment for the proxy to fully start
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      // Verify the proxy is actually running
-      try {
-        final status = PlatformUtils.isOHOS ? null : await getCorduitStatus();
-        debugPrint('Proxy status after start: running=${status?.running}');
-        if (status != null && !status.running) {
-          debugPrint('WARNING: Proxy reports not running after start!');
+      if (!PlatformUtils.isOHOS) {
+        final status = await getCorduitStatus();
+        if (!status.running) {
+          throw StateError('Proxy engine stopped during startup');
         }
         _proxyStatus = status;
-      } catch (e) {
-        debugPrint('Failed to get status after start: $e');
       }
-
-      // Start status timer for periodic updates
-      _syncTimers();
 
       if (PlatformUtils.isDesktop && _autoSystemProxy) {
         final generalSettings = await StorageService.instance
@@ -720,13 +726,20 @@ class AppStateProvider extends ChangeNotifier {
 
       if (Platform.isAndroid) {
         if (!await _enableAndroidVpnWithRetry()) {
-          throw StateError('Android VPN could not be established');
+          throw StateError(
+            PlatformProxyService.instance.lastTunError ??
+                'Android VPN could not be established',
+          );
         }
       }
 
+      _isServiceRunning = true;
+      _syncTimers();
       debugPrint('ArcadiaPlus proxy started successfully');
       return true;
     } catch (e, stackTrace) {
+      _serviceError = e.toString();
+      ServiceDiagnostics.failure(_serviceError!);
       debugPrint('Failed to start service: $e');
       debugPrint('Stack trace: $stackTrace');
       await _stopService();
@@ -784,6 +797,7 @@ class AppStateProvider extends ChangeNotifier {
       await ConfiguredProxyEngine.instance.stop(stopCorduit);
       await _stopRecursiveDns();
       _isServiceRunning = false;
+      _appliedDnsSettings = null;
       _isInitialized = false;
       _proxyStatus = null;
       _trafficStats = null;
@@ -894,6 +908,8 @@ class AppStateProvider extends ChangeNotifier {
   ///   same zero speeds every tick; notifying on those rebuilds the home
   ///   screen once a second for no visible difference.
   Future<void> _refreshStatus() async {
+    // A listener being up does not mean the VPN startup transaction committed.
+    if (_isLoading || _disposed) return;
     if (PlatformUtils.isOHOS) {
       if (_isLoading || _isRefreshingRuleSets) return;
       final running = await PlatformProxyService.instance.checkTunModeStatus();

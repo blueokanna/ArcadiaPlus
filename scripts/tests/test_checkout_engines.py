@@ -80,3 +80,16 @@ class CheckoutSafety(unittest.TestCase):
                 checkout.checkout(parent, {'RecurseX': 'a' * 40, 'Corduit': 'b' * 40},
                                   {'RecurseX': '0.2.6', 'Corduit': '0.3.3'})
             self.assertFalse((parent / 'RecurseX').exists())
+
+    def test_local_pin_check_reads_commit_manifest_not_current_checkout(self):
+        with patch.object(checkout.subprocess, 'check_output', return_value=
+                          '[package]\nname="corduit"\nversion="0.3.4"\n') as read:
+            checkout.verify_local(self.parent, {'Corduit': 'a' * 40}, {'Corduit': '0.3.4'})
+        self.assertEqual(read.call_args.args[0],
+                         ['git', '-C', str(self.parent / 'Corduit'), 'show', 'a' * 40 + ':Cargo.toml'])
+
+    def test_old_ci_pin_is_rejected_after_local_version_upgrade(self):
+        with patch.object(checkout.subprocess, 'check_output', return_value=
+                          '[package]\nname="corduit"\nversion="0.3.3"\n'):
+            with self.assertRaisesRegex(ValueError, 'matching rust/Cargo.lock'):
+                checkout.verify_local(self.parent, {'Corduit': 'a' * 40}, {'Corduit': '0.3.4'})

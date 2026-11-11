@@ -11,18 +11,20 @@ class SettingsChoiceTile extends StatelessWidget {
     required this.subtitle,
     required this.leading,
     required this.trailing,
+    this.compact = false,
   });
 
   final Widget title;
   final Widget subtitle;
   final Widget leading;
   final Widget trailing;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
       final stacked =
-          constraints.maxWidth < 480 ||
+          constraints.maxWidth < (compact ? 300 : 480) ||
           MediaQuery.textScalerOf(context).scale(16) > 20;
       final tile = AdaptiveListTile(
         title: title,

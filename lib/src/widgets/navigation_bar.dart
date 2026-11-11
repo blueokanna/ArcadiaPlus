@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
@@ -151,19 +153,25 @@ class AppNavigationBar extends StatelessWidget {
         heightFactor: 1,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
-          child: Material(
-            key: const ValueKey('floating-navigation'),
-            color: colors.surfaceContainerLow,
-            elevation: 4,
-            shadowColor: colors.shadow.withValues(alpha: 0.18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(36),
-              side: BorderSide(
-                color: colors.outlineVariant.withValues(alpha: 0.35),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(36),
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Material(
+                key: const ValueKey('floating-navigation'),
+                color: colors.surfaceContainerLow.withValues(alpha: .72),
+                elevation: 0,
+                shadowColor: colors.shadow.withValues(alpha: 0.18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(36),
+                  side: BorderSide(
+                    color: colors.outlineVariant.withValues(alpha: 0.35),
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Padding(padding: const EdgeInsets.all(6), child: strip),
               ),
             ),
-            clipBehavior: Clip.antiAlias,
-            child: Padding(padding: const EdgeInsets.all(6), child: strip),
           ),
         ),
       ),

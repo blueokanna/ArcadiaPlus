@@ -30,6 +30,8 @@ import 'package:arcadiaplus/src/widgets/traffic_chart.dart';
 // UI fixtures do not initialize a core, change OS proxy settings or use profiles.
 class _DashboardState extends ChangeNotifier implements AppStateProvider {
   @override
+  String? get serviceError => null;
+  @override
   bool get isServiceRunning => false;
   @override
   bool get isLoading => false;

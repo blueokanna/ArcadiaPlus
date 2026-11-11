@@ -1,5 +1,6 @@
 """Check out explicitly pinned engine revisions beside the application in CI."""
 
+import argparse
 import json
 from pathlib import Path
 import re
@@ -40,9 +41,23 @@ def locked_versions(file=ROOT / 'rust' / 'Cargo.lock'):
 def validate_package(directory, repo, version):
     with (directory / 'Cargo.toml').open('rb') as stream:
         package = tomllib.load(stream).get('package', {})
+    validate_package_data(package, repo, version)
+
+
+def validate_package_data(package, repo, version):
     if package.get('name') != PACKAGES[repo] or package.get('version') != version:
         raise ValueError(f'{repo}: fetched package must be {PACKAGES[repo]} {version}, '
                          'matching rust/Cargo.lock')
+
+
+def verify_local(parent, pins, versions):
+    """Check CI pins without resetting, fetching or editing developer checkouts."""
+    for repo, revision in pins.items():
+        manifest = subprocess.check_output(
+            ['git', '-C', str(parent / repo), 'show', f'{revision}:Cargo.toml'],
+            text=True, encoding='utf-8', stderr=subprocess.PIPE, timeout=30)
+        validate_package_data(tomllib.loads(manifest).get('package', {}), repo, versions[repo])
+        print(f'{repo}: pinned source matches {versions[repo]}', flush=True)
 
 
 def checkout(parent, pins, versions):
@@ -69,6 +84,11 @@ def checkout(parent, pins, versions):
 
 if __name__ == '__main__':
     try:
-        checkout(ROOT.parent, revisions(), locked_versions())
+        parser = argparse.ArgumentParser(description=__doc__)
+        parser.add_argument('--verify-local', action='store_true',
+                            help='Verify pinned manifests using existing Git objects; do not change checkouts')
+        options = parser.parse_args()
+        operation = verify_local if options.verify_local else checkout
+        operation(ROOT.parent, revisions(), locked_versions())
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         sys.exit(f'Engine checkout failed: {error}')

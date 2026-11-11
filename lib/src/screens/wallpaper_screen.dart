@@ -1,3 +1,5 @@
+import '../widgets/page_insets.dart';
+
 import 'package:arcadiaplus/src/theme/app_typography.dart';
 
 import 'dart:ui' as ui;
@@ -60,7 +62,7 @@ class WallpaperScreen extends StatelessWidget {
           }
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: PageInsets.scroll(context, const EdgeInsets.all(16)),
             children: [
               _FramingPreview(wallpaper: wallpaper),
               if (wallpaper.settings.hasImage) ...[
@@ -285,8 +287,6 @@ class _FramingPreviewState extends State<_FramingPreview> {
               )
             : LayoutBuilder(
                 builder: (context, constraints) => GestureDetector(
-                  // Framing is a two-finger gesture by nature; a double tap is
-                  // the one-hand way back to the default.
                   onDoubleTap: wallpaper.resetFraming,
                   onScaleStart: (details) {
                     _gestureZoom = wallpaper.zoom;
@@ -298,9 +298,6 @@ class _FramingPreviewState extends State<_FramingPreview> {
                   },
                   onScaleUpdate: (details) {
                     final pan = details.localFocalPoint - _gestureFocalPoint;
-                    // A drag across the whole preview covers the whole
-                    // alignment range, so the picture follows the finger at
-                    // the speed it is dragged.
                     wallpaper.setFraming(
                       alignmentX:
                           _gestureAlignment.dx -

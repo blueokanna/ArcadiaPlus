@@ -16,11 +16,15 @@ class StatusCard extends StatelessWidget {
     required this.isLoading,
     required this.onStartStop,
     this.identity,
+    this.error,
+    this.errorAction,
   });
   final bool isRunning;
   final bool isLoading;
   final VoidCallback onStartStop;
   final Widget? identity;
+  final String? error;
+  final Widget? errorAction;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +154,17 @@ class StatusCard extends StatelessWidget {
               ),
             ],
           ),
+          if (error != null) ...[
+            const SizedBox(height: 16),
+            Semantics(
+              liveRegion: true,
+              child: SelectableText(
+                error!,
+                style: theme.textTheme.bodyMedium?.copyWith(color: c.error),
+              ),
+            ),
+            ?errorAction,
+          ],
         ],
       ),
     );

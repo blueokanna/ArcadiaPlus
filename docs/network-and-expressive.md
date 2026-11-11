@@ -2,7 +2,7 @@
 
 ## 构建使用哪份内核
 
-ArcadiaPlus 的开发构建直接使用相邻仓库 `../Corduit`（0.3.3）与 `../RecurseX`（0.2.6），Courierust 保持 crates.io 1.1.2。两个 `[patch.crates-io]` 统一桥接层与核心的依赖身份；应用仓库不保存解析器源码副本。RecurseX 的修改只在其原仓库维护。
+ArcadiaPlus 的开发构建直接使用相邻仓库 `../Corduit`（0.3.4）与 `../RecurseX`（0.2.6），Courierust 保持 crates.io 1.1.2。两个 `[patch.crates-io]` 统一桥接层与核心的依赖身份；应用仓库不保存解析器源码副本。RecurseX 的修改只在其原仓库维护。
 
 桥接层与 Corduit 必须共享同一份 RecurseX；RecurseX 与 Corduit 必须共享同一份 Courierust，保证 DNS 的出站套接字工厂只有一个实例。之前混合本地路径和注册表依赖的方式会引入两份同版本的 RecurseX，版本号相同并不代表包身份相同。
 
@@ -11,9 +11,9 @@ python scripts/check_engine_dependencies.py --offline
 cargo check --manifest-path rust/Cargo.toml --locked --all-targets --all-features
 ```
 
-检查脚本需要 Python 3.11 或更高版本。它校验相邻仓库的包名、版本和固定路径，再检查 Cargo 的实际依赖图。重复解析器、非预期源码路径、不同 Courierust 实例及 JNI 类型分裂都会失败。
+检查脚本需要 Python 3.11 或更高版本。它校验相邻仓库的包名、版本和固定路径，读取 CI 固定提交中的清单与锁文件比对，再检查 Cargo 的实际依赖图。重复解析器、非预期源码路径、不同 Courierust 实例及 JNI 类型分裂都会失败。检查过程只读，不改动本地检出。
 
-CI 和 release 使用 `.github/actions/checkout-engines`，把两个项目检出到应用仓库的同级目录。提交号统一记录在受版本管理的 `scripts/engine_revisions.json` 中，不需要设置 GitHub 仓库变量。当前固定 RecurseX `299967e51fccdf2557ad5aa09b56adfe6926d690` 与 Corduit `d479373dc80ebafd3e324e2cad6450d5519eee3c`；两个提交均已确认可从 GitHub 获取。脚本拒绝分支名、缺省 HEAD 和覆盖现有目录，并检查检出结果的包名、版本与 `rust/Cargo.lock` 一致。
+CI 和 release 使用 `.github/actions/checkout-engines`，把两个项目检出到应用仓库的同级目录。提交号统一记录在受版本管理的 `scripts/engine_revisions.json` 中，不需要设置 GitHub 仓库变量。当前固定 RecurseX `299967e51fccdf2557ad5aa09b56adfe6926d690` 与 Corduit `4f57632ca9d4da334753856994f5d465da8279b5`；两个提交均已确认可从 GitHub 获取。脚本拒绝分支名、缺省 HEAD 和覆盖现有目录，并检查检出结果的包名、版本与 `rust/Cargo.lock` 一致。
 
 更新引擎时，先验证并推送引擎提交，再将完整 SHA 写入该 JSON 文件，与应用代码、必要的锁文件更新一同提交。GitHub runner 不能读取本地未提交内容。旧的 `RECURSEX_REVISION`、`CORDUIT_REVISION` 仓库变量不再参与构建；重跑旧提交仍会使用旧工作流，需要推送修复后的应用提交再触发新运行。
 
@@ -21,11 +21,27 @@ RecurseX 是相邻的独立项目，不是应用 workspace 的成员。在 `rust
 
 `Rust dependency security` 仅扫描提交的 `rust/Cargo.lock`，不检出引擎、不调用应用的 Cargo metadata，也不编译应用。扫描器固定为 cargo-audit 0.22.2，缓存仅保存扫描器二进制；保留 `--deny warnings`，不忽略公告或允许失败。安全审计通过表示当前 RustSec 数据库没有报告该锁文件的问题，不等于应用逻辑已经没有缺陷。使用方法见 [cargo-audit 官方文档](https://github.com/rustsec/rustsec/tree/main/cargo-audit)。
 
-本次 CI 修复在没有仓库变量、没有现有引擎目录的临时环境中实际抓取了上述提交，锁定依赖检查通过。应用 Rust 测试 28 项通过（2 项公网测试按设计跳过），RecurseX 测试 622 项通过（1 项系统客户端测试按设计跳过），两个项目的 Clippy 均通过。脚本测试 27 项、工作流配置测试 5 项通过。cargo-audit 读取 1458 条公告并扫描 205 个锁定依赖，`--deny warnings` 退出码为 0；只有锁文件、没有源码清单的目录也通过相同审计。日志保存在 `.dart_tool/ci-*.log` 和 `.dart_tool/security-*.log`。这些是本机验证结果，修复提交尚未在 GitHub runner 上运行。
+此前 CI 修复曾在没有仓库变量、没有现有引擎目录的临时环境中抓取当时固定的提交，锁定依赖检查通过。该轮应用 Rust 测试 28 项通过（2 项公网测试按设计跳过），RecurseX 测试 622 项通过（1 项系统客户端测试按设计跳过），两个项目的 Clippy 均通过。脚本测试 27 项、工作流配置测试 5 项通过。cargo-audit 当时读取 1458 条公告并扫描 205 个锁定依赖，`--deny warnings` 退出码为 0；只有锁文件、没有源码清单的目录也通过相同审计。历史日志保存在 `.dart_tool/ci-*.log` 和 `.dart_tool/security-*.log`。这不是 Corduit 0.3.4 的新一轮审计，也不是 GitHub runner 的执行记录；本轮验证见下节。
 
 Corduit 0.3.2 将 Android JNI 升级到 0.22.4。应用的三个原生入口同步改用 `EnvUnowned`，由内核取得 JNI 环境并管理 JavaVM、VpnService 引用和 protect 回调，避免两套 JNI 类型或生命周期状态。应用侧保留原有导出符号和停止服务顺序，Kotlin 的调用接口不变。
 
 ## DNS 与路由
+
+### Corduit 0.3.4 适配（2026-11-12）
+
+本轮使用已推送的 Corduit 0.3.4 提交，应用与 CI 固定到同一版本，不额外修改核心源码。0.3.4 已包含 NODATA、NXDOMAIN 与真实故障的分类，应用继续保留私有 DNS 策略和严格模式的加密边界。
+
+DNS 编辑、严格模式校验和落盘进入同一串行队列。校验基于加载完成且包含前序编辑的设置；保存期间禁用应用按钮，应用动作还会等待已有写入完成。校验或写入失败保留原设置，不能启动尚未保存的选项。YAML 预检在工作隔离区执行，避免订阅解析阻塞动画。
+
+一次启动使用同一份 DNS 设置建立递归服务和生成核心配置。运行中的规则集自动刷新沿用已应用的 DNS 设置，避免将“下次启动生效”的隐私选项提前混入当前服务。递归集成测试通过应用 API 检查回环监听与停止，普通回归不依赖公共网站可达性。
+
+递归监听由 TCP 先分配临时端口，再绑定同端口 UDP，避免 Windows 的 UDP 分配器选中 TCP 保留端口。临时端口冲突最多重试 8 次；指定端口不会被替换。失败时关闭并等待所有已启动的监听线程，防止半启动状态遗留端口。
+
+本轮实际验证：Flutter 静态分析、147 个 Dart 文件的格式检查和 Rust 全目标 Clippy 通过；Flutter 测试 347 项、Rust 全目标测试 27 项、构建脚本测试 29 项通过。Flutter 的外部规则夹具测试和 Rust 的公网 DoH 测试各跳过 1 项。记录位于 `.dart_tool/corduit034-*.log`。
+
+ARM64 Release 已覆盖安装到连接的手机，控制接口实际返回 `Corduit v0.3.4`，VPN 前台服务运行。通过手机代理访问 Gstatic 和 YouTube 的 HTTPS 检测地址均返回 204，TLS 证书校验通过。递归监听的 TCP 查询对 `cloudflare.com`、`www.baidu.com` 分别返回 2、3 条答案；同次验证中 `example.com` 的独立递归查询返回 SERVFAIL，但经手机代理访问该站 HTTPS 返回 200，证书校验通过。监听成功不代表当前网络下所有权威解析均可达，仍需保留配置上游的故障恢复。包使用现有 Android Debug 证书签名，正式分发仍应使用发布密钥。
+
+以下按日期保留旧版本的验证记录；启动探测、版本与产物说明以当前代码及本节为准。
 
 ### Corduit 0.3.3 适配（2026-11-11）
 

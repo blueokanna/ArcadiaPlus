@@ -7,11 +7,52 @@ import 'package:arcadiaplus/src/services/storage_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test(
+    'subscription DNS remains intact after explicitly disabling protection',
+    () {
+      const profile = '''
+dns:
+  nameserver: [119.29.29.29, 223.5.5.5, tls://dot.pub]
+  default-nameserver: [119.29.29.29, 114.114.114.114]
+  nameserver-policy:
+    '+.private.example': tcp://resolver.private.example:8080
+rules: ['MATCH,DIRECT']
+''';
+      final settings = DnsSettings(requireEncryptedDns: false);
+      final restored = DnsSettings.fromJson(settings.toJson());
+      final dns =
+          jsonDecode(
+                ConfigConverter.convertClashYamlToJson(
+                  profile,
+                  dnsSettings: restored,
+                  requireCompleteRules: true,
+                ),
+              )['dns']
+              as Map;
+      expect(dns['nameservers'], [
+        '119.29.29.29',
+        '223.5.5.5',
+        'tls://dot.pub',
+      ]);
+      expect(dns['default_nameserver'], ['119.29.29.29', '114.114.114.114']);
+      expect(dns['nameserver_policy']['+.private.example'], [
+        'tcp://resolver.private.example:8080',
+      ]);
+      expect(
+        () => ConfigConverter.convertClashYamlToJson(
+          profile,
+          dnsSettings: DnsSettings(requireEncryptedDns: true),
+          requireCompleteRules: true,
+        ),
+        throwsA(predicate((e) => e.toString().contains('nameserver-policy'))),
+      );
+    },
+  );
   Map<String, dynamic> convert(String dns) =>
       jsonDecode(
             ConfigConverter.convertClashYamlToJson(
               'dns:\n$dns\nrules: ["MATCH,DIRECT"]',
-              dnsSettings: DnsSettings(),
+              dnsSettings: DnsSettings(requireEncryptedDns: true),
               requireCompleteRules: true,
               systemDnsServers: ['192.168.1.1'],
               recursiveDnsAddress: '127.0.0.1:5353',

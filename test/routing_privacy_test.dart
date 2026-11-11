@@ -34,7 +34,7 @@ dns:
   nameserver-policy:
     'bilibili.com': [https://9.9.9.9/dns-query]
 rules: []
-''', dnsSettings: DnsSettings()),
+''', dnsSettings: DnsSettings(requireEncryptedDns: true)),
     ) as Map;
     final policies = config['dns']['nameserver_policy'] as Map;
     expect(policies.containsKey('+.qq.com'), false);
@@ -68,7 +68,7 @@ rules: []
     final gate = Completer<void>();
     final written = <bool>[];
     final provider = DnsSettingsProvider(
-      read: () async => DnsSettings(),
+      read: () async => DnsSettings(requireEncryptedDns: true),
       write: (settings) async {
         written.add(settings.requireEncryptedDns);
         if (written.length == 1) await gate.future;
@@ -152,7 +152,7 @@ dns:
     '+.example.com': [tls://private.example]
 rules: [MATCH,DIRECT]
 ''',
-          dnsSettings: DnsSettings(),
+          dnsSettings: DnsSettings(requireEncryptedDns: true),
           recursiveDnsAddress: '127.0.0.1:5353',
           systemDnsServers: ['192.168.1.1'],
         ),
@@ -174,11 +174,11 @@ rules: [MATCH,DIRECT]
     final config = jsonDecode(
       ConfigConverter.convertClashYamlToJson(
         'rules: []',
-        dnsSettings: DnsSettings(),
+        dnsSettings: DnsSettings(requireEncryptedDns: true),
       ),
     ) as Map;
     expect(config['dns']['nameservers'], EncryptedDnsPolicy.defaults);
-    expect(DnsSettings.fromJson({}).requireEncryptedDns, true);
+    expect(DnsSettings.fromJson({}).requireEncryptedDns, false);
     expect(
       DnsSettings.fromJson(DnsSettings(requireEncryptedDns: false).toJson())
           .requireEncryptedDns,

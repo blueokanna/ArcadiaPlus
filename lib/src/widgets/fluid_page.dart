@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:material_new_shapes/material_new_shapes.dart';
+
+import 'expressive_shape.dart';
 
 import '../theme/app_motion.dart';
+import 'page_insets.dart';
 import '../utils/app_lifecycle.dart';
 
 /// One finite timeline per page, shared by entrance and shape transitions.
@@ -9,6 +11,9 @@ import '../utils/app_lifecycle.dart';
 class FluidPage extends StatefulWidget {
   const FluidPage({super.key, required this.child});
   final Widget child;
+
+  static Animation<double>? animationOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_FluidScope>()?.animation;
   @override
   State<FluidPage> createState() => _FluidPageState();
 }
@@ -120,27 +125,29 @@ class FluidEmptyState extends StatelessWidget {
         const AlwaysStoppedAnimation(1.0);
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: PageInsets.scroll(context, const EdgeInsets.all(24)),
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            minHeight: (constraints.maxHeight - 48).clamp(0, double.infinity),
+            minWidth: (constraints.maxWidth - 48).clamp(0, double.infinity),
+            minHeight:
+                (constraints.maxHeight - 48 - PageInsets.bottomOf(context))
+                    .clamp(0, double.infinity),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              RepaintBoundary(
-                child: ClipPath(
-                  clipper: _GlyphClipper(animation),
-                  child: ColoredBox(
-                    color: colors.secondaryContainer,
-                    child: SizedBox(
-                      width: 88,
-                      height: 88,
-                      child: Icon(
-                        icon,
-                        size: 34,
-                        color: colors.onSecondaryContainer,
-                      ),
+              ExpressiveShape(
+                progress: animation,
+                pair: ExpressiveShapePair.empty,
+                child: ColoredBox(
+                  color: colors.secondaryContainer,
+                  child: SizedBox(
+                    width: 88,
+                    height: 88,
+                    child: Icon(
+                      icon,
+                      size: 34,
+                      color: colors.onSecondaryContainer,
                     ),
                   ),
                 ),
@@ -167,23 +174,4 @@ class FluidEmptyState extends StatelessWidget {
       ),
     );
   }
-}
-
-class _GlyphClipper extends CustomClipper<Path> {
-  _GlyphClipper(this.animation) : super(reclip: animation);
-  final Animation<double> animation;
-  static final _morph = Morph(
-    MaterialShapes.clover4Leaf,
-    MaterialShapes.cookie9Sided,
-  );
-  @override
-  Path getClip(Size size) => _morph
-      .toPath(progress: animation.value.clamp(0, 1))
-      .transform(
-        (Matrix4.identity()..scaleByDouble(size.width, size.height, 1, 1))
-            .storage,
-      );
-  @override
-  bool shouldReclip(_GlyphClipper oldClipper) =>
-      oldClipper.animation != animation;
 }

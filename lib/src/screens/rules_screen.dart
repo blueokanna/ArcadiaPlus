@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../widgets/page_insets.dart';
+
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/providers/app_state_provider.dart';
 import 'package:arcadiaplus/src/rust/api.dart';
@@ -315,7 +317,11 @@ class _RulesScreenState extends State<RulesScreen> {
               ),
             ),
             _ruleSliver(context, padding, radius),
-            SliverToBoxAdapter(child: SizedBox(height: spacing * 2)),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: spacing * 2 + PageInsets.bottomOf(context),
+              ),
+            ),
           ],
         ),
       ),

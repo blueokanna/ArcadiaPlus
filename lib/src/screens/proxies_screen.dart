@@ -1,3 +1,5 @@
+import '../widgets/page_insets.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -297,7 +299,11 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
                           ),
                         ),
                       ),
-                    const SliverToBoxAdapter(child: SizedBox(height: 32)),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 32 + PageInsets.bottomOf(context),
+                      ),
+                    ),
                   ],
                 );
                 return Row(
@@ -402,9 +408,7 @@ class _NodeGrid extends StatelessWidget {
               (constraints.crossAxisExtent / (250 * scale.clamp(1, 2)))
                   .floor()
                   .clamp(1, 4);
-          final columns = preferredColumns == 0
-              ? capacity
-              : preferredColumns.clamp(1, capacity);
+          final columns = preferredColumns == 0 ? capacity : preferredColumns;
           Widget itemBuilder(BuildContext context, int index) {
             final item = items[index];
             final name = switch (item) {
@@ -435,7 +439,7 @@ class _NodeGrid extends StatelessWidget {
               crossAxisCount: columns,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              mainAxisExtent: 56 + 72 * scale.clamp(1, 3),
+              mainAxisExtent: 72 + 100 * scale,
             ),
           );
         },

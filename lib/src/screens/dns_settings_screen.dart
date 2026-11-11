@@ -1,3 +1,7 @@
+import '../widgets/page_insets.dart';
+import '../widgets/dns_apply_card.dart';
+import '../providers/app_state_provider.dart';
+
 import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:arcadiaplus/src/widgets/dns_status_card.dart';
 import 'package:flutter/foundation.dart' show listEquals;
@@ -59,6 +63,7 @@ class DnsSettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final app = context.watch<AppStateProvider?>();
 
     return Scaffold(
       appBar: AppBar(
@@ -71,7 +76,7 @@ class DnsSettingsScreen extends StatelessWidget {
       body: Consumer<DnsSettingsProvider>(
         builder: (context, dnsSettings, child) {
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: PageInsets.scroll(context, const EdgeInsets.all(16)),
             children: [
               if (dnsSettings.saveError != null)
                 _Notice(
@@ -166,18 +171,34 @@ class DnsSettingsScreen extends StatelessWidget {
                     SwitchListTile(
                       title: Text(
                         Localizations.localeOf(context).languageCode == 'zh'
-                            ? '加密 DNS 保护'
-                            : 'Encrypted DNS protection',
+                            ? '优先加密 DNS'
+                            : 'Prefer encrypted DNS',
                       ),
                       subtitle: Text(
                         Localizations.localeOf(context).languageCode == 'zh'
-                            ? '下次启动生效。所有 DNS 路径加密并校验证书；不兼容的配置会报错，不会回退到明文或系统 DNS。'
-                            : 'Verified encryption on every DNS path. Incompatible settings fail explicitly. Applies on next start.',
+                            ? '将支持的公共解析器升级为经过证书验证的加密连接。私有和不支持的地址保留订阅配置，可能使用明文；本机递归仍可启用。'
+                            : 'Upgrade supported public resolvers with verified encryption. Private and unsupported endpoints keep subscription settings and may use plaintext. Local recursion remains available.',
                       ),
                       secondary: const Icon(Icons.enhanced_encryption_outlined),
-                      value: dnsSettings.requireEncryptedDns,
-                      onChanged: dnsSettings.setRequireEncryptedDns,
+                      value: dnsSettings.preferEncryptedDns,
+                      onChanged: dnsSettings.setPreferEncryptedDns,
                     ),
+                    if (dnsSettings.preferEncryptedDns)
+                      SwitchListTile(
+                        title: Text(
+                          Localizations.localeOf(context).languageCode == 'zh'
+                              ? '禁止明文 DNS（严格）'
+                              : 'Block plaintext DNS (strict)',
+                        ),
+                        subtitle: Text(
+                          Localizations.localeOf(context).languageCode == 'zh'
+                              ? '要求所有解析路径加密；需要订阅兼容，并关闭本机递归。'
+                              : 'Require encryption on every path. Needs a compatible profile; disables local recursion.',
+                        ),
+                        value: dnsSettings.requireEncryptedDns,
+                        onChanged: (value) =>
+                            _setStrictProtection(context, dnsSettings, value),
+                      ),
                     if (!dnsSettings.requireEncryptedDns)
                       const _AppendSystemDnsTile(),
                     _divider(),
@@ -187,8 +208,8 @@ class DnsSettingsScreen extends StatelessWidget {
                       ),
                       subtitle: Text(
                         Localizations.localeOf(context).languageCode == 'zh'
-                            ? '优先从根服务器递归解析，失败时使用已配置上游。需要 UDP/TCP 53 可达；关闭加密保护后才可启用。'
-                            : 'Prefer root recursion; configured servers recover failures. Requires UDP/TCP 53 and encrypted protection off.',
+                            ? '优先从根服务器递归解析，失败时使用已配置上游。需要 UDP/TCP 53 可达；可与优先加密共用，但不能与严格模式共用。'
+                            : 'Prefer root recursion; configured servers recover failures. Requires UDP/TCP 53. Compatible with preferred encryption, but not strict mode.',
                       ),
                       leading: _leadingIcon(context, Icons.hub_outlined),
                       trailing: Switch(
@@ -198,7 +219,36 @@ class DnsSettingsScreen extends StatelessWidget {
                             : dnsSettings.setUseRecursiveResolver,
                       ),
                     ),
-                    const DnsStatusCard(),
+                    DnsApplyCard(
+                      settings: dnsSettings.settings,
+                      running: app?.isServiceRunning ?? false,
+                      busy:
+                          (app?.isLoading ?? false) ||
+                          dnsSettings.isLoading ||
+                          dnsSettings.isSaving ||
+                          dnsSettings.saveError != null,
+                      serviceError: app?.serviceError,
+                      onApply: app == null
+                          ? null
+                          : () async {
+                              if (!await dnsSettings.waitUntilSaved() ||
+                                  !context.mounted) {
+                                return;
+                              }
+                              if (app.isServiceRunning) {
+                                await app.restartService();
+                              } else {
+                                await app.startService();
+                              }
+                            },
+                    ),
+                    DnsStatusCard(
+                      enabled: dnsSettings.useRecursiveResolver,
+                      encrypted: dnsSettings.requireEncryptedDns,
+                      busy: app?.isLoading ?? false,
+                      serviceRunning: app?.isServiceRunning,
+                      startupError: app?.recursiveDnsWarning,
+                    ),
                     _divider(),
                     SettingsChoiceTile(
                       title: Text(l10n?.dnsMode ?? 'DNS Mode'),
@@ -298,6 +348,24 @@ class DnsSettingsScreen extends StatelessWidget {
 
   static Widget _divider() =>
       const Divider(height: 1, indent: 16, endIndent: 16);
+}
+
+Future<void> _setStrictProtection(
+  BuildContext context,
+  DnsSettingsProvider provider,
+  bool value,
+) async {
+  await provider.setRequireEncryptedDns(value);
+  if (value && provider.saveError != null && context.mounted) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          zh ? '无法启用严格加密，已保留原设置。具体原因见页面提示。' : 'Strict encryption could not be enabled. Previous settings retained; see the details on this page.',
+        ),
+      ),
+    );
+  }
 }
 
 /// `append system DNS`, which only exists where the platform lets an

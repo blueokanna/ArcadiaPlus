@@ -116,6 +116,8 @@ def main():
     versions = {name: read_toml(path / 'Cargo.toml')['package']['version']
                 for name, path in sources.items()}
     expected = validate_lock(read_toml(rust / 'Cargo.lock'), versions)
+    subprocess.run([sys.executable, str(rust.parent / 'scripts' / 'checkout_engines.py'),
+                    '--verify-local'], check=True)
     command = ['cargo', 'metadata', '--manifest-path', str(rust / 'Cargo.toml'),
                '--format-version=1', '--locked', '--all-features']
     if options.offline:

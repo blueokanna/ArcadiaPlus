@@ -1,3 +1,7 @@
+import '../widgets/page_insets.dart';
+
+import 'package:go_router/go_router.dart';
+
 import 'package:arcadiaplus/src/widgets/theme_picker.dart';
 import 'package:arcadiaplus/src/widgets/exit_identity.dart';
 import 'package:arcadiaplus/src/widgets/memory_info_card.dart';
@@ -162,7 +166,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         },
         child: SingleChildScrollView(
           physics: PlatformUtils.getScrollPhysics(context),
-          padding: ResponsiveUtils.getResponsivePadding(context),
+          padding: PageInsets.scroll(
+            context,
+            ResponsiveUtils.getResponsivePadding(context),
+          ),
           child: SafeArea(
             top: false,
             child: Align(
@@ -288,9 +295,15 @@ class _StatusSectionState extends State<_StatusSection> {
   Widget build(BuildContext context) {
     final port = context.watch<GeneralSettingsProvider>().mixedPort;
     final active = TickerMode.valuesOf(context).enabled;
-    return Selector<AppStateProvider, ({bool isRunning, bool isLoading})>(
-      selector: (_, appState) =>
-          (isRunning: appState.isServiceRunning, isLoading: appState.isLoading),
+    return Selector<
+      AppStateProvider,
+      ({bool isRunning, bool isLoading, String? error})
+    >(
+      selector: (_, appState) => (
+        isRunning: appState.isServiceRunning,
+        isLoading: appState.isLoading,
+        error: appState.serviceError,
+      ),
       builder: (context, snapshot, _) {
         _exit.configure(
           useProxy: snapshot.isRunning,
@@ -300,6 +313,16 @@ class _StatusSectionState extends State<_StatusSection> {
           active: active && snapshot.isRunning,
         );
         return StatusCard(
+          error: snapshot.error,
+          errorAction: snapshot.error?.contains('DNS') == true
+              ? TextButton.icon(
+                  onPressed: () => context.push('/dns-settings'),
+                  icon: const Icon(Icons.dns_outlined),
+                  label: Text(
+                    AppLocalizations.of(context)?.dnsSettings ?? 'DNS settings',
+                  ),
+                )
+              : null,
           identity: !snapshot.isRunning
               ? null
               : ListenableBuilder(

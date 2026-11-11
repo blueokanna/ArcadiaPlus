@@ -1,3 +1,5 @@
+import '../widgets/page_insets.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -66,7 +68,10 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                             ? 2
                             : 1;
                         return ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+                          padding: PageInsets.scroll(
+                            context,
+                            const EdgeInsets.fromLTRB(20, 20, 20, 96),
+                          ),
                           itemCount:
                               (profilesProvider.profiles.length / columns)
                                   .ceil(),
@@ -101,10 +106,13 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                     ),
                   ),
                 ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _showAddProfileDialog(context),
-            icon: const Icon(Icons.add),
-            label: Text(l10n?.addProfile ?? 'Add Profile'),
+          floatingActionButton: Padding(
+            padding: EdgeInsets.only(bottom: PageInsets.bottomOf(context)),
+            child: FloatingActionButton.extended(
+              onPressed: () => _showAddProfileDialog(context),
+              icon: const Icon(Icons.add),
+              label: Text(l10n?.addProfile ?? 'Add Profile'),
+            ),
           ),
         );
       },
