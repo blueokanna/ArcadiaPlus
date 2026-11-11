@@ -110,7 +110,20 @@ class AdaptiveListTile extends StatelessWidget {
       enabled: enabled && (onTap != null || onLongPress != null),
       builder: (states) => ListTile(
         statesController: states,
-        leading: leading,
+        leading: leading is Icon
+            ? Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: IconTheme.merge(
+                  data: const IconThemeData(size: 21),
+                  child: leading!,
+                ),
+              )
+            : leading,
         title: title,
         subtitle: subtitle,
         trailing: trailing,
@@ -119,11 +132,7 @@ class AdaptiveListTile extends StatelessWidget {
         visualDensity: isAdaptive == true ? adaptiveDensity : visualDensity,
         shape:
             shape ??
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                PlatformUtils.isDesktop ? 8 : 12,
-              ),
-            ),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         style: style,
         selectedColor: selectedColor ?? colorScheme.primary,
         iconColor: iconColor ?? colorScheme.onSurfaceVariant,
@@ -136,7 +145,7 @@ class AdaptiveListTile extends StatelessWidget {
         contentPadding: isAdaptive == true ? adaptivePadding : contentPadding,
         enabled: enabled,
         onTap: onTap,
-        onLongPress: PlatformUtils.shouldShowContextMenu() ? onLongPress : null,
+        onLongPress: onLongPress,
         mouseCursor:
             mouseCursor ??
             (PlatformUtils.isDesktop

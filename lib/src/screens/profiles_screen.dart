@@ -21,7 +21,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     super.initState();
     // Load profiles on init
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProfilesProvider>().loadProfiles();
+      if (mounted) context.read<ProfilesProvider>().loadProfiles();
     });
   }
 
@@ -54,17 +54,52 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
           ),
           body: profilesProvider.profiles.isEmpty
               ? _buildEmptyState(context, l10n)
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: profilesProvider.profiles.length,
-                  itemBuilder: (context, index) {
-                    return _buildProfileCard(
-                      context,
-                      profilesProvider.profiles[index],
-                      profilesProvider,
-                      l10n,
-                    );
-                  },
+              : Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1120),
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final columns =
+                            constraints.maxWidth >= 840 &&
+                                MediaQuery.textScalerOf(context).scale(14) <= 20
+                            ? 2
+                            : 1;
+                        return ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 96),
+                          itemCount:
+                              (profilesProvider.profiles.length / columns)
+                                  .ceil(),
+                          itemBuilder: (context, row) => Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              for (
+                                var column = 0;
+                                column < columns;
+                                column++
+                              ) ...[
+                                if (column > 0) const SizedBox(width: 16),
+                                Expanded(
+                                  child:
+                                      row * columns + column <
+                                          profilesProvider.profiles.length
+                                      ? _buildProfileCard(
+                                          context,
+                                          profilesProvider.profiles[row *
+                                                  columns +
+                                              column],
+                                          profilesProvider,
+                                          l10n,
+                                        )
+                                      : const SizedBox.shrink(),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ),
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _showAddProfileDialog(context),
@@ -160,7 +195,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
             }
           }
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(28),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -212,24 +247,6 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                       ],
                     ),
                   ),
-                  if (isActive)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colorScheme.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        l10n?.inUse ?? 'In Use',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onPrimary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
                   PopupMenuButton<String>(
                     icon: Icon(
                       Icons.more_vert,
@@ -276,6 +293,23 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 ],
               ),
 
+              if (isActive) ...[
+                const SizedBox(height: 12),
+                Chip(
+                  avatar: Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: colorScheme.onPrimary,
+                  ),
+                  label: Text(l10n?.inUse ?? 'In Use'),
+                  labelStyle: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.onPrimary,
+                  ),
+                  backgroundColor: colorScheme.primary,
+                  side: BorderSide.none,
+                ),
+              ],
+
               // Traffic info if available
               if (profile.usedTraffic != null &&
                   profile.totalTraffic != null) ...[
@@ -298,14 +332,16 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                           : colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      '${l10n?.expiresOn ?? 'Expires'}: ${_formatDate(profile.expiresAt!)}',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: isActive
-                            ? colorScheme.onPrimaryContainer.withValues(
-                                alpha: 0.7,
-                              )
-                            : colorScheme.onSurfaceVariant,
+                    Expanded(
+                      child: Text(
+                        '${l10n?.expiresOn ?? 'Expires'}: ${_formatDate(profile.expiresAt!)}',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: isActive
+                              ? colorScheme.onPrimaryContainer.withValues(
+                                  alpha: 0.7,
+                                )
+                              : colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ],
@@ -326,15 +362,18 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final used = profile.usedTraffic ?? 0;
-    final total = profile.totalTraffic ?? 1;
-    final progress = used / total;
+    final used = (profile.usedTraffic ?? 0).clamp(0, 0x7FFFFFFFFFFFFFFF);
+    final total = (profile.totalTraffic ?? 0).clamp(0, 0x7FFFFFFFFFFFFFFF);
+    // A missing/zero quota does not describe a percentage. Keep the measured
+    // bytes visible without inventing a limit or feeding NaN to the painter.
+    final progress = total > 0 ? (used / total).clamp(0.0, 1.0) : 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          spacing: 16,
+          runSpacing: 4,
           children: [
             Text(
               _formatTraffic(used),
@@ -346,7 +385,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
               ),
             ),
             Text(
-              _formatTraffic(total),
+              total > 0 ? '/ ${_formatTraffic(total)}' : '/ —',
               style: textTheme.bodySmall?.copyWith(
                 color: isActive
                     ? colorScheme.onPrimaryContainer.withValues(alpha: 0.7)
@@ -362,9 +401,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
               ? colorScheme.onPrimaryContainer.withValues(alpha: 0.2)
               : colorScheme.surfaceContainerHighest,
           valueColor: AlwaysStoppedAnimation<Color>(
-            progress > 0.9
-                ? colorScheme.error
-                : (isActive ? colorScheme.primary : colorScheme.primary),
+            progress > 0.9 ? colorScheme.error : colorScheme.primary,
           ),
         ),
       ],
@@ -378,12 +415,10 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
+      useSafeArea: true,
+      builder: (sheetContext) {
         return SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -499,6 +534,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          scrollable: true,
           title: Text(l10n?.importUrl ?? 'Import from URL'),
           content: Column(
             mainAxisSize: MainAxisSize.min,

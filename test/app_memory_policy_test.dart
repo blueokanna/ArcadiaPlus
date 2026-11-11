@@ -8,6 +8,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'cache cleanup evicts retained entries without killing live images',
+    (tester) async {
+      final cache = ImageCache();
+      final image = await tester.runAsync(() async {
+        final recorder = ui.PictureRecorder();
+        Canvas(recorder).drawColor(Colors.blue, BlendMode.src);
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(16, 16);
+        picture.dispose();
+        return image;
+      });
+      final completer = OneFrameImageStreamCompleter(
+        Future.value(ImageInfo(image: image!)),
+      );
+      cache.putIfAbsent('retained', () => completer);
+      final listener = ImageStreamListener((info, _) => info.dispose());
+      completer.addListener(listener);
+      await tester.pump();
+      final bytes = cache.currentSizeBytes;
+      expect(bytes, greaterThan(0));
+      expect(AppMemoryPolicy.releaseImageCache(cache), bytes);
+      expect(cache.currentSizeBytes, 0);
+      expect(cache.liveImageCount, 1);
+      completer.removeListener(listener);
+      cache.clearLiveImages();
+    },
+  );
   test('image cache retention has a mobile budget', () {
     final cache = ImageCache();
     AppMemoryPolicy.configure(cache, platform: TargetPlatform.android);

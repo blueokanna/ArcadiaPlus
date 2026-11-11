@@ -1,0 +1,42 @@
+[
+  {
+    "file": "GoogleSansFlex.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/googlesansflex/GoogleSansFlex%5BROND%2Copsz%2Cslnt%2Cwdth%2Cwght%5D.ttf",
+    "sha256": "a9ac770798857d5e8ac593ced42b22e40a7c08cec98319f92b0eccc2783a77ba"
+  },
+  {
+    "file": "LICENSE-GoogleSansFlex.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/googlesansflex/OFL.txt",
+    "sha256": "fc13d69f63e36d284b6e383d4d1463d8ad404f0aa065e57cf961252d51063137"
+  },
+  {
+    "file": "GoogleSansFlex-TRADEMARKS.md",
+    "source": "https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/googlesansflex/TRADEMARKS.md",
+    "sha256": "5cad381c0828db656f32a787a1eff76db3303c74ec4f94668ae9fc2873ffe42f"
+  },
+  {
+    "file": "NotoSansSC.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+    "sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
+  },
+  {
+    "file": "LICENSE-NotoSansSC.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/notosanssc/OFL.txt",
+    "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+  },
+  {
+    "file": "GoogleSansCode.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/googlesanscode/GoogleSansCode%5Bwght%5D.ttf",
+    "sha256": "c9649573afcd966f61096b1e9c3c3115e7b54315ca2adf9839c6f8b17d5f8e1f"
+  },
+  {
+    "file": "LICENSE-GoogleSansCode.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/googlesanscode/OFL.txt",
+    "sha256": "ff8f4fbc4f1a71c7d4c6481c48dc2b21c43f8dc15872536667fee45c15d20928"
+  },
+  {
+    "file": "GoogleSansCode-TRADEMARKS.md",
+    "source": "https://raw.githubusercontent.com/google/fonts/5bb28733cec313b63fbd415b574b5ae35c8aa8b8/ofl/googlesanscode/TRADEMARKS.md",
+    "sha256": "d9c627c968837b4a148195153271ca69e98d4bc750b041e0d98ba7b376b1cf50"
+  }
+]

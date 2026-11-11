@@ -5,27 +5,26 @@ import 'package:arcadiaplus/src/utils/animation_utils.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/theme/app_motion.dart';
 
-import 'expressive_action.dart';
 import 'expressive_status_shape.dart';
 
-/// A stable control surface: only the state content changes, never the card's
-/// scale. Running is a persistent state and does not require a repeating ticker.
+/// One compact, accessible action; the shape is the control, not decoration.
 class StatusCard extends StatelessWidget {
   const StatusCard({
     super.key,
     required this.isRunning,
     required this.isLoading,
     required this.onStartStop,
+    this.identity,
   });
-
   final bool isRunning;
   final bool isLoading;
   final VoidCallback onStartStop;
+  final Widget? identity;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
+    final c = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final status = isLoading
         ? (isRunning
@@ -34,120 +33,103 @@ class StatusCard extends StatelessWidget {
         : (isRunning
               ? (l10n?.running ?? 'Running')
               : (l10n?.stopped ?? 'Stopped'));
-    final foreground = isRunning ? colors.onPrimaryContainer : colors.onSurface;
-    final duration = AppMotion.duration(context);
-
-    final artwork = ExcludeSemantics(
-      child: ExpressiveStatusShape(
-        running: isRunning,
-        child: AnimatedContainer(
-          duration: duration,
-          width: 64,
-          height: 64,
-          color: isRunning ? colors.primary : colors.surfaceContainerHighest,
-          child: Icon(
-            isRunning ? Icons.check_rounded : Icons.power_settings_new_rounded,
-            color: isRunning ? colors.onPrimary : colors.onSurfaceVariant,
-            size: 30,
-          ),
-        ),
-      ),
-    );
-    final label = Text(
-      l10n?.serviceStatus ?? 'Service status',
-      style: theme.textTheme.labelMedium?.copyWith(color: foreground),
-    );
-    final state = Semantics(
-      liveRegion: true,
-      child: AnimatedDefaultTextStyle(
-        duration: duration,
-        style: theme.textTheme.headlineSmall!.copyWith(
-          color: foreground,
-          fontWeight: FontWeight.w700,
-        ),
-        child: Text(status, key: ValueKey(status)),
-      ),
-    );
+    final action = isLoading
+        ? status
+        : isRunning
+        ? (l10n?.stopService ?? 'Stop Service')
+        : (l10n?.startService ?? 'Start Service');
     return AnimatedContainer(
-      duration: duration,
-      curve: AppMotion.curve,
+      duration: AppMotion.duration(context),
+      curve: AppMotion.standardCurve,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isRunning ? colors.primaryContainer : colors.surfaceContainerLow,
+        color: c.surfaceContainerLow,
         borderRadius: BorderRadius.circular(28),
       ),
-      padding: const EdgeInsets.all(20),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              if (constraints.maxWidth < 280 ||
-                  MediaQuery.textScalerOf(context).scale(16) > 22) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(child: label),
-                        const SizedBox(width: 12),
-                        artwork,
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    state,
-                  ],
-                );
-              }
-              return Row(
-                children: [
-                  artwork,
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [label, state],
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                l10n?.serviceStatus ?? 'Service status',
+                style: theme.textTheme.labelLarge,
+              ),
+              Semantics(
+                liveRegion: true,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 9,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isRunning
+                        ? c.primaryContainer
+                        : c.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: isRunning
+                          ? c.onPrimaryContainer
+                          : c.onSurfaceVariant,
                     ),
                   ),
-                  if (isLoading && !MediaQuery.disableAnimationsOf(context))
-                    const SizedBox.square(
-                      dimension: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                ],
-              );
-            },
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          ExpressiveAction(
-            selected: !isRunning,
-            onPressed: isLoading
-                ? null
-                : () {
-                    AnimationUtils.mediumHaptic();
-                    onStartStop();
-                  },
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isRunning ? Icons.stop_rounded : Icons.play_arrow_rounded,
-                  size: 22,
-                ),
-                const SizedBox(width: 10),
-                Flexible(
-                  child: Text(
-                    isLoading
-                        ? status
-                        : isRunning
-                        ? (l10n?.stopService ?? 'Stop Service')
-                        : (l10n?.startService ?? 'Start Service'),
-                    textAlign: TextAlign.center,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child:
+                    identity ??
+                    Text(status, style: theme.textTheme.headlineSmall),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 64,
+                height: 64,
+                child: ExpressiveStatusShape(
+                  running: isRunning,
+                  busy: isLoading,
+                  child: Material(
+                    color: c.primary,
+                    child: IconButton(
+                      key: const ValueKey('service-toggle'),
+                      tooltip: action,
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              AnimationUtils.mediumHaptic();
+                              onStartStop();
+                            },
+                      style: IconButton.styleFrom(
+                        foregroundColor: c.onPrimary,
+                        disabledForegroundColor: c.onPrimary.withValues(
+                          alpha: .55,
+                        ),
+                        padding: EdgeInsets.zero,
+                      ),
+                      icon: Icon(
+                        isLoading
+                            ? Icons.hourglass_top_rounded
+                            : isRunning
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                        size: 28,
+                      ),
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

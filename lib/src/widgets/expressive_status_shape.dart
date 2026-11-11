@@ -10,8 +10,10 @@ class ExpressiveStatusShape extends StatefulWidget {
     super.key,
     required this.running,
     required this.child,
+    this.busy = false,
   });
   final bool running;
+  final bool busy;
   final Widget child;
 
   @override
@@ -20,17 +22,22 @@ class ExpressiveStatusShape extends StatefulWidget {
 
 class _ExpressiveStatusShapeState extends State<ExpressiveStatusShape>
     with SingleTickerProviderStateMixin {
+  double get _target => widget.busy
+      ? .5
+      : widget.running
+      ? 1
+      : 0;
   static final _morph = Morph(
-    MaterialShapes.square,
+    MaterialShapes.cookie12Sided,
     MaterialShapes.cookie9Sided,
   );
   late final _progress = AnimationController.unbounded(
     vsync: this,
-    value: widget.running ? 1 : 0,
+    value: _target,
   );
 
   void _update() {
-    final target = widget.running ? 1.0 : 0.0;
+    final target = _target;
     if (MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled) {
       _progress.value = target;
@@ -52,14 +59,16 @@ class _ExpressiveStatusShapeState extends State<ExpressiveStatusShape>
     super.didChangeDependencies();
     if (MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled) {
-      _progress.value = widget.running ? 1 : 0;
+      _progress.value = _target;
     }
   }
 
   @override
   void didUpdateWidget(ExpressiveStatusShape oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.running != widget.running) _update();
+    if (oldWidget.running != widget.running || oldWidget.busy != widget.busy) {
+      _update();
+    }
   }
 
   @override

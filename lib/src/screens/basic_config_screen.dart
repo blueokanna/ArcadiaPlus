@@ -1,3 +1,4 @@
+import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:arcadiaplus/src/providers/general_settings_provider.dart';
@@ -535,7 +536,7 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
             style: textTheme.bodyMedium?.copyWith(
               fontWeight: FontWeight.w600,
               color: colorScheme.primary,
-              fontFamily: 'monospace',
+              fontFamily: AppTypography.codeFamily,
             ),
           ),
         ],
@@ -614,7 +615,7 @@ class _BasicConfigScreenState extends State<BasicConfigScreen> {
         textAlign: TextAlign.center,
         style: textTheme.bodySmall?.copyWith(
           fontWeight: isHeader ? FontWeight.w600 : null,
-          fontFamily: isMono ? 'monospace' : null,
+          fontFamily: isMono ? AppTypography.codeFamily : null,
         ),
       ),
     );

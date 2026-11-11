@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/theme/app_typography.dart';
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -44,7 +46,7 @@ class ConnectionDestination extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
-              fontFamily: 'monospace',
+              fontFamily: AppTypography.codeFamily,
             ),
           ),
         ],

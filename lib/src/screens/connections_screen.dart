@@ -1,3 +1,7 @@
+import '../widgets/fluid_page.dart';
+import '../widgets/dns_activity_panel.dart';
+
+import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:arcadiaplus/src/widgets/connection_destination.dart';
 
 import 'dart:async';
@@ -27,6 +31,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
   Timer? _listTimer;
   bool _onTop = true;
   bool _observingLifecycle = false;
+  bool _dns = false;
 
   @override
   void didChangeDependencies() {
@@ -81,7 +86,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
   void didPop() => _setOnTop(false);
 
   void _syncTimer() {
-    if (_onTop && AppLifecycle.instance.isActive) {
+    if (_onTop && !_dns && AppLifecycle.instance.isActive) {
       _listTimer ??= Timer.periodic(_listInterval, (_) {
         if (mounted) context.read<AppStateProvider>().refreshConnections();
       });
@@ -134,118 +139,91 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
           ),
         ],
       ),
-      body: Selector<AppStateProvider, (bool, List<ActiveConnection>)>(
-        selector: (_, state) =>
-            (state.isServiceRunning, state.activeConnections),
-        shouldRebuild: (previous, next) =>
-            previous.$1 != next.$1 || !identical(previous.$2, next.$2),
-        builder: (context, snapshot, child) {
-          if (!snapshot.$1) {
-            return _buildNotRunningView(context);
-          }
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SegmentedButton<bool>(
+              segments: [
+                ButtonSegment(
+                  value: false,
+                  label: Text(l10n?.connections ?? 'Connections'),
+                  icon: const Icon(Icons.hub_outlined),
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text(
+                    Localizations.localeOf(context).languageCode == 'zh'
+                        ? 'DNS 查询'
+                        : 'DNS queries',
+                  ),
+                  icon: const Icon(Icons.dns_outlined),
+                ),
+              ],
+              selected: {_dns},
+              onSelectionChanged: (values) {
+                setState(() => _dns = values.single);
+                _syncTimer();
+              },
+            ),
+          ),
+          Expanded(
+            child: _dns
+                ? const SingleChildScrollView(
+                    padding: EdgeInsets.all(12),
+                    child: DnsActivityPanel(),
+                  )
+                : Selector<AppStateProvider, (bool, List<ActiveConnection>)>(
+                    selector: (_, state) =>
+                        (state.isServiceRunning, state.activeConnections),
+                    shouldRebuild: (previous, next) =>
+                        previous.$1 != next.$1 ||
+                        !identical(previous.$2, next.$2),
+                    builder: (context, snapshot, child) {
+                      if (!snapshot.$1) {
+                        return _buildNotRunningView(context);
+                      }
 
-          if (snapshot.$2.isEmpty) {
-            return _buildEmptyView(context);
-          }
+                      if (snapshot.$2.isEmpty) {
+                        return _buildEmptyView(context);
+                      }
 
-          return _buildConnectionsList(
-            context,
-            context.read<AppStateProvider>(),
-          );
-        },
+                      return _buildConnectionsList(
+                        context,
+                        context.read<AppStateProvider>(),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildNotRunningView(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
-    final spacing = ResponsiveUtils.getSpacing(context);
-    final iconSize = ResponsiveUtils.getIconSize(context, large: true);
-
-    return Center(
-      child: Padding(
-        padding: ResponsiveUtils.getResponsivePadding(context),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: EdgeInsets.all(spacing * 3),
-              decoration: BoxDecoration(
-                color: colorScheme.errorContainer.withValues(alpha: 0.3),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.power_off_rounded,
-                size: iconSize * 2,
-                color: colorScheme.error,
-              ),
-            ),
-            SizedBox(height: spacing * 3),
-            Text(
-              l10n?.serviceNotRunningTitle ?? 'Service Not Running',
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: spacing),
-            Text(
-              l10n?.startServiceToViewConnections2 ??
-                  'Start the ArcadiaPlus service to view active connections',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return FluidPage(
+      key: const ValueKey('connections-stopped'),
+      child: FluidEmptyState(
+        icon: Icons.power_off_rounded,
+        title: l10n?.serviceNotRunningTitle ?? 'Service Not Running',
+        message:
+            l10n?.startServiceToViewConnections2 ??
+            'Start the service to view active connections',
       ),
     );
   }
 
   Widget _buildEmptyView(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final l10n = AppLocalizations.of(context);
-    final spacing = ResponsiveUtils.getSpacing(context);
-    final iconSize = ResponsiveUtils.getIconSize(context, large: true);
-
-    return Center(
-      child: Padding(
-        padding: ResponsiveUtils.getResponsivePadding(context),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: EdgeInsets.all(spacing * 3),
-              decoration: BoxDecoration(
-                color: colorScheme.primaryContainer.withValues(alpha: 0.3),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.link_off_rounded,
-                size: iconSize * 2,
-                color: colorScheme.primary,
-              ),
-            ),
-            SizedBox(height: spacing * 3),
-            Text(
-              l10n?.noActiveConnectionsTitle ?? 'No active connections',
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(height: spacing),
-            Text(
-              l10n?.connectionsWillAppear2 ?? 'Active connections will appear here as data flows through the proxy.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+    return FluidPage(
+      key: const ValueKey('connections-empty'),
+      child: FluidEmptyState(
+        icon: Icons.hub_outlined,
+        title: l10n?.noActiveConnectionsTitle ?? 'No active connections',
+        message: Localizations.localeOf(context).languageCode == 'zh'
+            ? '服务已就绪，产生网络流量后将在这里显示连接。'
+            : 'The service is ready. Connections appear when traffic starts.',
       ),
     );
   }
@@ -537,7 +515,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
                   connection.rulePayload,
                   style: textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
-                    fontFamily: 'monospace',
+                    fontFamily: AppTypography.codeFamily,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

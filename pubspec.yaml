@@ -2,7 +2,7 @@ name: arcadiaplus
 description: "A modern cross-platform proxy client built with Flutter and Rust."
 publish_to: "none"
 
-version: 1.0.9+1
+version: 1.0.9+3
 
 environment:
   sdk: ^3.13.0
@@ -90,11 +90,23 @@ flutter:
     - assets/arcadiaplus.png
     - assets/Country.mmdb
     - assets/fonts/LICENSE-Roboto.txt
+    - assets/fonts/LICENSE-GoogleSansFlex.txt
+    - assets/fonts/LICENSE-NotoSansSC.txt
+    - assets/fonts/LICENSE-GoogleSansCode.txt
     - assets/wintun/wintun.dll
     - assets/wintun/LICENSE.txt
     - LICENSE
 
   fonts:
+    - family: Google Sans Code
+      fonts:
+        - asset: assets/fonts/GoogleSansCode.ttf
+    - family: Google Sans Flex
+      fonts:
+        - asset: assets/fonts/GoogleSansFlex.ttf
+    - family: Noto Sans SC
+      fonts:
+        - asset: assets/fonts/NotoSansSC.ttf
     - family: Roboto
       fonts:
         - asset: assets/fonts/Roboto-Regular.ttf

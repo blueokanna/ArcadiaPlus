@@ -4,11 +4,11 @@ import 'package:arcadiaplus/src/theme/app_shapes.dart';
 import 'package:arcadiaplus/src/theme/app_theme.dart';
 
 void main() {
-  test('application theme uses Material 3 and bundled Roboto', () {
+  test('application theme uses Material 3 and bundled Google Sans Flex', () {
     final theme = AppTheme.createTheme(AppTheme.defaultTheme, Brightness.light);
 
     expect(theme.useMaterial3, isTrue);
-    expect(theme.textTheme.bodyMedium?.fontFamily, 'Roboto');
+    expect(theme.textTheme.bodyMedium?.fontFamily, 'Google Sans Flex');
   });
 
   test('Material surfaces use the shared shape hierarchy', () {

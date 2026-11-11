@@ -23,6 +23,8 @@ class ExpressiveAction extends StatelessWidget {
       useMaterial3: true,
       brightness: source.brightness,
       platform: source.platform,
+      fontFamily: source.textTheme.bodyMedium?.fontFamily,
+      fontFamilyFallback: source.textTheme.bodyMedium?.fontFamilyFallback,
       colorScheme:
           md3.ColorScheme.fromSeed(
             seedColor: c.primary,

@@ -18,38 +18,52 @@ class _DnsStatusCardState extends State<DnsStatusCard> {
   String? _error;
   Timer? _timer;
   bool _loading = false;
+  bool _visible = false;
+  int _generation = 0;
 
   @override
   void initState() {
     super.initState();
     AppLifecycle.instance.active.addListener(_sync);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _visible = TickerMode.valuesOf(context).enabled;
     _sync();
   }
 
   void _sync() {
+    _generation++;
     _timer?.cancel();
-    if (AppLifecycle.instance.isActive) {
+    if (_visible && AppLifecycle.instance.isActive) {
       _refresh();
       _timer = Timer.periodic(const Duration(seconds: 5), (_) => _refresh());
     }
   }
 
   Future<void> _refresh() async {
-    if (_loading) return;
+    if (_loading || !_visible || !AppLifecycle.instance.isActive) return;
+    final generation = _generation;
     _loading = true;
     try {
       if (widget.readStatus == null && !NativeCoreService.instance.isReady) {
         return;
       }
       final status = await (widget.readStatus ?? api.getRecursiveDnsStatus)();
-      if (mounted && (status != _status || _error != null)) {
+      if (mounted &&
+          generation == _generation &&
+          (status != _status || _error != null)) {
         setState(() {
           _status = status;
           _error = null;
         });
       }
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted && generation == _generation) {
+        setState(() => _error = error.toString());
+      }
     } finally {
       _loading = false;
     }
@@ -78,7 +92,7 @@ class _DnsStatusCardState extends State<DnsStatusCard> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'RecurseX',
+                    zh ? 'RecurseX · 本地递归' : 'RecurseX · Local recursion',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
@@ -98,8 +112,8 @@ class _DnsStatusCardState extends State<DnsStatusCard> {
                             ? '运行中 · ${status.listen}'
                             : 'Running · ${status.listen}')
                       : (zh
-                            ? '未运行；开关将在下次启动代理时应用'
-                            : 'Stopped; settings apply on the next proxy start')),
+                            ? '本地递归未运行；不代表转发 DNS 已停止。设置将在下次启动代理时应用。'
+                            : 'Local recursion is stopped; forwarding DNS may still be active. Settings apply on the next proxy start.')),
             ),
             if (status != null && status.running) ...[
               const SizedBox(height: 12),

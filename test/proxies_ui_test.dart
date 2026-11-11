@@ -1,3 +1,5 @@
+import 'support/test_fonts.dart';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -23,12 +25,7 @@ class PreviewProvider extends ProxiesProvider {
 
 void main() {
   setUpAll(() async {
-    await (FontLoader(
-      'Roboto',
-    )..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))).load();
-    await (FontLoader(
-      'MaterialIcons',
-    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+    await loadAppFonts();
   });
   testWidgets('native keyboard activation and node semantics', (tester) async {
     var taps = 0;
@@ -111,7 +108,10 @@ proxy-groups:
           );
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
-          expect(find.byType(ChoiceChip), findsNWidgets(3));
+          expect(
+            find.byType(ChoiceChip),
+            width >= 1000 && scale == 1 ? findsNothing : findsNWidgets(3),
+          );
           final semantics = tester.ensureSemantics();
           await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
           await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));

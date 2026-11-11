@@ -1,10 +1,11 @@
+import 'support/test_fonts.dart';
+
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -51,12 +52,7 @@ class LayoutProxies extends ProxiesProvider {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
-    await (FontLoader(
-      'Roboto',
-    )..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))).load();
-    await (FontLoader(
-      'MaterialIcons',
-    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+    await loadAppFonts();
   });
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -225,61 +221,84 @@ void main() {
   });
 
   for (final scale in [1.0, 2.0]) {
-    testWidgets(
-      'phone supports persistent two-column node layout at text scale $scale',
-      (tester) async {
-        tester.view.physicalSize = const Size(380, 820);
-        tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
-        addTearDown(tester.view.resetDevicePixelRatio);
-        final engine = FakeEngine();
-        final provider = LayoutProxies(engine)..loadFromYaml(config(4));
-        final boundary = GlobalKey();
-        Widget screen(Key key) => ChangeNotifierProvider<ProxiesProvider>.value(
-          value: provider,
-          child: MaterialApp(
-            theme: AppTheme.createTheme(AppTheme.defaultTheme, Brightness.dark),
-            key: key,
-            builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(context)
-                  .copyWith(textScaler: TextScaler.linear(scale)),
-              child: child!,
-            ),
-            home: RepaintBoundary(key: boundary, child: const ProxiesScreen()),
+    testWidgets('node column preference adapts safely at text scale $scale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(380, 820);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final engine = FakeEngine();
+      final provider = LayoutProxies(engine)..loadFromYaml(config(4));
+      final boundary = GlobalKey();
+      Widget screen(Key key) => ChangeNotifierProvider<ProxiesProvider>.value(
+        value: provider,
+        child: MaterialApp(
+          theme: AppTheme.createTheme(AppTheme.defaultTheme, Brightness.dark),
+          key: key,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(textScaler: TextScaler.linear(scale)),
+            child: child!,
           ),
-        );
-        await tester.pumpWidget(screen(const ValueKey(1)));
-        await tester.pumpAndSettle();
-        await tester.tap(find.byTooltip('Node layout'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Two columns'));
-        await tester.pumpAndSettle();
-        final tiles = find.byType(ProxyNodeTile);
-        expect(
-          tester.getTopLeft(tiles.at(0)).dy,
-          tester.getTopLeft(tiles.at(1)).dy,
-        );
-        expect(
-          tester.getTopLeft(tiles.at(0)).dx,
-          lessThan(tester.getTopLeft(tiles.at(1)).dx),
-        );
-        expect(
-          (await SharedPreferences.getInstance()).getInt('proxy_node_columns'),
-          2,
-        );
-        await tester.pumpWidget(screen(const ValueKey(2)));
-        await tester.pumpAndSettle();
-        expect(
-          tester.getTopLeft(tiles.at(0)).dy,
-          tester.getTopLeft(tiles.at(1)).dy,
-        );
-        expect(tester.takeException(), isNull);
-        await capture(tester, boundary, 'two-columns-$scale');
-        await tester.pumpWidget(const SizedBox.shrink());
-        provider.dispose();
-        engine.dispose();
-      },
-    );
+          home: RepaintBoundary(key: boundary, child: const ProxiesScreen()),
+        ),
+      );
+      await tester.pumpWidget(screen(const ValueKey(1)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Node layout'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Two columns'));
+      await tester.pumpAndSettle();
+      final tiles = find.byType(ProxyNodeTile);
+      expect(
+        tester.getTopLeft(tiles.at(0)).dy,
+        lessThan(tester.getTopLeft(tiles.at(1)).dy),
+      );
+      expect(
+        (await SharedPreferences.getInstance()).getInt('proxy_node_columns'),
+        2,
+      );
+      // Preserve the preference without forcing unreadable narrow cards.
+      tester.view.physicalSize = const Size(1200, 900);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(tiles.at(0)).dy,
+        tester.getTopLeft(tiles.at(1)).dy,
+      );
+      await tester.pumpWidget(screen(const ValueKey(2)));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(tiles.at(0)).dy,
+        tester.getTopLeft(tiles.at(1)).dy,
+      );
+      expect(tester.takeException(), isNull);
+      await capture(tester, boundary, 'two-columns-$scale');
+      await tester.enterText(find.byType(TextField), 'node2');
+      await tester.pumpAndSettle();
+      expect(find.byType(ProxyNodeTile), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(ProxyNodeTile),
+          matching: find.text('node2'),
+        ),
+        findsOneWidget,
+      );
+      tester.view.physicalSize = const Size(800, 1200);
+      await tester.pumpAndSettle();
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'node2',
+      );
+      expect(find.byType(ProxyNodeTile), findsOneWidget);
+      await tester.enterText(find.byType(TextField), 'unmatched-node');
+      await tester.pumpAndSettle();
+      expect(find.text('No matching nodes'), findsOneWidget);
+      expect(find.byType(ProxyNodeTile), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      provider.dispose();
+      engine.dispose();
+    });
 
     testWidgets('theme previews fit narrow screens at text scale $scale', (
       tester,

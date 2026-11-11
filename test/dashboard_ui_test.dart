@@ -1,5 +1,12 @@
 import 'dart:io';
+
+import 'support/test_fonts.dart';
+
 import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
+import 'package:go_router/go_router.dart';
+import 'package:arcadiaplus/src/widgets/adaptive_scaffold.dart';
 
 import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/widgets/expressive_action.dart';
@@ -63,14 +70,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const capture = bool.fromEnvironment('CAPTURE_UI');
   setUpAll(() async {
-    final loader = FontLoader('Roboto')
-      ..addFont(rootBundle.load('assets/fonts/Roboto-Regular.ttf'))
-      ..addFont(rootBundle.load('assets/fonts/Roboto-Medium.ttf'))
-      ..addFont(rootBundle.load('assets/fonts/Roboto-Bold.ttf'));
-    await loader.load();
-    await (FontLoader(
-      'MaterialIcons',
-    )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
+    await loadAppFonts();
   });
 
   Widget app(
@@ -94,61 +94,164 @@ void main() {
     ),
   );
 
-  for (final width in [320.0, 480.0, 1200.0]) {
-    for (final scale in [1.0, 2.0]) {
-      testWidgets('traffic totals remain horizontal at $width / $scale', (
-        tester,
-      ) async {
-        tester.view.physicalSize = Size(width, 1000);
+  for (final (size, platform) in [
+    (const Size(390, 844), TargetPlatform.android),
+    (const Size(800, 1280), TargetPlatform.android),
+    (const Size(1440, 960), TargetPlatform.windows),
+  ]) {
+    for (final brightness in Brightness.values) {
+      testWidgets('expressive shell $size $brightness', (tester) async {
         tester.view.devicePixelRatio = 1;
-        addTearDown(tester.view.resetPhysicalSize);
+        tester.view.physicalSize = size;
+        debugDefaultTargetPlatformOverride = platform;
+        final previousShadows = debugDisableShadows;
+        if (capture) debugDisableShadows = false;
         addTearDown(tester.view.resetDevicePixelRatio);
-        await tester.pumpWidget(
-          app(
-            TrafficChart(
-              trafficStats: TrafficStats(
-                upload: BigInt.from(4096),
-                download: BigInt.from(8192),
-                uploadSpeed: BigInt.zero,
-                downloadSpeed: BigInt.zero,
-                directUpload: BigInt.from(1024),
-                directDownload: BigInt.from(2048),
-                proxyUpload: BigInt.from(3072),
-                proxyDownload: BigInt.from(6144),
-              ),
-              uploadSpeed: BigInt.zero,
-              downloadSpeed: BigInt.zero,
-              isProxyRunning: false,
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        addTearDown(() => debugDisableShadows = previousShadows);
+        final state = _DashboardState();
+        final network = _NetworkState();
+        final settings = GeneralSettingsProvider();
+        final boundary = GlobalKey();
+        final router = GoRouter(
+          routes: [
+            ShellRoute(
+              builder: (_, _, child) => AdaptiveScaffold(body: child),
+              routes: [
+                GoRoute(path: '/', builder: (_, _) => const HomeScreen()),
+                for (final path in [
+                  '/proxies',
+                  '/profiles',
+                  '/connections',
+                  '/logs',
+                  '/settings',
+                ])
+                  GoRoute(
+                    path: path,
+                    builder: (_, _) => Center(child: Text(path)),
+                  ),
+              ],
             ),
-            scale: scale,
+          ],
+        );
+        await tester.pumpWidget(
+          MultiProvider(
+            providers: [
+              ChangeNotifierProvider<AppStateProvider>.value(value: state),
+              ChangeNotifierProvider<NetworkSettingsProvider>.value(
+                value: network,
+              ),
+              ChangeNotifierProvider<GeneralSettingsProvider>.value(
+                value: settings,
+              ),
+            ],
+            child: MaterialApp.router(
+              routerConfig: router,
+              theme: AppTheme.createTheme(
+                AppTheme.defaultTheme,
+                brightness,
+              ).copyWith(platform: platform),
+              locale: const Locale('zh', 'CN'),
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              builder: (context, child) =>
+                  RepaintBoundary(key: boundary, child: child!),
+            ),
           ),
         );
-        await tester.pump();
-        final labels = ['Download', 'Upload', 'Domestic total', 'Proxy total'];
-        final positions = labels
-            .map(
-              (label) => tester.getTopLeft(
-                find.descendant(
-                  of: find.byKey(const ValueKey('traffic-totals-row')),
-                  matching: find.text(label),
-                ),
-              ),
-            )
-            .toList();
-        for (var index = 1; index < positions.length; index++) {
-          expect(positions[index].dy, positions[0].dy);
-          expect(positions[index].dx, greaterThan(positions[index - 1].dx));
-        }
-        expect(find.text('3.0 KB'), findsOneWidget);
-        expect(find.text('9.0 KB'), findsOneWidget);
-        await tester.drag(
-          find.byKey(const ValueKey('traffic-totals-row')),
-          const Offset(-3000, 0),
-        );
         await tester.pumpAndSettle();
-        expect(find.text('Proxy total').hitTestable(), findsOneWidget);
         expect(tester.takeException(), isNull);
+        expect(
+          find.byKey(const ValueKey('floating-navigation')),
+          size.width < 600 ? findsOneWidget : findsNothing,
+        );
+        if (capture) {
+          await tester.runAsync(() async {
+            final image =
+                await (boundary.currentContext!.findRenderObject()!
+                        as RenderRepaintBoundary)
+                    .toImage();
+            final bytes = (await image.toByteData(
+              format: ui.ImageByteFormat.png,
+            ))!;
+            final file = File(
+              '.dart_tool/ui-previews/expressive-shell-${size.width.toInt()}-${brightness.name}.png',
+            );
+            await file.parent.create(recursive: true);
+            await file.writeAsBytes(bytes.buffer.asUint8List());
+            image.dispose();
+          });
+        }
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        state.dispose();
+        network.dispose();
+        settings.dispose();
+        router.dispose();
+        debugDefaultTargetPlatformOverride = null;
+        debugDisableShadows = previousShadows;
       });
+    }
+  }
+
+  for (final width in [320.0, 480.0, 1200.0]) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'traffic totals remain visible without horizontal clipping at $width / $scale',
+        (tester) async {
+          tester.view.physicalSize = Size(width, 1000);
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetPhysicalSize);
+          addTearDown(tester.view.resetDevicePixelRatio);
+          await tester.pumpWidget(
+            app(
+              TrafficChart(
+                trafficStats: TrafficStats(
+                  upload: BigInt.from(4096),
+                  download: BigInt.from(8192),
+                  uploadSpeed: BigInt.zero,
+                  downloadSpeed: BigInt.zero,
+                  directUpload: BigInt.from(1024),
+                  directDownload: BigInt.from(2048),
+                  proxyUpload: BigInt.from(3072),
+                  proxyDownload: BigInt.from(6144),
+                ),
+                uploadSpeed: BigInt.zero,
+                downloadSpeed: BigInt.zero,
+                isProxyRunning: false,
+              ),
+              scale: scale,
+            ),
+          );
+          await tester.pump();
+          final labels = [
+            'Download',
+            'Upload',
+            'Domestic total',
+            'Proxy total',
+          ];
+          for (final label in labels) {
+            final finder = find.descendant(
+              of: find.byKey(const ValueKey('traffic-totals-row')),
+              matching: find.text(label),
+            );
+            expect(finder, findsOneWidget);
+            final bounds = tester.getRect(finder);
+            expect(bounds.left, greaterThanOrEqualTo(16));
+            expect(bounds.right, lessThanOrEqualTo(width - 16));
+          }
+          expect(find.text('3.0 KB'), findsOneWidget);
+          expect(find.text('9.0 KB'), findsOneWidget);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        },
+      );
     }
   }
 
@@ -165,7 +268,7 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.byType(ExpressiveAction));
+    await tester.tap(find.byKey(const ValueKey('service-toggle')));
     expect(taps, 1);
     await tester.pumpWidget(
       app(
@@ -176,7 +279,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Stopping...'), findsNWidgets(2));
     expect(
-      tester.widget<ExpressiveAction>(find.byType(ExpressiveAction)).onPressed,
+      tester
+          .widget<IconButton>(find.byKey(const ValueKey('service-toggle')))
+          .onPressed,
       isNull,
     );
     expect(find.byType(CircularProgressIndicator), findsNothing);

@@ -6,6 +6,11 @@ import 'package:arcadiaplus/src/services/proxy_engine_service.dart';
 class FakeEngine extends ChangeNotifier implements ProxyEngine {
   @override
   bool isReady = false;
+  @override
+  bool supportsProfile(String? profileId) => true;
+  @override
+  Future<T> transaction<T>(Future<T> Function(ProxyEngine engine) action) =>
+      action(this);
   bool get hasSubscribers => hasListeners;
   final selections = <String, String>{};
   final calls = <String>[];

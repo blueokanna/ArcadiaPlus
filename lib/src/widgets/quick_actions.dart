@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:arcadiaplus/src/widgets/routing_mode_selector.dart';
 
 import 'package:flutter/material.dart';
@@ -171,7 +173,9 @@ class _QuickActionsState extends State<QuickActions> {
     final colorScheme = Theme.of(context).colorScheme;
     final spacing = ResponsiveUtils.getSpacing(context);
     final isMobile =
-        Platform.isAndroid || PlatformUtils.isOHOS || Platform.isIOS;
+        PlatformUtils.isOHOS ||
+        defaultTargetPlatform == TargetPlatform.android ||
+        defaultTargetPlatform == TargetPlatform.iOS;
 
     final state = context
         .select<
@@ -189,20 +193,34 @@ class _QuickActionsState extends State<QuickActions> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        RoutingModeSelector(
-          mode: state.mode,
-          onChanged: _isUpdating || state.loading ? null : _switchProxyMode,
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                RoutingModeSelector(
+                  mode: state.mode,
+                  mobile: isMobile,
+                  onChanged: _isUpdating || state.loading
+                      ? null
+                      : _switchProxyMode,
+                ),
+                const SizedBox(height: 12),
+                Text(switch (state.mode) {
+                  ProxyMode.rule =>
+                    l10n?.ruleModeDesc ??
+                        'Route traffic using the active profile rules.',
+                  ProxyMode.global =>
+                    l10n?.globalModeDesc ??
+                        'Route traffic through the selected proxy.',
+                  ProxyMode.direct => l10n?.directModeName ?? 'Direct Mode',
+                }, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 12),
-        Text(switch (state.mode) {
-          ProxyMode.rule =>
-            l10n?.ruleModeDesc ??
-                'Route traffic using the active profile rules.',
-          ProxyMode.global =>
-            l10n?.globalModeDesc ?? 'Route traffic through the selected proxy.',
-          ProxyMode.direct => l10n?.directModeName ?? 'Direct Mode',
-        }, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 20),
         if (isMobile)
           _ServiceStatusCard(
             isRunning: state.running,

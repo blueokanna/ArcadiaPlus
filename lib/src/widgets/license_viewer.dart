@@ -1,3 +1,4 @@
+import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
@@ -32,8 +33,10 @@ Future<void> showBundledLicense(BuildContext context) async {
             child: SingleChildScrollView(
               child: SelectableText(
                 text,
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(height: 1.5, fontFamily: 'monospace'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  height: 1.5,
+                  fontFamily: AppTypography.codeFamily,
+                ),
               ),
             ),
           ),

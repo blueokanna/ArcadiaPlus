@@ -318,12 +318,12 @@ class AppStateProvider extends ChangeNotifier {
       );
 
       debugPrint('Calling initializeCorduit...');
-      await initializeCorduit(configJson: jsonConfig);
-      await ProfileSelections.restore(
-        activeProfileId,
-        jsonConfig,
-        const NativeProxyEngine(),
-      );
+      await ConfiguredProxyEngine.instance.configure(activeProfileId, (
+        engine,
+      ) async {
+        await initializeCorduit(configJson: jsonConfig);
+        await ProfileSelections.restore(activeProfileId, jsonConfig, engine);
+      });
       _activeProfileId = activeProfileId;
       _appliedConfigJson = jsonConfig;
       _ruleSetReport = report;
@@ -436,14 +436,14 @@ class AppStateProvider extends ChangeNotifier {
   /// conversion can point corduit at it.
   Future<void> _applyReload(String config) async {
     if (!PlatformUtils.isOHOS) {
-      await reloadCorduit(configJson: config);
-      if (_activeProfileId != null) {
-        await ProfileSelections.restore(
-          _activeProfileId!,
-          config,
-          const NativeProxyEngine(),
-        );
-      }
+      await ConfiguredProxyEngine.instance.configure(_activeProfileId, (
+        engine,
+      ) async {
+        await reloadCorduit(configJson: config);
+        if (_activeProfileId != null) {
+          await ProfileSelections.restore(_activeProfileId!, config, engine);
+        }
+      });
       _appliedConfigJson = config;
       return;
     }
@@ -781,7 +781,7 @@ class AppStateProvider extends ChangeNotifier {
         }
       }
 
-      await stopCorduit();
+      await ConfiguredProxyEngine.instance.stop(stopCorduit);
       await _stopRecursiveDns();
       _isServiceRunning = false;
       _isInitialized = false;
@@ -1066,7 +1066,11 @@ class AppStateProvider extends ChangeNotifier {
       if (reload || _isServiceRunning) {
         await _applyReload(configJson);
       } else {
-        await initializeCorduit(configJson: configJson);
+        await ConfiguredProxyEngine.instance.configure(_activeProfileId, (
+          _,
+        ) async {
+          await initializeCorduit(configJson: configJson);
+        });
         _isInitialized = true;
         _appliedConfigJson = configJson;
       }

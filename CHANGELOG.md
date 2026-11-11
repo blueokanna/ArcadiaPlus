@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.0.9+3
+
+- Replace the decorative dashboard emblem and duplicate full-width action with one compact, morphing Material shape control. Move exit IP, provider and sourced network-risk classification into the status card; incomplete responses remain unknown.
+- Add a memory details sheet that distinguishes process RSS from the decoded-image cache. Clear retained image-cache entries without forcing collection, interrupting connections or inventing separate native heap measurements.
+- Display bounded, actual TUN DNS ingress events with their time, domain and query type. Keep local RecurseX counters separate and identify unavailable per-query answers and timing. Pause DNS readers on hidden routes and in the background.
+- Share finite route entrance motion and expressive empty-state shapes, honoring reduced motion and app visibility. Keep the floating capsule navigation and responsive layouts.
+
+## 1.0.9+2
+
+- Replace the bottom navigation with a floating capsule and a retargetable spring indicator. Share destinations with the compact tablet rail and expanded desktop sidebar; reserve space for page actions and support keyboard navigation and reduced motion.
+- Bundle Google Sans Flex, Noto Sans SC and Google Sans Code with their OFL licenses and pinned source checksums. Apply the same typography to Material and Expressive controls, including offline startup and code views.
+- Refine light and dark surfaces, connection controls, node cards and settings tiles. Reflow traffic metrics and subscription cards by available width and text size; draw mini charts from recorded samples only. Handle zero subscription quotas and scroll import sheets in short landscape windows.
+
+- Remove the mobile portrait lock and allow Android activity resizing. Phone, tablet and split-screen layouts now share the same navigation destinations; Android logs remain under Settings, without the mismatched sidebar entry.
+- Separate native library loading from configured engine readiness. Preserve offline node choices, scope writes to the loaded profile, and serialize selection recovery with configuration replacement. Automatic strategy groups no longer receive manual selector writes.
+- Add a strategy panel on wide proxy screens and node search on every screen size. Use denser node cards, retain column preferences without squeezing large text, and keep navigation reachable in short landscape windows.
+
 ## 1.0.9+1
 
 - Upgrade to the published Corduit 0.3.2 and RecurseX 0.2.5 packages. Remove the sibling engine checkout from CI and verify registry checksums and shared dependency identities without vendoring source code.

@@ -1,10 +1,11 @@
 import 'package:arcadiaplus/src/theme/app_shapes.dart';
+import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  static const String _fontFamily = 'Roboto';
+  static const String _fontFamily = AppTypography.family;
 
   /// Alpha of the interface's background layers while a wallpaper is showing.
   ///
@@ -22,6 +23,7 @@ class AppTheme {
   }) {
     return TextStyle(
       fontFamily: _fontFamily,
+      fontFamilyFallback: AppTypography.fallback,
       fontSize: fontSize,
       fontWeight: fontWeight,
       letterSpacing: letterSpacing,
@@ -113,7 +115,11 @@ class AppTheme {
     Brightness brightness,
   ) {
     final seedColor = getThemeSeedColor(themeName);
-    return ColorScheme.fromSeed(seedColor: seedColor, brightness: brightness);
+    return ColorScheme.fromSeed(
+      seedColor: seedColor,
+      brightness: brightness,
+      dynamicSchemeVariant: DynamicSchemeVariant.fidelity,
+    );
   }
 
   /// The palette [themeName] resolves to in [brightness], for a preview.
@@ -252,10 +258,21 @@ class AppTheme {
     ColorScheme colorScheme,
     Brightness brightness,
   ) {
+    // A quiet canvas separates the expressive controls from their surfaces.
+    // Dynamic colors retain their hue and accessible on-colors.
+    colorScheme = colorScheme.copyWith(
+      surface: brightness == Brightness.light
+          ? colorScheme.surfaceContainer
+          : colorScheme.surfaceContainerLowest,
+      surfaceContainerLow: brightness == Brightness.light
+          ? colorScheme.surfaceContainerLowest
+          : colorScheme.surfaceContainer,
+    );
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       fontFamily: _fontFamily,
+      fontFamilyFallback: AppTypography.fallback,
       textTheme: _createTextTheme(colorScheme),
       pageTransitionsTheme: _createPageTransitionsTheme(),
       splashFactory: _splashFactory(),
@@ -344,17 +361,17 @@ class AppTheme {
       ),
       headlineLarge: _textStyle(
         fontSize: 32,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w700,
         color: colorScheme.onSurface,
       ),
       headlineMedium: _textStyle(
         fontSize: 28,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w700,
         color: colorScheme.onSurface,
       ),
       headlineSmall: _textStyle(
         fontSize: 24,
-        fontWeight: FontWeight.w400,
+        fontWeight: FontWeight.w600,
         color: colorScheme.onSurface,
       ),
       titleLarge: _textStyle(
@@ -383,13 +400,13 @@ class AppTheme {
       labelMedium: _textStyle(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        letterSpacing: 0.5,
+        letterSpacing: 0.1,
         color: colorScheme.onSurface,
       ),
       labelSmall: _textStyle(
         fontSize: 11,
         fontWeight: FontWeight.w500,
-        letterSpacing: 0.5,
+        letterSpacing: 0.1,
         color: colorScheme.onSurface,
       ),
       bodyLarge: _textStyle(
@@ -401,13 +418,13 @@ class AppTheme {
       bodyMedium: _textStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,
-        letterSpacing: 0.25,
+        letterSpacing: 0,
         color: colorScheme.onSurface,
       ),
       bodySmall: _textStyle(
         fontSize: 12,
         fontWeight: FontWeight.w400,
-        letterSpacing: 0.4,
+        letterSpacing: 0.1,
         color: colorScheme.onSurfaceVariant,
       ),
     );

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../widgets/fluid_page.dart';
+
 /// Navigation intent; destination changes replace, hierarchical changes push.
 enum AppPageTransition { hierarchical, destination }
 
@@ -11,4 +13,7 @@ Page<void> buildAppPage(
   GoRouterState state,
   Widget child, {
   AppPageTransition transition = AppPageTransition.hierarchical,
-}) => MaterialPage<void>(key: state.pageKey, child: child);
+}) => MaterialPage<void>(
+  key: state.pageKey,
+  child: FluidPage(child: child),
+);

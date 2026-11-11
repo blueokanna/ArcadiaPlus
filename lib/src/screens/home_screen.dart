@@ -1,4 +1,8 @@
 import 'package:arcadiaplus/src/widgets/theme_picker.dart';
+import 'package:arcadiaplus/src/widgets/exit_identity.dart';
+import 'package:arcadiaplus/src/widgets/memory_info_card.dart';
+import 'package:arcadiaplus/src/widgets/dns_activity_panel.dart';
+import 'package:arcadiaplus/src/services/exit_ip_service.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -197,7 +201,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        if (constraints.maxWidth >= 960 &&
+                        if (constraints.maxWidth >= 840 &&
                             MediaQuery.textScalerOf(context).scale(14) <= 19)
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,6 +218,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         ],
                         const SizedBox(height: 28),
                         const _SystemInfoSection(),
+                        const DnsActivityPanel(compact: true),
                       ],
                     );
                   },
@@ -225,121 +230,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       ),
     );
   }
-}
-
-Widget _systemInfoCard(
-  BuildContext context,
-  SystemInfo info,
-  AppLocalizations? l10n,
-) {
-  final colorScheme = Theme.of(context).colorScheme;
-  final borderRadius = ResponsiveUtils.getBorderRadius(context);
-  final cpuInfo = info.cpuName.isNotEmpty && !info.cpuName.contains('Unknown')
-      ? '${info.cpuName} (${info.cpuCores}C/${info.cpuThreads}T)'
-      : '${info.cpuCores} ${l10n?.cpuCores ?? "cores"} / ${info.cpuThreads} ${l10n?.cpuThreads ?? "threads"}';
-
-  final isMobile = PlatformUtils.isMobile;
-
-  return Card(
-    elevation: 0,
-    color: colorScheme.surfaceContainerLow,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(borderRadius),
-    ),
-    child: Padding(
-      padding: ResponsiveUtils.getCardPadding(context),
-      child: Column(
-        children: [
-          _infoRow(
-            context,
-            icon: Icons.computer_outlined,
-            label: l10n?.platform ?? 'Platform',
-            value: info.platform,
-          ),
-          const Divider(height: 24),
-          _infoRow(
-            context,
-            icon: Icons.phone_android_outlined,
-            label: l10n?.deviceModel ?? 'Device Model',
-            value: _deviceModel(),
-          ),
-          const Divider(height: 24),
-          _infoRow(
-            context,
-            icon: Icons.memory_outlined,
-            label: '${l10n?.memory ?? 'Memory'} (RSS)',
-            value:
-                '${info.memoryUsed ~/ BigInt.from(1024) ~/ BigInt.from(1024)} MiB',
-          ),
-          if (!isMobile) ...[
-            const Divider(height: 24),
-            _infoRow(
-              context,
-              icon: Icons.developer_board_outlined,
-              label: l10n?.cpuCores ?? 'CPU',
-              value: cpuInfo,
-              scrollable: true,
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
-}
-
-Widget _infoRow(
-  BuildContext context, {
-  required IconData icon,
-  required String label,
-  required String value,
-  bool scrollable = false,
-}) {
-  final colorScheme = Theme.of(context).colorScheme;
-  final textTheme = Theme.of(context).textTheme;
-  final iconSize = ResponsiveUtils.getIconSize(context);
-  final spacing = ResponsiveUtils.getSpacing(context);
-
-  return Row(
-    children: [
-      Icon(icon, size: iconSize * 0.85, color: colorScheme.primary),
-      SizedBox(width: spacing),
-      Flexible(
-        flex: 0,
-        child: Text(
-          label,
-          style: textTheme.bodyMedium?.copyWith(
-            color: colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
-      SizedBox(width: spacing),
-      Expanded(
-        child: scrollable
-            ? SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                child: Text(
-                  value,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.end,
-                ),
-              )
-            : Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  value,
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.end,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-      ),
-    ],
-  );
 }
 
 String _deviceModel() {
@@ -378,26 +268,57 @@ Widget _sectionHeader(BuildContext context, String title, IconData icon) {
   );
 }
 
-class _StatusSection extends StatelessWidget {
+class _StatusSection extends StatefulWidget {
   const _StatusSection();
 
   @override
+  State<_StatusSection> createState() => _StatusSectionState();
+}
+
+class _StatusSectionState extends State<_StatusSection> {
+  final _exit = ExitIpController();
+
+  @override
+  void dispose() {
+    _exit.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final port = context.watch<GeneralSettingsProvider>().mixedPort;
+    final active = TickerMode.valuesOf(context).enabled;
     return Selector<AppStateProvider, ({bool isRunning, bool isLoading})>(
       selector: (_, appState) =>
           (isRunning: appState.isServiceRunning, isLoading: appState.isLoading),
-      builder: (context, snapshot, _) => StatusCard(
-        isRunning: snapshot.isRunning,
-        isLoading: snapshot.isLoading,
-        onStartStop: () {
-          final appState = context.read<AppStateProvider>();
-          if (appState.isServiceRunning) {
-            appState.stopService();
-          } else {
-            appState.startService();
-          }
-        },
-      ),
+      builder: (context, snapshot, _) {
+        _exit.configure(
+          useProxy: snapshot.isRunning,
+          port: port,
+          active: active,
+        );
+        return StatusCard(
+          identity: ListenableBuilder(
+            listenable: _exit,
+            builder: (context, _) => ExitIdentity(
+              report: _exit.report,
+              loading: _exit.loading,
+              failed: _exit.failed,
+              onRefresh: _exit.refresh,
+            ),
+          ),
+          isRunning: snapshot.isRunning,
+          isLoading: snapshot.isLoading,
+          onStartStop: () {
+            final appState = context.read<AppStateProvider>();
+            if (appState.isServiceRunning) {
+              appState.stopService();
+            } else {
+              appState.startService();
+            }
+          },
+        );
+      },
     );
   }
 }
@@ -449,6 +370,7 @@ class _TrafficSection extends StatelessWidget {
       ),
       builder: (context, snapshot, _) => RepaintBoundary(
         child: TrafficChart(
+          showIpInfo: false,
           trafficStats: snapshot.traffic,
           downloadSpeed: snapshot.downloadSpeed,
           uploadSpeed: snapshot.uploadSpeed,
@@ -480,7 +402,7 @@ class _SystemInfoSection extends StatelessWidget {
               Icons.info_outline,
             ),
             ResponsiveSpacing(multiplier: 1.5),
-            _systemInfoCard(context, systemInfo, l10n),
+            MemoryInfoCard(info: systemInfo, device: _deviceModel()),
             ResponsiveSpacing(multiplier: 2),
           ],
         );

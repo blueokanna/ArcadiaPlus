@@ -15,6 +15,7 @@ class ProxyNodeTile extends StatelessWidget {
     this.latency,
     this.failed = false,
     this.icon = Icons.public_rounded,
+    this.selectable = true,
   });
 
   final String name;
@@ -24,6 +25,7 @@ class ProxyNodeTile extends StatelessWidget {
   final String? latency;
   final bool failed;
   final IconData icon;
+  final bool selectable;
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +40,12 @@ class ProxyNodeTile extends StatelessWidget {
         onPressed: onPressed,
         style: ButtonStyle(
           animationDuration: AppMotion.duration(context, AppMotion.short),
-          padding: const WidgetStatePropertyAll(EdgeInsets.all(12)),
-          minimumSize: const WidgetStatePropertyAll(Size(48, 104)),
+          padding: const WidgetStatePropertyAll(EdgeInsets.all(16)),
+          minimumSize: const WidgetStatePropertyAll(Size(48, 96)),
           alignment: Alignment.centerLeft,
-          shape: const WidgetStatePropertyAll(AppShapes.card),
+          shape: const WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: AppShapes.large),
+          ),
           elevation: const WidgetStatePropertyAll(0),
           backgroundColor: WidgetStatePropertyAll(
             selected ? colors.secondaryContainer : colors.surfaceContainerLow,
@@ -49,7 +53,9 @@ class ProxyNodeTile extends StatelessWidget {
           foregroundColor: WidgetStatePropertyAll(foreground),
           side: WidgetStatePropertyAll(
             BorderSide(
-              color: selected ? colors.secondary : colors.outlineVariant,
+              color: selected
+                  ? colors.primary
+                  : colors.outlineVariant.withValues(alpha: 0.5),
             ),
           ),
         ),
@@ -59,23 +65,45 @@ class ProxyNodeTile extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, size: 22),
-                const Spacer(),
-                Icon(
-                  selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                  size: 22,
-                  color: selected ? colors.secondary : colors.outline,
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: selected ? colors.primary : colors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 19,
+                    color: selected
+                        ? colors.onPrimary
+                        : colors.onSurfaceVariant,
+                  ),
                 ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: text.titleSmall?.copyWith(
+                      color: foreground,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (selectable)
+                  Icon(
+                    selected
+                        ? Icons.check_circle_rounded
+                        : Icons.circle_outlined,
+                    size: 22,
+                    color: selected ? colors.secondary : colors.outline,
+                  ),
               ],
             ),
-            const SizedBox(height: 14),
-            Text(
-              name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: text.titleSmall?.copyWith(color: foreground),
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 12,
               runSpacing: 4,

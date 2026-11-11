@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:arcadiaplus/src/theme/app_theme.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 import 'package:arcadiaplus/src/widgets/navigation_bar.dart';
@@ -50,7 +49,6 @@ class AdaptiveScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenType = ResponsiveUtils.getScreenSizeType(context);
-    final safeArea = ResponsiveUtils.getSafeAreaPadding(context);
 
     // 根据屏幕类型决定导航方式
     final bool useSideNav =
@@ -65,7 +63,7 @@ class AdaptiveScaffold extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const AppNavigationBar(),
-            Expanded(child: _buildResponsiveBody(context, body)),
+            Expanded(child: body),
           ],
         ),
         floatingActionButton: floatingActionButton,
@@ -90,7 +88,9 @@ class AdaptiveScaffold extends StatelessWidget {
       // Mobile: Use bottom navigation with safe area handling
       return Scaffold(
         appBar: appBar,
-        body: _buildResponsiveBody(context, body),
+        // Routed pages own their Scaffold and may specify explicit list padding.
+        // Reserve the floating bar here, including for their local FABs.
+        body: SafeArea(top: false, left: false, right: false, child: body),
         floatingActionButton: floatingActionButton,
         floatingActionButtonLocation:
             floatingActionButtonLocation ?? PlatformUtils.getFabLocation(),
@@ -103,54 +103,15 @@ class AdaptiveScaffold extends StatelessWidget {
         resizeToAvoidBottomInset: resizeToAvoidBottomInset ?? true,
         primary: primary,
         drawerDragStartBehavior: drawerDragStartBehavior,
-        extendBody: extendBody,
+        extendBody: true,
         extendBodyBehindAppBar: extendBodyBehindAppBar,
         drawerEdgeDragWidth: drawerEdgeDragWidth,
         drawerEnableOpenDragGesture: drawerEnableOpenDragGesture,
         endDrawerEnableOpenDragGesture: endDrawerEnableOpenDragGesture,
-        bottomNavigationBar: _buildBottomNav(context, safeArea),
+        bottomNavigationBar: MediaQuery.viewInsetsOf(context).bottom > 0
+            ? null
+            : const AppNavigationBar(),
       );
     }
-  }
-
-  /// 构建响应式 body，处理安全区域
-  Widget _buildResponsiveBody(BuildContext context, Widget child) {
-    final viewPadding = ResponsiveUtils.getViewPadding(context);
-
-    // 对于有刘海/挖孔屏的设备，确保内容不被遮挡
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        // 保持原有的 padding，让子组件自行处理
-        padding: viewPadding,
-      ),
-      child: child,
-    );
-  }
-
-  /// 构建底部导航栏，处理安全区域
-  Widget _buildBottomNav(BuildContext context, EdgeInsets safeArea) {
-    final colorScheme = Theme.of(context).colorScheme;
-    // With a wallpaper behind the app the theme's surfaces are veils; a bar
-    // that kept painting an opaque colour would be the one solid strip across
-    // an otherwise translucent interface.
-    final veil = Theme.of(context).extension<WallpaperSurface>();
-    final background =
-        veil?.veil(colorScheme.surfaceContainerLow) ??
-        colorScheme.surfaceContainerLow;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: background,
-        // 添加顶部分隔线
-        border: Border(
-          top: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant
-                .withValues(alpha: 0.3),
-            width: 0.5,
-          ),
-        ),
-      ),
-      child: SafeArea(top: false, child: const AppNavigationBar()),
-    );
   }
 }

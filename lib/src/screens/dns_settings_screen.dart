@@ -1,3 +1,4 @@
+import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:arcadiaplus/src/widgets/dns_status_card.dart';
 import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
@@ -771,7 +772,7 @@ class _UpstreamEditorSheetState extends State<_UpstreamEditorSheet> {
                           title: Text(
                             item,
                             style: const TextStyle(
-                              fontFamily: 'monospace',
+                              fontFamily: AppTypography.codeFamily,
                               fontSize: 13,
                             ),
                           ),

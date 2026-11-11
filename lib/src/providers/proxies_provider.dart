@@ -28,7 +28,7 @@ class ProxiesProvider extends ChangeNotifier {
   ProxiesProvider({
     ProxyEngine? engine,
     Future<SharedPreferences> Function()? preferences,
-  }) : _engine = engine ?? const NativeProxyEngine(),
+  }) : _engine = engine ?? ConfiguredProxyEngine.instance,
        _preferences = preferences ?? SharedPreferences.getInstance {
     _engine.addListener(_onEngineChanged);
   }
@@ -65,11 +65,23 @@ class ProxiesProvider extends ChangeNotifier {
       UnmodifiableMapView(_latencyResults);
   bool get isLoading => _isLoading;
   bool get isTesting => _isTesting;
+  bool get canTestLatency =>
+      _engine.isReady && _engine.supportsProfile(_profileId);
   String? get error => _error;
   List<ParsedProxyGroup> get proxyGroups => _config?.proxyGroups ?? const [];
   List<ParsedProxy> get proxies => _config?.proxies ?? const [];
   ParsedProxyGroup? get selectedGroup => _groupsByName[_selectedGroupName];
   bool isSelecting(String group) => (_pendingSelections[group] ?? 0) > 0;
+  bool canSelectGroup(String name) {
+    final group = _groupsByName[name];
+    return group != null &&
+        !const {
+          'url-test',
+          'fallback',
+          'load-balance',
+          'relay',
+        }.contains(group.type.toLowerCase());
+  }
 
   List<Object> getProxiesForGroup(ParsedProxyGroup group) => [
     for (final name in group.proxies)
@@ -82,7 +94,11 @@ class ProxiesProvider extends ChangeNotifier {
   }
 
   void _onEngineChanged() {
-    if (!_disposed && _engine.isReady) unawaited(syncSelectionsToRust());
+    if (_disposed) return;
+    _measurementGeneration++;
+    _latencyResults.clear();
+    if (canTestLatency) unawaited(syncSelectionsToRust());
+    _notify();
   }
 
   Future<void> loadFromActiveProfile() => _operations.run(() async {
@@ -118,6 +134,7 @@ class ProxiesProvider extends ChangeNotifier {
         _selectedGroupName = savedGroup;
       }
       for (final group in proxyGroups) {
+        if (!canSelectGroup(group.name)) continue;
         final saved = prefs.getString(ProfileSelections.key(id, group.name));
         if (saved != null && group.proxies.contains(saved)) {
           _selectedProxies[group.name] = saved;
@@ -144,10 +161,11 @@ class ProxiesProvider extends ChangeNotifier {
       ..addEntries(proxyGroups.map((g) => MapEntry(g.name, g)));
     _selectedProxies.removeWhere(
       (group, proxy) =>
+          !canSelectGroup(group) ||
           !(_groupsByName[group]?.proxies.contains(proxy) ?? false),
     );
     for (final group in proxyGroups) {
-      if (group.proxies.isNotEmpty) {
+      if (canSelectGroup(group.name) && group.proxies.isNotEmpty) {
         _selectedProxies.putIfAbsent(group.name, () => group.proxies.first);
       }
     }
@@ -185,6 +203,7 @@ class ProxiesProvider extends ChangeNotifier {
 
   Future<void> selectProxyInGroup(String groupName, String proxyName) async {
     if (_disposed ||
+        !canSelectGroup(groupName) ||
         !(_groupsByName[groupName]?.proxies.contains(proxyName) ?? false)) {
       return;
     }
@@ -200,7 +219,7 @@ class ProxiesProvider extends ChangeNotifier {
         if (!_current(generation)) return;
         _error = null;
         if (await _applySelection(groupName, proxyName, generation)) {
-          if (_engine.isReady) ProxySelectionEvents.applied(groupName);
+          if (canTestLatency) ProxySelectionEvents.applied(groupName);
           await _saveSelections();
         }
       });
@@ -221,7 +240,7 @@ class ProxiesProvider extends ChangeNotifier {
   }
 
   Future<void> _syncSelections(int generation) async {
-    if (!_current(generation) || !_engine.isReady) return;
+    if (!_current(generation) || !canTestLatency) return;
     _error = null;
     var applied = false;
     for (final entry in _selectedProxies.entries.toList(growable: false)) {
@@ -243,11 +262,11 @@ class ProxiesProvider extends ChangeNotifier {
     int generation,
   ) async {
     if (!_current(generation)) return false;
-    if (_engine.isReady) {
+    if (canTestLatency) {
       final result = await _selection.select(
         group,
         member,
-        isCurrent: () => _current(generation),
+        isCurrent: () => _current(generation) && canTestLatency,
       );
       if (result == null || !_current(generation)) return false;
       final effective = result.member;
@@ -308,7 +327,9 @@ class ProxiesProvider extends ChangeNotifier {
   LatencyResult? getLatency(String proxyName) => _latencyResults[proxyName];
 
   Future<void> testAllLatencies() async {
-    if (_disposed || _isTesting || selectedGroup == null) return;
+    if (_disposed || _isTesting || !canTestLatency || selectedGroup == null) {
+      return;
+    }
     final group = selectedGroup!;
     final names = group.proxies
         .where(_proxiesByName.containsKey)
@@ -342,7 +363,9 @@ class ProxiesProvider extends ChangeNotifier {
   }
 
   Future<void> testLatency(String proxyName) {
-    if (_disposed || !_proxiesByName.containsKey(proxyName)) {
+    if (_disposed ||
+        !canTestLatency ||
+        !_proxiesByName.containsKey(proxyName)) {
       return Future.value();
     }
     return _measure(proxyName, selectedGroup?.url);
@@ -380,7 +403,7 @@ class ProxiesProvider extends ChangeNotifier {
       }
       LatencyResult result;
       try {
-        if (!_engine.isReady) throw StateError('Proxy core is not ready');
+        if (!canTestLatency) throw StateError('Proxy core is not ready');
         final ms = await _engine.measure(
           name,
           url?.isNotEmpty == true

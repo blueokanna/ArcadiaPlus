@@ -20,6 +20,12 @@ class ProxySelectionService {
     String group,
     String member, {
     required bool Function() isCurrent,
+  }) => engine.transaction((_) => _select(group, member, isCurrent: isCurrent));
+
+  Future<ProxySelectionResult?> _select(
+    String group,
+    String member, {
+    required bool Function() isCurrent,
   }) async {
     bool current() => isCurrent() && engine.isReady;
     if (!current()) return null;

@@ -1,3 +1,4 @@
+import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_dialog.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
@@ -61,7 +62,7 @@ class RustInitErrorDialog extends StatelessWidget {
               child: Text(
                 '${l10n.rustInitErrorDetails}: $errorDetails',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  fontFamily: 'monospace',
+                  fontFamily: AppTypography.codeFamily,
                   color: theme.colorScheme.error,
                 ),
               ),

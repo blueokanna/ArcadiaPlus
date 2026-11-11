@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:flutter/services.dart';
 import 'package:arcadiaplus/src/utils/app_memory_policy.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -48,6 +49,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  AppTypography.registerLicenses();
   AppMemoryPolicy.configure(PaintingBinding.instance.imageCache);
   AppLifecycle.instance.start();
   runApp(const ArcadiaPlusBootstrap());
@@ -93,10 +95,8 @@ class _ArcadiaPlusBootstrapState extends State<ArcadiaPlusBootstrap> {
         _guarded('desktop window', PlatformUtils.initDesktopWindow),
       if (PlatformUtils.isMobile)
         _guarded('orientation', () async {
-          await SystemChrome.setPreferredOrientations(const [
-            DeviceOrientation.portraitUp,
-            DeviceOrientation.portraitDown,
-          ]);
+          // Let Android respect auto-rotate, tablet posture and multi-window.
+          await SystemChrome.setPreferredOrientations(const []);
         }),
     ]);
 

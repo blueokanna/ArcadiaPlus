@@ -1,243 +1,404 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
 import 'package:arcadiaplus/src/theme/app_motion.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 
+typedef _Destination = ({
+  String path,
+  String label,
+  IconData icon,
+  IconData selected,
+});
+
+/// Labels, selection, keyboard navigation and routes share one source of truth.
 class AppNavigationBar extends StatelessWidget {
   final ValueChanged<int>? onDestinationSelected;
-
   const AppNavigationBar({super.key, this.onDestinationSelected});
 
-  bool get _isMobilePlatform {
-    if (kIsWeb) return false;
-    return PlatformUtils.isMobile;
-  }
-
-  bool get _showLogs => !_isMobilePlatform;
-
-  int _getCurrentIndex(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final mobile = switch (Theme.of(context).platform) {
+      TargetPlatform.android || TargetPlatform.iOS => true,
+      _ => PlatformUtils.isOHOS,
+    };
+    final destinations = <_Destination>[
+      (
+        path: '/',
+        label: l10n?.home ?? 'Home',
+        icon: Icons.space_dashboard_outlined,
+        selected: Icons.space_dashboard_rounded,
+      ),
+      (
+        path: '/proxies',
+        label: l10n?.proxies ?? 'Proxies',
+        icon: Icons.public_outlined,
+        selected: Icons.public_rounded,
+      ),
+      (
+        path: '/profiles',
+        label: l10n?.profiles ?? 'Profiles',
+        icon: Icons.folder_outlined,
+        selected: Icons.folder_rounded,
+      ),
+      (
+        path: '/connections',
+        label: l10n?.connectionsShort ?? 'Conns',
+        icon: Icons.hub_outlined,
+        selected: Icons.hub_rounded,
+      ),
+      if (!mobile)
+        (
+          path: '/logs',
+          label: l10n?.logs ?? 'Logs',
+          icon: Icons.article_outlined,
+          selected: Icons.article_rounded,
+        ),
+      (
+        path: '/settings',
+        label: l10n?.settings ?? 'Settings',
+        icon: Icons.tune_outlined,
+        selected: Icons.tune_rounded,
+      ),
+    ];
     final path = GoRouterState.of(context).uri.path;
-    final location = path == '/' ? '/' : '/${path.split('/')[1]}';
-    if (_showLogs) {
-      switch (location) {
-        case '/':
-          return 0;
-        case '/proxies':
-          return 1;
-        case '/profiles':
-          return 2;
-        case '/connections':
-          return 3;
-        case '/logs':
-          return 4;
-        case '/settings':
-          return 5;
-        default:
-          return 0;
-      }
-    } else {
-      switch (location) {
-        case '/':
-          return 0;
-        case '/proxies':
-          return 1;
-        case '/profiles':
-          return 2;
-        case '/connections':
-          return 3;
-        case '/settings':
-          return 4;
-        default:
-          return 0;
+    final match = destinations.indexWhere((item) => item.path == path);
+    final index = match < 0 ? destinations.length - 1 : match;
+    void navigate(int index) {
+      if (destinations[index].path == path) return;
+      AnimationUtils.selectionHaptic();
+      onDestinationSelected?.call(index);
+      context.go(destinations[index].path);
+    }
+
+    final side = PlatformUtils.shouldUseSideNavigation(context);
+    final expanded = MediaQuery.sizeOf(context).width >= 1000;
+    final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final extent = side && expanded
+        ? 56.0 + (scale - 1).clamp(0, 2) * 24
+        : 66.0 + (scale - 1).clamp(0, 2) * 28;
+    final strip = _DestinationStrip(
+      destinations: destinations,
+      selected: index,
+      vertical: side,
+      expanded: side && expanded,
+      extent: extent,
+      onSelected: navigate,
+    );
+    if (side) {
+      return SizedBox(
+        width: expanded ? 224 : 88,
+        child: SafeArea(
+          right: false,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              expanded ? 12 : 6,
+              20,
+              expanded ? 12 : 6,
+              20,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 28),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: colors.primaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.shield_rounded,
+                          color: colors.onPrimaryContainer,
+                          size: 23,
+                        ),
+                      ),
+                      if (expanded) ...[
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'ArcadiaPlus',
+                            maxLines: 2,
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                strip,
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Align(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Material(
+            key: const ValueKey('floating-navigation'),
+            color: colors.surfaceContainerLow,
+            elevation: 4,
+            shadowColor: colors.shadow.withValues(alpha: 0.18),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(36),
+              side: BorderSide(
+                color: colors.outlineVariant.withValues(alpha: 0.35),
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Padding(padding: const EdgeInsets.all(6), child: strip),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Only the indicator moves each frame. Destination buttons and routed content
+/// remain outside the animation builder, including during an interrupted spring.
+class _DestinationStrip extends StatefulWidget {
+  const _DestinationStrip({
+    required this.destinations,
+    required this.selected,
+    required this.vertical,
+    required this.expanded,
+    required this.extent,
+    required this.onSelected,
+  });
+  final List<_Destination> destinations;
+  final int selected;
+  final bool vertical;
+  final bool expanded;
+  final double extent;
+  final ValueChanged<int> onSelected;
+  @override
+  State<_DestinationStrip> createState() => _DestinationStripState();
+}
+
+class _DestinationStripState extends State<_DestinationStrip>
+    with SingleTickerProviderStateMixin {
+  late final _position = AnimationController.unbounded(
+    vsync: this,
+    value: widget.selected.toDouble(),
+  );
+
+  @override
+  void didUpdateWidget(_DestinationStrip oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selected != widget.selected) {
+      if (MediaQuery.disableAnimationsOf(context) ||
+          !TickerMode.valuesOf(context).enabled) {
+        _position.value = widget.selected.toDouble();
+      } else {
+        _position.animateWith(
+          SpringSimulation(
+            AppMotion.spatialSpring,
+            _position.value,
+            widget.selected.toDouble(),
+            _position.velocity,
+            tolerance: const Tolerance(distance: 0.001, velocity: 0.001),
+          ),
+        );
       }
     }
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context) ||
+        !TickerMode.valuesOf(context).enabled) {
+      _position.value = widget.selected.toDouble();
+    }
+  }
+
+  @override
+  void dispose() {
+    _position.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final currentIndex = _getCurrentIndex(context);
-    final l10n = AppLocalizations.of(context);
-
-    if (PlatformUtils.shouldUseSideNavigation(context)) {
-      return _buildNavigationRail(context, colorScheme, currentIndex, l10n);
-    }
-
-    return _buildBottomNavigationBar(context, colorScheme, currentIndex, l10n);
-  }
-
-  Widget _buildNavigationRail(
-    BuildContext context,
-    ColorScheme colorScheme,
-    int currentIndex,
-    AppLocalizations? l10n,
-  ) {
-    return NavigationRail(
-      selectedIndex: currentIndex,
-      onDestinationSelected: (index) {
-        AnimationUtils.selectionHaptic();
-        onDestinationSelected?.call(index);
-        _navigateToScreen(context, index);
+    final colors = Theme.of(context).colorScheme;
+    final buttons = [
+      for (var i = 0; i < widget.destinations.length; i++) _button(context, i),
+    ];
+    void step(int delta) => widget.onSelected(
+      (widget.selected + delta) % widget.destinations.length,
+    );
+    return CallbackShortcuts(
+      bindings: {
+        SingleActivator(
+          widget.vertical
+              ? LogicalKeyboardKey.arrowDown
+              : LogicalKeyboardKey.arrowRight,
+        ): () => step(
+          Directionality.of(context) == TextDirection.rtl && !widget.vertical
+              ? -1
+              : 1,
+        ),
+        SingleActivator(
+          widget.vertical
+              ? LogicalKeyboardKey.arrowUp
+              : LogicalKeyboardKey.arrowLeft,
+        ): () => step(
+          Directionality.of(context) == TextDirection.rtl && !widget.vertical
+              ? 1
+              : -1,
+        ),
+        const SingleActivator(LogicalKeyboardKey.home): () =>
+            widget.onSelected(0),
+        const SingleActivator(LogicalKeyboardKey.end): () =>
+            widget.onSelected(widget.destinations.length - 1),
       },
-      labelType: NavigationRailLabelType.all,
-      backgroundColor: colorScheme.surfaceContainerLow,
-      indicatorColor: colorScheme.secondaryContainer,
-      selectedIconTheme: IconThemeData(
-        color: colorScheme.onSecondaryContainer,
-        size: 24,
-      ),
-      unselectedIconTheme: IconThemeData(
-        color: colorScheme.onSurfaceVariant,
-        size: 24,
-      ),
-      selectedLabelTextStyle: TextStyle(
-        color: colorScheme.onSurface,
-        fontWeight: FontWeight.w500,
-        fontSize: 12,
-      ),
-      unselectedLabelTextStyle: TextStyle(
-        color: colorScheme.onSurfaceVariant,
-        fontWeight: FontWeight.w500,
-        fontSize: 12,
-      ),
-      useIndicator: true,
-      indicatorShape: const StadiumBorder(),
-      minWidth: 80,
-      destinations: [
-        NavigationRailDestination(
-          icon: const Icon(Icons.home_outlined),
-          selectedIcon: const Icon(Icons.home),
-          label: Text(l10n?.home ?? 'Home'),
-        ),
-        NavigationRailDestination(
-          icon: const Icon(Icons.public_outlined),
-          selectedIcon: const Icon(Icons.public),
-          label: Text(l10n?.proxies ?? 'Proxies'),
-        ),
-        NavigationRailDestination(
-          icon: const Icon(Icons.folder_outlined),
-          selectedIcon: const Icon(Icons.folder),
-          label: Text(l10n?.profiles ?? 'Profiles'),
-        ),
-        NavigationRailDestination(
-          icon: const Icon(Icons.link_outlined),
-          selectedIcon: const Icon(Icons.link),
-          label: Text(l10n?.connections ?? 'Connections'),
-        ),
-        NavigationRailDestination(
-          icon: const Icon(Icons.article_outlined),
-          selectedIcon: const Icon(Icons.article),
-          label: Text(l10n?.logs ?? 'Logs'),
-        ),
-        NavigationRailDestination(
-          icon: const Icon(Icons.settings_outlined),
-          selectedIcon: const Icon(Icons.settings),
-          label: Text(l10n?.settings ?? 'Settings'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildBottomNavigationBar(
-    BuildContext context,
-    ColorScheme colorScheme,
-    int currentIndex,
-    AppLocalizations? l10n,
-  ) {
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
-        child: NavigationBar(
-          selectedIndex: currentIndex,
-          onDestinationSelected: (index) {
-            AnimationUtils.selectionHaptic();
-            onDestinationSelected?.call(index);
-            _navigateToScreen(context, index);
+      child: SizedBox(
+        height: widget.vertical
+            ? widget.extent * buttons.length
+            : widget.extent,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final cellWidth = widget.vertical
+                ? constraints.maxWidth
+                : constraints.maxWidth / buttons.length;
+            final reverse =
+                !widget.vertical &&
+                Directionality.of(context) == TextDirection.rtl;
+            return RepaintBoundary(
+              child: Stack(
+                children: [
+                  AnimatedBuilder(
+                    animation: _position,
+                    builder: (context, child) {
+                      final position = _position.value.clamp(
+                        0.0,
+                        buttons.length - 1.0,
+                      );
+                      return Positioned(
+                        left: widget.vertical
+                            ? 0
+                            : (reverse
+                                      ? buttons.length - 1 - position
+                                      : position) *
+                                  cellWidth,
+                        top: widget.vertical ? position * widget.extent : 0,
+                        width: cellWidth,
+                        height: widget.extent,
+                        child: child!,
+                      );
+                    },
+                    child: Padding(
+                      padding: widget.expanded
+                          ? const EdgeInsets.symmetric(vertical: 4)
+                          : const EdgeInsets.symmetric(horizontal: 2),
+                      child: DecoratedBox(
+                        key: const ValueKey('navigation-indicator'),
+                        decoration: BoxDecoration(
+                          color: colors.secondaryContainer,
+                          borderRadius: BorderRadius.circular(
+                            widget.expanded ? 18 : 30,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (widget.vertical)
+                    Column(children: buttons)
+                  else
+                    Row(
+                      children: [
+                        for (final button in buttons) Expanded(child: button),
+                      ],
+                    ),
+                ],
+              ),
+            );
           },
-          backgroundColor: colorScheme.surfaceContainerLow,
-          indicatorColor: colorScheme.secondaryContainer,
-          surfaceTintColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          height: 80,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          animationDuration: AppMotion.duration(context),
-          destinations: [
-            NavigationDestination(
-              icon: const Icon(Icons.home_outlined),
-              selectedIcon: const Icon(Icons.home),
-              label: l10n?.home ?? 'Home',
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.public_outlined),
-              selectedIcon: const Icon(Icons.public),
-              label: l10n?.proxies ?? 'Proxies',
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.folder_outlined),
-              selectedIcon: const Icon(Icons.folder),
-              label: l10n?.profiles ?? 'Profiles',
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.link_outlined),
-              selectedIcon: const Icon(Icons.link),
-              label: l10n?.connectionsShort ?? 'Conns',
-            ),
-            NavigationDestination(
-              icon: const Icon(Icons.settings_outlined),
-              selectedIcon: const Icon(Icons.settings),
-              label: l10n?.settings ?? 'Settings',
-            ),
-          ],
         ),
       ),
     );
   }
 
-  void _navigateToScreen(BuildContext context, int index) {
-    if (_showLogs) {
-      switch (index) {
-        case 0:
-          context.go('/');
-          break;
-        case 1:
-          context.go('/proxies');
-          break;
-        case 2:
-          context.go('/profiles');
-          break;
-        case 3:
-          context.go('/connections');
-          break;
-        case 4:
-          context.go('/logs');
-          break;
-        case 5:
-          context.go('/settings');
-          break;
-      }
-    } else {
-      switch (index) {
-        case 0:
-          context.go('/');
-          break;
-        case 1:
-          context.go('/proxies');
-          break;
-        case 2:
-          context.go('/profiles');
-          break;
-        case 3:
-          context.go('/connections');
-          break;
-        case 4:
-          context.go('/settings');
-          break;
-      }
-    }
+  Widget _button(BuildContext context, int index) {
+    final item = widget.destinations[index];
+    final selected = index == widget.selected;
+    final colors = Theme.of(context).colorScheme;
+    final label = Text(
+      item.label,
+      maxLines: widget.expanded ? 2 : 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: widget.expanded ? TextAlign.start : TextAlign.center,
+    );
+    final icon = Icon(
+      selected ? item.selected : item.icon,
+      size: widget.expanded ? 22 : 24,
+    );
+    return Semantics(
+      selected: selected,
+      child: Tooltip(
+        message: item.label,
+        excludeFromSemantics: true,
+        child: SizedBox(
+          height: widget.extent,
+          width: double.infinity,
+          child: TextButton(
+            key: ValueKey('nav-${item.path}'),
+            onPressed: () => widget.onSelected(index),
+            style: TextButton.styleFrom(
+              foregroundColor: selected
+                  ? colors.onSecondaryContainer
+                  : colors.onSurfaceVariant,
+              textStyle:
+                  (widget.expanded
+                          ? Theme.of(context).textTheme.labelLarge
+                          : Theme.of(context).textTheme.labelSmall)
+                      ?.copyWith(
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+              padding: EdgeInsets.symmetric(
+                horizontal: widget.expanded ? 16 : 2,
+                vertical: 4,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(widget.expanded ? 18 : 30),
+              ),
+              minimumSize: const Size(48, 48),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: widget.expanded
+                ? Row(
+                    children: [
+                      icon,
+                      const SizedBox(width: 14),
+                      Expanded(child: label),
+                    ],
+                  )
+                : Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [icon, const SizedBox(height: 4), label],
+                  ),
+          ),
+        ),
+      ),
+    );
   }
 }

@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/theme/app_typography.dart';
+
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -104,7 +106,7 @@ class WallpaperScreen extends StatelessWidget {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontFamily: 'monospace',
+                                fontFamily: AppTypography.codeFamily,
                                 fontSize: 12,
                               ),
                             ),

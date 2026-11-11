@@ -92,6 +92,7 @@ class TrafficChart extends StatefulWidget {
   final bool isProxyRunning;
   final int proxyPort;
   final IpProbeClientFactory ipClientFactory;
+  final bool showIpInfo;
 
   const TrafficChart({
     super.key,
@@ -101,6 +102,7 @@ class TrafficChart extends StatefulWidget {
     this.isProxyRunning = false,
     this.proxyPort = 7890,
     this.ipClientFactory = createIpProbeClient,
+    this.showIpInfo = true,
   });
 
   @override
@@ -195,7 +197,6 @@ class _IpInfoCache {
 final _ipInfoCache = _IpInfoCache();
 
 class _TrafficChartState extends State<TrafficChart> {
-  final _totalsScrollController = ScrollController();
   Timer? _ipRefreshTimer;
   final _clients = <Dio>{};
   IpInfo? _ipv4Info;
@@ -211,6 +212,7 @@ class _TrafficChartState extends State<TrafficChart> {
   void initState() {
     super.initState();
     _recordSample();
+    if (!widget.showIpInfo) return;
     if (!_ipInfoCache.shouldRefresh(widget.isProxyRunning, widget.proxyPort)) {
       _ipv4Info = _ipInfoCache.ipv4Info;
       _ipv6Info = _ipInfoCache.ipv6Info;
@@ -266,8 +268,9 @@ class _TrafficChartState extends State<TrafficChart> {
   void didUpdateWidget(TrafficChart oldWidget) {
     super.didUpdateWidget(oldWidget);
     _recordSample();
-    if (widget.isProxyRunning != oldWidget.isProxyRunning ||
-        widget.proxyPort != oldWidget.proxyPort) {
+    if (widget.showIpInfo &&
+        (widget.isProxyRunning != oldWidget.isProxyRunning ||
+            widget.proxyPort != oldWidget.proxyPort)) {
       _ipInfoCache.clear();
       _scheduleIpRefresh(const Duration(milliseconds: 500));
     }
@@ -275,7 +278,6 @@ class _TrafficChartState extends State<TrafficChart> {
 
   @override
   void dispose() {
-    _totalsScrollController.dispose();
     _ipRefreshTimer?.cancel();
     for (final client in _clients) {
       client.close(force: true);
@@ -470,6 +472,7 @@ class _TrafficChartState extends State<TrafficChart> {
               _TrafficStatCard(
                 icon: Icons.arrow_downward_rounded,
                 label: l10n?.download ?? 'Download',
+                history: downloadSpots,
                 speed: _formatSpeed(widget.downloadSpeed),
                 total: _formatBytes(widget.trafficStats.download),
                 color: colorScheme.primary,
@@ -480,6 +483,7 @@ class _TrafficChartState extends State<TrafficChart> {
               _TrafficStatCard(
                 icon: Icons.arrow_upward_rounded,
                 label: l10n?.upload ?? 'Upload',
+                history: uploadSpots,
                 speed: _formatSpeed(widget.uploadSpeed),
                 total: _formatBytes(widget.trafficStats.upload),
                 color: colorScheme.tertiary,
@@ -521,50 +525,37 @@ class _TrafficChartState extends State<TrafficChart> {
                 isActive: false,
               ),
             ];
-            final minimumWidth =
-                164.0 *
-                (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(
-                  1.0,
-                  2.0,
-                );
-            final width = ((constraints.maxWidth - spacing * 3) / 4).clamp(
-              minimumWidth,
-              double.infinity,
-            );
-            return Scrollbar(
-              controller: _totalsScrollController,
-              thumbVisibility: true,
-              child: SingleChildScrollView(
-                controller: _totalsScrollController,
-                key: const ValueKey('traffic-totals-row'),
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < cards.length; i++) ...[
-                      if (i > 0) SizedBox(width: spacing),
-                      SizedBox(width: width, child: cards[i]),
-                    ],
-                  ],
-                ),
-              ),
+            final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+            final columns = (constraints.maxWidth / (156 * scale.clamp(1, 2)))
+                .floor()
+                .clamp(1, constraints.maxWidth >= 1000 ? 4 : 2);
+            const gap = 12.0;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              key: const ValueKey('traffic-totals-row'),
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final card in cards) SizedBox(width: width, child: card),
+              ],
             );
           },
         ),
 
         SizedBox(height: spacing),
 
-        _IpInfoCard(
-          ipv4Info: _ipv4Info,
-          ipv6Info: _ipv6Info,
-          isLoading: _isLoadingIp,
-          isProxyRunning: widget.isProxyRunning,
-          onRefresh: _fetchIpInfo,
-          colorScheme: colorScheme,
-          textTheme: textTheme,
-          error: _ipError,
-        ),
+        if (widget.showIpInfo)
+          _IpInfoCard(
+            ipv4Info: _ipv4Info,
+            ipv6Info: _ipv6Info,
+            isLoading: _isLoadingIp,
+            isProxyRunning: widget.isProxyRunning,
+            onRefresh: _fetchIpInfo,
+            colorScheme: colorScheme,
+            textTheme: textTheme,
+            error: _ipError,
+          ),
 
         SizedBox(height: spacing * 2),
 
@@ -814,8 +805,10 @@ class _TrafficStatCard extends StatelessWidget {
   final ColorScheme colorScheme;
   final TextTheme textTheme;
   final bool isActive;
+  final List<FlSpot>? history;
 
   const _TrafficStatCard({
+    this.history,
     required this.icon,
     required this.label,
     required this.speed,
@@ -830,7 +823,7 @@ class _TrafficStatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final borderRadius = ResponsiveUtils.getBorderRadius(context);
-    final spacing = ResponsiveUtils.getSpacing(context);
+    const spacing = 12.0;
 
     return Card(
       elevation: 0,
@@ -872,7 +865,7 @@ class _TrafficStatCard extends StatelessWidget {
             // 速度
             Text(
               speed,
-              style: textTheme.titleMedium?.copyWith(
+              style: textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: color,
               ),
@@ -900,6 +893,14 @@ class _TrafficStatCard extends StatelessWidget {
                 ),
               ],
             ),
+            if (history != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 30,
+                width: double.infinity,
+                child: CustomPaint(painter: _TrafficSparkline(history!, color)),
+              ),
+            ],
           ],
         ),
       ),
@@ -1285,4 +1286,49 @@ class _LegendDot extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Draws only recorded samples. Empty history has no fabricated waveform.
+class _TrafficSparkline extends CustomPainter {
+  const _TrafficSparkline(this.points, this.color);
+  final List<FlSpot> points;
+  final Color color;
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) return;
+    final maximum = points.fold<double>(
+      1,
+      (value, point) => point.y > value ? point.y : value,
+    );
+    final path = Path();
+    for (var i = 0; i < points.length; i++) {
+      final x = size.width * i / (points.length - 1);
+      final y =
+          size.height -
+          2 -
+          (points[i].y / maximum).clamp(0, 1) * (size.height - 4);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    final area = Path.from(path)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(area, Paint()..color = color.withValues(alpha: .09));
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeJoin = StrokeJoin.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_TrafficSparkline oldDelegate) =>
+      oldDelegate.points != points || oldDelegate.color != color;
 }

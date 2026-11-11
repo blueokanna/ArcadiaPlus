@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/theme/app_typography.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -399,7 +401,7 @@ class _LogsScreenState extends State<LogsScreen> {
                               child: SelectableText(
                                 log,
                                 style: textTheme.bodySmall?.copyWith(
-                                  fontFamily: 'monospace',
+                                  fontFamily: AppTypography.codeFamily,
                                   color: _getLogColor(log, colorScheme),
                                   height: 1.4,
                                 ),
