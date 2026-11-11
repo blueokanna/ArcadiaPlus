@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Reproducible CI engine checkouts
+
+- Record pushed RecurseX and Corduit commits in `scripts/engine_revisions.json`; CI and release no longer require separately configured repository variables.
+- Verify fetched commit identities and package versions against the application lockfile. Keep sibling repositories outside the application source tree and refuse to replace existing checkouts.
+- Audit the committed lockfile independently of engine checkout and application metadata. Keep the pinned RustSec scanner and `--deny warnings`; cache only the scanner executable.
+- Run RecurseX feature checks through its own manifest instead of selecting a dependency as an application workspace member.
+
 ## Unreleased — Corduit 0.3.3 adaptation
 
 - Validate encrypted DNS across primary, recovery, policy and bootstrap roles. Preserve private resolver boundaries and fallback filters; remove implicit public domain routes and system DNS additions under encryption.

@@ -1,24 +1,51 @@
 """Check out explicitly pinned engine revisions beside the application in CI."""
 
-import os
+import json
 from pathlib import Path
 import re
 import subprocess
 import sys
+import tomllib
+
+ROOT = Path(__file__).resolve().parents[1]
+PACKAGES = {'RecurseX': 'recurse-x', 'Corduit': 'corduit'}
 
 
-def revisions(environment):
+def revisions(file=ROOT / 'scripts' / 'engine_revisions.json'):
+    pins = json.loads(file.read_text(encoding='utf-8'))
+    if not isinstance(pins, dict) or set(pins) != set(PACKAGES):
+        raise ValueError(f'{file}: expected exactly RecurseX and Corduit revisions')
     result = {}
-    for repo, variable in [('RecurseX', 'RECURSEX_REVISION'), ('Corduit', 'CORDUIT_REVISION')]:
-        revision = environment.get(variable, '')
-        if not re.fullmatch(r'[0-9a-fA-F]{40}', revision):
-            raise ValueError(f'{variable} must be the full 40-character commit of the reviewed '
-                             f'and pushed {repo} changes; branches and implicit HEAD are refused')
+    for repo in PACKAGES:
+        revision = pins[repo]
+        if not isinstance(revision, str) or not re.fullmatch(r'[0-9a-fA-F]{40}', revision):
+            raise ValueError(f'{file}: {repo} must be a full 40-character pushed commit; '
+                             'branches and implicit HEAD are refused')
         result[repo] = revision.lower()
     return result
 
 
-def checkout(parent, pins):
+def locked_versions(file=ROOT / 'rust' / 'Cargo.lock'):
+    with file.open('rb') as stream:
+        lock = tomllib.load(stream)
+    result = {}
+    for repo, package in PACKAGES.items():
+        entries = [p for p in lock.get('package', []) if p['name'] == package]
+        if len(entries) != 1 or entries[0].get('source') is not None:
+            raise ValueError(f'{package}: expected one sibling package in {file}')
+        result[repo] = entries[0]['version']
+    return result
+
+
+def validate_package(directory, repo, version):
+    with (directory / 'Cargo.toml').open('rb') as stream:
+        package = tomllib.load(stream).get('package', {})
+    if package.get('name') != PACKAGES[repo] or package.get('version') != version:
+        raise ValueError(f'{repo}: fetched package must be {PACKAGES[repo]} {version}, '
+                         'matching rust/Cargo.lock')
+
+
+def checkout(parent, pins, versions):
     # Validate all destinations before changing any checkout. Never replace a local repo.
     destinations = {repo: parent / repo for repo in pins}
     for destination in destinations.values():
@@ -29,17 +56,19 @@ def checkout(parent, pins):
         subprocess.run(['git', 'init', str(destination)], check=True)
         subprocess.run(['git', '-C', str(destination), 'remote', 'add', 'origin',
                         f'https://github.com/blueokanna/{repo}.git'], check=True)
-        subprocess.run(['git', '-C', str(destination), 'fetch', '--depth=1', 'origin', revision], check=True)
-        subprocess.run(['git', '-C', str(destination), 'checkout', '--detach', 'FETCH_HEAD'], check=True)
+        subprocess.run(['git', '-C', str(destination), 'fetch', '--depth=1', '--no-tags',
+                        'origin', revision], check=True, timeout=180)
+        subprocess.run(['git', '-C', str(destination), 'checkout', '--detach', revision], check=True)
         actual = subprocess.check_output(['git', '-C', str(destination), 'rev-parse', 'HEAD'],
                                          text=True).strip()
         if actual != revision:
             raise ValueError(f'{repo}: fetched commit does not match the pin')
+        validate_package(destination, repo, versions[repo])
         print(f'{repo}: {actual}', flush=True)
 
 
 if __name__ == '__main__':
     try:
-        checkout(Path(__file__).resolve().parents[2], revisions(os.environ))
-    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        checkout(ROOT.parent, revisions(), locked_versions())
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         sys.exit(f'Engine checkout failed: {error}')

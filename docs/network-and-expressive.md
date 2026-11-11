@@ -13,7 +13,15 @@ cargo check --manifest-path rust/Cargo.toml --locked --all-targets --all-feature
 
 检查脚本需要 Python 3.11 或更高版本。它校验相邻仓库的包名、版本和固定路径，再检查 Cargo 的实际依赖图。重复解析器、非预期源码路径、不同 Courierust 实例及 JNI 类型分裂都会失败。
 
-CI 和 release 使用 `.github/actions/checkout-engines`，把两个项目检出到应用仓库的同级目录。仓库变量 `RECURSEX_REVISION` 与 `CORDUIT_REVISION` 必须是已经审阅并推送的完整 40 位提交 SHA；脚本拒绝分支名、缺省 HEAD 和覆盖现有目录。本地未提交修改不能由 GitHub runner 获取，不能用旧提交代替本轮代码。发布准备顺序为：验证两个引擎仓库、提交并推送、设置这两个 SHA，再运行应用构建。此处只配置构建流程，不自动提交、推送或发布任何仓库。
+CI 和 release 使用 `.github/actions/checkout-engines`，把两个项目检出到应用仓库的同级目录。提交号统一记录在受版本管理的 `scripts/engine_revisions.json` 中，不需要设置 GitHub 仓库变量。当前固定 RecurseX `299967e51fccdf2557ad5aa09b56adfe6926d690` 与 Corduit `d479373dc80ebafd3e324e2cad6450d5519eee3c`；两个提交均已确认可从 GitHub 获取。脚本拒绝分支名、缺省 HEAD 和覆盖现有目录，并检查检出结果的包名、版本与 `rust/Cargo.lock` 一致。
+
+更新引擎时，先验证并推送引擎提交，再将完整 SHA 写入该 JSON 文件，与应用代码、必要的锁文件更新一同提交。GitHub runner 不能读取本地未提交内容。旧的 `RECURSEX_REVISION`、`CORDUIT_REVISION` 仓库变量不再参与构建；重跑旧提交仍会使用旧工作流，需要推送修复后的应用提交再触发新运行。
+
+RecurseX 是相邻的独立项目，不是应用 workspace 的成员。在 `rust/` 目录执行其测试或 Clippy 时，应使用 `--manifest-path ../../RecurseX/Cargo.toml --all-features --locked`；`-p recurse-x --all-features` 会被 Cargo 以“不能为 workspace 外的包指定特性”拒绝。
+
+`Rust dependency security` 仅扫描提交的 `rust/Cargo.lock`，不检出引擎、不调用应用的 Cargo metadata，也不编译应用。扫描器固定为 cargo-audit 0.22.2，缓存仅保存扫描器二进制；保留 `--deny warnings`，不忽略公告或允许失败。安全审计通过表示当前 RustSec 数据库没有报告该锁文件的问题，不等于应用逻辑已经没有缺陷。使用方法见 [cargo-audit 官方文档](https://github.com/rustsec/rustsec/tree/main/cargo-audit)。
+
+本次 CI 修复在没有仓库变量、没有现有引擎目录的临时环境中实际抓取了上述提交，锁定依赖检查通过。应用 Rust 测试 28 项通过（2 项公网测试按设计跳过），RecurseX 测试 622 项通过（1 项系统客户端测试按设计跳过），两个项目的 Clippy 均通过。脚本测试 27 项、工作流配置测试 5 项通过。cargo-audit 读取 1458 条公告并扫描 205 个锁定依赖，`--deny warnings` 退出码为 0；只有锁文件、没有源码清单的目录也通过相同审计。日志保存在 `.dart_tool/ci-*.log` 和 `.dart_tool/security-*.log`。这些是本机验证结果，修复提交尚未在 GitHub runner 上运行。
 
 Corduit 0.3.2 将 Android JNI 升级到 0.22.4。应用的三个原生入口同步改用 `EnvUnowned`，由内核取得 JNI 环境并管理 JavaVM、VpnService 引用和 protect 回调，避免两套 JNI 类型或生命周期状态。应用侧保留原有导出符号和停止服务顺序，Kotlin 的调用接口不变。
 

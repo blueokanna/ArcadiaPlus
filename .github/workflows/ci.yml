@@ -54,9 +54,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust Android targets
         uses: dtolnay/rust-toolchain@stable
@@ -154,9 +151,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -180,12 +174,12 @@ jobs:
       - name: Lint Rust workspace
         run: |
           cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-          cargo clippy -p recurse-x --all-targets --all-features --locked -- -D warnings
+          cargo clippy --manifest-path ../../RecurseX/Cargo.toml --all-targets --all-features --locked -- -D warnings
 
       - name: Test Rust workspace
         run: |
           cargo test --workspace --all-targets --all-features --locked
-          cargo test -p recurse-x --all-features --locked
+          cargo test --manifest-path ../../RecurseX/Cargo.toml --all-features --locked
 
   msrv:
     name: Rust 1.88 compatibility (${{ matrix.os }})
@@ -199,9 +193,6 @@ jobs:
       - uses: actions/checkout@v5
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
@@ -251,9 +242,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable

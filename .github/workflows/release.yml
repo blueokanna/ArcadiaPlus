@@ -132,9 +132,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -212,9 +209,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust Android targets
         uses: dtolnay/rust-toolchain@stable
@@ -340,9 +334,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -450,9 +441,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust for both macOS architectures
         uses: dtolnay/rust-toolchain@stable
@@ -525,9 +513,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -636,9 +621,6 @@ jobs:
 
       - name: Check out pinned sibling engines
         uses: ./.github/actions/checkout-engines
-        with:
-          recursex-revision: ${{ vars.RECURSEX_REVISION }}
-          corduit-revision: ${{ vars.CORDUIT_REVISION }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
