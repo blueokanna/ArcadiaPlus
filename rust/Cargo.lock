@@ -193,9 +193,9 @@ dependencies = [
 
 [[package]]
 name = "corduit"
-version = "0.3.5"
+version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "af90796f440a75ca2facfa9ad2f6764617084ba36ebeec2936b2457406d9469b"
+checksum = "aa185dace3fdf04d958396b840c422e4ce222ea2c8688dbdeddfbc0d04c03a52"
 dependencies = [
  "bitflags 2.13.2",
  "bytes",
@@ -731,7 +731,7 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "lib-arcadiaplus"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "corduit",
  "flutter_rust_bridge",

@@ -2,7 +2,7 @@
 name = "lib-arcadiaplus"
 edition = "2024"
 license-file = "../LICENSE"
-version = "1.1.1"
+version = "1.1.2"
 rust-version = "1.88"
 authors = ["blueokanna"]
 description = "A cross-platform basic proxy client with rust core and flutter bindings for ArcadiaPlus"
@@ -13,7 +13,7 @@ name = "rust_lib_arcadiaplus"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-corduit = { version = "0.3.5", features = [
+corduit = { version = "0.3.6", features = [
     "std",
     "tls",
     "tls13",

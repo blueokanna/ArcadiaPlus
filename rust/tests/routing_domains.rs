@@ -74,9 +74,6 @@ fn bilibili_domain_set_routes_direct_without_overriding_prior_rejections() {
     assert_eq!(route("ads.bilibili.com"), "REJECT");
     assert_eq!(route("bilibili.com.evil.test"), "PROXY");
     assert_eq!(route("example.net"), "PROXY");
-
-    // Exercise mode changes on the same router, including returning to rule
-    // mode; global must bypass even a preceding REJECT rule.
     set_runtime_proxy_mode(proxy_mode::GLOBAL);
     for domain in ["api.bilibili.com", "ads.bilibili.com", "weixin.qq.com"] {
         assert_eq!(route(domain), "GLOBAL");
