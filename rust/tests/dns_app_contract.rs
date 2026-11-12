@@ -5,6 +5,31 @@ use std::net::{TcpListener, UdpSocket};
 use std::time::Duration;
 
 #[test]
+#[ignore = "requires public DNS; verifies the domain from the Android incident"]
+fn incident_domain_resolves_through_configured_doh_with_cname() {
+    for upstream in ["https://223.5.5.5/dns-query", "https://223.6.6.6/dns-query"] {
+        let engine = EngineResolver::from_settings(EngineDnsSettings {
+            nameservers: vec![upstream.into()],
+            ..EngineDnsSettings::default()
+        })
+        .unwrap();
+        for _ in 0..3 {
+            let addresses = engine.resolve("jpushsc.m.jd.com", 2002).unwrap();
+            assert!(!addresses.is_empty());
+            assert!(
+                addresses
+                    .iter()
+                    .all(|addr| !addr.ip().is_unspecified() && !addr.ip().is_loopback())
+            );
+            eprintln!(
+                "{upstream}: jpushsc.m.jd.com returned {} addresses",
+                addresses.len()
+            );
+        }
+    }
+}
+
+#[test]
 fn recursive_servfail_recovers_through_the_configured_upstream() {
     let local = UdpSocket::bind("127.0.0.1:0").unwrap();
     let recovery = UdpSocket::bind("127.0.0.1:0").unwrap();
@@ -100,7 +125,6 @@ fn healthy_local_recursion_does_not_race_the_recovery_resolver() {
 
 #[test]
 fn a_tls_failure_stays_an_error_without_plaintext_retry() {
-    // A non-TLS peer on a configured TLS port: no real certificates or network.
     let tls = TcpListener::bind("127.0.0.1:0").unwrap();
     tls.set_nonblocking(true).unwrap();
     let addr = tls.local_addr().unwrap();
@@ -142,7 +166,6 @@ fn public_https_dns_uses_the_actual_corduit_resolver() {
 #[test]
 fn local_recursion_is_ready_without_contacting_a_public_probe() {
     use rust_lib_arcadiaplus::{api, recursive_dns};
-    // Exercise the application's blocking-worker API, not just its bind helper.
     struct Cleanup;
     impl Drop for Cleanup {
         fn drop(&mut self) {

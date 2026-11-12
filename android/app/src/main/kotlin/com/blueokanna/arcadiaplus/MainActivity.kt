@@ -104,6 +104,18 @@ class MainActivity : FlutterActivity() {
                 "isVpnRunning" -> {
                     result.success(ArcadiaPlusVpnService.isRunning)
                 }
+                "confirmVpnStarted" -> {
+                    mainScope.launch {
+                        val saved = withContext(Dispatchers.IO) { ArcadiaPlusVpnService.confirmStarted() }
+                        result.success(saved)
+                    }
+                }
+                "awaitVpnReady" -> {
+                    mainScope.launch {
+                        val ready = withContext(Dispatchers.IO) { ArcadiaPlusVpnService.awaitReady(this@MainActivity) }
+                        result.success(ready)
+                    }
+                }
                 "isOtherVpnActive" -> {
                     result.success(isOtherVpnActive())
                 }

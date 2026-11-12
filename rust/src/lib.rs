@@ -33,6 +33,8 @@ pub mod ohos_ffi;
 pub mod recursive_dns;
 mod rule_index;
 mod types;
+#[cfg(any(target_os = "android", test))]
+mod vpn_resume;
 
 pub use api::*;
 pub use types::*;

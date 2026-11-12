@@ -69,7 +69,10 @@ pub async fn set_geoip_database_path(path: String) -> std::result::Result<(), St
         if !database.is_file() {
             return Err(format!("GeoIP database not found at {path}"));
         }
-        engine::engine::geoip::set_default_database_path(database).map_err(|e| e.to_string())
+        engine::engine::geoip::set_default_database_path(database).map_err(|e| e.to_string())?;
+        #[cfg(any(target_os = "android", test))]
+        crate::vpn_resume::geoip(path);
+        Ok::<(), String>(())
     })
     .await
 }
@@ -83,7 +86,15 @@ pub async fn test_config(config_json: String) -> std::result::Result<bool, Strin
 /// Build the engine from a JSON config. Does not start listeners.
 #[frb]
 pub async fn initialize_corduit(config_json: String) -> std::result::Result<(), String> {
-    run(move || engine::api::initialize_corduit(config_json)).await
+    run(move || {
+        #[cfg(any(target_os = "android", test))]
+        let resume_config = config_json.clone();
+        engine::api::initialize_corduit(config_json)?;
+        #[cfg(any(target_os = "android", test))]
+        crate::vpn_resume::configuration(resume_config);
+        Ok::<(), engine::CorduitError>(())
+    })
+    .await
 }
 
 /// Start listeners, outbounds and the DNS server.
@@ -101,7 +112,15 @@ pub async fn stop_corduit() -> std::result::Result<(), String> {
 /// Replace the running config.
 #[frb]
 pub async fn reload_corduit(config_json: String) -> std::result::Result<(), String> {
-    run(move || engine::api::reload_corduit(config_json)).await
+    run(move || {
+        #[cfg(any(target_os = "android", test))]
+        let resume_config = config_json.clone();
+        engine::api::reload_corduit(config_json)?;
+        #[cfg(any(target_os = "android", test))]
+        crate::vpn_resume::configuration(resume_config);
+        Ok::<(), engine::CorduitError>(())
+    })
+    .await
 }
 
 /// Engine status snapshot.
@@ -153,7 +172,13 @@ pub async fn reload_config_from_file(config_path: String) -> std::result::Result
 
 #[frb]
 pub async fn set_proxy_mode(mode: i32) -> std::result::Result<(), String> {
-    run(move || engine::api::set_proxy_mode(mode)).await
+    run(move || {
+        engine::api::set_proxy_mode(mode)?;
+        #[cfg(any(target_os = "android", test))]
+        crate::vpn_resume::changed();
+        Ok::<(), String>(())
+    })
+    .await
 }
 
 #[frb]
@@ -175,7 +200,13 @@ pub async fn get_proxy_groups() -> std::result::Result<Vec<ProxyGroupDto>, Strin
 
 #[frb]
 pub async fn select_proxy(group_tag: String, proxy_tag: String) -> std::result::Result<(), String> {
-    run(move || engine::api::select_proxy(group_tag, proxy_tag)).await
+    run(move || {
+        engine::api::select_proxy(group_tag, proxy_tag)?;
+        #[cfg(any(target_os = "android", test))]
+        crate::vpn_resume::changed();
+        Ok::<(), String>(())
+    })
+    .await
 }
 
 #[frb]
@@ -183,7 +214,15 @@ pub async fn select_proxy_in_group(
     group_name: String,
     proxy_name: String,
 ) -> std::result::Result<bool, String> {
-    run(move || engine::api::select_proxy_in_group(group_name, proxy_name)).await
+    run(move || {
+        let selected = engine::api::select_proxy_in_group(group_name, proxy_name)?;
+        #[cfg(any(target_os = "android", test))]
+        if selected {
+            crate::vpn_resume::changed();
+        }
+        Ok::<bool, engine::CorduitError>(selected)
+    })
+    .await
 }
 
 #[frb]
@@ -394,13 +433,25 @@ pub async fn start_recursive_dns(
     listen: String,
     cache_path: Option<String>,
 ) -> std::result::Result<String, String> {
-    run(move || recursive_dns::start(&listen, cache_path.as_deref())).await
+    run(move || {
+        let bound = recursive_dns::start(&listen, cache_path.as_deref())?;
+        #[cfg(any(target_os = "android", test))]
+        crate::vpn_resume::recursion(bound.clone(), cache_path);
+        Ok::<String, String>(bound)
+    })
+    .await
 }
 
 /// Stop the recursive resolver front-end.
 #[frb]
 pub async fn stop_recursive_dns() -> std::result::Result<(), String> {
-    run(|| recursive_dns::stop()).await
+    run(|| {
+        recursive_dns::stop()?;
+        #[cfg(any(target_os = "android", test))]
+        crate::vpn_resume::clear_recursion();
+        Ok::<(), String>(())
+    })
+    .await
 }
 
 #[frb]
@@ -690,6 +741,8 @@ pub async fn clear_android_vpn_fd() {
 pub async fn set_android_proxy_mode(mode: String) {
     let _ = run(move || {
         engine::api::set_android_proxy_mode(mode);
+        #[cfg(any(target_os = "android", test))]
+        crate::vpn_resume::changed();
         Ok::<(), String>(())
     })
     .await;

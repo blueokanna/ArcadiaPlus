@@ -18,6 +18,7 @@ import 'package:arcadiaplus/src/services/proxy_selection_events.dart';
 import 'package:arcadiaplus/src/services/service_diagnostics.dart';
 import 'package:arcadiaplus/src/services/proxy_engine_service.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+import 'package:arcadiaplus/src/utils/applied_configuration.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
 
@@ -74,7 +75,7 @@ class AppStateProvider extends ChangeNotifier {
   // Profile and config that are currently loaded into the engine, kept for
   // rule set refreshes and for detecting whether a reload is needed.
   String? _activeProfileId;
-  String? _appliedConfigJson;
+  AppliedConfiguration? _appliedConfig;
   DnsSettings? _appliedDnsSettings;
   bool _isInitializingProfile = false;
 
@@ -205,6 +206,46 @@ class AppStateProvider extends ChangeNotifier {
   void _onLifecycleChanged() {
     _syncTimers(refreshOnReturn: true);
     if (AppLifecycle.instance.isActive) unawaited(_consumeQuickConnect());
+    if (AppLifecycle.instance.isActive && !_isServiceRunning) {
+      unawaited(_operations.run(_adoptAndroidVpn));
+    }
+  }
+
+  Future<void> _adoptAndroidVpn() async {
+    if (!Platform.isAndroid ||
+        _disposed ||
+        _isLoading ||
+        _isServiceRunning ||
+        !NativeCoreService.instance.isReady) {
+      return;
+    }
+    try {
+      if (!await PlatformProxyService.instance.awaitAndroidVpnReady()) return;
+      final status = await getCorduitStatus();
+      if (!status.running || _disposed) return;
+      final mode = await getAndroidProxyMode();
+      _proxyMode = ProxyMode.values.firstWhere(
+        (value) => value.name == mode,
+        orElse: () => ProxyMode.rule,
+      );
+      _activeProfileId = await StorageService.instance.getActiveProfileId();
+      _appliedDnsSettings = await StorageService.instance.getDnsSettings();
+      _recursiveDnsAddress = (await getRecursiveDnsStatus()).listen;
+      await ConfiguredProxyEngine.instance.configure(_activeProfileId, (
+        _,
+      ) async {
+        if (!(await getCorduitStatus()).running) {
+          throw StateError('Restored VPN stopped while attaching the UI');
+        }
+      });
+      _proxyStatus = status;
+      _isInitialized = true;
+      _isServiceRunning = true;
+      _syncTimers();
+      notifyListeners();
+    } catch (error) {
+      debugPrint('Cannot synchronize the Android VPN session: $error');
+    }
   }
 
   bool _consumingQuickConnect = false;
@@ -334,7 +375,10 @@ class AppStateProvider extends ChangeNotifier {
         await ProfileSelections.restore(activeProfileId, jsonConfig, engine);
       });
       _activeProfileId = activeProfileId;
-      _appliedConfigJson = jsonConfig;
+      _appliedConfig = AppliedConfiguration(
+        jsonConfig,
+        retainSource: PlatformUtils.isOHOS,
+      );
       _appliedDnsSettings = dnsSettings;
       _ruleSetReport = report;
       _isInitialized = true;
@@ -444,7 +488,8 @@ class AppStateProvider extends ChangeNotifier {
       );
       _ruleSetReport = report;
 
-      if (_isServiceRunning && jsonConfig != _appliedConfigJson) {
+      if (_isServiceRunning &&
+          !(_appliedConfig?.matches(jsonConfig) ?? false)) {
         await _applyReload(jsonConfig);
       }
       return true;
@@ -470,22 +515,28 @@ class AppStateProvider extends ChangeNotifier {
           await ProfileSelections.restore(_activeProfileId!, config, engine);
         }
       });
-      _appliedConfigJson = config;
+      _appliedConfig = AppliedConfiguration(
+        config,
+        retainSource: PlatformUtils.isOHOS,
+      );
       return;
     }
     final platform = PlatformProxyService.instance;
-    final previous = _appliedConfigJson;
+    final previous = _appliedConfig;
     if (!await platform.disableTunMode()) {
       throw StateError('Cannot stop VPN for reload');
     }
     try {
-      _appliedConfigJson = config;
+      _appliedConfig = AppliedConfiguration(
+        config,
+        retainSource: PlatformUtils.isOHOS,
+      );
       await _prepareOhosEngine();
       if (!await platform.enableTunMode(mode: _proxyMode)) {
         throw StateError('Extension rejected updated configuration');
       }
     } catch (_) {
-      _appliedConfigJson = previous;
+      _appliedConfig = previous;
       await _prepareOhosEngine();
       _isServiceRunning = await platform.enableTunMode(mode: _proxyMode);
       rethrow;
@@ -574,7 +625,8 @@ class AppStateProvider extends ChangeNotifier {
         generalSettings.copyWith(mode: restoredMode.name),
       );
     }
-    if (NativeCoreService.instance.isReady) {
+    await _adoptAndroidVpn();
+    if (NativeCoreService.instance.isReady && !_isServiceRunning) {
       await PlatformProxyService.instance.configureProxyMode(_proxyMode);
     }
     notifyListeners();
@@ -857,7 +909,7 @@ class AppStateProvider extends ChangeNotifier {
   /// beside them, which is also where the settings screen looks when a start
   /// fails.
   Future<void> _prepareOhosEngine() async {
-    final config = _appliedConfigJson;
+    final config = _appliedConfig?.retainedSource;
     if (config == null) {
       throw StateError('No configuration for the VPN extension');
     }
@@ -1110,7 +1162,10 @@ class AppStateProvider extends ChangeNotifier {
           await initializeCorduit(configJson: configJson);
         });
         _isInitialized = true;
-        _appliedConfigJson = configJson;
+        _appliedConfig = AppliedConfiguration(
+          configJson,
+          retainSource: PlatformUtils.isOHOS,
+        );
       }
       await _refreshStatus();
     } finally {

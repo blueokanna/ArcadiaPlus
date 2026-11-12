@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- Validate against local Corduit 0.3.8 and published Courierust 1.1.3. Bound platform TUN egress to 1 MiB of owned packet payload and 512 queued packets, including the packet held by the writer in the byte budget. Drop congestion without blocking ACK processing and retain TCP retransmission semantics.
+- Keep a SHA-256 identity instead of a second full configuration document in the Flutter provider; retain source only for the HarmonyOS extension and rollback. Avoid unnecessary native configuration clones outside Android.
+- Stream Android restart snapshots through an 8 KiB buffer with an encoded-size limit and atomic replacement. A failed or oversized write preserves the previous snapshot. Release hidden DNS panel snapshots and reject late results.
+
+## 1.1.0+3
+
+- Give configured DNS forwarding its existing end-to-end query budget instead of splitting a 1.5-second exchange timeout across the entire upstream group. Add a delayed-response regression that fails with the former deadline.
+- Retain TUN download bytes until cumulatively acknowledged, respect the application's TCP receive window, retry lost segments and probe closed windows. Delay FIN until the response is acknowledged and preserve uploads after a remote half-close. Cover packet loss, zero-window recovery, sequence wrap and half-close with protocol and loopback tests.
+- Fix companion Courierust TLS negotiation: advertise both enabled versions, enforce RFC 8446 downgrade markers in the correct direction, and complete the advertised X25519 client key exchange for TLS 1.2. Verify TLS 1.2 and TLS 1.3 against OpenSSL with certificate and hostname checks enabled.
+- Add a reproducible local Android build against sibling engine sources and an independent application-UID VPN probe covering DNS, HTTPS and VPN ownership. No dependency sources are vendored.
+- Move intercepted TUN DNS queries onto a bounded worker queue so upstream timeouts cannot block TCP packet processing. Discard queued queries and suppress late DNS replies when the tunnel stops; the engine change lives in the Corduit source repository.
+- Resume a saved Android VPN session when the UI returns after a process exit, provided the user has not stopped the session or revoked VPN consent. Do not rely solely on the device delivering a sticky-service restart.
+- Add an ADB verification command that installs an ordinary-UID diagnostic application, checks VPN ownership, exercises DNS and verified HTTPS, and returns failure when any check fails. Root-shell network probes are not accepted as evidence of application VPN connectivity.
+
+- Restore the Android VPN engine, selector choices, routing mode and local recursive DNS after a sticky service restart. Store restart state atomically in the app's private, backup-excluded directory; explicit disconnects disable recovery before teardown.
+- Hold a partial wake lock while the VPN is active, keep the service independent of the recent-task entry, and release native resources off the Android main thread. Report actual JNI protection readiness instead of assuming initialization succeeded.
+- Reconcile the Flutter UI with a VPN restored by Android. Add a real engine restart regression and an opt-in CNAME/dual-stack DNS check for the reported `jpushsc.m.jd.com` failure.
+- Companion Corduit source fixes retry interrupted relay I/O and parse SOCKS5 replies without over-reading or length underflow. CI/release builds require published versions containing both the Corduit and Courierust fixes; local validation uses the sibling repositories without vendoring them.
+
 ## 1.1.0+2
 
 - Upgrade to the published Corduit 0.3.6 release and retain RecurseX 0.2.6. CI and release builds use checksummed registry packages, verify shared resolver, socket-factory and JNI identities, and no longer require sibling repositories or local patches.

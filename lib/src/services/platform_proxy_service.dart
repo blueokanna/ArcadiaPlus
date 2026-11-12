@@ -68,6 +68,14 @@ class PlatformProxyService extends ChangeNotifier {
     return await _channel.invokeMethod<int>('requestQuickSettingsTile') ?? -1;
   }
 
+  Future<bool> awaitAndroidVpnReady() async {
+    if (!Platform.isAndroid) return false;
+    if (await _channel.invokeMethod<bool>('awaitVpnReady') != true) {
+      return false;
+    }
+    return checkTunModeStatus();
+  }
+
   /// Records what the platform is doing now and tells the listeners.
   ///
   /// A no-op value does not notify: a mode switch touches the mode and the
@@ -573,6 +581,9 @@ class PlatformProxyService extends ChangeNotifier {
           }
           _vpnFd = -1;
           return false;
+        }
+        if (await _channel.invokeMethod<bool>('confirmVpnStarted') != true) {
+          throw StateError('Cannot persist the running Android VPN session');
         }
       } catch (e, stackTrace) {
         _lastTunError = e.toString();

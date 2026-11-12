@@ -67,6 +67,12 @@ void main() {
     controller.setVisible(false);
     await tester.pump(const Duration(seconds: 10));
     expect(reads, 1);
+    expect(controller.records, isEmpty);
+    expect(controller.status, isNull);
+    controller.setVisible(true);
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(reads, 2);
+    expect(controller.records.length, 80);
     controller.dispose();
   });
   testWidgets('late snapshots cannot update a hidden panel', (tester) async {

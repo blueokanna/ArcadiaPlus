@@ -193,9 +193,9 @@ dependencies = [
 
 [[package]]
 name = "corduit"
-version = "0.3.6"
+version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa185dace3fdf04d958396b840c422e4ce222ea2c8688dbdeddfbc0d04c03a52"
+checksum = "d4ee2692e45fd56d19fa15baf30a84de27246e5f0523cd152d06550ea273bc88"
 dependencies = [
  "bitflags 2.13.2",
  "bytes",
@@ -234,9 +234,9 @@ checksum = "7f8f80099a98041a3d1622845c271458a2d73e688351bf3cb999266764b81d48"
 
 [[package]]
 name = "courierust"
-version = "1.1.2"
+version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e1c3667cc0b9be95cfa465a74635c24b7bfc61f37c03e343035e45621a3ab7fe"
+checksum = "c1f9d691941442a40cdbbdda9dac0426fc31c555391de92c423256bb38c7dc43"
 
 [[package]]
 name = "crc32fast"
@@ -736,6 +736,7 @@ dependencies = [
  "corduit",
  "flutter_rust_bridge",
  "jni",
+ "nextjson",
  "once_cell",
  "parking_lot",
  "recurse-x",
@@ -1886,9 +1887,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "9.5.0"
+version = "9.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0700e6c427aff64acdbf02e85fbfd946c2ee12319d1af013092f3a2178914ff8"
+checksum = "e3476fd497ac8af5b1ec7b51acab7bef380f7e8dd8e0487595bafd839417a302"
 dependencies = [
  "constant_time_eq",
  "crc32fast",

@@ -66,7 +66,9 @@ fn assert_encrypted_failure(role: &str) {
         result.is_err(),
         "failed encrypted {role} lookup bypassed DNS policy: {result:?}"
     );
-    let header = peer.join().unwrap();
+    let header = peer
+        .join()
+        .unwrap_or_else(|_| panic!("no TLS handshake for {role}; resolver returned {result:?}"));
     assert_eq!(header[0], 0x16, "expected a TLS handshake record");
     assert_eq!(header[1], 0x03, "expected a TLS record version");
 }

@@ -62,6 +62,16 @@ class DnsActivityController extends ChangeNotifier {
         refresh();
         _timer = Timer.periodic(const Duration(seconds: 3), (_) => refresh());
       });
+    } else {
+      // Native history remains available. A hidden panel owns no Dart copy.
+      records = const [];
+      status = null;
+      total = BigInt.zero;
+      dropped = BigInt.zero;
+      final generation = _generation;
+      scheduleMicrotask(() {
+        if (!_disposed && generation == _generation) notifyListeners();
+      });
     }
   }
 
@@ -118,6 +128,8 @@ class DnsActivityController extends ChangeNotifier {
     _disposed = true;
     _generation++;
     _timer?.cancel();
+    records = const [];
+    status = null;
     AppLifecycle.instance.active.removeListener(_sync);
     super.dispose();
   }

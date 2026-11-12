@@ -13,7 +13,7 @@ name = "rust_lib_arcadiaplus"
 crate-type = ["rlib", "cdylib", "staticlib"]
 
 [dependencies]
-corduit = { version = "0.3.6", features = [
+corduit = { version = "0.3.8", features = [
     "std",
     "tls",
     "tls13",
@@ -25,7 +25,7 @@ corduit = { version = "0.3.6", features = [
     "tuic",
     "wireguard",
 ] }
-flutter_rust_bridge = { version = "=2.13.0", default-features = false, features = [
+flutter_rust_bridge = { version = "2.13.0", default-features = false, features = [
     "anyhow",
     "dart-opaque",
     "log",
@@ -35,6 +35,7 @@ flutter_rust_bridge = { version = "=2.13.0", default-features = false, features 
     "wasm-start",
 ] }
 once_cell = "1.21.4"
+nextjson = "0.1.5"
 parking_lot = "0.12.5"
 recurse-x = "0.2.6"
 tokio = { version = "1.54.1", features = ["rt"] }

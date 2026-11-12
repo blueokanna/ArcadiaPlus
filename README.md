@@ -13,6 +13,36 @@
 
 ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平台接管，Rust 侧只保留一层 FFI，代理引擎、DNS、TUN 数据面与协议实现全部来自 [corduit](https://crates.io/crates/corduit)。
 
+### Android 后台运行与故障核对
+
+VPN 由前台服务持有，界面退到后台或从最近任务中划掉不会主动停止隧道。活动隧道持有部分唤醒锁，停止时释放。系统重建服务时，从应用私有的 `noBackupFilesDir` 恢复配置、手动选择的节点、路由模式和本地递归 DNS，再启动数据包处理。若系统没有及时重建服务，重新打开应用也会尝试恢复；主动断开和撤销 VPN 权限会先禁用恢复。恢复文件含连接配置，不进入系统备份，也不写入日志。
+
+这不等于绕过系统电源管理：强行停止应用、撤销 VPN 权限和厂商省电限制仍由系统决定。锁屏验收应同时确认通知、实际请求和重新打开应用后的状态，不能只看 VPN 图标。Android 对休眠期间网络和唤醒锁的限制见[官方说明](https://developer.android.com/training/monitoring-device-state/doze-standby)。
+
+`Interrupted system call` 表示系统调用被信号打断，转发层应重试并检查取消状态。`no salt received` 仅说明对端未返回 Shadowsocks 响应，不能单凭它认定密码错误或 DNS 故障；应核对实际节点的 cipher、plugin、DNS 上游及同节点的其他客户端结果。`NXDOMAIN` 必须保留其语义，不能伪造 IP 或悄悄改走系统 DNS。公开域名的在线核对可运行 `cargo test --manifest-path rust/Cargo.toml --test dns_app_contract incident_domain -- --ignored --nocapture`，该测试经过应用实际使用的解析器，普通离线测试不会访问公共 DNS。
+
+TUN 收包线程不等待上游 DNS：查询交给 4 个工作线程和最多 64 个待处理数据包的队列。慢查询不会挡住 TCP 握手和确认包，队列满时按 UDP 语义丢包等待客户端重试，停止时丢弃排队任务。
+
+2026-11-12 的 Android 17 蜂窝网络实测中，本机递归对 `jpushsc.m.jd.com` 的 20 次查询返回 13 次 NXDOMAIN、7 次 SERVFAIL；同机 AliDNS DoH 对照 20 次成功。随后锁屏测试发现，仅开启“优先加密 DNS”仍会遇到原 DoT 上游超时。因此测试手机关闭本机递归，并将通用 DNS 覆盖为 `https://223.5.5.5/dns-query`、`https://223.6.6.6/dns-query`，保留订阅中的专用解析规则。代码修复和上游配置调整分别验收；本机递归在该网络上的失败仍未解决，不能通过忽略 NXDOMAIN 来掩盖。
+
+连接 ADB、在手机启动 VPN 后，可运行 `python scripts/verify_android_device.py --rounds 2`。脚本构建独立诊断 APK，确认普通应用 UID 接入 ArcadiaPlus 的 VPN，再查询五个域名并校验 GitHub、Google 和百度的 HTTPS 返回码及完整响应。诊断时显示临时页面并运行前台服务，结束后关闭。TLS 证书校验保持开启，任一检查失败或测试超时时命令返回非零，并保留已完成的结果；报告默认写入 `.build/android-validation/report.json`。多设备时使用 `--serial`，SDK 不在标准位置时使用 `--sdk`。该命令不读取订阅、不更改代理配置；新安装的诊断包默认在结束时移除，已有诊断包保留。
+
+`--delay 300` 可留出五分钟锁屏观察时间。部分厂商仍会冻结独立诊断进程，必须分别记录诊断进程与 VPN 服务的状态：测试进程停止执行不等于 VPN 断开，ADB root 请求成功也不等于普通应用联网成功。脚本不会关闭系统冻结机制。
+
+本轮链路修复覆盖两个实际故障。加密 DNS 使用的 TLS 客户端曾漏报 TLS 1.2、反向判断降级标记，并缺少已声明的 X25519 交换路径；Courierust 修复后通过 OpenSSL 的 TLS 1.2/1.3 证书校验互操作测试。TUN 下载端曾在数据尚未确认时丢弃副本，忽略接收窗口，导致大响应或应用暂停后永久缺字节；Corduit 现在保留有界发送队列、重传未确认数据、探测零窗口，并等待数据确认后发送 FIN。回归测试覆盖丢包、序列号回绕、零窗口恢复和双向半关闭。
+
+DNS 转发还曾把单次交换的 1.5 秒误作整组上游的期限，再由多个服务器平分。现在转发组使用原有查询总预算（常规查询 5 秒、引导查询 3 秒），仍在同一截止时间内完成；延迟应答测试验证了旧代码的过早超时。该修复不改变上游、专用域名规则或证书校验。
+
+当前联调使用 `D:\RustProject\Corduit` 的 0.3.8 本地源码和已发布的 Courierust 1.1.3。引擎源码没有复制到应用项目。正式发布前需确认已发布的 Corduit 包含当前修改，再恢复注册表依赖并更新锁文件；本地路径依赖不会通过发布依赖检查。
+
+### 内存边界
+
+平台 TUN 写出队列同时限制为 512 个排队包和 1 MiB 自有包数据；正在写入的包仍计入字节预算。队列不保留输入切片背后的大缓冲区，满队列时按网络拥塞语义丢包，断开接收端则明确报错。TCP 的未确认数据仍由发送队列保留并重传。这个预算不包括其他连接缓冲、线程栈、TLS 状态或整个进程的 RSS。
+
+Flutter 的配置去重只保留 SHA-256 摘要；HarmonyOS 因扩展进程和回滚需要保留正文。Android 恢复文件将字符串按不超过 4 KiB 的 UTF-8 片段编码，以 8 KiB 文件缓冲写入，避免序列化器再次分配完整配置字符串。按编码后大小执行 32 MiB 上限，失败时保留旧文件。原生恢复状态仍保留重启所需配置，不能为了减小数字而破坏 VPN 模式切换。隐藏 DNS 面板释放 Dart 侧记录副本，原生 DNS 缓存继续为代理服务。
+
+内存验收需在同一设备、配置和负载下比较 PSS/RSS、连接峰值以及流量结束后的回落。调试包不能直接与发布包比较，也不能把队列字节上限当成进程内存降幅。
+
 它读 Clash 形态的配置（`proxies`、`proxy-groups`、`rules`、`rule-providers`、`dns`），把配置翻译成引擎执行的规则表，并把执行情况显示出来：规则表本身、每条规则的命中次数、转换时丢了什么、规则集上次刷新是什么时候。它不提供服务器、节点或订阅——配置由你准备，合法性由你负责。
 
 下面把当前版本的实际能力写清楚了，包括哪些平台还不能宣称可用。
@@ -45,7 +75,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.3.5 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 运行配置使用严格校验：必要规则集缺失、规则类型不受支持或出口不存在时拒绝启动，不通过跳过规则改变实际分流。离线预览可展示转换警告。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的是本地 `file` 规则集。下载失败、空内容或存在不支持的条目时保留上一份完整缓存；必要规则集没有有效缓存时拒绝启动，不跳过规则改变分流。
@@ -149,7 +179,7 @@ Material Shape 变形集中在 `ExpressiveShape` 与 `AnimatedExpressiveShape`�
 
 全局模式使用代理页的 `GLOBAL` 选择组，选择按配置独立保存。订阅未定义该组时，应用用可用节点生成，不把排在首位的国内直连组当作全局出口；无可用节点时拒绝流量。订阅显式定义的 `GLOBAL` 保留其成员和选择，包括用户自行配置的 `DIRECT`。
 
-RecurseX 0.2.6 / courierust 1.1.2 的 DoH、DoH3 当前要求连接 IP 与证书 IP 身份一致，不支持独立的域名身份覆盖。默认使用支持 IP 证书的阿里 DoH 地址。已知公共 DNS 的旧写法转换为同一服务商的兼容加密端点，并记录转换警告；未知私有 DoH 配置会明确报错，需使用该服务商支持的 IP 端点或 DoT/DoQ，不能通过关闭证书校验绕过。
+RecurseX 0.2.6 的 DoH、DoH3 适配器当前要求连接 IP 与证书 IP 身份一致，不支持独立的域名身份覆盖；升级 Courierust 不会改变这层适配约束。默认使用支持 IP 证书的阿里 DoH 地址。已知公共 DNS 的旧写法转换为同一服务商的兼容加密端点，并记录转换警告；未知私有 DoH 配置会明确报错，需使用该服务商支持的 IP 端点或 DoT/DoQ，不能通过关闭证书校验绕过。
 
 `rule` / `global` / `direct` 的判定全部在引擎里完成：inbound、TUN 数据面与 Android VPN 都把连接交给同一个路由器，所以切换模式从不需要重建隧道。
 
@@ -313,7 +343,11 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 
 ## 构建与检查
 
-应用直接构建已发布的 crates.io 引擎，不需要检出相邻的 Corduit 或 RecurseX 仓库。依赖升级后同步提交 `rust/Cargo.toml` 与 `rust/Cargo.lock`，运行 `python scripts/check_engine_dependencies.py --offline` 验证版本、校验和和共享依赖身份；首次下载依赖时省略 `--offline`。
+正式构建使用已发布的 crates.io 引擎。当前工作区按本地 Corduit 0.3.8 验证内存改动，Courierust 使用注册表 1.1.3。发布前需要先发布当前引擎修复、恢复注册表依赖，并同步 `rust/Cargo.toml` 与 `rust/Cargo.lock`，再运行 `python scripts/check_engine_dependencies.py --offline`。本地路径依赖不会被该检查视为发布就绪。
+
+本机 Android 联调使用 `python scripts/build_android_local.py`，默认读取相邻的 `Corduit`、`Courierust` 仓库，也可用同名参数指定路径。脚本临时添加 Cargo 源码覆盖，构建后恢复清单与锁文件，不复制依赖源码、不引入 vendor。运行期间不要在 `rust/` 中启动其他 Cargo 命令。
+
+手机启动 VPN 后运行 `python scripts/verify_android_device.py --rounds 3`。脚本安装独立诊断包，以普通应用 UID 验证 VPN 归属、DNS 和 HTTPS，保持平台证书校验，结果写入 `.build/android-validation/report.json`；首次安装的诊断包默认在测试后卸载。测试不读取订阅、不修改节点或应用配置。root ADB shell 发出的请求可能绕过 VPN，不能替代这一验收。
 
 首页流量卡按窗口宽度和文字缩放自动换行。「直连流量」与「代理流量」按最终出口的传输类型计数，不依赖组名或目的地国家。两项均包含上传、下载有效载荷、已结束的短连接和 UDP，不含协议封装、TUN 包头或重传开销。Android 与桌面使用同一出口计数源，总量由同次采样的直连、代理分项相加；连接页不再插入标为代理的 TUN 汇总伪连接。
 
@@ -352,7 +386,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT 的 HAP 由 CI 的 `ohos` 与 [ohos/README.md](ohos/README.md) 的 DevEco/hvigor 流程构建。CI 除构建外还会断言 HAP 内确实含有 `libapp.so`、`librust_lib_arcadiaplus.so` 与 `libarcadia_core.so`——构建通过只证明打包链路正确；VPN 数据面（授权弹窗、隧道、引擎分流）仍按该文档的真机清单逐项验证。
 
-CI 与发布工作流使用 `--locked` 构建同一份已提交的注册表依赖图，禁止本地路径、Git 和源码替换覆盖。已移除旧的相邻仓库检出步骤、提交号文件及网络补丁；Corduit 0.3.5 的发布源码已包含相关网络修复，应用回归测试直接验证发布包。
+CI 与发布工作流使用 `--locked` 构建同一份已提交的注册表依赖图，禁止本地路径、Git 和源码替换覆盖。已移除旧的相邻仓库检出步骤、提交号文件及网络补丁。本轮相邻仓库的修复仍需发布并更新依赖后才能进入这条构建链；本地 APK 验证通过不等于注册表发布包已经包含修复。
 
 ## 免责声明
 

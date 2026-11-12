@@ -14,6 +14,7 @@ import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.net.InetAddress
@@ -24,13 +25,19 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ArcadiaPlusVpnService : VpnService() {
 
     // JNI methods for Rust bridge
-    private external fun nativeInitRustBridge()
+    private external fun nativeInitRustBridge(): Boolean
     private external fun nativeClearRustBridge()
     private external fun nativeStopProxy()
+    private external fun nativeSaveSession(path: String): Boolean
+    private external fun nativeRestoreSession(path: String): Boolean
+    private external fun nativeResumePackets(fd: Int): Boolean
+    private external fun nativeForgetSession()
 
     companion object {
         private const val TAG = "ArcadiaPlusVpnService"
+        private const val SESSION_PREFS = "vpn_session"
         const val ACTION_START = "com.blueokanna.arcadiaplus.START_VPN"
+        private const val ACTION_RESUME = "com.blueokanna.arcadiaplus.RESUME_VPN"
         const val ACTION_STOP = "com.blueokanna.arcadiaplus.STOP_VPN"
         const val NOTIFICATION_CHANNEL_ID = "arcadiaplus_vpn"
         const val NOTIFICATION_ID = 1
@@ -43,15 +50,10 @@ class ArcadiaPlusVpnService : VpnService() {
         val proxyMode: ProxyMode
             get() = _proxyMode
 
-        // Whether the tunnel captures private (LAN) ranges. Mirrors the
-        // "Allow LAN" setting; defaults to the previous behaviour when the
-        // caller does not say.
         @Volatile private var _captureLan = true
         val captureLan: Boolean
             get() = _captureLan
 
-        // Kept out of the tunnel when LAN access is off. Public traffic is
-        // unaffected: the default route is still captured in full.
         private val PRIVATE_PREFIXES =
                 listOf(
                         "10.0.0.0" to 8,
@@ -82,6 +84,47 @@ class ArcadiaPlusVpnService : VpnService() {
         @Volatile private var instance: ArcadiaPlusVpnService? = null
 
         private val _isStarting = AtomicBoolean(false)
+
+        fun confirmStarted(): Boolean = instance?.confirmSession() ?: false
+        fun awaitReady(context: Context): Boolean {
+            val latch = synchronized(this) {
+                if (isRunning && _vpnFd >= 0) return true
+                if (!_isStarting.get()) {
+                    // Some devices defer sticky-service restarts. An Activity
+                    // returning to the foreground can resume the saved session,
+                    // but must never undo an explicit stop or take VPN consent.
+                    val prefs = context.getSharedPreferences(SESSION_PREFS, MODE_PRIVATE)
+                    if (!prefs.getBoolean("requested", false) ||
+                        !java.io.File(context.noBackupFilesDir, "vpn-session.json").isFile ||
+                        prepare(context) != null) return false
+
+                    _isStarting.set(true)
+                    startLatch = CountDownLatch(1)
+                    val intent = Intent(context, ArcadiaPlusVpnService::class.java)
+                        .setAction(ACTION_RESUME)
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            context.startForegroundService(intent)
+                        } else {
+                            context.startService(intent)
+                        }
+                    } catch (error: Exception) {
+                        _isStarting.set(false)
+                        startLatch?.countDown()
+                        Log.e(TAG, "Could not resume saved VPN session", error)
+                        return false
+                    }
+                }
+                startLatch
+            }
+            try {
+                if (latch?.await(30, TimeUnit.SECONDS) != true) return false
+            } catch (error: InterruptedException) {
+                Thread.currentThread().interrupt()
+                return false
+            }
+            return isRunning && _vpnFd >= 0
+        }
 
         init {
             Log.d(TAG, "=== Native library loading started ===")
@@ -135,9 +178,6 @@ class ArcadiaPlusVpnService : VpnService() {
         @Synchronized
         fun resetAllState() {
             Log.d(TAG, "=== Resetting all VPN static state ===")
-            // A live service owns the ParcelFileDescriptor. Clearing only the
-            // companion state would orphan that descriptor and leave the VPN
-            // route installed while Flutter believes it has stopped.
             instance?.let { runningService ->
                 Log.d(TAG, "Stopping live VPN service before resetting state")
                 runningService.stopVpnInternal()
@@ -191,11 +231,6 @@ class ArcadiaPlusVpnService : VpnService() {
                                     true
                     ) {
                         Log.w(TAG, "Another VPN is active - will attempt to take over VPN slot")
-                        // The VpnService.prepare() call will automatically revoke the other VPN's
-                        // permission
-                        // when the user grants permission to our app, or if we already have
-                        // permission,
-                        // calling establish() will take over the VPN slot
                     }
                 }
             } catch (e: Exception) {
@@ -251,6 +286,8 @@ class ArcadiaPlusVpnService : VpnService() {
 
         fun stopVpnFromOutside(context: Context) {
             Log.d(TAG, "=== stopVpnFromOutside called ===")
+            context.getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit()
+                .putBoolean("requested", false).commit()
 
             // Set flags first to signal stop
             _isRunning.set(false)
@@ -270,10 +307,10 @@ class ArcadiaPlusVpnService : VpnService() {
         fun setProxyMode(mode: ProxyMode) {
             _proxyMode = mode
             Log.d(TAG, "Proxy mode set to: $mode")
-            // The routing decision is the engine's; this only keeps the mode
-            // shown in the notification honest.
             instance?.let { service ->
                 service.currentMode = mode
+                service.getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit()
+                    .putString("mode", mode.name.lowercase()).apply()
                 service.refreshNotification()
             }
         }
@@ -288,6 +325,34 @@ class ArcadiaPlusVpnService : VpnService() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private val isStarting = AtomicBoolean(false)
     private var currentMode: ProxyMode = ProxyMode.RULE
+    private var wakeLock: PowerManager.WakeLock? = null
+    private val destroyed = AtomicBoolean(false)
+    private val sessionFile get() = java.io.File(noBackupFilesDir, "vpn-session.json")
+
+    @Synchronized
+    private fun confirmSession(): Boolean {
+        if (destroyed.get() || !_isRunning.get() || _vpnFd < 0) return false
+        if (!nativeSaveSession(sessionFile.absolutePath)) return false
+        return getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit()
+            .putBoolean("requested", true)
+            .putString("mode", currentMode.name.lowercase())
+            .putBoolean("allowLan", _captureLan).commit()
+    }
+
+    // The lock belongs to the active tunnel, not to the Activity. It is
+    // released on every startup failure, explicit stop and service teardown.
+    @android.annotation.SuppressLint("WakelockTimeout")
+    private fun acquireWakeLock() {
+        if (wakeLock?.isHeld == true) return
+        wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:VpnRelay")
+            .apply { setReferenceCounted(false); acquire() }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let { if (it.isHeld) it.release() }
+        wakeLock = null
+    }
 
     // Network connectivity callback for auto-stop on disconnect
     private var connectivityManager: ConnectivityManager? = null
@@ -311,8 +376,8 @@ class ArcadiaPlusVpnService : VpnService() {
 
         try {
             Log.d(TAG, "Initializing Rust JNI bridge...")
-            nativeInitRustBridge()
-            _jniInitialized.set(true)
+            _jniInitialized.set(nativeInitRustBridge())
+            check(_jniInitialized.get()) { "Native socket protection bridge failed to initialize" }
             Log.d(TAG, "Rust JNI bridge initialized successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to initialize Rust JNI bridge: ${e.message}", e)
@@ -424,15 +489,24 @@ class ArcadiaPlusVpnService : VpnService() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand: action=${intent?.action}, startId=$startId")
 
-        when (intent?.action) {
-            ACTION_START -> {
+        val prefs = getSharedPreferences(SESSION_PREFS, MODE_PRIVATE)
+        val resumeRequested = intent?.action == ACTION_RESUME ||
+            intent?.action == SERVICE_INTERFACE || intent == null
+        val recovering = resumeRequested && prefs.getBoolean("requested", false)
+        when {
+            recovering || intent?.action == ACTION_START -> {
+                if (_isRunning.get() && _vpnFd >= 0) return START_STICKY
                 if (isStarting.getAndSet(true)) {
                     Log.d(TAG, "VPN start already in progress, ignoring duplicate request")
-                    return START_NOT_STICKY
+                    return START_STICKY
                 }
+                if (recovering && startLatch?.count != 1L) startLatch = CountDownLatch(1)
+                _isStarting.set(true)
 
-                val mode = intent.getStringExtra("mode") ?: "rule"
-                _captureLan = intent.getBooleanExtra("allowLan", true)
+                val mode = if (recovering) prefs.getString("mode", "rule") ?: "rule"
+                    else intent?.getStringExtra("mode") ?: "rule"
+                _captureLan = if (recovering) prefs.getBoolean("allowLan", true)
+                    else intent?.getBooleanExtra("allowLan", true) ?: true
                 currentMode =
                         when (mode.lowercase()) {
                             "global" -> ProxyMode.GLOBAL
@@ -444,40 +518,50 @@ class ArcadiaPlusVpnService : VpnService() {
                 startForeground(NOTIFICATION_ID, createNotification())
 
                 Thread(
-                                { startVpn() },
+                                { startVpn(recovering) },
                                 "arcadiaplus-vpn-start",
                         )
                         .start()
             }
-            ACTION_STOP -> {
+            intent?.action == ACTION_STOP -> {
+                prefs.edit().putBoolean("requested", false).commit()
                 Thread({ stopVpnInternal(stopProxy = true) }, "arcadiaplus-vpn-stop").start()
+                return START_NOT_STICKY
             }
             else -> {
                 if (!_isRunning.get()) {
+                    _isStarting.set(false)
+                    startLatch?.countDown()
                     Log.d(TAG, "No action and VPN not running, stopping service")
                     stopSelf()
+                    return START_NOT_STICKY
                 }
             }
         }
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
     @Synchronized
-    private fun startVpn() {
+    private fun startVpn(recovering: Boolean = false) {
         try {
+            check(!destroyed.get()) { "VPN service was destroyed during startup" }
+            acquireWakeLock()
             Log.d(TAG, "=== Starting VPN with mode: $currentMode ===")
 
             if (!_jniInitialized.get()) {
                 Log.w(TAG, "JNI bridge not initialized, attempting to initialize...")
                 try {
-                    nativeInitRustBridge()
-                    _jniInitialized.set(true)
+                    _jniInitialized.set(nativeInitRustBridge())
                     Log.d(TAG, "JNI bridge initialized on retry")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to initialize JNI bridge on retry: ${e.message}", e)
                 }
             } else {
                 Log.d(TAG, "JNI bridge already initialized")
+            }
+            check(_jniInitialized.get()) { "Native socket protection bridge is unavailable" }
+            if (recovering) {
+                check(nativeRestoreSession(sessionFile.absolutePath)) { "Cannot restore VPN engine and DNS" }
             }
 
             vpnInterface?.let { oldInterface ->
@@ -492,7 +576,6 @@ class ArcadiaPlusVpnService : VpnService() {
             vpnInterface = null
             _vpnFd = -1
 
-            // Wait a bit for any previous VPN to fully release resources
             Thread.sleep(200)
 
             Log.d(TAG, "Building VPN interface...")
@@ -570,8 +653,13 @@ class ArcadiaPlusVpnService : VpnService() {
 
             if (vpnInterface != null) {
                 val fd = vpnInterface!!.fd
+                check(!destroyed.get()) { "VPN service was destroyed during startup" }
+                if (recovering) {
+                    check(nativeResumePackets(fd)) { "Cannot restart VPN packet processing" }
+                }
                 _vpnFd = fd
                 _isRunning.set(true)
+                if (recovering) check(confirmSession()) { "Cannot save restored VPN session" }
                 publishTileState()
 
                 Log.d(TAG, "=== VPN STARTED SUCCESSFULLY ===")
@@ -587,28 +675,24 @@ class ArcadiaPlusVpnService : VpnService() {
                 if (lastError != null) {
                     Log.e(TAG, "Last error: ${lastError.message}")
                 }
-                _isRunning.set(false)
-                _vpnFd = -1
-                startLatch?.countDown()
-                stopForegroundCompat()
-                stopSelf()
+                stopVpnInternal(stopProxy = recovering)
             }
         } catch (e: Exception) {
             Log.e(TAG, "=== VPN START EXCEPTION ===", e)
             Log.e(TAG, "Error: ${e.message}")
-            _isRunning.set(false)
-            _vpnFd = -1
-            startLatch?.countDown()
-            stopForegroundCompat()
-            stopSelf()
+            stopVpnInternal(stopProxy = recovering)
         } finally {
             isStarting.set(false)
+            _isStarting.set(false)
         }
     }
 
     @Synchronized
     private fun stopVpnInternal(stopProxy: Boolean = false) {
         Log.d(TAG, "=== stopVpnInternal called ===")
+        getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit().putBoolean("requested", false).commit()
+        nativeForgetSession()
+        releaseWakeLock()
 
         _isRunning.set(false)
         _vpnFd = -1
@@ -731,6 +815,16 @@ class ArcadiaPlusVpnService : VpnService() {
     }
 
     override fun onDestroy() {
+        destroyed.set(true)
+        // Native joins and a racing establish() can take seconds. Never wait
+        // for the startup monitor on Android's main thread.
+        Thread({ destroyResources() }, "arcadiaplus-vpn-destroy").start()
+        super.onDestroy()
+    }
+
+    @Synchronized
+    private fun destroyResources() {
+        releaseWakeLock()
         Log.d(TAG, "onDestroy called")
         val ownsState = instance === this
         if (ownsState) {
@@ -752,14 +846,14 @@ class ArcadiaPlusVpnService : VpnService() {
             Log.w(TAG, "Failed to clear Rust JNI bridge: ${e.message}")
         }
 
-        vpnInterface?.close()
+        try { vpnInterface?.close() }
+        catch (error: Exception) { Log.w(TAG, "Cannot close destroyed VPN interface", error) }
         vpnInterface = null
-
-        super.onDestroy()
     }
 
     override fun onRevoke() {
         Log.d(TAG, "VPN permission revoked")
+        getSharedPreferences(SESSION_PREFS, MODE_PRIVATE).edit().putBoolean("requested", false).commit()
         Thread({ stopVpnInternal(stopProxy = true) }, "arcadiaplus-vpn-revoke").start()
         super.onRevoke()
     }
