@@ -62,8 +62,15 @@ class WallpaperProvider extends ChangeNotifier {
     _load();
   }
 
+  bool _disposed = false;
+  @override
+  void notifyListeners() {
+    if (!_disposed) super.notifyListeners();
+  }
+
   @override
   void dispose() {
+    _disposed = true;
     // A drag that ends just as the provider goes away still gets written;
     // dropping it would lose the last thing the user did.
     if (_pendingSave != null) {
@@ -76,9 +83,6 @@ class WallpaperProvider extends ChangeNotifier {
   Future<void> _load() async {
     try {
       final stored = await StorageService.instance.getWallpaperSettings();
-      // A path that no longer resolves is worse than no path: it would leave
-      // the settings screen claiming a wallpaper exists and the backdrop
-      // silently drawing nothing. Self-heal instead.
       if (stored.hasImage &&
           !await WallpaperService.instance.isReadable(stored.imagePath!)) {
         debugPrint(
@@ -111,12 +115,10 @@ class WallpaperProvider extends ChangeNotifier {
 
     try {
       final path = await WallpaperService.instance.pickAndStore();
-      if (path == null) return false;
+      if (path == null || _disposed) return false;
 
       final previous = _settings.imagePath;
-      // A new picture gets a new framing: keeping the old pan and zoom would
-      // apply a crop that was chosen for a different image.
-      _settings = _settings.copyWith(
+      final next = _settings.copyWith(
         imagePath: path,
         enabled: true,
         alignmentX: 0,
@@ -125,7 +127,8 @@ class WallpaperProvider extends ChangeNotifier {
       );
       _pendingSave?.cancel();
       _pendingSave = null;
-      await StorageService.instance.saveWallpaperSettings(_settings);
+      await StorageService.instance.saveWallpaperSettings(next);
+      _settings = next;
       if (previous != null && previous != path) {
         await WallpaperService.forgetImage(previous);
       }

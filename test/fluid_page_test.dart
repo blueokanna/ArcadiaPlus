@@ -61,10 +61,10 @@ void main() {
         )
         .toList();
     expect(rows.length, 8);
-    expect(
-      rows.every((row) => identical(row.opacity, rows.first.opacity)),
-      isTrue,
-    );
+    await tester.pump(const Duration(milliseconds: 160));
+    expect(rows.first.opacity.value, greaterThan(rows.last.opacity.value));
+    // Eight phased reveals still use the page's single active ticker.
+    expect(tester.binding.transientCallbackCount, 1);
     await tester.pumpAndSettle();
     expect(tester.binding.transientCallbackCount, 0);
   });

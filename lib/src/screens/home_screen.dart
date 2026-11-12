@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:arcadiaplus/src/widgets/theme_picker.dart';
 import 'package:arcadiaplus/src/widgets/exit_identity.dart';
 import 'package:arcadiaplus/src/widgets/memory_info_card.dart';
-import 'package:arcadiaplus/src/widgets/dns_activity_panel.dart';
 import 'package:arcadiaplus/src/services/exit_ip_service.dart';
 
 import 'dart:async';
@@ -165,6 +164,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           await context.read<AppStateProvider>().refreshStatus();
         },
         child: SingleChildScrollView(
+          key: const PageStorageKey('home-scroll'),
           physics: PlatformUtils.getScrollPhysics(context),
           padding: PageInsets.scroll(
             context,
@@ -225,7 +225,6 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         ],
                         const SizedBox(height: 28),
                         const _SystemInfoSection(),
-                        const DnsActivityPanel(compact: true),
                       ],
                     );
                   },
@@ -283,18 +282,11 @@ class _StatusSection extends StatefulWidget {
 }
 
 class _StatusSectionState extends State<_StatusSection> {
-  final _exit = ExitIpController();
-
-  @override
-  void dispose() {
-    _exit.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
+    // The application owns the lookup and its one-hour cache across routes.
+    final exit = context.read<ExitIpController>();
     final port = context.watch<GeneralSettingsProvider>().mixedPort;
-    final active = TickerMode.valuesOf(context).enabled;
     return Selector<
       AppStateProvider,
       ({bool isRunning, bool isLoading, String? error})
@@ -305,12 +297,10 @@ class _StatusSectionState extends State<_StatusSection> {
         error: appState.serviceError,
       ),
       builder: (context, snapshot, _) {
-        _exit.configure(
+        exit.configure(
           useProxy: snapshot.isRunning,
           port: port,
-          // Opening a stopped dashboard must not disclose the direct IP to a
-          // third-party enrichment service. Probe only through the live proxy.
-          active: active && snapshot.isRunning,
+          active: snapshot.isRunning,
         );
         return StatusCard(
           error: snapshot.error,
@@ -326,12 +316,12 @@ class _StatusSectionState extends State<_StatusSection> {
           identity: !snapshot.isRunning
               ? null
               : ListenableBuilder(
-                  listenable: _exit,
+                  listenable: exit,
                   builder: (context, _) => ExitIdentity(
-                    report: _exit.report,
-                    loading: _exit.loading,
-                    failed: _exit.failed,
-                    onRefresh: _exit.refresh,
+                    report: exit.report,
+                    loading: exit.loading,
+                    failed: exit.failed,
+                    onRefresh: exit.refresh,
                   ),
                 ),
           isRunning: snapshot.isRunning,

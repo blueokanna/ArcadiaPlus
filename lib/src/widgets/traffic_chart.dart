@@ -154,7 +154,7 @@ class _IpInfoCache {
   int? lastProxyPort;
   int? lastSelectionRevision;
 
-  static const cacheDuration = Duration(minutes: 5);
+  static const cacheDuration = Duration(hours: 1);
 
   bool shouldRefresh(bool isProxyRunning, int proxyPort) {
     if (lastProxyPort != proxyPort ||
@@ -457,7 +457,7 @@ class _TrafficChartState extends State<TrafficChart> {
     final borderRadius = ResponsiveUtils.getBorderRadius(context);
     final cardPadding = ResponsiveUtils.getCardPadding(context);
     final chartHeight = ResponsiveUtils.getTrafficChartHeight(context);
-    final chinese = l10n?.locale.languageCode == 'zh';
+    final copy = l10n ?? AppLocalizations(Localizations.localeOf(context));
 
     final downloadSpots = trafficHistoryManager.getDownloadSpots();
     final uploadSpots = trafficHistoryManager.getUploadSpots();
@@ -492,18 +492,16 @@ class _TrafficChartState extends State<TrafficChart> {
                 isActive: widget.uploadSpeed > BigInt.zero,
               ),
               Tooltip(
-                message: chinese
-                    ? '本次运行经直连出口传输的上传与下载之和，包含局域网及其他直连流量；不是 IP 地理归属统计。'
-                    : 'Session upload + download through direct exits, including LAN and other direct traffic; not IP geolocation.',
+                message: copy.directTrafficHelp,
                 child: _TrafficStatCard(
                   icon: Icons.home_work_outlined,
-                  label: chinese ? '国内总流量' : 'Domestic total',
+                  label: copy.directTraffic,
                   speed: _formatBytes(
                     widget.trafficStats.directUpload +
                         widget.trafficStats.directDownload,
                   ),
                   total: '',
-                  detail: chinese ? '本次运行 · 直连' : 'Session · Direct',
+                  detail: copy.directSession,
                   color: colorScheme.secondary,
                   colorScheme: colorScheme,
                   textTheme: textTheme,
@@ -512,13 +510,13 @@ class _TrafficChartState extends State<TrafficChart> {
               ),
               _TrafficStatCard(
                 icon: Icons.public_rounded,
-                label: chinese ? '代理总流量' : 'Proxy total',
+                label: copy.proxyTraffic,
                 speed: _formatBytes(
                   widget.trafficStats.proxyUpload +
                       widget.trafficStats.proxyDownload,
                 ),
                 total: '',
-                detail: chinese ? '本次运行 · 代理' : 'Session · Proxy',
+                detail: copy.proxySession,
                 color: colorScheme.primary,
                 colorScheme: colorScheme,
                 textTheme: textTheme,

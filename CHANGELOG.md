@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0
+
+- Keep exit IP lookups and their one-hour results across dashboard navigation; invalidate only on confirmed route changes or explicit refresh.
+- Use outbound payload counters consistently on Android and desktop, including direct/proxy breakdowns. Remove synthetic TUN connection rows and the home DNS query panel.
+- Build the rule engine on demand, release inactive connection snapshots, bound image retention and page state, and clean abandoned cache files automatically.
+- Adapt ten theme seeds from the supplied Pantone print chart, localize dashboard and palette copy in all supported languages, and coordinate MD3 shape and row transitions on the page timeline.
+- Fix Windows system proxy readback, populate local-network bypasses, and preserve Shadowsocks frame boundaries across read timeouts.
+
+
 ## Unreleased — Reproducible CI engine checkouts
 
 - Record pushed RecurseX and Corduit commits in `scripts/engine_revisions.json`; CI and release no longer require separately configured repository variables.

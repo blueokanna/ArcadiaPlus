@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'profile_metadata_migration.dart';
+
 /// DNS settings model.
 ///
 /// Only the knobs the engine can actually carry are modelled here
@@ -130,8 +132,6 @@ class DnsSettings {
     overrideDns: json['overrideDns'] as bool? ?? false,
     listen: json['listen'] as String? ?? '127.0.0.1:53',
     useRecursiveResolver: json['useRecursiveResolver'] as bool? ?? false,
-    // Missing preference means follow the subscription. Never turn an
-    // explicitly persisted privacy choice off during an upgrade.
     requireEncryptedDns: json['requireEncryptedDns'] as bool? ?? false,
     preferEncryptedDns: json['preferEncryptedDns'] as bool? ?? false,
     dnsMode: normaliseMode(json['dnsMode']),
@@ -246,7 +246,7 @@ class GeneralSettings {
     this.externalController,
     this.externalUi,
     this.secret,
-    this.hapticFeedbackEnabled = false, // 默认关闭
+    this.hapticFeedbackEnabled = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -358,7 +358,6 @@ class ProfileConfig {
   final String name;
   final String type; // 'url', 'file', 'qrcode'
   final String source;
-  final String? configContent;
   final DateTime? lastUpdated;
   final DateTime? expiresAt;
   final int? usedTraffic;
@@ -371,7 +370,6 @@ class ProfileConfig {
     required this.name,
     required this.type,
     required this.source,
-    this.configContent,
     this.lastUpdated,
     this.expiresAt,
     this.usedTraffic,
@@ -385,7 +383,6 @@ class ProfileConfig {
     'name': name,
     'type': type,
     'source': source,
-    'configContent': configContent,
     'lastUpdated': lastUpdated?.toIso8601String(),
     'expiresAt': expiresAt?.toIso8601String(),
     'usedTraffic': usedTraffic,
@@ -399,7 +396,6 @@ class ProfileConfig {
     name: json['name'] as String,
     type: json['type'] as String,
     source: json['source'] as String,
-    configContent: json['configContent'] as String?,
     lastUpdated: json['lastUpdated'] != null
         ? DateTime.parse(json['lastUpdated'] as String)
         : null,
@@ -417,7 +413,6 @@ class ProfileConfig {
     String? name,
     String? type,
     String? source,
-    String? configContent,
     DateTime? lastUpdated,
     DateTime? expiresAt,
     int? usedTraffic,
@@ -430,7 +425,6 @@ class ProfileConfig {
       name: name ?? this.name,
       type: type ?? this.type,
       source: source ?? this.source,
-      configContent: configContent ?? this.configContent,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       expiresAt: expiresAt ?? this.expiresAt,
       usedTraffic: usedTraffic ?? this.usedTraffic,
@@ -459,6 +453,7 @@ class NetworkSettings {
   static const List<String> defaultBypassDomains = <String>[
     'localhost',
     '127.0.0.1',
+    '127.0.0.0/8',
     '::1',
     '10.0.0.0/8',
     '172.16.0.0/12',
@@ -474,14 +469,11 @@ class NetworkSettings {
   /// [StorageService.getNetworkSettings] then merges the missing entries once
   /// and stamps the record, so an entry the user deletes afterwards stays gone
   /// until the default list itself next changes.
-  static const int bypassDefaultsRevision = 1;
+  static const int bypassDefaultsRevision = 2;
 
   final bool systemProxy;
   final List<String> bypassDomains;
   final bool tunEnabled;
-
-  /// Revision of [defaultBypassDomains] this record already carries. Zero for
-  /// records written before the revision was tracked.
   final int bypassRevision;
 
   NetworkSettings({
@@ -507,8 +499,6 @@ class NetworkSettings {
                 .toList() ??
             const [],
         tunEnabled: json['tunEnabled'] as bool? ?? false,
-        // Absent means the record predates the revision field, which is
-        // exactly the case the migration in `getNetworkSettings` is for.
         bypassRevision: json['bypassRevision'] as int? ?? 0,
       );
 
@@ -613,8 +603,6 @@ class WallpaperSettings {
         enabled: json['enabled'] as bool? ?? true,
         blur: _clamp(json['blur'] as num?, 0, maxBlur, 18),
         dim: _clamp(json['dim'] as num?, 0, maxDim, 0.35),
-        // Records written before framing existed sit in the centre at fill
-        // scale, which is exactly what those builds drew.
         alignmentX: _clamp(json['alignmentX'] as num?, -1, 1, 0),
         alignmentY: _clamp(json['alignmentY'] as num?, -1, 1, 0),
         zoom: _clamp(json['zoom'] as num?, minZoom, maxZoom, minZoom),
@@ -674,6 +662,12 @@ class StorageService {
     // Ensure data directories exist
     await Directory('$_dataDir/profiles').create(recursive: true);
     await Directory('$_dataDir/config').create(recursive: true);
+    try {
+      await migrateProfileMetadata(_prefs!, Directory('$_dataDir/profiles'));
+    } catch (error) {
+      // Keep the legacy preference on failure; the next startup can retry.
+      debugPrint('Profile metadata migration deferred: $error');
+    }
   }
 
   // ==================== Profile Management ====================
@@ -694,8 +688,18 @@ class StorageService {
   }
 
   Future<void> saveProfiles(List<ProfileConfig> profiles) async {
+    final preferences = _prefs;
+    final directory = _dataDir;
+    if (preferences == null || directory == null) {
+      throw StateError('Profile storage is not initialized');
+    }
+    // A deferred migration may still own the only YAML copy. Metadata edits
+    // cannot discard it just because the list model no longer carries YAML.
+    await migrateProfileMetadata(preferences, Directory('$directory/profiles'));
     final jsonList = profiles.map((p) => p.toJson()).toList();
-    await _prefs?.setString('profiles', jsonEncode(jsonList));
+    if (!await preferences.setString('profiles', jsonEncode(jsonList))) {
+      throw const FileSystemException('Could not save profile metadata');
+    }
   }
 
   Future<void> addProfile(ProfileConfig profile) async {

@@ -3,10 +3,11 @@ import 'proxy_engine_service.dart';
 /// A result describes the last observed core state, including failed changes.
 /// A null member means that the core state could not be established.
 class ProxySelectionResult {
-  const ProxySelectionResult(this.member, {this.error});
+  const ProxySelectionResult(this.member, {this.error, this.changed = false});
 
   final String? member;
   final Object? error;
+  final bool changed;
 }
 
 /// Runs one selection transaction. The owner serializes transactions and
@@ -46,7 +47,7 @@ class ProxySelectionService {
       effective = await engine.selected(group);
       if (!current()) return null;
       if (accepted && effective == member) {
-        return ProxySelectionResult(member);
+        return ProxySelectionResult(member, changed: true);
       }
       failure = StateError('Engine did not confirm selection: $group');
     } catch (error) {
@@ -78,6 +79,7 @@ class ProxySelectionService {
     return ProxySelectionResult(
       effective,
       error: StateError('$failure $recovery'),
+      changed: effective != previous,
     );
   }
 }

@@ -1,3 +1,5 @@
+import 'dashboard_strings.dart';
+
 import 'package:flutter/material.dart';
 
 class AppLocalizations {
@@ -37,6 +39,7 @@ class AppLocalizations {
       ..._wallpaperStrings['de']!,
       ..._settingsActionStrings['de']!,
       ..._rulesScreenStrings['de']!,
+      ...dashboardStrings['de']!,
     },
     'en': {
       ..._enStrings,
@@ -47,6 +50,7 @@ class AppLocalizations {
       ..._wallpaperStrings['en']!,
       ..._settingsActionStrings['en']!,
       ..._rulesScreenStrings['en']!,
+      ...dashboardStrings['en']!,
     },
     'es': {
       ..._esStrings,
@@ -58,6 +62,7 @@ class AppLocalizations {
       ..._wallpaperStrings['es']!,
       ..._settingsActionStrings['es']!,
       ..._rulesScreenStrings['es']!,
+      ...dashboardStrings['es']!,
     },
     'fr': {
       ..._frStrings,
@@ -69,6 +74,7 @@ class AppLocalizations {
       ..._wallpaperStrings['fr']!,
       ..._settingsActionStrings['fr']!,
       ..._rulesScreenStrings['fr']!,
+      ...dashboardStrings['fr']!,
     },
     'it': {
       ..._itStrings,
@@ -80,6 +86,7 @@ class AppLocalizations {
       ..._wallpaperStrings['it']!,
       ..._settingsActionStrings['it']!,
       ..._rulesScreenStrings['it']!,
+      ...dashboardStrings['it']!,
     },
     'ja': {
       ..._jaStrings,
@@ -91,6 +98,7 @@ class AppLocalizations {
       ..._wallpaperStrings['ja']!,
       ..._settingsActionStrings['ja']!,
       ..._rulesScreenStrings['ja']!,
+      ...dashboardStrings['ja']!,
     },
     'ko': {
       ..._koStrings,
@@ -102,6 +110,7 @@ class AppLocalizations {
       ..._wallpaperStrings['ko']!,
       ..._settingsActionStrings['ko']!,
       ..._rulesScreenStrings['ko']!,
+      ...dashboardStrings['ko']!,
     },
     'pt': {
       ..._ptStrings,
@@ -113,6 +122,7 @@ class AppLocalizations {
       ..._wallpaperStrings['pt']!,
       ..._settingsActionStrings['pt']!,
       ..._rulesScreenStrings['pt']!,
+      ...dashboardStrings['pt']!,
     },
     'ru': {
       ..._ruStrings,
@@ -124,6 +134,7 @@ class AppLocalizations {
       ..._wallpaperStrings['ru']!,
       ..._settingsActionStrings['ru']!,
       ..._rulesScreenStrings['ru']!,
+      ...dashboardStrings['ru']!,
     },
     'zh_CN': {
       ..._zhCNStrings,
@@ -134,6 +145,7 @@ class AppLocalizations {
       ..._wallpaperStrings['zh_CN']!,
       ..._settingsActionStrings['zh_CN']!,
       ..._rulesScreenStrings['zh_CN']!,
+      ...dashboardStrings['zh_CN']!,
     },
     'zh_TW': {
       ..._zhTWStrings,
@@ -145,6 +157,7 @@ class AppLocalizations {
       ..._wallpaperStrings['zh_TW']!,
       ..._settingsActionStrings['zh_TW']!,
       ..._rulesScreenStrings['zh_TW']!,
+      ...dashboardStrings['zh_TW']!,
     },
   };
 
@@ -180,6 +193,28 @@ class AppLocalizations {
         _localizedValues['en']?[key] ??
         key;
   }
+
+  String get directTraffic => _getLocalizedString('directTraffic');
+  String get proxyTraffic => _getLocalizedString('proxyTraffic');
+  String get directSession => _getLocalizedString('directSession');
+  String get proxySession => _getLocalizedString('proxySession');
+  String get directTrafficHelp => _getLocalizedString('directTrafficHelp');
+  String get exitResidential => _getLocalizedString('exitResidential');
+  String get exitMobile => _getLocalizedString('exitMobile');
+  String get exitHosting => _getLocalizedString('exitHosting');
+  String get exitProxy => _getLocalizedString('exitProxy');
+  String get exitUnknown => _getLocalizedString('exitUnknown');
+  String get exitUnrated => _getLocalizedString('exitUnrated');
+  String get exitLowRisk => _getLocalizedString('exitLowRisk');
+  String get exitChecking => _getLocalizedString('exitChecking');
+  String get exitUnavailable => _getLocalizedString('exitUnavailable');
+  String get exitProvider => _getLocalizedString('exitProvider');
+  String get exitRefresh => _getLocalizedString('exitRefresh');
+  String get exitAssessment => _getLocalizedString('exitAssessment');
+  String get paletteScreenNote => _getLocalizedString('paletteScreenNote');
+  String exitRiskScore(int score) =>
+      _getLocalizedString('exitRiskScore').replaceAll('{score}', '$score');
+  String paletteName(String id) => _getLocalizedString('palette_$id');
 
   // Navigation
   String get appName => _getLocalizedString('appName');

@@ -104,7 +104,6 @@ class ProfilesProvider extends ChangeNotifier {
         name: name,
         type: 'url',
         source: url,
-        configContent: configContent,
         lastUpdated: DateTime.now(),
         expiresAt: expiresAt,
         usedTraffic: usedTraffic,
@@ -148,7 +147,6 @@ class ProfilesProvider extends ChangeNotifier {
         name: name,
         type: 'file',
         source: filePath,
-        configContent: content,
         lastUpdated: DateTime.now(),
       );
 
@@ -225,7 +223,6 @@ class ProfilesProvider extends ChangeNotifier {
       }
 
       final updatedProfile = profile.copyWith(
-        configContent: configContent,
         lastUpdated: DateTime.now(),
         expiresAt: expiresAt,
         usedTraffic: usedTraffic,
@@ -368,7 +365,6 @@ class ProfilesProvider extends ChangeNotifier {
       }
 
       final updatedProfile = _profiles[index].copyWith(
-        configContent: normalizedContent,
         lastUpdated: DateTime.now(),
       );
       await StorageService.instance.saveProfileConfig(id, normalizedContent);

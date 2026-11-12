@@ -10,6 +10,22 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGES = {'RecurseX': 'recurse-x', 'Corduit': 'corduit'}
+PATCHES = {'Corduit': ROOT / 'scripts' / 'patches' / 'corduit-network.patch'}
+
+
+def engine_patches(parent, *, apply=False):
+    """Apply reviewed fixes atomically per repo; never reset developer changes."""
+    for repo, patch_file in PATCHES.items():
+        command = ['git', '-C', str(parent / repo), 'apply', '--whitespace=error']
+        reverse = subprocess.run(command + ['--reverse', '--check', str(patch_file)],
+                                 capture_output=True, text=True)
+        if reverse.returncode == 0:
+            continue
+        if not apply:
+            raise ValueError(f'{repo}: required network fixes missing; run '
+                             'python scripts/checkout_engines.py --apply-patches')
+        subprocess.run(command + ['--check', str(patch_file)], check=True)
+        subprocess.run(command + [str(patch_file)], check=True)
 
 
 def revisions(file=ROOT / 'scripts' / 'engine_revisions.json'):
@@ -80,15 +96,25 @@ def checkout(parent, pins, versions):
             raise ValueError(f'{repo}: fetched commit does not match the pin')
         validate_package(destination, repo, versions[repo])
         print(f'{repo}: {actual}', flush=True)
+    engine_patches(parent, apply=True)
 
 
 if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser(description=__doc__)
-        parser.add_argument('--verify-local', action='store_true',
+        mode = parser.add_mutually_exclusive_group()
+        mode.add_argument('--verify-local', action='store_true',
                             help='Verify pinned manifests using existing Git objects; do not change checkouts')
+        mode.add_argument('--apply-patches', action='store_true',
+                          help='Apply the tracked engine fixes to existing sibling checkouts')
         options = parser.parse_args()
-        operation = verify_local if options.verify_local else checkout
-        operation(ROOT.parent, revisions(), locked_versions())
+        if options.apply_patches:
+            verify_local(ROOT.parent, revisions(), locked_versions())
+            engine_patches(ROOT.parent, apply=True)
+        elif options.verify_local:
+            verify_local(ROOT.parent, revisions(), locked_versions())
+            engine_patches(ROOT.parent)
+        else:
+            checkout(ROOT.parent, revisions(), locked_versions())
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         sys.exit(f'Engine checkout failed: {error}')

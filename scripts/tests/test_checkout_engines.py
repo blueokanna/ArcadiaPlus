@@ -2,6 +2,7 @@ import importlib.util
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -17,6 +18,36 @@ class CheckoutSafety(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.parent = Path(self.temp.name)
         self.pins = self.parent / 'engine_revisions.json'
+
+    def patch_fixture(self):
+        repo = self.parent / 'Corduit'
+        repo.mkdir()
+        subprocess.run(['git', 'init', '-q', str(repo)], check=True)
+        source = repo / 'source.txt'
+        source.write_text('before\n', encoding='utf-8', newline='\n')
+        patch_file = self.parent / 'fix.patch'
+        patch_file.write_text('--- a/source.txt\n+++ b/source.txt\n'
+                              '@@ -1 +1 @@\n-before\n+after\n', encoding='utf-8', newline='\n')
+        return source, patch_file
+
+    def test_required_patch_is_applied_once_and_verified_without_mutation(self):
+        source, patch_file = self.patch_fixture()
+        with patch.object(checkout, 'PATCHES', {'Corduit': patch_file}):
+            with self.assertRaisesRegex(ValueError, 'required network fixes missing'):
+                checkout.engine_patches(self.parent)
+            self.assertEqual(source.read_text(), 'before\n')
+            checkout.engine_patches(self.parent, apply=True)
+            checkout.engine_patches(self.parent, apply=True)
+            checkout.engine_patches(self.parent)
+            self.assertEqual(source.read_text(), 'after\n')
+
+    def test_patch_conflict_preserves_developer_changes(self):
+        source, patch_file = self.patch_fixture()
+        source.write_text('developer edit\n', encoding='utf-8')
+        with patch.object(checkout, 'PATCHES', {'Corduit': patch_file}):
+            with self.assertRaises(subprocess.CalledProcessError):
+                checkout.engine_patches(self.parent, apply=True)
+        self.assertEqual(source.read_text(), 'developer edit\n')
 
     def load(self, value):
         self.pins.write_text(json.dumps(value), encoding='utf-8')

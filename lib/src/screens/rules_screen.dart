@@ -99,6 +99,8 @@ class _RulesScreenState extends State<RulesScreen> {
       _error = null;
     });
     try {
+      await context.read<AppStateProvider>().prepareEngine();
+      if (!mounted) return;
       final window = await getRulesWindow(
         offset: 0,
         limit: _pageSize,

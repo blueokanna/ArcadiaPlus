@@ -39,8 +39,8 @@ void main() {
   test('image cache retention has a mobile budget', () {
     final cache = ImageCache();
     AppMemoryPolicy.configure(cache, platform: TargetPlatform.android);
-    expect(cache.maximumSizeBytes, 32 * 1024 * 1024);
-    expect(cache.maximumSize, 100);
+    expect(cache.maximumSizeBytes, 16 * 1024 * 1024);
+    expect(cache.maximumSize, 48);
   });
 
   testWidgets(

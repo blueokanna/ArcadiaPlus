@@ -14,6 +14,7 @@ import 'package:arcadiaplus/src/services/native_core_service.dart';
 import 'package:arcadiaplus/src/services/rule_provider_service.dart';
 import 'package:arcadiaplus/src/services/system_dns_service.dart';
 import 'package:arcadiaplus/src/services/profile_selections.dart';
+import 'package:arcadiaplus/src/services/proxy_selection_events.dart';
 import 'package:arcadiaplus/src/services/service_diagnostics.dart';
 import 'package:arcadiaplus/src/services/proxy_engine_service.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
@@ -117,9 +118,7 @@ class AppStateProvider extends ChangeNotifier {
   AppStateProvider() {
     RuleProviderService.instance.addListener(_onRuleProviderRefresh);
     AppLifecycle.instance.active.addListener(_onLifecycleChanged);
-    _initialization = _loadSettings().then(
-      (_) => _initializeFromActiveProfile(),
-    );
+    _initialization = _loadSettings();
     _loadSystemInfo();
     _loadVersionInfo();
     _syncTimers();
@@ -130,8 +129,6 @@ class AppStateProvider extends ChangeNotifier {
     unawaited(_initialization.then((_) => _consumeQuickConnect()));
   }
 
-  /// A rule set refresh outside this provider (profile update, manual action)
-  /// may have changed the files the engine is reading.
   void _onRuleProviderRefresh() {
     if (_isInitializingProfile || _isRefreshingRuleSets || _disposed) return;
     final profileId = RuleProviderService.instance.lastProfileId;
@@ -252,27 +249,30 @@ class AppStateProvider extends ChangeNotifier {
       _statusTimer = null;
     }
 
-    if (isActive) {
+    if (isActive && _liveStatsClaims > 0) {
       _systemInfoTimer ??= Timer.periodic(
         _systemInfoInterval,
         (_) => _loadSystemInfo(),
       );
+    } else {
+      _systemInfoTimer?.cancel();
+      _systemInfoTimer = null;
+    }
+    if (isActive && _isServiceRunning) {
       _ruleSetTimer ??= Timer.periodic(
         _ruleSetInterval,
         (_) => refreshRuleSets(),
       );
     } else {
-      _systemInfoTimer?.cancel();
-      _systemInfoTimer = null;
       _ruleSetTimer?.cancel();
       _ruleSetTimer = null;
     }
 
     if (refreshOnReturn && isActive) {
       // Whatever is on screen is stale by however long the app was away.
-      if (_isServiceRunning) unawaited(_refreshStatus());
-      unawaited(_loadSystemInfo());
-      unawaited(refreshRuleSets());
+      if (wantsStatus) unawaited(_refreshStatus());
+      if (_liveStatsClaims > 0) unawaited(_loadSystemInfo());
+      if (_isServiceRunning) unawaited(refreshRuleSets());
     }
   }
 
@@ -353,6 +353,18 @@ class AppStateProvider extends ChangeNotifier {
       _isInitializingProfile = false;
     }
   }
+
+  /// Offline node tests and rule inspection opt into engine construction.
+  /// Serialization also prevents a page visit from racing a service start.
+  Future<void> prepareEngine() => _operations.run(() async {
+    await _initialization;
+    if (_disposed || _isServiceRunning) return;
+    final profile = await StorageService.instance.getActiveProfileId();
+    if (!_isInitialized ||
+        !ConfiguredProxyEngine.instance.supportsProfile(profile)) {
+      await _initializeFromActiveProfile();
+    }
+  });
 
   /// Materialises the profile's rule sets and converts the profile into the
   /// engine's JSON document, collecting every conversion warning.
@@ -601,7 +613,7 @@ class AppStateProvider extends ChangeNotifier {
 
     try {
       final settings = await StorageService.instance.getGeneralSettings();
-      if (NativeCoreService.instance.isReady) {
+      if (NativeCoreService.instance.isReady && _isInitialized) {
         final applied = await PlatformProxyService.instance.configureProxyMode(
           mode,
         );
@@ -613,10 +625,11 @@ class AppStateProvider extends ChangeNotifier {
         settings.copyWith(mode: mode.name),
       );
       _proxyMode = mode;
+      ProxySelectionEvents.applied('mode:${mode.name}');
       notifyListeners();
       return true;
     } catch (error) {
-      if (NativeCoreService.instance.isReady) {
+      if (NativeCoreService.instance.isReady && _isInitialized) {
         await PlatformProxyService.instance.configureProxyMode(previousMode);
       }
       _proxyMode = previousMode;
@@ -1006,16 +1019,26 @@ class AppStateProvider extends ChangeNotifier {
   // ---- Connection list -------------------------------------------------------
 
   bool _isRefreshingConnections = false;
+  int _connectionSnapshotRevision = 0;
+
+  /// The connections page owns the large Dart snapshot. Native sessions keep
+  /// running; an obsolete in-flight FFI reply must not recreate the snapshot.
+  void discardConnectionSnapshot() {
+    _connectionSnapshotRevision++;
+    _activeConnections = const [];
+  }
 
   /// Re-read the connection list and the lifetime counters that head it.
   Future<void> refreshConnections() async {
     if (!NativeCoreService.instance.isReady || !_isServiceRunning) return;
     if (_isRefreshingConnections) return;
     _isRefreshingConnections = true;
+    final revision = _connectionSnapshotRevision;
     try {
       var changed = false;
 
       final connections = await getActiveConnections();
+      if (_disposed || revision != _connectionSnapshotRevision) return;
       if (!listEquals(connections, _activeConnections)) {
         _activeConnections = List.unmodifiable(connections);
         changed = true;
@@ -1078,7 +1101,6 @@ class AppStateProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      // Replacing an initialized engine under a live tunnel loses its listeners.
       if (reload || _isServiceRunning) {
         await _applyReload(configJson);
       } else {

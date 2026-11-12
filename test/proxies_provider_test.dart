@@ -27,6 +27,23 @@ void main() {
     engine.dispose();
   });
   test(
+    'unchanged selection sync does not invalidate the exit IP cache',
+    () async {
+      await flush();
+      engine.isReady = true;
+      await provider.syncSelectionsToRust();
+      final revision = ProxySelectionEvents.revision;
+      await provider.syncSelectionsToRust();
+      await provider.selectProxyInGroup(
+        'route',
+        provider.getSelectedProxyForGroup('route')!,
+      );
+      expect(ProxySelectionEvents.revision, revision);
+      expect(provider.config!.rules, isEmpty);
+      expect(provider.config!.dns, isEmpty);
+    },
+  );
+  test(
     'rapid selections serialize and publish only confirmed members',
     () async {
       await flush();

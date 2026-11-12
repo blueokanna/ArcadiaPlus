@@ -20,14 +20,27 @@ class FluidPage extends StatefulWidget {
 
 class _FluidPageState extends State<FluidPage>
     with SingleTickerProviderStateMixin {
-  late final _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 420),
-  );
-  late final _curve = CurvedAnimation(
-    parent: _controller,
-    curve: AppMotion.curve,
-  );
+  AnimationController? _controller;
+  CurvedAnimation? _curve;
+  Animation<double>? _opacity;
+  Animation<Offset>? _position;
+  void _createEntrance() {
+    if (_controller != null) return;
+    final controller = _controller = AnimationController(
+      vsync: this,
+      duration: AppMotion.pageEntrance,
+    );
+    final curve = _curve = CurvedAnimation(
+      parent: controller,
+      curve: AppMotion.curve,
+    );
+    _opacity = Tween<double>(begin: .65, end: 1).animate(curve);
+    _position = Tween<Offset>(
+      begin: const Offset(0, .012),
+      end: Offset.zero,
+    ).animate(curve);
+  }
+
   bool _started = false;
   Animation<double>? _routeAnimation;
   bool _timelineSelected = false;
@@ -38,7 +51,7 @@ class _FluidPageState extends State<FluidPage>
   }
 
   void _pause() {
-    if (!AppLifecycle.instance.isActive) _controller.value = 1;
+    if (!AppLifecycle.instance.isActive) _controller?.value = 1;
   }
 
   @override
@@ -50,32 +63,36 @@ class _FluidPageState extends State<FluidPage>
       // The first route is already complete when mounted; give it one finite
       // entrance. Pushed routes keep the navigator's interactive timeline.
       if (route != null && route.status != AnimationStatus.completed) {
-        _routeAnimation = route;
+        // One eased shape timeline follows the navigator, including reversals
+        // during back gestures. No second page controller or composited fade.
+        _routeAnimation = route.drive(
+          CurveTween(curve: AppMotion.standardCurve),
+        );
       }
     }
     // A Material route already owns the page transition. Share its timeline
     // with shape reveals instead of stacking another fade/slide over it.
     if (_routeAnimation != null) {
-      _controller.value = 1;
       _started = true;
       return;
     }
+    _createEntrance();
     if (MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled ||
         !AppLifecycle.instance.isActive) {
-      _controller.value = 1;
+      _controller!.value = 1;
       _started = true;
     } else if (!_started) {
       _started = true;
-      _controller.forward();
+      _controller!.forward();
     }
   }
 
   @override
   void dispose() {
     AppLifecycle.instance.active.removeListener(_pause);
-    _curve.dispose();
-    _controller.dispose();
+    _curve?.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -83,18 +100,12 @@ class _FluidPageState extends State<FluidPage>
   Widget build(BuildContext context) => _FluidScope(
     animation: MediaQuery.disableAnimationsOf(context)
         ? const AlwaysStoppedAnimation(1.0)
-        : _routeAnimation ?? _curve,
+        : _routeAnimation ?? _curve!,
     child: _routeAnimation != null
         ? widget.child
         : FadeTransition(
-            opacity: Tween<double>(begin: .65, end: 1).animate(_curve),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0, .012),
-                end: Offset.zero,
-              ).animate(_curve),
-              child: widget.child,
-            ),
+            opacity: _opacity!,
+            child: SlideTransition(position: _position!, child: widget.child),
           ),
   );
 }

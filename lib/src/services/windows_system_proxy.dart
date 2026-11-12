@@ -49,6 +49,21 @@ class WindowsSystemProxy {
       (state['flags'] as int) & 2 != 0 &&
       (state['server'] as String).trim().isNotEmpty;
 
+  // WinINET may retain dormant server/PAC strings after their flags are off.
+  // Compare the selected modes and their active values, not unused cache data.
+  static bool _matches(
+    Map<String, Object> expected,
+    Map<String, Object> actual,
+  ) {
+    final flags = expected['flags'] as int;
+    return flags == actual['flags'] &&
+        (flags & 2 == 0 ||
+            (expected['server'] == actual['server'] &&
+                expected['bypass'] == actual['bypass'])) &&
+        (flags & 4 == 0 ||
+            expected['autoConfigUrl'] == actual['autoConfigUrl']);
+  }
+
   Future<void> enable(String endpoint, String bypass) => _changes.run(() async {
     final previous = await read();
     final file = await _snapshotFile();
@@ -61,21 +76,23 @@ class WindowsSystemProxy {
       // Do not replace a valid crash-recovery snapshot or apply over corrupt data.
       _validate(jsonDecode(await file.readAsString()));
     }
-    await channel.invokeMethod<void>('apply', {
+    final desired = <String, Object>{
       'flags': 3, // DIRECT | PROXY; PAC and auto-detect cannot supersede this endpoint.
       'server': endpoint,
       'bypass': bypass,
       'autoConfigUrl': '',
-    });
-    final actual = await read();
-    if (actual['flags'] != 3 ||
-        actual['server'] != endpoint ||
-        actual['bypass'] != bypass ||
-        actual['autoConfigUrl'] != '') {
+    };
+    await channel.invokeMethod<void>('apply', desired);
+    try {
+      if (!_matches(desired, await read())) {
+        throw const FileSystemException(
+          'Windows did not retain the proxy settings',
+        );
+      }
+    } catch (_) {
+      // A failed read-back is also a failed transaction, even if the write worked.
       await channel.invokeMethod<void>('apply', previous);
-      throw const FileSystemException(
-        'Windows did not retain the proxy settings',
-      );
+      rethrow;
     }
   });
 
@@ -85,7 +102,7 @@ class WindowsSystemProxy {
       final saved = _validate(jsonDecode(await file.readAsString()));
       await channel.invokeMethod<void>('apply', saved);
       final actual = await read();
-      if (saved.keys.any((key) => saved[key] != actual[key])) {
+      if (!_matches(saved, actual)) {
         throw const FileSystemException(
           'Windows did not restore the proxy settings',
         );

@@ -72,11 +72,11 @@ class StatusCard extends StatelessWidget {
                     horizontal: 9,
                     vertical: 4,
                   ),
-                  decoration: BoxDecoration(
+                  decoration: ShapeDecoration(
                     color: isRunning
                         ? c.primaryContainer
                         : c.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(20),
+                    shape: const StadiumBorder(),
                   ),
                   child: Text(
                     status,

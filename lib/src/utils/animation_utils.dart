@@ -67,8 +67,13 @@ class _StaggeredListItemState extends State<StaggeredListItem>
   CurvedAnimation? _curve;
   Timer? _entrance;
   bool _started = false;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  Animation<double> _fadeAnimation = const AlwaysStoppedAnimation(1);
+  Animation<Offset> _slideAnimation = const AlwaysStoppedAnimation(Offset.zero);
+  Animation<double>? _sharedSource;
+  Animation<double>? _sharedFade;
+  Animation<Offset>? _sharedSlide;
+  int? _sharedIndex;
+  Offset? _sharedOffset;
 
   void _initializeStandalone() {
     if (_controller != null) return;
@@ -93,14 +98,14 @@ class _StaggeredListItemState extends State<StaggeredListItem>
       _started = true;
       return;
     }
-    _initializeStandalone();
     if (MediaQuery.disableAnimationsOf(context) ||
         !TickerMode.valuesOf(context).enabled ||
         widget.index >= 8) {
       _entrance?.cancel();
-      _controller!.value = 1;
+      _controller?.value = 1;
       _started = true;
     } else if (!_started) {
+      _initializeStandalone();
       _started = true;
       // Stagger only the first viewport. Rows reached by scrolling remain
       // immediately readable and do not create a ticker per new connection.
@@ -149,15 +154,25 @@ class _StaggeredListItemState extends State<StaggeredListItem>
           !TickerMode.valuesOf(context).enabled ||
           widget.index >= 8;
       final progress = visible ? const AlwaysStoppedAnimation(1.0) : shared;
+      if (!identical(_sharedSource, progress) ||
+          _sharedIndex != widget.index ||
+          _sharedOffset != widget.slideOffset) {
+        _sharedSource = progress;
+        _sharedIndex = widget.index;
+        _sharedOffset = widget.slideOffset;
+        // A short leading wave, driven entirely by the route's frame clock.
+        // Reversal walks the same intervals backwards without delayed work.
+        _sharedFade = progress.drive(
+          CurveTween(curve: Interval(widget.index.clamp(0, 7) * .025, 1)),
+        );
+        _sharedSlide = Tween<Offset>(
+          begin: widget.slideOffset,
+          end: Offset.zero,
+        ).animate(_sharedFade!);
+      }
       return FadeTransition(
-        opacity: progress,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: widget.slideOffset,
-            end: Offset.zero,
-          ).animate(progress),
-          child: widget.child,
-        ),
+        opacity: _sharedFade!,
+        child: SlideTransition(position: _sharedSlide!, child: widget.child),
       );
     }
     return FadeTransition(

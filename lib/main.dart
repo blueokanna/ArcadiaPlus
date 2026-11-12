@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+
+import 'src/services/exit_ip_service.dart';
+import 'src/services/cache_maintenance.dart';
+
 import 'package:arcadiaplus/src/widgets/app_motion_scope.dart';
 import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:flutter/services.dart';
@@ -52,6 +56,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   AppTypography.registerLicenses();
   AppMemoryPolicy.configure(PaintingBinding.instance.imageCache);
+  AppMemoryPolicy.start();
   AppLifecycle.instance.start();
   runApp(const ArcadiaPlusBootstrap());
 }
@@ -79,6 +84,7 @@ class _ArcadiaPlusBootstrapState extends State<ArcadiaPlusBootstrap> {
       }),
       _guarded('storage', () async {
         await StorageService.instance.init();
+        CacheMaintenance.instance.start();
         final settings = await StorageService.instance.getGeneralSettings();
         AnimationUtils.setHapticEnabled(settings.hapticFeedbackEnabled);
       }),
@@ -293,9 +299,29 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
         ChangeNotifierProvider(create: (_) => ProfilesProvider()),
         ChangeNotifierProvider(create: (_) => NetworkSettingsProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
-        ChangeNotifierProvider(create: (_) => ProxiesProvider()),
+        ChangeNotifierProvider(
+          create: (context) => ProxiesProvider(
+            prepareEngine: context.read<AppStateProvider>().prepareEngine,
+          ),
+        ),
         ChangeNotifierProvider(create: (_) => DnsSettingsProvider()),
         ChangeNotifierProvider(create: (_) => GeneralSettingsProvider()),
+        ChangeNotifierProxyProvider2<
+          AppStateProvider,
+          GeneralSettingsProvider,
+          ExitIpController
+        >(
+          create: (_) => ExitIpController(),
+          update: (_, app, settings, controller) {
+            final exit = controller!;
+            exit.configure(
+              useProxy: app.isServiceRunning,
+              port: settings.mixedPort,
+              active: exit.requested && app.isServiceRunning,
+            );
+            return exit;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => UpdateProvider()),
         ChangeNotifierProvider(create: (_) => WallpaperProvider()),
       ],

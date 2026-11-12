@@ -3,6 +3,9 @@ import 'package:arcadiaplus/src/widgets/adaptive_button.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
 import 'package:arcadiaplus/src/providers/theme_provider.dart';
 
+import '../theme/palette_reference.dart';
+import '../theme/app_shapes.dart';
+
 Future<void> showThemePicker(BuildContext context, ThemeProvider provider) {
   return showModalBottomSheet<void>(
     context: context,
@@ -49,7 +52,7 @@ class ThemePicker extends StatelessWidget {
                       crossAxisCount: columns,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      mainAxisExtent: 104 + 32 * scale,
+                      mainAxisExtent: 110 + 56 * scale,
                     ),
                     itemBuilder: (context, index) {
                       final name = provider.availableThemes[index];
@@ -71,7 +74,7 @@ class ThemePicker extends StatelessWidget {
                             backgroundColor: colors.surfaceContainerHigh,
                             foregroundColor: colors.onSurface,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: AppShapes.extraLarge,
                             ),
                             side: BorderSide(
                               color: selected
@@ -85,7 +88,7 @@ class ThemePicker extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: AppShapes.medium,
                                 child: SizedBox(
                                   height: 40,
                                   child: Row(
@@ -110,7 +113,8 @@ class ThemePicker extends StatelessWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      provider.getThemeDisplayName(name),
+                                      l10n?.paletteName(name) ??
+                                          provider.getThemeDisplayName(name),
                                       maxLines: 2,
                                       style: theme.textTheme.labelLarge
                                           ?.copyWith(color: colors.onSurface),
@@ -125,6 +129,13 @@ class ThemePicker extends StatelessWidget {
                                     ),
                                   ],
                                 ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                PaletteReference.forTheme(name).label,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                ),
                               ),
                             ],
                           ),
@@ -150,6 +161,16 @@ class ThemePicker extends StatelessWidget {
                   onChanged: provider.dynamicColorAvailable == false
                       ? null
                       : provider.setUseDynamicColors,
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              sliver: SliverToBoxAdapter(
+                child: Text(
+                  l10n?.paletteScreenNote ??
+                      'Screen colors adapted from the supplied print chart.',
+                  style: theme.textTheme.bodySmall,
                 ),
               ),
             ),

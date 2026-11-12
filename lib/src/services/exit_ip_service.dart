@@ -80,7 +80,10 @@ class ExitIpReport {
 /// Owns one lookup. Route changes cancel sockets and invalidate late replies.
 /// No API secrets, disk history or direct fallback while the proxy is selected.
 class ExitIpController extends ChangeNotifier {
-  ExitIpController({this.clientFactory = createIpProbeClient}) {
+  ExitIpController({
+    this.clientFactory = createIpProbeClient,
+    DateTime Function()? now,
+  }) : _now = now ?? DateTime.now {
     AppLifecycle.instance.active.addListener(_lifecycle);
     _subscription = ProxySelectionEvents.changes.listen(
       (_) => configure(
@@ -92,6 +95,10 @@ class ExitIpController extends ChangeNotifier {
     );
   }
   final IpProbeClientFactory clientFactory;
+  final DateTime Function() _now;
+  static const cacheLifetime = Duration(hours: 1);
+  DateTime? _lastAttempt;
+  bool get requested => _visible;
   StreamSubscription<String>? _subscription;
   Dio? _client;
   Timer? _debounce;
@@ -114,6 +121,7 @@ class ExitIpController extends ChangeNotifier {
     required bool active,
     bool invalidate = false,
   }) {
+    if (_disposed) return;
     _visible = active;
     active = active && AppLifecycle.instance.isActive;
     final changed = _proxy != useProxy || _port != port || invalidate;
@@ -127,13 +135,18 @@ class ExitIpController extends ChangeNotifier {
       _client = null;
       _debounce?.cancel();
       loading = false;
-      if (changed) report = null;
+      if (changed) {
+        report = null;
+        failed = false;
+        _lastAttempt = null;
+      }
     }
     if (active &&
-        (changed || resumed) &&
-        (report == null ||
-            DateTime.now().difference(report!.checkedAt) >
-                const Duration(minutes: 5))) {
+        !loading &&
+        !(_debounce?.isActive ?? false) &&
+        (_lastAttempt == null ||
+            _now().isBefore(_lastAttempt!) ||
+            _now().difference(_lastAttempt!) >= cacheLifetime)) {
       _debounce?.cancel();
       _debounce = Timer(
         resumed ? Duration.zero : const Duration(milliseconds: 350),
@@ -182,6 +195,9 @@ class ExitIpController extends ChangeNotifier {
       if (current()) {
         report = next;
         failed = next == null;
+        // Cache completed failures too. Revisiting a page must not repeatedly
+        // contact an unavailable provider; the refresh button remains explicit.
+        _lastAttempt = _now();
       }
     } finally {
       client.close(force: true);

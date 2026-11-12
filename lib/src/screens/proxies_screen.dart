@@ -20,6 +20,7 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
   final _searchController = TextEditingController();
   String get _query => _searchController.text.trim().toLowerCase();
   int _layoutRevision = 0;
+  ProxiesProvider? _pageState;
 
   Future<void> _loadLayout() async {
     final revision = _layoutRevision;
@@ -54,6 +55,8 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
   @override
   void initState() {
     super.initState();
+    _pageState = context.read<ProxiesProvider>();
+    _searchController.text = _pageState!.searchQuery;
     _loadLayout();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) context.read<ProxiesProvider>().loadFromActiveProfile();
@@ -62,6 +65,7 @@ class _ProxiesScreenState extends State<ProxiesScreen> {
 
   @override
   void dispose() {
+    _pageState?.searchQuery = _searchController.text;
     _searchController.dispose();
     super.dispose();
   }

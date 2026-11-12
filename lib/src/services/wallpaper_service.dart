@@ -2,7 +2,8 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart' show FileImage;
+import 'package:flutter/painting.dart'
+    show FileImage, ResizeImage, ResizeImagePolicy;
 import 'package:arcadiaplus/src/services/storage_service.dart';
 
 class WallpaperService {
@@ -71,15 +72,8 @@ class WallpaperService {
       rethrow;
     }
 
-    await for (final entity in directory.list()) {
-      if (entity is File && entity.path != destination.path) {
-        try {
-          await entity.delete();
-        } catch (error) {
-          debugPrint('Failed to remove an old wallpaper copy: $error');
-        }
-      }
-    }
+    // Cleanup runs after the preference has been committed, with a grace
+    // period. A failed save must leave the previously selected file intact.
     return destination.path;
   }
 
@@ -112,6 +106,16 @@ class WallpaperService {
   static Future<void> forgetImage(String path) async {
     try {
       await FileImage(File(path)).evict();
+      // Backdrop and preview decode quantized fit variants, whose cache keys
+      // differ from FileImage. Evict every allowed variant of this path.
+      for (var extent = 256; extent <= 2048; extent += 256) {
+        await ResizeImage(
+          FileImage(File(path)),
+          width: extent,
+          height: extent,
+          policy: ResizeImagePolicy.fit,
+        ).evict();
+      }
     } catch (error) {
       debugPrint('Failed to forget the wallpaper image "$path": $error');
     }

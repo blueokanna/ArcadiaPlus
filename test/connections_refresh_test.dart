@@ -20,6 +20,8 @@ class ConnectionState extends ChangeNotifier implements AppStateProvider {
   Future<void> refreshConnections() async {}
   @override
   Future<void> refreshStatus() async {}
+  @override
+  void discardConnectionSnapshot() => activeConnections = [];
   void update() => notifyListeners();
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -66,6 +68,7 @@ void main() {
       await tester.pump();
       expect(identical(tester.state(first), animationState), true);
       await tester.pumpWidget(const SizedBox.shrink());
+      expect(state.activeConnections, isEmpty);
       state.dispose();
       expect(tester.takeException(), isNull);
     },

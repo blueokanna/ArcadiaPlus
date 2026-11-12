@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,17 +31,20 @@ class ProxiesProvider extends ChangeNotifier {
   ProxiesProvider({
     ProxyEngine? engine,
     Future<SharedPreferences> Function()? preferences,
+    this.prepareEngine,
   }) : _engine = engine ?? ConfiguredProxyEngine.instance,
        _preferences = preferences ?? SharedPreferences.getInstance {
     _engine.addListener(_onEngineChanged);
   }
 
   final ProxyEngine _engine;
+  final Future<void> Function()? prepareEngine;
   final Future<SharedPreferences> Function() _preferences;
   late final _selection = ProxySelectionService(_engine);
   final _operations = SerialTaskQueue();
   final _persistence = SerialTaskQueue();
   ParsedClashConfig? _config;
+  String? _profileDigest;
   String? _profileId;
   String? _selectedGroupName;
   final Map<String, String> _selectedProxies = {};
@@ -55,6 +61,7 @@ class ProxiesProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isTesting = false;
   String? _error;
+  String searchQuery = '';
 
   static const maxConcurrentProbes = 4;
   ParsedClashConfig? get config => _config;
@@ -109,6 +116,7 @@ class ProxiesProvider extends ChangeNotifier {
     _error = null;
     _notify();
     try {
+      await prepareEngine?.call();
       final id = await StorageService.instance.getActiveProfileId();
       final yaml = id == null
           ? null
@@ -116,17 +124,26 @@ class ProxiesProvider extends ChangeNotifier {
       if (!_current(generation)) return;
       if (_profileId != id) {
         _profileId = id;
+        _profileDigest = null;
+        _replaceConfig(null);
         _selectedProxies.clear();
         _selectedGroupName = null;
       }
       if (yaml == null) {
         _replaceConfig(null);
+        _profileDigest = null;
         _error = 'No active profile';
         return;
       }
-      final parsed = await compute(ConfigConverter.parseClashConfig, yaml);
+      final digest = sha256.convert(utf8.encode(yaml)).toString();
+      if (_config != null && _profileDigest == '$id:$digest') {
+        await _syncSelections(generation);
+        return;
+      }
+      final parsed = await compute(ConfigConverter.parseProxyConfig, yaml);
       if (!_current(generation)) return;
       _replaceConfig(parsed);
+      _profileDigest = null;
       final prefs = await _preferences();
       if (!_current(generation)) return;
       final savedGroup = prefs.getString(ProfileSelections.groupKey(id));
@@ -141,6 +158,7 @@ class ProxiesProvider extends ChangeNotifier {
         }
       }
       await _syncSelections(generation);
+      if (_current(generation)) _profileDigest = '$id:$digest';
     } catch (error) {
       if (_current(generation)) _error = error.toString();
     } finally {
@@ -180,8 +198,9 @@ class ProxiesProvider extends ChangeNotifier {
     _generation++;
     _measurementGeneration++;
     _isLoading = false;
+    _profileDigest = null;
     try {
-      _replaceConfig(ConfigConverter.parseClashConfig(yamlContent));
+      _replaceConfig(ConfigConverter.parseProxyConfig(yamlContent));
       _error = null;
       unawaited(syncSelectionsToRust());
     } catch (error) {
@@ -219,7 +238,6 @@ class ProxiesProvider extends ChangeNotifier {
         if (!_current(generation)) return;
         _error = null;
         if (await _applySelection(groupName, proxyName, generation)) {
-          if (canTestLatency) ProxySelectionEvents.applied(groupName);
           await _saveSelections();
         }
       });
@@ -250,7 +268,6 @@ class ProxiesProvider extends ChangeNotifier {
     }
     if (!_current(generation)) return;
     if (applied) {
-      ProxySelectionEvents.applied(_selectedGroupName ?? '');
       await _saveSelections();
     }
     _notify();
@@ -269,6 +286,7 @@ class ProxiesProvider extends ChangeNotifier {
         isCurrent: () => _current(generation) && canTestLatency,
       );
       if (result == null || !_current(generation)) return false;
+      if (result.changed) ProxySelectionEvents.applied(group);
       final effective = result.member;
       if (effective != null &&
           (_groupsByName[group]?.proxies.contains(effective) ?? false)) {

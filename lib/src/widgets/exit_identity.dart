@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../services/exit_ip_service.dart';
+import '../l10n/app_localizations.dart';
+import '../theme/app_shapes.dart';
+import '../theme/app_motion.dart';
 
 /// The same compact identity block fits a phone hero or a desktop status card.
 class ExitIdentity extends StatelessWidget {
@@ -19,27 +22,28 @@ class ExitIdentity extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    final l10n =
+        AppLocalizations.of(context) ??
+        AppLocalizations(Localizations.localeOf(context));
     final c = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
     final value = report;
     final network = switch (value?.network ?? IpNetworkKind.unknown) {
-      IpNetworkKind.residentialCandidate =>
-        zh ? '住宅候选' : 'Residential candidate',
-      IpNetworkKind.mobile => zh ? '移动网络' : 'Mobile',
-      IpNetworkKind.hosting => zh ? '数据中心' : 'Hosting',
-      IpNetworkKind.proxy => zh ? '代理出口' : 'Proxy exit',
-      IpNetworkKind.unknown => zh ? '类型未知' : 'Type unknown',
+      IpNetworkKind.residentialCandidate => l10n.exitResidential,
+      IpNetworkKind.mobile => l10n.exitMobile,
+      IpNetworkKind.hosting => l10n.exitHosting,
+      IpNetworkKind.proxy => l10n.exitProxy,
+      IpNetworkKind.unknown => l10n.exitUnknown,
     };
     final score = value?.riskScore;
     final risk = score == null
-        ? (zh ? '质量未知' : 'Risk unknown')
+        ? l10n.exitUnrated
         : score <= 10
-        ? (zh ? '风险较低' : 'Lower risk')
-        : (zh ? '风险 $score/100' : 'Risk $score/100');
+        ? l10n.exitLowRisk
+        : l10n.exitRiskScore(score);
     final detail = value == null
-        ? (zh ? '刷新出口信息' : 'Refresh exit information')
-        : '${value.source} · ${TimeOfDay.fromDateTime(value.checkedAt).format(context)}\n${zh ? '类型与风险来自第三方情报；住宅候选不等于确认住宅，风险分数不是安全概率。' : 'Third-party classification. Residential candidate is not verified residential service; risk is not a probability.'}';
+        ? l10n.exitRefresh
+        : '${value.source} · ${TimeOfDay.fromDateTime(value.checkedAt).format(context)}\n${l10n.exitAssessment}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -48,11 +52,17 @@ class ExitIdentity extends StatelessWidget {
           onLongPress: value == null
               ? null
               : () => Clipboard.setData(ClipboardData(text: value.ip)),
-          child: Text(
-            value?.ip ?? (loading ? (zh ? '检测出口…' : 'Checking exit…') : '—'),
-            style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+          child: AnimatedSwitcher(
+            duration: AppMotion.duration(context, AppMotion.short),
+            switchInCurve: AppMotion.standardCurve,
+            switchOutCurve: AppMotion.standardCurve,
+            child: Text(
+              value?.ip ?? (loading ? l10n.exitChecking : '—'),
+              key: ValueKey(value?.ip ?? (loading ? 'loading' : 'empty')),
+              style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -74,7 +84,7 @@ class ExitIdentity extends StatelessWidget {
                               ? c.errorContainer
                               : c.secondaryContainer
                         : c.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: AppShapes.medium,
                   ),
                   child: Text(
                     label,
@@ -93,9 +103,7 @@ class ExitIdentity extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           value?.organization ??
-              (failed
-                  ? (zh ? '检测暂不可用' : 'Lookup unavailable')
-                  : (zh ? '出口运营商' : 'Exit provider')),
+              (failed ? l10n.exitUnavailable : l10n.exitProvider),
           style: t.bodySmall,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
@@ -108,7 +116,7 @@ class ExitIdentity extends StatelessWidget {
               loading ? Icons.more_horiz : Icons.refresh_rounded,
               size: 16,
             ),
-            label: Text(value?.source ?? (zh ? '检测 IP' : 'Check IP')),
+            label: Text(value?.source ?? l10n.exitRefresh),
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
               minimumSize: const Size(48, 48),

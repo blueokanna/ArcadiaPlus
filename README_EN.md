@@ -45,13 +45,54 @@ The sections below state what the current build actually does, including the pla
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
-- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.3.0, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
-- Explicit configuration downgrades: a node whose protocol corduit cannot build is dropped and its references fall back to `DIRECT`, and a rule type corduit has no rule for is skipped — every downgrade is reported through `onWarning`, never silent.
+- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.3.4, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
+- Runtime configuration uses strict validation: missing required rule sets, unsupported rule types and missing outbounds prevent startup. Offline previews can show conversion warnings; runtime routing is never changed by silently skipping rules.
 - Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
-- Rule sets (`rule-providers`) are owned by the Dart side: `RuleProviderService` downloads, validates, normalises, and caches them in the app's private directory, then refreshes each one on the interval the profile declares (86400 seconds by default). The engine only ever receives local `file` providers, a failed refresh keeps the last good copy, and a rule set that is missing takes its `RULE-SET` rules out of the profile the way Clash does — with a warning, and without failing the rest of the config.
+- Rule sets (`rule-providers`) are owned by Dart: `RuleProviderService` downloads, validates, normalises and caches them in the app's private directory, refreshing at the profile's interval (86400 seconds by default). The engine receives local `file` providers. Failed downloads, empty content and unsupported entries preserve the last complete cache. A required rule set without a valid cache prevents startup.
 - The GeoIP database ships with the installer (`assets/Country.mmdb`), is unpacked into the app support directory at start-up, and is registered with the engine; a failure to unpack or register is recorded, and `GEOIP` rules simply do not match while it is missing — never a silent downgrade.
 - Shared Rust TUN packet processing for Android, Windows, and Linux, with platform-owned device lifecycles.
 - Generated app icons for Windows, macOS, Linux, Android, iOS, and HarmonyOS NEXT from `assets/arcadiaplus.png`.
+
+## Startup diagnostics and interface behavior
+
+Start with the error details retained on the home screen when startup fails. Original configuration and VPN errors are logged; cleanup no longer replaces them with a generic missing-profile message. The home screen shows a running service only after the engine confirms it and, on Android, the VPN data path is established.
+
+Fresh installs and older settings without an encryption choice follow subscription DNS. Existing strict-encryption choices remain intact. Profiles without upstreams use the built-in encrypted endpoints. Preferred encryption upgrades known public resolvers but preserves private and unsupported subscription endpoints, so plaintext queries remain possible and local recursion is compatible. Strict encryption separately constrains primary, fallback, bootstrap and domain-policy resolvers. Failed compatibility checks preserve the previous mode. The DNS page uses the runtime converter for preflight checks and offers start/restart to apply changes.
+
+Public resolvers are upgraded only to verified endpoints of the same operator. For example, `119.29.29.29` uses DNSPod DoT with the `dot.pub` certificate identity, as documented in the [Tencent Cloud integration guide](https://cloud.tencent.com/document/product/302/110784). Strict mode rejects subscriptions that depend on private plaintext resolvers such as `tcp://private-resolver:8080`. Supply a compatible encrypted endpoint or disable strict protection to retain subscription routing; this never disables certificate verification or replaces private policies with public resolvers.
+
+Local recursion starts and stops with the proxy, listening only on loopback. Both UDP and TCP must bind before the address is published. Startup does not depend on public website probes. The forwarding layer preserves local precedence, a recovery budget and a brief failure cooldown. The DNS page distinguishes saved settings, listener state and actual query counters. Startup errors appear in both logs and the status card.
+
+VPN DNS distinguishes NODATA, NXDOMAIN and query failures: a name without an AAAA record receives NOERROR with no answer; a nonexistent name receives NXDOMAIN; transport failures receive SERVFAIL. Normal empty answers retain their type and do not trigger system-DNS queries outside subscription policy.
+
+The proxy page's automatic layout uses available width; explicit one/two-column choices are respected. Narrow cards put names below icons and grow with text scaling. Mobile navigation floats above the page, blurring only its own background; list padding and floating actions share navigation clearance. List entrances reuse the page timeline. Background state and reduced-motion preferences use the global motion switch; performance needs measurements on target devices in profile mode.
+
+`ExpressiveShape` reuses page timelines. `AnimatedExpressiveShape` creates a controller on its first state change. Home status, empty states, selected nodes and DNS status share cached shapes and spring parameters. Interrupted transitions retain progress and velocity, animate the clip region and stop when settled.
+
+## Dashboard caching, resource management and color
+
+An application-owned controller retains the exit IP result and any in-flight lookup across navigation. Returning to Home does not repeat a completed lookup for one hour, including failed lookups. An actual node selection, proxy port or routing mode change invalidates the cache; manual refresh remains available. Synchronizing an unchanged selection does not invalidate it. Backgrounding cancels unfinished work and rejects late replies; an interrupted lookup can retry on resume, while completed results keep their remaining lifetime. DNS queries have been removed from Home and remain available in the DNS tab on the connections page.
+
+Cold startup loads settings and native libraries. The engine is built when starting the service, visiting the proxy page or inspecting rules. Profile lists retain metadata only; YAML belongs to its configuration file. Legacy preference copies are removed only after checking the file, recovering missing files from the backup first. The node page retains only nodes and groups, without a duplicate DNS policy or rule table, and reuses parsed results when the subscription is unchanged. Disposing the connections page releases its Dart snapshot. A bounded LRU cache retains scroll state for up to 12 destinations; node search and layout preferences are stored separately. Retained decoded images are capped at 16 MiB on mobile and 32 MiB on desktop, and unused images are evicted when backgrounded. Replacing a wallpaper evicts all supported decoded sizes for that file.
+
+File maintenance runs at startup and on foreground entry, at most once a day. It removes abandoned rule download temporary files and unselected wallpaper copies older than 24 hours, preserving active rules and the current wallpaper. Motion uses Flutter's frame scheduler and native navigation timeline. Pages, MD3E shapes and visible rows share progress; pushed pages no longer allocate a second entrance controller. Reduced motion and background suspension remain supported. See the [Material 3 motion specification](https://m3.material.io/styles/motion/overview/how-it-works).
+
+The ten presets reference the supplied *PANTON 3.0 C* color-chart PDF. Seeds were sampled from its MuPDF 1.28.2 sRGB rendering, then passed to `ColorScheme.fromSeed` for MD3 light and dark roles. The PDF uses CMYK print simulations: these are screen approximations, not official Pantone RGB definitions or print calibration guarantees. The theme picker includes the reference number. Optional dynamic color still uses the system palette.
+
+| Preset ID | Reference | Screen seed | PDF page |
+| --- | --- | --- | --- |
+| default | 286 C | `#0060A9` | 6 |
+| ocean | 3005 C | `#0081C4` | 7 |
+| forest | 347 C | `#009A66` | 8 |
+| sunset | 179 C | `#F15C2A` | 3 |
+| purple | 2587 C | `#6351A2` | 5 |
+| teal | 320 C | `#00A1B2` | 7 |
+| rose | 213 C | `#EC0B6D` | 4 |
+| amber | 123 C | `#FDB826` | 1 |
+| indigo | 2756 C | `#173B8D` | 6 |
+| cyan | 3125 C | `#00B5C8` | 7 |
+
+Exit assessments, traffic descriptions and palette names cover all 11 locales, with separate Simplified and Traditional Chinese copy. Regression tests cover the one-hour cache boundary, real TCP/UDP outbound accounting, safe cache cleanup, light/dark text contrast and page layout. Image cache budgets are not process memory guarantees. Compare PSS/RSS and frame timings using profile/release builds on the same device and configuration; `scripts/android-profile.ps1` captures samples. See [Flutter memory analysis](https://docs.flutter.dev/tools/devtools/memory).
 
 ## Rules
 
@@ -67,17 +108,17 @@ Conversion translates the profile rule by rule. The vocabulary it can express:
 | `PROCESS-NAME` / `PROCESS-PATH` | Process matching |
 | `NETWORK` | `tcp` / `udp` |
 | `RULE-SET` | References a `rule-providers` entry; the engine only reads local files, so downloading, validating, caching, and refreshing happen on the Dart side |
-| `GEOSITE` | The engine ships no v2ray geosite database; with a provider of that name it matches through the provider, and without one the rule is skipped with a warning |
+| `GEOSITE` | Matches the provider with the same name; `cn`, `geolocation-!cn`, `category-ads-all` and `private` can use the corresponding Loyalsoldier data; other categories require compatible rule sets |
 | `AND` / `OR` / `NOT` | Logical composition with nested conditions, as in `AND,((DOMAIN-SUFFIX,a.com),(NETWORK,tcp)),PROXY` |
 | `MATCH` / `FINAL` | Catch-all rule |
 
-Conversion downgrades explicitly: a rule type the engine cannot evaluate (`SCRIPT`, `PROCESS-PATH-REGEX`, `SUB-RULE`, `IP-SUFFIX`, and the like) is skipped with the reason reported through `onWarning`, and a rule set in `mrs` format or with binary content is refused rather than half-loaded. Skipping beats approximating here, because an approximation sends the traffic the rule was written to protect.
+Unsupported runtime rules such as `SCRIPT`, `PROCESS-PATH-REGEX` and `SUB-RULE` produce an error and stop loading. Unsupported binary rule sets are never treated as text. Failed refreshes preserve the last valid cache; required rule sets without a valid cache must be supplied before startup.
 
 The Rules entry in settings (`/rules`) shows the engine's table with each rule's **live hit count**, every conversion warning from the current profile, and each rule set's readiness, entry count, and last refresh. Hit counts are why this screen exists: a rule that never fires, or one that fires for everything, is visible instead of inferred. The table is read a window at a time: the Rust side keeps the snapshot and answers window and search requests (the top page quietly re-reads the hit counts every five seconds), and the screen builds only the rows it shows — a subscription with an inline ACL can hold tens of thousands of rules, and decoding all of them on the UI isolate while building a row per entry is exactly how the diagnostic page used to take the whole app down with it. The search box scans the full table in Rust and returns the total match count plus the first 500 matches.
 
 ## Protocol Status
 
-The protocol implementations live in corduit 0.3.0, and this build enables every feature it defines (`hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic`, `tls13`, …). This repository wires them into Flutter and keeps the real-server interoperability checklist below open.
+This build uses Corduit 0.3.4 through a sibling-source `[patch.crates-io]` entry. `Cargo.lock` pins package versions and `scripts/engine_revisions.json` pins CI commits. Enabled features include `hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic` and `tls13`. CI verifies shared resolver, socket-factory and JNI dependency identities.
 
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
@@ -99,12 +140,16 @@ A protocol can move to “supported” only after interoperability tests against
 | --- | --- | --- | --- | --- |
 | Android | Present | N/A | `VpnService` path implemented | Requires device, ABI, and long-running regression tests |
 | Windows | Present | Implemented | Wintun path implemented | Requires Windows 10/11 tests with elevation |
-| Linux | Present | GNOME settings path (every `gsettings` exit code is checked) | IPv4 TUN path provided by corduit | Needs root/device testing; the data path points the default route at the TUN and exempts only proxy server addresses, so engine-dialled direct traffic can loop back into the tunnel — rule/direct modes are not claimed until that is verified on hardware |
+| Linux | Present | GNOME settings path (every `gsettings` exit code is checked) | IPv4 TUN path provided by corduit | TUN currently permits global mode only and explicitly rejects rule/direct; root/device testing is still required |
 | macOS | Present | `networksetup` path | No Network Extension | Full-tunnel support cannot be claimed |
 | iOS | Present | N/A | No Packet Tunnel Extension | Application shell only |
 | HarmonyOS NEXT | Present | N/A | `VpnExtensionAbility` tunnel with the engine data path implemented | Requires a HarmonyOS NEXT device (authorization prompt, tunnel, engine routing); not claimed before that verification |
 
 ## Routing Modes
+
+Global mode uses the `GLOBAL` selector on the proxy page, with selections saved per profile. If absent, the app builds it from available nodes instead of selecting the first domestic/direct group. With no usable nodes, traffic is rejected. An explicitly configured `GLOBAL` preserves its members and choice, including user-configured `DIRECT`.
+
+RecurseX 0.2.6 / courierust 1.1.2 currently require the DoH/DoH3 connection IP and certificate IP identity to match; independent hostname identity overrides are unsupported. Defaults use Alibaba DoH endpoints with IP certificates. Known public hostname endpoints are converted to compatible verified endpoints of the same operator with a warning. Unknown private DoH configurations fail explicitly: use a supported IP endpoint or DoT/DoQ, never disabled certificate verification.
 
 `rule` / `global` / `direct` are decided inside the engine: the inbounds, the TUN data path, and the Android VPN all hand their connections to one router, so switching modes never requires rebuilding the tunnel.
 
@@ -112,10 +157,10 @@ A protocol can move to “supported” only after interoperability tests against
 | --- | --- | --- |
 | Android | `set_android_proxy_mode` (engine runtime mode) plus the notification text | The VPN route is always `0.0.0.0/0` and the engine decides per dial; every port-53 query that enters the tunnel is answered by the netstack's fake-IP resolver |
 | Windows | `set_windows_proxy_mode` | Switching to `global` while the route table is not in global mode is retried through `enable_tun_mode_with_mode("global")`, which rebuilds the routes |
-| Linux / macOS | `set_proxy_mode` (engine runtime mode) | The Linux TUN data path dials through the local SOCKS inbound, so the mode applies at dial time |
+| Linux / macOS | `set_proxy_mode` (engine runtime mode) | Linux TUN permits global mode only; macOS has no TUN implementation, while its system proxy still supports engine routing |
 | System proxy | Independent of the mode | Points at the local mixed port; Linux checks every `gsettings` exit code, and Windows snapshots the previous proxy settings before enabling and restores them on disable |
 
-Rule sets refresh at start-up, after a profile update, and on a 15-minute due check. Only providers whose declared interval (one day by default) has elapsed actually make a network request, and those requests carry `If-None-Match` / `If-Modified-Since`; a 304 means the cached copy is current. A refreshed rule set lands on a content-addressed file name, which changes the config, so the running engine loads the new content on the next `reload_corduit`.
+Rule sets are checked when the engine is prepared and after a profile update. While the service is running, checks also run on foreground entry and every 15 minutes. Opening a stopped dashboard does not build the engine or download rule sets. Only providers whose declared interval (one day by default) has elapsed actually make a network request, and those requests carry `If-None-Match` / `If-Modified-Since`; a 304 means the cached copy is current. A refreshed rule set lands on a content-addressed file name, which changes the config, so the running engine loads the new content on the next `reload_corduit`.
 
 ### Proxy group semantics
 
@@ -177,7 +222,26 @@ The bar: with the tunnel idle, `procs_running` should stay in the single digits,
 Gaps and boundaries worth knowing, so nothing here is mistaken for a feature it is not:
 
 - The DNS surface the app edits is its settings page, applied only while “override DNS” is on — without it the profile's `dns` block wins. An override is not a whole-section replacement either: `nameserver-policy` and `default-nameserver` are still read from the profile (the first is a subscription's only way to resolve its own node domains, the second bootstraps upstreams written as host names such as `tls://doh.pub`), and the **bootstrap resolvers** list the page now offers comes before the profile's entries. The engine's wider DNS surface (`fallback-filter`, `fake-ip-range` / `-filter` / `-ttl`, `cache-size`, `hosts`) still passes through from the profile.
-- The system proxy bypass list reaches Windows (`ProxyOverride`) and Linux (`ignore-hosts`); the macOS `networksetup` path currently only sets or clears the proxies themselves.
+- The system proxy bypass list reaches Windows (WinINET), Linux (`ignore-hosts`) and macOS (`networksetup`). CIDR entries are expanded into exact wildcard patterns where required.
+
+## System proxy and DNS connection behavior
+
+Windows enables the system proxy after service startup by default; automatic activation can be disabled in Settings. Fresh installs and settings migrations include the following bypass entries while preserving custom entries, IPv6 loopback and link-local entries:
+
+```text
+localhost;127.*;192.168.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;*.local
+```
+
+Windows uses the WinINET connection API to snapshot, apply and verify settings, then restores the snapshot on disable. Reads use `INTERNET_PER_CONN_FLAGS_UI` to preserve the configured autodetection state. A dormant PAC URL retained by Windows no longer causes a successful activation to be rolled back; failed verification still restores the previous settings. This bypass list applies to the system proxy. TUN/VPN traffic follows tunnel routing and engine rules.
+
+- **Prefer encrypted DNS** upgrades supported public resolvers to verified encrypted endpoints operated by the same provider. Private subscription resolvers, domain policies and bootstrap settings remain intact. This preference does not mean every DNS path is encrypted.
+- **Strict encrypted DNS** requires encryption on every resolution path and rejects incompatible configurations before startup. It disables local recursion and never silently retries TLS failures over plaintext.
+- **Local recursion** listens only on loopback and takes precedence while healthy; configured upstreams recover failures. Root and authoritative queries require reachable UDP/TCP port 53. A ready listener does not guarantee successful resolution for every name or DNSSEC chain validation.
+- **Android DNS** inside the VPN is answered by the netstack. The app skips additional privileged low-port listeners; explicitly configured unprivileged listeners remain available. Local recursion continues to use its own ephemeral loopback port.
+
+The Shadowsocks reader preserves partial salt, encrypted-length and payload state across read timeouts without resetting frames or nonces. Truncation and authentication errors still fail. DNS resolution and TCP dialing share one connection deadline. Groups do not count cancelled connections as node failures or mark nodes unavailable after they have delivered payload; session lifetime no longer overwrites probe latency. Automatic groups emit `retired` once when crossing the failure threshold and recover after a success. Manual groups continue to honor the selected member.
+
+These fixes cannot eliminate network blocking, invalid node credentials or server-initiated disconnects. Keep the first DNS/TLS/handshake error preceding `retired` and identify the affected protocol and node. Windows settings interaction and Android network transitions still require device validation.
 
 ## Architecture
 
@@ -188,10 +252,10 @@ Flutter Rust Bridge (generated bindings)
         |
 lib-arcadiaplus (the only bridge crate, rooted at rust/: async adaptation, DTO mapping, platform entry points)
         |
-corduit 0.3.0 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
+corduit 0.3.4 (engine: config, routing, inbounds, outbounds, DNS, TUN, all protocols)
         +-- courierust (HTTP/1.1 · HTTP/2 · HTTP/3 · WebSocket · TLS stack)
         +-- nextjson / rustbinary (config and binary codecs)
-recurse-x 0.2.3 (optional local recursion: the resolver, plus the client-facing UDP/TCP DNS server whose lifecycle the bridge owns)
+recurse-x 0.2.6 (optional local recursion: the resolver, plus the client-facing UDP/TCP DNS server whose lifecycle the bridge owns)
 ```
 
 corduit is synchronous while the Dart surface stays `Future`-based, so the bridge dispatches every engine call onto a blocking worker (`run`). Starting the proxy, probing latency, or toggling TUN therefore never stalls the Flutter isolate.
@@ -208,6 +272,8 @@ Clear ownership boundaries matter more than adding macros, generics, or complex 
 - HarmonyOS NEXT: DevEco Studio 5.0.5+ (or the same command-line tools CI uses) and the CPF-Flutter Flutter OHOS SDK; the HAP is also built by the `ohos` job in GitHub Actions — see [ohos/README.md](ohos/README.md)
 
 ## Build and Check
+
+Home traffic cards wrap to fit the window and text scale. “Direct traffic” and “Proxy traffic” follow the final outbound transport, regardless of group names or destination country. Both include uploaded and downloaded payload, closed short connections and UDP, excluding protocol framing, TUN headers and retransmission overhead. Android and desktop use the same outbound counters, with totals derived from the same direct/proxy sample. The connection list no longer adds synthetic TUN aggregates labeled as proxy connections.
 
 ```bash
 flutter pub get
@@ -244,7 +310,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT HAPs are built by the `ohos` job in CI and by the DevEco/hvigor workflow in [ohos/README.md](ohos/README.md). CI additionally asserts that the HAP really contains `libapp.so`, `librust_lib_arcadiaplus.so` and `libarcadia_core.so`: a successful build proves the packaging chain, and the VPN data path (authorization prompt, tunnel, engine routing) is still verified device-by-device against that document's checklist.
 
-`rust/Cargo.toml` points at the engine through `path = "../../Corduit"` (a sibling checkout of the engine repository) and declares the version it requires. The engine moves in lockstep with this app, so every workflow starts with `.github/actions/checkout-engine`: it reads the version requirement from `rust/Cargo.toml`, materialises the engine at that sibling path, checks out the matching `v<version>` tag when one exists (otherwise it follows the engine repository's default branch with a warning), and finally verifies that the checked-out engine reports the required version — a mismatch fails the job rather than letting an unknown engine turn CI green. Tag engine releases as `v<version>` to pin CI to an immutable revision.
+Place `ArcadiaPlus`, `Corduit` and `RecurseX` under the same parent directory. `rust/Cargo.toml` declares registry versions and uses two `[patch.crates-io]` entries for the sibling sources; there is no vendored engine copy. CI and release workflows use `.github/actions/checkout-engines` to fetch only the full commits in `scripts/engine_revisions.json`, with no branch or missing-tag fallback. They then apply `scripts/patches/corduit-network.patch`, so these fixes do not depend on uncommitted developer code. For existing sibling checkouts, run `python scripts/checkout_engines.py --apply-patches`. It is idempotent and refuses conflicts without resetting local changes. `--verify-local` checks pinned package versions and required patches without writing. Once upstream includes the fixes, update the pins and remove the corresponding patch together. Run `python scripts/check_engine_dependencies.py --offline` after changing engine versions or pins.
 
 ## Disclaimer
 

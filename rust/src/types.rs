@@ -341,8 +341,10 @@ impl From<engine::TrafficStats> for TrafficStats {
         let (direct_upload, direct_download, proxy_upload, proxy_download) =
             engine::engine::global_tracker().route_totals();
         Self {
-            upload: value.upload,
-            download: value.download,
+            // Derive totals from the very same route sample: independently
+            // sampled counters and TUN headers cannot skew the breakdown.
+            upload: direct_upload.saturating_add(proxy_upload),
+            download: direct_download.saturating_add(proxy_download),
             upload_speed: value.upload_speed,
             download_speed: value.download_speed,
             direct_upload,

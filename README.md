@@ -69,6 +69,31 @@ VPN 的 DNS 应答区分 NODATA、NXDOMAIN 与查询失败：域名存在但没�
 
 Material Shape 变形集中在 `ExpressiveShape` 与 `AnimatedExpressiveShape`：前者复用页面时间线，后者用于状态切换，首次变化时才创建控制器。首页状态、空状态、节点选中标记和 DNS 状态使用同一套缓存形状与弹簧参数。连续操作从当前进度和速度继续，动画只更新裁剪区域；静止状态不循环播放。
 
+## 首页缓存、资源管理与配色
+
+出口 IP 检测由应用级控制器持有。页面切换保留结果和正在进行的请求；同一路由一小时内不会因返回首页重复请求，失败结果也适用。实际节点选择变化、代理端口或路由模式变化使缓存失效，手动刷新始终可用。重复同步同一个节点不会触发失效。进入后台会取消未完成请求并拒绝迟到结果，恢复前台后可重试未完成的查询；已完成的缓存继续有效。首页已移除 DNS 查询区，诊断记录仍在连接页的 DNS 标签中。
+
+冷启动只加载设置和原生库；启动服务、访问代理页或查看规则时才构建引擎。配置列表只存元数据，YAML 由配置文件持有；旧版本偏好设置中的 YAML 副本在确认磁盘文件可用后移除，缺失文件先从副本恢复。代理页只保留节点和分组，不保留另一份 DNS 与规则表；订阅内容未变时复用解析结果。页面销毁时释放连接快照，滚动位置使用最多 12 个页面的 LRU 状态缓存，节点搜索和布局选择独立保存。图片缓存上限为移动端 16 MiB、桌面端 32 MiB，应用进入后台时回收未使用的解码图片；替换壁纸会清除该文件的各尺寸缓存。
+
+文件维护在启动和恢复前台时执行，每天最多一次：清理超过 24 小时的规则下载临时文件和未选中的旧壁纸，不删除正在使用的规则或当前壁纸。动效沿用 Flutter 帧调度器与原生导航时间线；页面、MD3E 形状和首屏列表共享进度，推入页面不再创建第二个入场控制器。系统减少动态效果设置与后台暂停始终生效。实现依据 [Material 3 动效规范](https://m3.material.io/styles/motion/overview/how-it-works)。
+
+十组预设以用户提供的《潘通 PANTON 3.0 版本色卡 C》PDF 为参考，通过 MuPDF 1.28.2 渲染为 sRGB 后采样，并由 `ColorScheme.fromSeed` 生成 MD3 明暗角色色。PDF 本身使用 CMYK 印刷模拟，因此下表是屏幕近似值，并非 Pantone 官方 RGB 定义或印刷校色保证。主题选择器保留参考色号；动态取色仍使用系统提供的配色。
+
+| 预设 ID | 色号 | 屏幕种子色 | PDF 页码 |
+| --- | --- | --- | --- |
+| default | 286 C | `#0060A9` | 6 |
+| ocean | 3005 C | `#0081C4` | 7 |
+| forest | 347 C | `#009A66` | 8 |
+| sunset | 179 C | `#F15C2A` | 3 |
+| purple | 2587 C | `#6351A2` | 5 |
+| teal | 320 C | `#00A1B2` | 7 |
+| rose | 213 C | `#EC0B6D` | 4 |
+| amber | 123 C | `#FDB826` | 1 |
+| indigo | 2756 C | `#173B8D` | 6 |
+| cyan | 3125 C | `#00B5C8` | 7 |
+
+首页出口评级、流量说明和主题名称覆盖全部 11 种语言，简繁中文分别维护。回归测试检查一小时缓存边界、真实 TCP/UDP 出口计数、缓存清理边界、明暗文字对比度与页面布局。内存缓存上限不是进程内存承诺；实际 PSS/RSS 与帧耗时需用相同设备、相同配置的 profile/release 构建比较，可运行 `scripts/android-profile.ps1` 采样，方法见 [Flutter 内存分析](https://docs.flutter.dev/tools/devtools/memory)。
+
 ## 规则
 
 规则表由配置转换逐条翻译给引擎，支持的类型与语义：
@@ -135,7 +160,7 @@ RecurseX 0.2.6 / courierust 1.1.2 的 DoH、DoH3 当前要求连接 IP 与证书
 | Linux / macOS | `set_proxy_mode`（引擎运行时模式） | Linux TUN 开启时仅允许 global；macOS 尚无 TUN 实现，系统代理仍支持引擎分流 |
 | 系统代理 | 与模式无关 | 指向本地 mixed 端口；Linux 逐条校验 `gsettings` 退出码，Windows 启用前会快照原代理设置并在关闭时恢复 |
 
-规则集刷新时机：应用启动、profile 更新、恢复前台，以及前台运行时每 15 分钟的到期检查。支持手动强制更新；常规检查只请求已经到期的规则集，并使用 ETag / Last-Modified 条件请求。下载失败保留上次有效内容；下载成功后重新加载引擎。HarmonyOS 当前通过重启 VPN 扩展更新配置，会中断已有连接。尚未实现系统后台定时更新任务。
+规则集在构建引擎、profile 更新时检查；服务运行期间恢复前台或每隔 15 分钟进行到期检查。仅打开已停止服务的首页不会构建引擎或下载规则集。支持手动强制更新；常规检查只请求已经到期的规则集，并使用 ETag / Last-Modified 条件请求。下载失败保留上次有效内容；下载成功后重新加载引擎。HarmonyOS 当前通过重启 VPN 扩展更新配置，会中断已有连接。尚未实现系统后台定时更新任务。
 
 ### 策略组语义
 
@@ -197,7 +222,26 @@ adb shell 'P=$(pidof com.blueokanna.arcadiaplus); for t in /proc/$P/task/*; do e
 这些是需要知道的边界，避免把某个设置当成它并不具备的能力：
 
 - App 能编辑的 DNS 面是 DNS 设置页，且只在“覆盖 DNS”开启时生效——未开启时以 profile 的 `dns` 段为准。覆盖时也不是整段替换：`nameserver-policy` 与 `default-nameserver` 仍从 profile 读取（前者是订阅自家节点域名的唯一解析途径，后者是形如 `tls://doh.pub` 这类按域名书写的上游的引导），设置页新增的**引导解析器**列表排在 profile 的条目之前。引擎更宽的 DNS 面（`fallback-filter`、`fake-ip-range` / `-filter` / `-ttl`、`cache-size`、`hosts`）仍由 profile 直接透传。
-- 系统代理的 bypass 列表：Windows（`ProxyOverride`）与 Linux（`ignore-hosts`）会下发，macOS 的 `networksetup` 路径暂时只在启用/关闭时设置代理本身。
+- 系统代理的 bypass 列表会下发至 Windows（WinINET）、Linux（`ignore-hosts`）和 macOS（`networksetup`）；不支持 CIDR 的平台会收到等价的精确通配模式。
+
+## 系统代理与 DNS 连接行为
+
+Windows 默认在服务启动后启用系统代理（可在设置中关闭自动启用），并写入绕过列表。新安装和旧设置迁移均覆盖以下地址，同时保留已有的自定义条目、IPv6 回环和链路本地条目：
+
+```text
+localhost;127.*;192.168.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;*.local
+```
+
+Windows 通过 WinINET 连接 API 保存原设置、写入并读回确认，停用时恢复。读取使用 `INTERNET_PER_CONN_FLAGS_UI` 保留用户配置的自动检测状态；未启用的 PAC 地址即使被系统保留，也不再导致启用失败后回滚。读回失败仍会恢复原设置。此绕过列表影响系统代理；TUN/VPN 的流量由隧道路由和引擎规则决定。
+
+- **优先加密 DNS**：将支持的公共解析器升级到同一运营方的加密端点，校验证书；保留订阅中的私有解析、域名策略和引导解析。不能据此宣称所有 DNS 都已加密。
+- **严格加密 DNS**：要求每条解析路径满足加密条件，不兼容的配置在启动前报错；关闭本机递归，不因 TLS 失败偷偷降级为明文。
+- **本机递归解析**：仅监听回环地址，健康时优先使用；失败由已配置的上游接替。根与权威查询需要 UDP/TCP 53 可达，监听就绪不等于所有域名均可解析，也不等于已启用 DNSSEC 信任链验证。
+- **Android DNS**：VPN 内的 DNS 由 netstack 应答。应用不会额外尝试绑定需要权限的低端口；显式配置的非特权监听端口仍可使用，递归服务继续使用独立的回环临时端口。
+
+Shadowsocks 接收器保存盐、加密长度和载荷的半包进度，短暂读超时不会重置帧或 nonce；截断与认证错误仍然失败。DNS 和 TCP 建连共用一次连接的时间预算。策略组不把已取消的连接计作节点失败，也不把已收到有效载荷后的传输错误算作节点不可用；连接存活时长不再覆盖探测延迟。自动组仅在达到失败阈值时记录一次 `retired`，后续成功可恢复；手选组始终尊重用户选择。
+
+这些修复不能消除运营商阻断、节点凭据错误或服务端主动断开。排查时应保留 `retired` 前的首条 DNS/TLS/握手错误，并区分协议与节点；Windows 设置交互和 Android 网络切换仍需要对应设备验证。
 
 ## 架构
 ```mermaid
@@ -271,7 +315,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 
 将 `ArcadiaPlus`、`Corduit` 与 `RecurseX` 放在同一父目录下。`rust/Cargo.toml` 声明版本并用两个 `[patch.crates-io]` 引用相邻仓库。本项目不维护 vendor 副本。修改引擎版本时，同步更新锁文件和 `scripts/engine_revisions.json`，再运行 `python scripts/check_engine_dependencies.py --offline`；检查会验证本地构建和 CI 固定提交的包版本，避免本机通过、CI 检出旧版本。
 
-首页四项流量指标始终横向排列，窄屏可横向滚动。「国内总流量」按直连出口统计，包含局域网和其他直连目的地，不是按 IP 国家归属计算；「代理总流量」按实际代理出口统计。两项都是本次核心运行期间的上传、下载有效载荷之和，包含已关闭的短连接和 UDP，不包含协议封装开销。
+首页流量卡按窗口宽度和文字缩放自动换行。「直连流量」与「代理流量」按最终出口的传输类型计数，不依赖组名或目的地国家。两项均包含上传、下载有效载荷、已结束的短连接和 UDP，不含协议封装、TUN 包头或重传开销。Android 与桌面使用同一出口计数源，总量由同次采样的直连、代理分项相加；连接页不再插入标为代理的 TUN 汇总伪连接。
 
 ```bash
 flutter pub get
@@ -308,7 +352,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT 的 HAP 由 CI 的 `ohos` 与 [ohos/README.md](ohos/README.md) 的 DevEco/hvigor 流程构建。CI 除构建外还会断言 HAP 内确实含有 `libapp.so`、`librust_lib_arcadiaplus.so` 与 `libarcadia_core.so`——构建通过只证明打包链路正确；VPN 数据面（授权弹窗、隧道、引擎分流）仍按该文档的真机清单逐项验证。
 
-CI 与发布工作流使用 `.github/actions/checkout-engines`，只检出 `scripts/engine_revisions.json` 中的完整提交号，不回退到分支 HEAD 或缺失标签。先将引擎提交推送到远端，再更新应用的固定点；本地未提交的核心代码不会出现在 GitHub runner 上。`--verify-local` 只读取现有 Git 对象中的清单，不重置或覆盖开发目录。
+CI 与发布工作流使用 `.github/actions/checkout-engines`，只检出 `scripts/engine_revisions.json` 中的完整提交号，不回退到分支 HEAD 或缺失标签。随后自动应用仓库内的 `scripts/patches/corduit-network.patch`，因此网络修复不会依赖开发机上未提交的引擎代码。已有相邻仓库执行 `python scripts/checkout_engines.py --apply-patches`；该操作幂等，冲突会报错，不重置或覆盖本地修改。`--verify-local` 只读验证固定提交的包版本和所需补丁。引擎上游合入修复后，应一起更新提交号并移除对应补丁。
 
 ## 免责声明
 

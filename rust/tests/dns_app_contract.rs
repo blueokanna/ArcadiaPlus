@@ -5,6 +5,58 @@ use std::net::{TcpListener, UdpSocket};
 use std::time::Duration;
 
 #[test]
+fn recursive_servfail_recovers_through_the_configured_upstream() {
+    let local = UdpSocket::bind("127.0.0.1:0").unwrap();
+    let recovery = UdpSocket::bind("127.0.0.1:0").unwrap();
+    for socket in [&local, &recovery] {
+        socket
+            .set_read_timeout(Some(Duration::from_secs(5)))
+            .unwrap();
+    }
+    let engine = EngineResolver::from_settings(EngineDnsSettings {
+        nameservers: vec![
+            local.local_addr().unwrap().to_string(),
+            recovery.local_addr().unwrap().to_string(),
+        ],
+        ..EngineDnsSettings::default()
+    })
+    .unwrap();
+    let workers: Vec<_> = [local, recovery]
+        .into_iter()
+        .enumerate()
+        .map(|(index, socket)| {
+            std::thread::spawn(move || {
+                let mut bytes = [0; 4096];
+                let (size, peer) = socket.recv_from(&mut bytes).unwrap();
+                let mut reply = Message::parse(&bytes[..size]).unwrap();
+                reply.flags.qr = true;
+                reply.flags.ra = true;
+                if index == 0 {
+                    reply.flags.rcode = recurse_x::Rcode::SERVFAIL;
+                } else {
+                    reply.answers.push(Record {
+                        name: reply.question().unwrap().qname.clone(),
+                        rr_type: RrType::A,
+                        class: RrClass::IN,
+                        ttl: 60,
+                        rdata: RData::A("203.0.113.42".parse().unwrap()),
+                    });
+                }
+                socket.send_to(&reply.to_bytes().unwrap(), peer).unwrap();
+            })
+        })
+        .collect();
+    let answer = engine.resolve_ips("recovery.test", false);
+    for worker in workers {
+        worker.join().unwrap();
+    }
+    assert_eq!(
+        answer.unwrap(),
+        vec!["203.0.113.42".parse::<std::net::IpAddr>().unwrap()]
+    );
+}
+
+#[test]
 fn healthy_local_recursion_does_not_race_the_recovery_resolver() {
     let primary = UdpSocket::bind("127.0.0.1:0").unwrap();
     primary

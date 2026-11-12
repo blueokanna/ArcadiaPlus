@@ -70,6 +70,43 @@ void main() {
     expect(WindowsSystemProxy.enabled(state), isTrue);
   });
 
+  test(
+    'a dormant PAC URL does not undo a successfully enabled proxy',
+    () async {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            if (call.method == 'read') return state;
+            state = {
+              ...Map<String, Object>.from(call.arguments as Map),
+              'autoConfigUrl': original['autoConfigUrl']!,
+            };
+            return null;
+          });
+      await proxy.enable('127.0.0.1:7890', '<local>;127.*');
+      expect(WindowsSystemProxy.enabled(state), isTrue);
+      await proxy.disable();
+      expect(state, original);
+    },
+  );
+
+  test('read-back failure rolls back the successful write', () async {
+    var reads = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(channel, (call) async {
+          if (call.method == 'read') {
+            if (++reads == 2) throw PlatformException(code: 'read_failed');
+            return state;
+          }
+          state = Map<String, Object>.from(call.arguments as Map);
+          return null;
+        });
+    await expectLater(
+      proxy.enable('127.0.0.1:7890', '<local>'),
+      throwsA(isA<PlatformException>()),
+    );
+    expect(state, original);
+  });
+
   test('overlapping enable and disable transactions are serialized', () async {
     await Future.wait([
       proxy.enable('127.0.0.1:7890', '<local>'),

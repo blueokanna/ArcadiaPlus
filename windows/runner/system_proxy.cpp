@@ -35,9 +35,9 @@ bool Wide(const Map& map, const char* key, std::wstring& result) {
       static_cast<int>(text->size()), result.data(), size) == size;
 }
 
-bool Read(Map& state, DWORD& error) {
+bool ReadOptions(Map& state, DWORD& error, DWORD flags_option) {
   std::array<INTERNET_PER_CONN_OPTIONW, 4> options{};
-  options[0].dwOption = INTERNET_PER_CONN_FLAGS;
+  options[0].dwOption = flags_option;
   options[1].dwOption = INTERNET_PER_CONN_PROXY_SERVER;
   options[2].dwOption = INTERNET_PER_CONN_PROXY_BYPASS;
   options[3].dwOption = INTERNET_PER_CONN_AUTOCONFIG_URL;
@@ -59,6 +59,15 @@ bool Read(Map& state, DWORD& error) {
     if (options[i].Value.pszValue) GlobalFree(options[i].Value.pszValue);
   }
   return ok != FALSE;
+}
+
+bool Read(Map& state, DWORD& error) {
+  // FLAGS reports effective autodetection, which can hide the saved WPAD bit.
+  // FLAGS_UI preserves the user's settings for verification and restoration.
+  if (ReadOptions(state, error, INTERNET_PER_CONN_FLAGS_UI)) return true;
+  if (error != ERROR_INVALID_PARAMETER && error != ERROR_INTERNET_INVALID_OPTION)
+    return false;
+  return ReadOptions(state, error, INTERNET_PER_CONN_FLAGS);
 }
 
 bool Apply(const Map& state, DWORD& error) {

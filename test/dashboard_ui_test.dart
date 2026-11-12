@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/services/exit_ip_service.dart';
+
 import 'dart:io';
 
 import 'support/test_fonts.dart';
@@ -141,6 +143,7 @@ void main() {
         await tester.pumpWidget(
           MultiProvider(
             providers: [
+              ChangeNotifierProvider(create: (_) => ExitIpController()),
               ChangeNotifierProvider<AppStateProvider>.value(value: state),
               ChangeNotifierProvider<NetworkSettingsProvider>.value(
                 value: network,
@@ -236,8 +239,8 @@ void main() {
           final labels = [
             'Download',
             'Upload',
-            'Domestic total',
-            'Proxy total',
+            'Direct traffic',
+            'Proxy traffic',
           ];
           for (final label in labels) {
             final finder = find.descendant(
@@ -369,6 +372,7 @@ void main() {
         await tester.pumpWidget(
           MultiProvider(
             providers: [
+              ChangeNotifierProvider(create: (_) => ExitIpController()),
               ChangeNotifierProvider<AppStateProvider>.value(value: state),
               ChangeNotifierProvider<NetworkSettingsProvider>.value(
                 value: network,

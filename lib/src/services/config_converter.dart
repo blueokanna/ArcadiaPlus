@@ -107,6 +107,19 @@ class ParsedClashConfig {
 
 /// Converts Clash YAML configuration to ArcadiaPlus JSON format
 class ConfigConverter {
+  /// The node page does not own the DNS policy or the rule table. Drop these
+  /// before the isolate result is copied back and retained for navigation.
+  static ParsedClashConfig parseProxyConfig(String yamlContent) {
+    final parsed = parseClashConfig(yamlContent);
+    return ParsedClashConfig(
+      proxies: parsed.proxies,
+      proxyGroups: parsed.proxyGroups,
+      general: const {},
+      dns: const {},
+      rules: const [],
+    );
+  }
+
   /// Checks only DNS, using the same boundary as runtime conversion. This can
   /// run before startup without downloading rule sets or exposing node secrets.
   static void validateDns(String yamlContent, DnsSettings settings) {
@@ -532,10 +545,6 @@ class ConfigConverter {
     void Function(String message)? onWarning,
   }) {
     final override = dnsSettings != null && dnsSettings.overrideDns;
-    // The profile's own section is read even when it is overridden: the parts
-    // of it that exist to make servers *reachable* — the per-domain policy and
-    // the bootstrap resolvers — stay in force, because losing them turns
-    // "use my own servers" into "the node domains no longer resolve".
     final rawProfileDns = _convertToMap(clash['dns']);
     final profileDns = rawProfileDns is Map
         ? Map<String, dynamic>.from(rawProfileDns)
@@ -557,9 +566,6 @@ class ConfigConverter {
       if (!withSystemDns.contains(server)) withSystemDns.add(server);
     }
 
-    // RecurseX treats a loopback-first group as ordered, with a reserved
-    // recovery budget and a brief failure cooldown. Keep that contract intact;
-    // splitting it into separate groups loses the loopback recovery state.
     final recursive =
         recursiveDnsAddress != null &&
         !(dnsSettings?.requireEncryptedDns ?? false);
@@ -571,10 +577,6 @@ class ConfigConverter {
         ? dnsSettings.fallback
         : _toStringList(dns['fallback']);
 
-    // `nameserver-policy` always comes from the profile: it is how a
-    // subscription makes its own node domains resolvable (typically a
-    // private TCP resolver). Overriding the general DNS servers must not
-    // break the node bootstrap.
     final policy = <String, List<String>>{};
     final rawPolicy = profileDns['nameserver-policy'];
     if (rawPolicy is Map) {
@@ -586,14 +588,6 @@ class ConfigConverter {
       });
     }
 
-    // `default-nameserver` bootstraps the host name of an upstream resolver
-    // (`tls://doh.pub` needs *a* resolver before it can answer anything), and
-    // `fallback-filter` decides when an answer is suspect enough to re-resolve
-    // through `fallback`. Under an override the app's own bootstrap list leads
-    // — it is the user's answer to a network that will not resolve the
-    // upstreams — and the profile's entries stay behind it, because a
-    // subscription reaches its private resolvers through exactly those
-    // addresses.
     final defaultNameserver = <String>[];
     if (override) {
       for (final entry in dnsSettings.bootstrap) {
@@ -607,18 +601,10 @@ class ConfigConverter {
       if (!defaultNameserver.contains(entry)) defaultNameserver.add(entry);
     }
     final fallbackFilter = _extractFallbackFilter(dns['fallback-filter']);
-
-    // Pass-through keys the app's own DNS settings cannot express yet, so they
-    // come from the profile. With "override DNS" on, `dns` is empty and every
-    // key below is omitted — leaving the engine's own defaults in place rather
-    // than handing it a value nobody chose.
     final fakeIpRange = dns['fake-ip-range'];
     final fakeIpFilter = _toStringList(dns['fake-ip-filter']);
     final fakeIpTtl = _toPositiveInt(dns['fake-ip-ttl']);
     final cacheSize = _toPositiveInt(dns['cache-size']);
-    // `use-hosts: false` in the profile means the hosts table must not be
-    // consulted; shipping it anyway would be data the profile asked to
-    // ignore, so it is not shipped at all.
     final useHosts = dns['use-hosts'];
     final hosts = useHosts == false
         ? const <String, String>{}
@@ -633,8 +619,6 @@ class ConfigConverter {
       'fallback': fallback,
       if (defaultNameserver.isNotEmpty) 'default_nameserver': defaultNameserver,
       'fallback_filter': ?fallbackFilter,
-      // mihomo's default is `redir-host`, not `fake-ip`. A profile that does not
-      // name a mode gets real answers, which is what it would get under mihomo.
       'enhanced_mode': _normaliseDnsMode(
         override ? dnsSettings.dnsMode : dns['enhanced-mode'],
         onWarning: onWarning,
@@ -648,8 +632,6 @@ class ConfigConverter {
       if (useHosts is bool) 'use_hosts': useHosts,
       if (hosts.isNotEmpty) 'hosts': hosts,
     };
-    // Known same-operator hostname endpoints can become verified IP endpoints
-    // before checking that bootstrap never requires system DNS.
     final compatible = strict
         ? DnsTransportCompatibility.apply(result, onWarning: onWarning)
         : result;
@@ -684,9 +666,6 @@ class ConfigConverter {
         return 'global';
       case 'direct':
         return 'direct';
-      // mihomo's scripting mode has no equivalent here; a profile that asks
-      // for it gets rule matching, and the difference is stated rather than
-      // silently approximated.
       case 'script':
         onWarning?.call(
           'mode: script has no equivalent in this engine; rule matching is '

@@ -51,6 +51,23 @@ void main() {
   });
 
   group('bypass entries for platforms without CIDR support', () {
+    test('defaults include all requested Windows LAN bypass patterns', () {
+      final patterns = PlatformProxyService.expandBypassForGlobMatching(
+        NetworkSettings.defaultBypassDomains,
+      );
+      expect(
+        patterns,
+        containsAll([
+          'localhost',
+          '127.*',
+          '192.168.*',
+          '10.*',
+          '*.local',
+          for (var octet = 16; octet <= 31; octet++) '172.$octet.*',
+        ]),
+      );
+      expect(patterns, isNot(contains('172.*')));
+    });
     test('octet-aligned blocks become wildcards', () {
       expect(PlatformProxyService.expandBypassForGlobMatching(['10.0.0.0/8']), [
         '10.*',

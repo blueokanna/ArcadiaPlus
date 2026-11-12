@@ -179,6 +179,8 @@ jobs:
       - name: Test Rust workspace
         run: |
           cargo test --workspace --all-targets --all-features --locked
+          cargo test --manifest-path ../../Corduit/Cargo.toml --lib --locked engine::outbound::
+          cargo test --manifest-path ../../Corduit/Cargo.toml --lib --locked common::socket::tests::
           cargo test --manifest-path ../../RecurseX/Cargo.toml --all-features --locked
 
   msrv:

@@ -33,10 +33,12 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
   bool _onTop = true;
   bool _observingLifecycle = false;
   bool _dns = false;
+  AppStateProvider? _appState;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _appState = context.read<AppStateProvider>();
     final route = ModalRoute.of(context);
     if (route != null) {
       routeObserver.subscribe(this, route);
@@ -62,6 +64,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
       _observingLifecycle = false;
     }
     _listTimer?.cancel();
+    _appState?.discardConnectionSnapshot();
     super.dispose();
   }
 

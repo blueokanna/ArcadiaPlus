@@ -193,7 +193,9 @@ dependencies = [
 
 [[package]]
 name = "corduit"
-version = "0.3.4"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af90796f440a75ca2facfa9ad2f6764617084ba36ebeec2936b2457406d9469b"
 dependencies = [
  "bitflags 2.13.2",
  "bytes",
@@ -729,7 +731,7 @@ checksum = "20870f649af7073d53e38067b2a84312175d56ea15217e1b15bc83506ec50afb"
 
 [[package]]
 name = "lib-arcadiaplus"
-version = "1.1.0"
+version = "1.1.1"
 dependencies = [
  "corduit",
  "flutter_rust_bridge",
@@ -1029,6 +1031,8 @@ checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
 [[package]]
 name = "recurse-x"
 version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a93c009b81c85fcf73c55c869958e72f6aa237bcffcde596819023cdc2a122d"
 dependencies = [
  "courierust",
  "nextjson",

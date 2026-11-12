@@ -1,3 +1,5 @@
+import 'palette_reference.dart';
+
 import 'package:arcadiaplus/src/theme/app_shapes.dart';
 import 'package:arcadiaplus/src/theme/app_typography.dart';
 import 'package:dynamic_color/dynamic_color.dart';
@@ -83,31 +85,8 @@ class AppTheme {
     }
   }
 
-  // Theme seed colors for preview
-  static Color getThemeSeedColor(String themeName) {
-    switch (themeName) {
-      case oceanTheme:
-        return const Color(0xFF0061A4);
-      case forestTheme:
-        return const Color(0xFF146C2E);
-      case sunsetTheme:
-        return const Color(0xFF8F4A4A);
-      case purpleTheme:
-        return const Color(0xFF6750A4);
-      case tealTheme:
-        return const Color(0xFF006A6A);
-      case roseTheme:
-        return const Color(0xFFB4004E);
-      case amberTheme:
-        return const Color(0xFF7D5700);
-      case indigoTheme:
-        return const Color(0xFF3F51B5);
-      case cyanTheme:
-        return const Color(0xFF006978);
-      default:
-        return const Color(0xFF1976D2);
-    }
-  }
+  static Color getThemeSeedColor(String themeName) =>
+      PaletteReference.forTheme(themeName).seed;
 
   // Generate ColorScheme from seed color using Material 3
   static ColorScheme _generateColorScheme(

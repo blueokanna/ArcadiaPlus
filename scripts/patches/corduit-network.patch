@@ -1,0 +1,727 @@
+--- a/src/api.rs
++++ b/src/api.rs
+@@ -969,18 +969,6 @@
+ pub fn get_traffic_stats() -> Result<TrafficStats> {
+     let tracker = crate::engine::connection_tracker::global_tracker();
+     tracker.update_speed();
+-    #[cfg(target_os = "android")]
+-    {
+-        if let Some(processor) = crate::get_android_vpn_processor() {
+-            let vpn_stats = processor.get_traffic_stats();
+-            return Ok(TrafficStats {
+-                upload: vpn_stats.bytes_received,
+-                download: vpn_stats.bytes_sent,
+-                upload_speed: tracker.upload_speed(),
+-                download_speed: tracker.download_speed(),
+-            });
+-        }
+-    }
+ 
+     Ok(TrafficStats {
+         upload: tracker.total_upload(),
+@@ -2439,8 +2427,7 @@
+     let tracker = crate::engine::connection_tracker::global_tracker();
+     let connections = tracker.get_all();
+ 
+-    #[allow(unused_mut)]
+-    let mut result: Vec<ActiveConnection> = connections
++    let result: Vec<ActiveConnection> = connections
+         .iter()
+         .map(|conn| ActiveConnection {
+             id: conn.id.clone(),
+@@ -2460,58 +2447,8 @@
+         })
+         .collect();
+ 
+-    #[cfg(target_os = "android")]
+-    {
+-        if let Some(processor) = crate::get_android_vpn_processor() {
+-            let vpn_stats = processor.get_traffic_stats();
+-
+-            if vpn_stats.tcp_connections > 0 || vpn_stats.udp_sessions > 0 {
+-                let start_time = std::time::SystemTime::now()
+-                    .duration_since(std::time::UNIX_EPOCH)
+-                    .unwrap_or_default()
+-                    .as_millis() as u64;
+-
+-                if vpn_stats.tcp_connections > 0 {
+-                    result.push(ActiveConnection {
+-                        id: format!("vpn-tcp-{}", vpn_stats.tcp_connections),
+-                        inbound_tag: "tun".to_string(),
+-                        outbound_tag: "proxy".to_string(),
+-                        host: format!("{} TCP connections", vpn_stats.tcp_connections),
+-                        destination_ip: None,
+-                        destination_port: 0,
+-                        protocol: "TCP".to_string(),
+-                        network: "tcp".to_string(),
+-                        upload_bytes: vpn_stats.bytes_received,
+-                        download_bytes: vpn_stats.bytes_sent,
+-                        start_time,
+-                        rule: "VPN".to_string(),
+-                        rule_payload: "TUN".to_string(),
+-                        process_name: None,
+-                    });
+-                }
+-
+-                if vpn_stats.udp_sessions > 0 {
+-                    result.push(ActiveConnection {
+-                        id: format!("vpn-udp-{}", vpn_stats.udp_sessions),
+-                        inbound_tag: "tun".to_string(),
+-                        outbound_tag: "proxy".to_string(),
+-                        host: format!("{} UDP sessions", vpn_stats.udp_sessions),
+-                        destination_ip: None,
+-                        destination_port: 0,
+-                        protocol: "UDP".to_string(),
+-                        network: "udp".to_string(),
+-                        upload_bytes: 0,
+-                        download_bytes: 0,
+-                        start_time,
+-                        rule: "VPN".to_string(),
+-                        rule_payload: "TUN".to_string(),
+-                        process_name: None,
+-                    });
+-                }
+-            }
+-        }
+-    }
+-
++    // TUN traffic traverses the same SOCKS inbounds and is already tracked.
++    // Packet-layer aggregates are neither connections nor proxy-only traffic.
+     Ok(result)
+ }
+ 
+@@ -2529,29 +2466,12 @@
+ pub fn get_connection_stats() -> Result<(u64, u64, u64, u64)> {
+     let tracker = crate::engine::connection_tracker::global_tracker();
+ 
+-    #[allow(unused_mut)]
+-    let mut total_count = tracker.total_count();
+-    #[allow(unused_mut)]
+-    let mut total_upload = tracker.total_upload();
+-    #[allow(unused_mut)]
+-    let mut total_download = tracker.total_download();
+-    #[allow(unused_mut)]
+-    let mut active_count = tracker.active_count() as u64;
+-
+-    #[cfg(target_os = "android")]
+-    {
+-        if let Some(processor) = crate::get_android_vpn_processor() {
+-            let vpn_stats = processor.get_traffic_stats();
+-            total_upload = vpn_stats.bytes_received;
+-            total_download = vpn_stats.bytes_sent;
+-
+-            let vpn_connections = (vpn_stats.tcp_connections + vpn_stats.udp_sessions) as u64;
+-            active_count = vpn_connections;
+-            total_count = total_count.max(vpn_connections);
+-        }
+-    }
+-
+-    Ok((total_count, total_upload, total_download, active_count))
++    Ok((
++        tracker.total_count(),
++        tracker.total_upload(),
++        tracker.total_download(),
++        tracker.active_count() as u64,
++    ))
+ }
+ 
+ // ============== TUN Mode ==============
+--- a/src/engine/outbound/shadowsocks.rs
++++ b/src/engine/outbound/shadowsocks.rs
+@@ -711,6 +711,17 @@
+     read_buffer: Vec<u8>,
+     read_pos: usize,
+     eof: bool,
++    stage: SsReadStage,
++    wire: Vec<u8>,
++    filled: usize,
++    failed: bool,
++}
++
++#[derive(Clone, Copy, PartialEq, Eq)]
++enum SsReadStage {
++    Salt,
++    Length,
++    Payload,
+ }
+ 
+ impl ShadowsocksStream {
+@@ -724,12 +735,104 @@
+             read_buffer: Vec::new(),
+             read_pos: 0,
+             eof: false,
++            stage: SsReadStage::Salt,
++            wire: vec![0; cipher_spec.salt_len],
++            filled: 0,
++            failed: false,
++        }
++    }
++
++    fn next_stage(&mut self, stage: SsReadStage, size: usize) {
++        self.stage = stage;
++        self.wire.resize(size, 0);
++        self.filled = 0;
++    }
++
++    // Persist every framing byte and nonce across the relay's short read polls.
++    // EOF is clean only between records, never inside a salt, length or tag.
++    fn read_chunk(&mut self) -> std::io::Result<Option<Vec<u8>>> {
++        loop {
++            {
++                let mut inner = self.inner.lock();
++                while self.filled < self.wire.len() {
++                    match inner.read(&mut self.wire[self.filled..]) {
++                        Ok(0) if self.stage == SsReadStage::Length && self.filled == 0 => {
++                            return Ok(None);
++                        }
++                        Ok(0) => {
++                            return Err(std::io::Error::new(
++                                ErrorKind::UnexpectedEof,
++                                "truncated Shadowsocks record",
++                            ));
++                        }
++                        Ok(n) => self.filled += n,
++                        Err(error) if error.kind() == ErrorKind::Interrupted => continue,
++                        Err(error) => return Err(error),
++                    }
++                }
++            }
++            match self.stage {
++                SsReadStage::Salt => {
++                    let key =
++                        derive_subkey_for_cipher(&self.password, &self.wire, &self.cipher_spec)
++                            .map_err(|error| {
++                                std::io::Error::new(ErrorKind::InvalidData, error.to_string())
++                            })?;
++                    self.dec = Some(AeadCipher::new(self.cipher_spec, key));
++                    self.next_stage(SsReadStage::Length, 2 + self.cipher_spec.tag_len);
++                }
++                SsReadStage::Length => {
++                    let length = self
++                        .dec
++                        .as_mut()
++                        .expect("salt initialized cipher")
++                        .decrypt(&self.wire)
++                        .map_err(|error| {
++                            std::io::Error::new(ErrorKind::InvalidData, error.to_string())
++                        })?;
++                    if length.len() != 2 {
++                        return Err(std::io::Error::new(
++                            ErrorKind::InvalidData,
++                            "invalid Shadowsocks length",
++                        ));
++                    }
++                    let size = u16::from_be_bytes([length[0], length[1]]) as usize;
++                    if size > 0x3fff {
++                        return Err(std::io::Error::new(
++                            ErrorKind::InvalidData,
++                            "Shadowsocks record exceeds 16 KiB",
++                        ));
++                    }
++                    self.next_stage(SsReadStage::Payload, size + self.cipher_spec.tag_len);
++                }
++                SsReadStage::Payload => {
++                    let data = self
++                        .dec
++                        .as_mut()
++                        .expect("salt initialized cipher")
++                        .decrypt(&self.wire)
++                        .map_err(|error| {
++                            std::io::Error::new(ErrorKind::InvalidData, error.to_string())
++                        })?;
++                    self.next_stage(SsReadStage::Length, 2 + self.cipher_spec.tag_len);
++                    return Ok(Some(data));
++                }
++            }
+         }
+     }
+ }
+ 
+ impl std::io::Read for ShadowsocksStream {
+     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
++        if buf.is_empty() {
++            return Ok(0);
++        }
++        if self.failed {
++            return Err(std::io::Error::new(
++                ErrorKind::InvalidData,
++                "Shadowsocks reader already failed",
++            ));
++        }
+         loop {
+             if self.read_pos < self.read_buffer.len() {
+                 let n = (self.read_buffer.len() - self.read_pos).min(buf.len());
+@@ -744,17 +847,13 @@
+             if self.eof {
+                 return Ok(0);
+             }
+-            let chunk = {
+-                let mut inner = self.inner.lock();
+-                if self.dec.is_none() {
+-                    let mut server_salt = vec![0u8; self.cipher_spec.salt_len];
+-                    inner.read_exact(&mut server_salt)?;
+-                    let dec_subkey =
+-                        derive_subkey_for_cipher(&self.password, &server_salt, &self.cipher_spec)
+-                            .map_err(|e| std::io::Error::other(e.to_string()))?;
+-                    self.dec = Some(AeadCipher::new(self.cipher_spec, dec_subkey));
++            let chunk = match self.read_chunk() {
++                Ok(chunk) => chunk,
++                Err(error) => {
++                    self.failed =
++                        !matches!(error.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut);
++                    return Err(error);
+                 }
+-                recv_decrypted_chunk(&mut *inner, self.dec.as_mut().unwrap())?
+             };
+             match chunk {
+                 Some(c) => {
+@@ -844,12 +943,6 @@
+                 tag_len: 16,
+                 cipher_type: CipherType::Chacha20Poly1305,
+             }),
+-            // The 2022 suite is a different wire protocol (SIP022): fixed and
+-            // variable headers per datagram, timestamps, session ids and a
+-            // replay window. The AEAD primitives alone are not it, and a
+-            // build that accepted these names would fail in the field while
+-            // pretending to speak the protocol — so it is refused here,
+-            // loudly, instead.
+             "2022-blake3-aes-128-gcm"
+             | "2022-blake3-aes-256-gcm"
+             | "2022-blake3-chacha20-poly1305"
+@@ -1002,17 +1095,16 @@
+     Ok(())
+ }
+ 
+-/// 接收并解密一个数据块；返回 `None` 表示 EOF。
++/// Receives and decrypts a data block; returns `None` to indicate EOF.
+ ///
+-/// 以 `io::Result` 返回，保留底层 socket 的错误 kind（`WouldBlock`/
+-/// `TimedOut` 表示空闲，relay 循环据此重试）。
++/// Returns an `io::Result`, preserving the error kind from the underlying socket
++/// (e.g., `WouldBlock` or `TimedOut` signify an idle state, prompting the relay loop to retry).
+ fn recv_decrypted_chunk<R: Read>(
+     reader: &mut R,
+     dec: &mut AeadCipher,
+ ) -> std::io::Result<Option<Vec<u8>>> {
+     let tag = dec.tag_len;
+ 
+-    // 读取并解密长度
+     let mut enc_len_buf = vec![0u8; 2 + tag];
+     match reader.read_exact(&mut enc_len_buf) {
+         Ok(_) => {}
+@@ -1035,7 +1127,6 @@
+         return Ok(None);
+     }
+ 
+-    // 读取并解密数据块
+     let mut enc_data = vec![0u8; data_len + tag];
+     reader.read_exact(&mut enc_data)?;
+ 
+@@ -1123,7 +1214,6 @@
+             ))
+         }
+         0x03 => {
+-            // Domain: 1 + 1 + domain_len + 2
+             if data.len() < 2 {
+                 return Err(Error::protocol("Domain address too short"));
+             }
+@@ -1138,7 +1228,6 @@
+             Ok((TargetAddr::Domain(domain, port), total_len))
+         }
+         0x04 => {
+-            // IPv6: 1 + 16 + 2 = 19 bytes
+             if data.len() < 19 {
+                 return Err(Error::protocol("IPv6 address too short"));
+             }
+@@ -1160,6 +1249,113 @@
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++
++    struct Fragmented {
++        bytes: std::io::Cursor<Vec<u8>>,
++        pause: bool,
++        fragmented: bool,
++    }
++
++    impl Read for Fragmented {
++        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
++            if self.fragmented {
++                self.pause = !self.pause;
++                if self.pause {
++                    return Err(ErrorKind::TimedOut.into());
++                }
++                let n = buf.len().min(1);
++                self.bytes.read(&mut buf[..n])
++            } else {
++                self.bytes.read(buf)
++            }
++        }
++    }
++    impl Write for Fragmented {
++        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
++            Ok(buf.len())
++        }
++        fn flush(&mut self) -> std::io::Result<()> {
++            Ok(())
++        }
++    }
++    impl crate::common::stream::SyncStream for Fragmented {
++        fn shutdown(&self, _: std::net::Shutdown) -> std::io::Result<()> {
++            Ok(())
++        }
++    }
++
++    fn framed_reader(
++        cipher: &str,
++        truncate: Option<usize>,
++        fragmented: bool,
++    ) -> (ShadowsocksStream, usize) {
++        let spec = CipherSpec::new(cipher).unwrap();
++        let salt = vec![7; spec.salt_len];
++        let key = derive_subkey_for_cipher("test", &salt, &spec).unwrap();
++        let mut enc = AeadCipher::new(spec, key.clone());
++        let mut wire = salt;
++        send_encrypted_chunk(&mut wire, &mut enc, b"first").unwrap();
++        let boundary = wire.len();
++        send_encrypted_chunk(&mut wire, &mut enc, b"second").unwrap();
++        if let Some(size) = truncate {
++            wire.truncate(size);
++        }
++        let inner = Fragmented {
++            bytes: std::io::Cursor::new(wire),
++            pause: false,
++            fragmented,
++        };
++        (
++            ShadowsocksStream::new(
++                Box::new(inner),
++                AeadCipher::new(spec, key),
++                spec,
++                "test".into(),
++            ),
++            boundary,
++        )
++    }
++
++    #[test]
++    fn every_framing_byte_survives_read_timeouts() {
++        for cipher in ["aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305"] {
++            let (mut reader, _) = framed_reader(cipher, None, true);
++            assert_eq!(reader.read(&mut []).unwrap(), 0);
++            let mut received = Vec::new();
++            let mut buf = [0; 3];
++            for _ in 0..512 {
++                match reader.read(&mut buf) {
++                    Ok(0) => break,
++                    Ok(n) => received.extend_from_slice(&buf[..n]),
++                    Err(e) if e.kind() == ErrorKind::TimedOut => continue,
++                    Err(e) => panic!("{cipher}: {e}"),
++                }
++            }
++            assert_eq!(received, b"firstsecond", "{cipher}");
++            assert!(reader.eof);
++        }
++    }
++
++    #[test]
++    fn partial_records_are_errors_but_record_boundary_eof_is_clean() {
++        let (_, boundary) = framed_reader("aes-128-gcm", None, false);
++        for size in 0..boundary {
++            if size == 16 {
++                continue;
++            }
++            let (mut reader, _) = framed_reader("aes-128-gcm", Some(size), false);
++            assert_eq!(
++                reader.read(&mut [0; 32]).unwrap_err().kind(),
++                ErrorKind::UnexpectedEof,
++                "cut at {size}"
++            );
++            assert!(reader.read(&mut [0; 32]).is_err());
++        }
++        let (mut reader, _) = framed_reader("aes-128-gcm", Some(boundary), false);
++        let mut data = Vec::new();
++        reader.read_to_end(&mut data).unwrap();
++        assert_eq!(data, b"first");
++    }
+ 
+     #[test]
+     fn test_cipher_spec_aes_256_gcm() {
+--- a/src/engine/outbound/group.rs
++++ b/src/engine/outbound/group.rs
+@@ -57,7 +57,7 @@
+ use std::collections::HashMap;
+ use std::sync::Arc;
+ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+-use std::time::{Duration, Instant};
++use std::time::Duration;
+ 
+ /// Health-check URL: a `204`-answering endpoint, so the measurement is one
+ /// round trip and nothing else — and the same URL almost every provider's
+@@ -269,13 +269,35 @@
+         let mut health = self.health.write();
+         let state = health.entry(tag.to_string()).or_default();
+         state.consecutive_failures = state.consecutive_failures.saturating_add(1);
+-        if !state.is_available() {
++        if state.consecutive_failures == FAILURES_BEFORE_DEAD && self.strategy.needs_probing() {
+             tracing::warn!(
+                 "Proxy group '{}': member '{}' retired after {} consecutive failures",
+                 self.config.tag,
+                 tag,
+                 state.consecutive_failures
+             );
++        }
++    }
++
++    fn record_relay_outcome(
++        &self,
++        tag: &str,
++        outcome: &Result<()>,
++        connection: Option<&crate::engine::connection_tracker::TrackedConnection>,
++    ) {
++        if connection.is_some_and(|c| c.cancellation_token().is_cancelled()) {
++            return;
++        }
++        if connection.is_some_and(|c| c.get_download() > 0) || outcome.is_ok() {
++            self.record_success(tag, None);
++        } else if !matches!(
++            outcome,
++            Err(Error::Dns { .. }
++                | Error::Config { .. }
++                | Error::Routing { .. }
++                | Error::ResourceExhausted { .. })
++        ) {
++            self.record_failure(tag);
+         }
+     }
+ 
+@@ -340,8 +362,6 @@
+                 if available.is_empty() {
+                     return Err(self.empty_group_error());
+                 }
+-                // Rotation over the *available* list, so a member that is out
+-                // does not consume a turn.
+                 let turn = self.cursor.fetch_add(1, Ordering::Relaxed);
+                 Ok(available[turn % available.len()].clone())
+             }
+@@ -558,21 +578,9 @@
+             ))
+         })?;
+ 
+-        let started = Instant::now();
+-        let outcome = proxy.relay_tcp_with_connection(inbound, target, connection);
+-        match outcome {
+-            Ok(()) => {
+-                self.record_success(&tag, Some(started.elapsed()));
+-                Ok(())
+-            }
+-            Err(error) => {
+-                // The inbound stream is consumed by the call, so this failure
+-                // cannot be retried here; retiring the member is what makes the
+-                // *next* connection avoid it.
+-                self.record_failure(&tag);
+-                Err(error)
+-            }
+-        }
++        let outcome = proxy.relay_tcp_with_connection(inbound, target, connection.clone());
++        self.record_relay_outcome(&tag, &outcome, connection.as_deref());
++        outcome
+     }
+ 
+     fn relay_udp_packet(&self, target: &TargetAddr, data: &[u8]) -> Result<Vec<u8>> {
+@@ -657,6 +665,44 @@
+ #[cfg(test)]
+ mod tests {
+     use super::*;
++
++    #[test]
++    fn relay_cancellation_and_delivered_payload_do_not_retire_members() {
++        use crate::engine::connection_tracker::TrackedConnection;
++        let group = group(OutboundType::Fallback, &["A", "B"]);
++        group.record_success("A", Some(Duration::from_millis(20)));
++        let make_connection = || {
++            TrackedConnection::new(
++                "in".into(),
++                "A".into(),
++                "target.test".into(),
++                443,
++                "tcp".into(),
++                "tcp".into(),
++                "MATCH".into(),
++                String::new(),
++            )
++        };
++        let cancelled = make_connection();
++        cancelled.cancellation_token().cancel();
++        for _ in 0..3 {
++            group.record_relay_outcome("A", &Err(Error::network("cancelled")), Some(&cancelled));
++        }
++        assert_eq!(group.health.read()["A"].consecutive_failures, 0);
++        let delivered = make_connection();
++        delivered.add_download(1);
++        group.record_failure("A");
++        group.record_relay_outcome("A", &Err(Error::network("reset")), Some(&delivered));
++        assert_eq!(group.health.read()["A"].consecutive_failures, 0);
++        assert_eq!(
++            group.health.read()["A"].latency,
++            Some(Duration::from_millis(20))
++        );
++        for _ in 0..2 {
++            group.record_relay_outcome("A", &Err(Error::network("handshake failed")), None);
++        }
++        assert_eq!(group.effective_member().as_deref(), Some("B"));
++    }
+     use crate::engine::config::OutboundConfig;
+     use nextjson::Value as Json;
+ 
+--- a/src/engine/mod.rs
++++ b/src/engine/mod.rs
+@@ -163,6 +163,16 @@
+             }
+         };
+ 
++        // Android VPN DNS is answered inside the netstack, without a privileged
++        // OS socket. Do not attempt a port the app UID cannot bind. Explicit
++        // unprivileged listeners still work independently of VPN capture.
++        if cfg!(target_os = "android") && listen.port() < 1024 && listen.port() != 0 {
++            tracing::info!(
++                "Android VPN handles DNS in the netstack; skipping privileged listener {listen}"
++            );
++            return;
++        }
++
+         if dns.enhanced_mode == DnsMode::FakeIp {
+             tracing::info!(
+                 "dns.enhanced-mode is fake-ip, but the DNS listener answers with real addresses: \
+--- a/src/common/socket.rs
++++ b/src/common/socket.rs
+@@ -138,7 +138,6 @@
+     raw: std::os::windows::io::RawSocket,
+     destination: std::net::IpAddr,
+ ) -> io::Result<()> {
+-    /// `IP_UNICAST_IF` / `IPV6_UNICAST_IF` share this option number.
+     const UNICAST_IF: libc::c_int = 31;
+     const IPPROTO_IP: libc::c_int = 0;
+     const IPPROTO_IPV6: libc::c_int = 41;
+@@ -229,13 +228,8 @@
+         socket2::Domain::IPV6
+     };
+     let sock = socket2::Socket::new(domain, socket2::Type::STREAM, Some(socket2::Protocol::TCP))?;
+-    // Both must precede `connect`: the tunnel exemption for the OS to honour
+-    // it, and the interface pin for the route table the tunnel installs.
+     protect_socket2(&sock)?;
+     apply_outbound_interface(&sock, addr.ip())?;
+-    // `connect_timeout` switches to non-blocking mode internally and restores
+-    // blocking mode on success, as required by the synchronous engine's I/O
+-    // timeouts (SO_RCVTIMEO / SO_SNDTIMEO).
+     sock.connect_timeout(&(*addr).into(), timeout)?;
+     let stream: TcpStream = sock.into();
+     stream.set_nodelay(true)?;
+@@ -250,7 +244,17 @@
+ /// private `nameserver-policy` resolver, and the system resolver would
+ /// answer NXDOMAIN — or worse, a decoy address — for them.
+ pub fn connect_host(host: &str, port: u16, timeout: Duration) -> io::Result<TcpStream> {
+-    let addrs = resolve_host(host, port, timeout)?;
++    connect_host_with(host, port, timeout, resolve_host)
++}
++
++fn connect_host_with(
++    host: &str,
++    port: u16,
++    timeout: Duration,
++    resolve: impl FnOnce(&str, u16, Duration) -> io::Result<Vec<SocketAddr>>,
++) -> io::Result<TcpStream> {
++    let started = Instant::now();
++    let addrs = resolve(host, port, timeout)?;
+     if addrs.is_empty() {
+         return Err(io::Error::new(
+             io::ErrorKind::NotFound,
+@@ -258,18 +262,31 @@
+         ));
+     }
+ 
+-    // Racing changes the shape of the budget: the attempts no longer take turns,
+-    // so each one may use the whole timeout rather than a divided share.
++    let remaining = timeout.saturating_sub(started.elapsed());
++    if remaining.is_zero() {
++        return Err(io::Error::new(
++            io::ErrorKind::TimedOut,
++            "DNS exhausted the connection deadline",
++        ));
++    }
+     if tcp_concurrent() && addrs.len() > 1 {
+-        return connect_first(&addrs, timeout);
+-    }
+-
+-    // Give each candidate a fair share of the budget so a dead first
+-    // address (e.g. a stale AAAA record) cannot consume it all.
+-    let per = (timeout / addrs.len().max(1) as u32).max(Duration::from_millis(250));
++        return connect_first(&addrs, remaining);
++    }
++
+     let mut last = None;
+-    for addr in addrs {
+-        match connect(&addr, per) {
++    for (index, addr) in addrs.iter().enumerate() {
++        let remaining = timeout.saturating_sub(started.elapsed());
++        if remaining.is_zero() {
++            return Err(io::Error::new(
++                io::ErrorKind::TimedOut,
++                "connection deadline exhausted",
++            ));
++        }
++        let per = remaining / (addrs.len() - index) as u32;
++        if per.is_zero() {
++            break;
++        }
++        match connect(addr, per) {
+             Ok(s) => return Ok(s),
+             Err(e) => last = Some(e),
+         }
+@@ -311,11 +328,9 @@
+                 } else {
+                     connect(&addr, remaining)
+                 };
+-                // If another candidate won, sending drops this stream instead.
+                 let _ = result_tx.send(result);
+             });
+         if let Err(error) = spawned {
+-            // Thread exhaustion is a failed attempt, not a process panic.
+             let _ = tx.send(Err(error));
+         }
+     }
+@@ -674,6 +689,26 @@
+ 
+ #[cfg(test)]
+ mod tests {
++    #[test]
++    fn dns_time_is_charged_to_the_connection_deadline() {
++        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
++        listener.set_nonblocking(true).unwrap();
++        let address = listener.local_addr().unwrap();
++        let result = super::connect_host_with(
++            "test.invalid",
++            address.port(),
++            std::time::Duration::from_millis(1),
++            |_, _, _| {
++                std::thread::sleep(std::time::Duration::from_millis(10));
++                Ok(vec![address])
++            },
++        );
++        assert_eq!(result.unwrap_err().kind(), std::io::ErrorKind::TimedOut);
++        assert_eq!(
++            listener.accept().unwrap_err().kind(),
++            std::io::ErrorKind::WouldBlock
++        );
++    }
+     use super::*;
+     use std::io::{Read, Write};
+     use std::net::TcpListener;
+@@ -706,7 +741,6 @@
+         loop {
+             match listener.accept() {
+                 Ok((stream, _)) => {
+-                    // Accepted sockets may inherit the listener's mode.
+                     stream.set_nonblocking(false).expect("blocking peer");
+                     configure(&stream, Some(DIAL_TEST_TIMEOUT), Some(DIAL_TEST_TIMEOUT))
+                         .expect("peer timeouts");

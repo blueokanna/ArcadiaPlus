@@ -126,9 +126,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               child: Text(
                                 themeProvider.useDynamicColors
                                     ? (l10n?.dynamicColors ?? 'DynamicColors')
-                                    : themeProvider.getThemeDisplayName(
-                                        themeProvider.selectedTheme,
-                                      ),
+                                    : (l10n?.paletteName(
+                                            themeProvider.selectedTheme,
+                                          ) ??
+                                          themeProvider.getThemeDisplayName(
+                                            themeProvider.selectedTheme,
+                                          )),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
