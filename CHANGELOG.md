@@ -1,9 +1,12 @@
 # Changelog
 
-## Unreleased — Registry dependency CI
+## 1.1.0+2
 
-- Align CI and release builds with the published Corduit 0.3.5 and RecurseX 0.2.6 dependencies. Remove obsolete sibling checkout requirements and patches.
-- Verify locked registry checksums and shared resolver, socket-factory and JNI identities without requiring local engine repositories.
+- Upgrade to the published Corduit 0.3.6 release and retain RecurseX 0.2.6. CI and release builds use checksummed registry packages, verify shared resolver, socket-factory and JNI identities, and no longer require sibling repositories or local patches.
+- Fix TCP half-close delivery under read-lock contention and include the authentication tag for empty Shadowsocks records. Share the Shadowsocks handshake and record codec between traffic relay and latency probes.
+- Perform certificate-verified TLS for HTTPS latency probes, preserve URL query parameters and non-default ports, and reject unsuccessful HTTP responses.
+- Distinguish an upstream closing before its first response from a truncated Shadowsocks salt, length or payload; include received and expected byte counts for partial records. Classify socket teardown by error kind so protocol errors are not hidden by message text.
+- Add loopback regressions for the application API, SOCKS5 ingress, nested proxy groups and Shadowsocks forwarding, including large transfers, half-close responses, truncated records and failed authentication.
 
 ## 1.1.0
 
