@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Registry dependency CI
+
+- Align CI and release builds with the published Corduit 0.3.5 and RecurseX 0.2.6 dependencies. Remove obsolete sibling checkout requirements and patches.
+- Verify locked registry checksums and shared resolver, socket-factory and JNI identities without requiring local engine repositories.
+
 ## 1.1.0
 
 - Keep exit IP lookups and their one-hour results across dashboard navigation; invalidate only on confirmed route changes or explicit refresh.

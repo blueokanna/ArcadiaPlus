@@ -45,7 +45,7 @@ The sections below state what the current build actually does, including the pla
 ## Implemented Scope
 
 - Flutter Material Design 3 UI with light/dark themes, dynamic color, Google Fonts, responsive navigation, and component/page motion.
-- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.3.4, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
+- A single Rust bridge layer: the proxy engine, DNS, TUN data path, and every proxy protocol come from [corduit](https://crates.io/crates/corduit) 0.3.5, and this repository no longer reimplements them. The bridge owns sync/async adaptation, DTO mapping, and platform entry points.
 - Runtime configuration uses strict validation: missing required rule sets, unsupported rule types and missing outbounds prevent startup. Offline previews can show conversion warnings; runtime routing is never changed by silently skipping rules.
 - Optional local recursion: with it enabled, [RecurseX](https://crates.io/crates/recurse-x) resolves from the root servers iteratively and corduit's DNS upstreams point at that front-end.
 - Rule sets (`rule-providers`) are owned by Dart: `RuleProviderService` downloads, validates, normalises and caches them in the app's private directory, refreshing at the profile's interval (86400 seconds by default). The engine receives local `file` providers. Failed downloads, empty content and unsupported entries preserve the last complete cache. A required rule set without a valid cache prevents startup.
@@ -118,7 +118,7 @@ The Rules entry in settings (`/rules`) shows the engine's table with each rule's
 
 ## Protocol Status
 
-This build uses Corduit 0.3.4 through a sibling-source `[patch.crates-io]` entry. `Cargo.lock` pins package versions and `scripts/engine_revisions.json` pins CI commits. Enabled features include `hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic` and `tls13`. CI verifies shared resolver, socket-factory and JNI dependency identities.
+This build uses the crates.io releases of Corduit 0.3.5 and RecurseX 0.2.6. `rust/Cargo.lock` pins versions and checksums. Enabled features include `hysteria`, `hysteria2`, `tuic`, `reality`, `shadowtls`, `wireguard`, `quic` and `tls13`. CI verifies that the bridge and engine share the resolver, socket factory and Android JNI dependency identities.
 
 | Protocol | Implementation | Notes |
 | --- | --- | --- |
@@ -310,7 +310,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT HAPs are built by the `ohos` job in CI and by the DevEco/hvigor workflow in [ohos/README.md](ohos/README.md). CI additionally asserts that the HAP really contains `libapp.so`, `librust_lib_arcadiaplus.so` and `libarcadia_core.so`: a successful build proves the packaging chain, and the VPN data path (authorization prompt, tunnel, engine routing) is still verified device-by-device against that document's checklist.
 
-Place `ArcadiaPlus`, `Corduit` and `RecurseX` under the same parent directory. `rust/Cargo.toml` declares registry versions and uses two `[patch.crates-io]` entries for the sibling sources; there is no vendored engine copy. CI and release workflows use `.github/actions/checkout-engines` to fetch only the full commits in `scripts/engine_revisions.json`, with no branch or missing-tag fallback. They then apply `scripts/patches/corduit-network.patch`, so these fixes do not depend on uncommitted developer code. For existing sibling checkouts, run `python scripts/checkout_engines.py --apply-patches`. It is idempotent and refuses conflicts without resetting local changes. `--verify-local` checks pinned package versions and required patches without writing. Once upstream includes the fixes, update the pins and remove the corresponding patch together. Run `python scripts/check_engine_dependencies.py --offline` after changing engine versions or pins.
+Build the published crates.io engines directly; sibling Corduit and RecurseX checkouts are no longer required. CI and release builds use the committed lockfile with `--locked`. After upgrading dependencies, commit both `rust/Cargo.toml` and `rust/Cargo.lock`, then run `python scripts/check_engine_dependencies.py --offline` to verify checksums and shared dependency identities. Omit `--offline` when downloading dependencies for the first time. Local path, Git and source replacement overrides are rejected. The obsolete checkout action, revision pins and network patch have been removed; the Corduit 0.3.5 release includes those network fixes, and application regression tests exercise the published package.
 
 ## Disclaimer
 

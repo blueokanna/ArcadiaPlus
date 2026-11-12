@@ -45,7 +45,7 @@ ArcadiaPlus 是一个跨平台的代理客户端：Flutter 负责界面与各平
 ## 当前实现
 
 - Flutter Material Design 3 UI：明暗主题、动态颜色、Google Fonts、响应式导航和页面/组件动画。
-- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.3.4 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
+- Rust 侧只留一层 FFI：代理引擎、DNS、TUN 数据路径与全部代理协议都由 [corduit](https://crates.io/crates/corduit) 0.3.5 提供，本仓库不再重复实现协议；桥接层负责同步/异步适配、DTO 映射与平台入口。
 - 运行配置使用严格校验：必要规则集缺失、规则类型不受支持或出口不存在时拒绝启动，不通过跳过规则改变实际分流。离线预览可展示转换警告。
 - 可选本地递归解析：开启后由 [RecurseX](https://crates.io/crates/recurse-x) 从根服务器迭代解析，corduit 的 DNS 上游指向该前端。
 - 规则集（`rule-providers`）由 Dart 侧托管：`RuleProviderService` 下载、校验、规范化并缓存到应用私有目录，按 profile 声明的 `interval`（默认 86400 秒）自动刷新；交给引擎的是本地 `file` 规则集。下载失败、空内容或存在不支持的条目时保留上一份完整缓存；必要规则集没有有效缓存时拒绝启动，不跳过规则改变分流。
@@ -118,7 +118,7 @@ Material Shape 变形集中在 `ExpressiveShape` 与 `AnimatedExpressiveShape`�
 
 ## 协议状态
 
-当前构建使用 Corduit 0.3.4，通过 `[patch.crates-io]` 指向相邻源码仓库；`Cargo.lock` 固定包版本，`scripts/engine_revisions.json` 固定 CI 使用的提交。本构建启用 `hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13` 等功能。CI 按固定提交检出相邻仓库，并检查解析器、套接字工厂和 JNI 的依赖身份一致。
+当前构建使用 crates.io 发布的 Corduit 0.3.5 与 RecurseX 0.2.6，`rust/Cargo.lock` 固定包版本和校验和。本构建启用 `hysteria`、`hysteria2`、`tuic`、`reality`、`shadowtls`、`wireguard`、`quic`、`tls13` 等功能。CI 检查应用与引擎共享同一个解析器、套接字工厂及 Android JNI 依赖。
 
 | 协议 | 实现来源 | 说明 |
 | --- | --- | --- |
@@ -313,7 +313,7 @@ corduit 是同步引擎，Dart 侧接口保持 `Future`——桥接层把每个�
 
 ## 构建与检查
 
-将 `ArcadiaPlus`、`Corduit` 与 `RecurseX` 放在同一父目录下。`rust/Cargo.toml` 声明版本并用两个 `[patch.crates-io]` 引用相邻仓库。本项目不维护 vendor 副本。修改引擎版本时，同步更新锁文件和 `scripts/engine_revisions.json`，再运行 `python scripts/check_engine_dependencies.py --offline`；检查会验证本地构建和 CI 固定提交的包版本，避免本机通过、CI 检出旧版本。
+应用直接构建已发布的 crates.io 引擎，不需要检出相邻的 Corduit 或 RecurseX 仓库。依赖升级后同步提交 `rust/Cargo.toml` 与 `rust/Cargo.lock`，运行 `python scripts/check_engine_dependencies.py --offline` 验证版本、校验和和共享依赖身份；首次下载依赖时省略 `--offline`。
 
 首页流量卡按窗口宽度和文字缩放自动换行。「直连流量」与「代理流量」按最终出口的传输类型计数，不依赖组名或目的地国家。两项均包含上传、下载有效载荷、已结束的短连接和 UDP，不含协议封装、TUN 包头或重传开销。Android 与桌面使用同一出口计数源，总量由同次采样的直连、代理分项相加；连接页不再插入标为代理的 TUN 汇总伪连接。
 
@@ -352,7 +352,7 @@ flutter build ios --release --no-codesign
 
 HarmonyOS NEXT 的 HAP 由 CI 的 `ohos` 与 [ohos/README.md](ohos/README.md) 的 DevEco/hvigor 流程构建。CI 除构建外还会断言 HAP 内确实含有 `libapp.so`、`librust_lib_arcadiaplus.so` 与 `libarcadia_core.so`——构建通过只证明打包链路正确；VPN 数据面（授权弹窗、隧道、引擎分流）仍按该文档的真机清单逐项验证。
 
-CI 与发布工作流使用 `.github/actions/checkout-engines`，只检出 `scripts/engine_revisions.json` 中的完整提交号，不回退到分支 HEAD 或缺失标签。随后自动应用仓库内的 `scripts/patches/corduit-network.patch`，因此网络修复不会依赖开发机上未提交的引擎代码。已有相邻仓库执行 `python scripts/checkout_engines.py --apply-patches`；该操作幂等，冲突会报错，不重置或覆盖本地修改。`--verify-local` 只读验证固定提交的包版本和所需补丁。引擎上游合入修复后，应一起更新提交号并移除对应补丁。
+CI 与发布工作流使用 `--locked` 构建同一份已提交的注册表依赖图，禁止本地路径、Git 和源码替换覆盖。已移除旧的相邻仓库检出步骤、提交号文件及网络补丁；Corduit 0.3.5 的发布源码已包含相关网络修复，应用回归测试直接验证发布包。
 
 ## 免责声明
 

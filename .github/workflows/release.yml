@@ -130,8 +130,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -207,8 +205,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust Android targets
         uses: dtolnay/rust-toolchain@stable
@@ -332,8 +328,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -439,8 +433,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust for both macOS architectures
         uses: dtolnay/rust-toolchain@stable
@@ -511,8 +503,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -619,8 +609,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable

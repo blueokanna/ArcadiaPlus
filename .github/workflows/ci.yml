@@ -52,8 +52,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust Android targets
         uses: dtolnay/rust-toolchain@stable
@@ -149,8 +147,6 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v5
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -174,14 +170,10 @@ jobs:
       - name: Lint Rust workspace
         run: |
           cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-          cargo clippy --manifest-path ../../RecurseX/Cargo.toml --all-targets --all-features --locked -- -D warnings
 
       - name: Test Rust workspace
         run: |
           cargo test --workspace --all-targets --all-features --locked
-          cargo test --manifest-path ../../Corduit/Cargo.toml --lib --locked engine::outbound::
-          cargo test --manifest-path ../../Corduit/Cargo.toml --lib --locked common::socket::tests::
-          cargo test --manifest-path ../../RecurseX/Cargo.toml --all-features --locked
 
   msrv:
     name: Rust 1.88 compatibility (${{ matrix.os }})
@@ -193,8 +185,6 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v5
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - uses: dtolnay/rust-toolchain@1.88.0
         with:
@@ -242,8 +232,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Check out pinned sibling engines
-        uses: ./.github/actions/checkout-engines
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
