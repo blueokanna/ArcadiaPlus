@@ -105,7 +105,9 @@ android {
     
     packaging {
         jniLibs {
-            useLegacyPackaging = true
+            // AGP >= 8.5.1 aligns uncompressed native libraries to 16 KiB.
+            // Keep APK and Play-generated APKs on the same mmap loading path.
+            useLegacyPackaging = false
         }
     }
 }

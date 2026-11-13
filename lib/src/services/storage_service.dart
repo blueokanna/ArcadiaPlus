@@ -734,6 +734,11 @@ class StorageService {
     await configFile.writeAsString(configContent);
   }
 
+  Future<int?> getProfileConfigSize(String profileId) async {
+    final stat = await File('$_dataDir/profiles/$profileId.yaml').stat();
+    return stat.type == FileSystemEntityType.file ? stat.size : null;
+  }
+
   Future<String?> getProfileConfig(String profileId) async {
     final configFile = File('$_dataDir/profiles/$profileId.yaml');
     if (await configFile.exists()) {

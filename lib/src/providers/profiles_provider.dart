@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import '../services/profile_download.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
 import 'package:arcadiaplus/src/services/rule_provider_service.dart';
@@ -59,7 +59,7 @@ class ProfilesProvider extends ChangeNotifier {
 
     try {
       // Fetch config from URL
-      final response = await http.get(Uri.parse(url));
+      final response = await ProfileDownload.get(Uri.parse(url));
       if (response.statusCode != 200) {
         throw Exception('Failed to fetch config: ${response.statusCode}');
       }
@@ -183,7 +183,7 @@ class ProfilesProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse(profile.source));
+      final response = await ProfileDownload.get(Uri.parse(profile.source));
       if (response.statusCode != 200) {
         throw Exception('Failed to fetch config: ${response.statusCode}');
       }
@@ -333,8 +333,7 @@ class ProfilesProvider extends ChangeNotifier {
   /// Get config file size for a profile
   Future<int?> getProfileConfigSize(String id) async {
     try {
-      final content = await StorageService.instance.getProfileConfig(id);
-      return content?.length;
+      return await StorageService.instance.getProfileConfigSize(id);
     } catch (e) {
       return null;
     }

@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/widgets/app_bottom_sheet.dart';
+
 import '../widgets/page_insets.dart';
 
 import 'package:arcadiaplus/src/widgets/theme_picker.dart';
@@ -795,12 +797,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final l10n = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
-    showModalBottomSheet(
+    showAppBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) {
         return DraggableScrollableSheet(
           initialChildSize: 0.5,

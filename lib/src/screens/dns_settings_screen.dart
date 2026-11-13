@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/widgets/app_bottom_sheet.dart';
+
 import '../widgets/page_insets.dart';
 import '../widgets/dns_apply_card.dart';
 import '../providers/app_state_provider.dart';
@@ -628,7 +630,7 @@ void _showUpstreamEditor(
 }) {
   final colorScheme = Theme.of(context).colorScheme;
 
-  showModalBottomSheet<void>(
+  showAppBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: colorScheme.surfaceContainerLow,

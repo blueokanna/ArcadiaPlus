@@ -1,3 +1,4 @@
+import 'package:arcadiaplus/src/widgets/app_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/widgets/adaptive_button.dart';
 import 'package:arcadiaplus/src/l10n/app_localizations.dart';
@@ -7,7 +8,7 @@ import '../theme/palette_reference.dart';
 import '../theme/app_shapes.dart';
 
 Future<void> showThemePicker(BuildContext context, ThemeProvider provider) {
-  return showModalBottomSheet<void>(
+  return showAppBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,

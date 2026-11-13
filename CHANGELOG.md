@@ -6,6 +6,14 @@
 - Keep a SHA-256 identity instead of a second full configuration document in the Flutter provider; retain source only for the HarmonyOS extension and rollback. Avoid unnecessary native configuration clones outside Android.
 - Stream Android restart snapshots through an 8 KiB buffer with an encoded-size limit and atomic replacement. A failed or oversized write preserves the previous snapshot. Release hidden DNS panel snapshots and reject late results.
 
+## 1.1.0+4
+
+- Align Android Rust libraries for 16 KiB pages and package native libraries uncompressed. Check ELF load segments, RELRO boundaries and APK ZIP offsets in CI and release builds.
+- Present bottom sheets above the application navigation. Keep profile saving accessible above gesture insets and the keyboard, with a separately scrolling form and large-text coverage.
+- Share nested page animation timelines, unify sheet motion and dialog shapes, and morph profile selection icons. Preserve reduced-motion and background lifecycle behavior.
+- Bound subscription downloads to 16 MiB and 30 seconds. Read profile size from file metadata instead of loading the configuration text.
+- Replace debugging narratives in both READMEs with concise product documentation. Publish paired Chinese and English Wiki guides for configuration, development, Android compatibility, motion, performance and troubleshooting.
+
 ## 1.1.0+3
 
 - Give configured DNS forwarding its existing end-to-end query budget instead of splitting a 1.5-second exchange timeout across the entire upstream group. Add a delayed-response regression that fails with the former deadline.

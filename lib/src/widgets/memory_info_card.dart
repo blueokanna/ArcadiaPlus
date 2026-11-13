@@ -1,3 +1,4 @@
+import 'package:arcadiaplus/src/widgets/app_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 
 import '../rust/types.dart';
@@ -18,7 +19,7 @@ class MemoryInfoCard extends StatelessWidget {
     return Card.filled(
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
-        onTap: () => showModalBottomSheet<void>(
+        onTap: () => showAppBottomSheet<void>(
           context: context,
           isScrollControlled: true,
           useSafeArea: true,

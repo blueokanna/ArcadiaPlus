@@ -1,3 +1,8 @@
+import '../theme/app_motion.dart';
+import '../widgets/expressive_shape.dart';
+
+import 'package:arcadiaplus/src/widgets/app_bottom_sheet.dart';
+
 import '../widgets/page_insets.dart';
 
 import 'dart:convert';
@@ -211,20 +216,22 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
             children: [
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isActive
-                          ? colorScheme.primary
-                          : colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      _getProfileTypeIcon(profile.type),
-                      color: isActive
-                          ? colorScheme.onPrimary
-                          : colorScheme.onSurfaceVariant,
-                      size: 20,
+                  AnimatedExpressiveShape(
+                    progress: isActive ? 1 : 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isActive
+                            ? colorScheme.primary
+                            : colorScheme.surfaceContainerHighest,
+                      ),
+                      child: Icon(
+                        _getProfileTypeIcon(profile.type),
+                        color: isActive
+                            ? colorScheme.onPrimary
+                            : colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -420,7 +427,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     final l10n = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
 
-    showModalBottomSheet(
+    showAppBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -459,7 +466,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                   title: l10n?.importUrl ?? 'Import from URL',
                   subtitle: l10n?.importUrlDesc ?? 'Enter subscription URL',
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     _showUrlInputDialog(context);
                   },
                 ),
@@ -474,7 +481,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                       l10n?.importFileDesc ??
                       'Select configuration file from storage',
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     _handleFileImport();
                   },
                 ),
@@ -489,7 +496,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                       l10n?.importClipboardDesc ??
                       'Paste configuration from clipboard',
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
                     _handleClipboardImport();
                   },
                 ),
@@ -813,18 +820,15 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     ProfileConfig profile,
     ProfilesProvider provider,
   ) {
-    showModalBottomSheet(
+    showAppBottomSheet(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
       builder: (context) => _EditProfileSheet(
         profile: profile,
         provider: provider,
         onSaved: () {
-          _showSnackBar('Profile saved');
+          if (mounted) _showSnackBar('Profile saved');
         },
       ),
     );
@@ -947,6 +951,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
   }
 
   Future<void> _handleSave() async {
+    if (_isSaving) return;
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('名称不能为空')));
@@ -956,7 +961,11 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     setState(() => _isSaving = true);
 
     try {
-      final interval = int.tryParse(_intervalController.text) ?? 180;
+      final interval = int.tryParse(_intervalController.text.trim());
+      if (_autoUpdate &&
+          (interval == null || interval <= 0 || interval > 525600)) {
+        throw const FormatException('Update interval must be 1–525600 minutes');
+      }
 
       final success = await widget.provider.editProfile(
         id: widget.profile.id,
@@ -965,7 +974,7 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
             ? _urlController.text.trim()
             : null,
         autoUpdate: _autoUpdate,
-        autoUpdateInterval: interval,
+        autoUpdateInterval: interval ?? widget.profile.autoUpdateInterval,
       );
 
       if (!mounted) return;
@@ -977,6 +986,11 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('保存失败: ${widget.provider.error ?? "未知错误"}')),
         );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$error')));
       }
     } finally {
       if (mounted) {
@@ -1087,257 +1101,277 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final isUrlType = widget.profile.type == 'url';
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
 
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  width: 32,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '编辑配置',
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                    style: IconButton.styleFrom(
-                      backgroundColor: colorScheme.surfaceContainerHighest,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Name field
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  labelText: '名称',
-                  hintText: '输入配置名称',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: colorScheme.surfaceContainerLow,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // URL field (only for URL type)
-              if (isUrlType) ...[
-                TextField(
-                  controller: _urlController,
-                  decoration: InputDecoration(
-                    labelText: 'URL',
-                    hintText: 'https://',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: colorScheme.surfaceContainerLow,
-                  ),
-                  keyboardType: TextInputType.url,
-                  maxLines: 1,
-                ),
-                const SizedBox(height: 20),
-
-                // Auto update switch
-                Container(
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: SwitchListTile(
-                    title: const Text('自动更新'),
-                    value: _autoUpdate,
-                    onChanged: (value) {
-                      setState(() => _autoUpdate = value);
-                    },
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Auto update interval (only show when auto update is enabled)
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 200),
-                  child: _autoUpdate
-                      ? Column(
-                          children: [
-                            TextField(
-                              controller: _intervalController,
-                              decoration: InputDecoration(
-                                labelText: '自动更新间隔（分钟）',
-                                hintText: '180',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                filled: true,
-                                fillColor: colorScheme.surfaceContainerLow,
-                              ),
-                              keyboardType: TextInputType.number,
-                            ),
-                            const SizedBox(height: 20),
-                          ],
-                        )
-                      : const SizedBox.shrink(),
-                ),
-              ],
-
-              // Config info section
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '配置',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                    // Drag handle
+                    Center(
+                      child: Container(
+                        width: 32,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.4,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        if (_configSize != null) ...[
-                          Text(
-                            _formatFileSize(_configSize!),
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          Text(
-                            '  ·  ',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                        if (widget.profile.lastUpdated != null)
-                          Text(
-                            _formatTimeAgo(widget.profile.lastUpdated!),
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                      ],
                     ),
                     const SizedBox(height: 16),
 
-                    // Action buttons
+                    // Header
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Edit config button
-                        OutlinedButton.icon(
-                          onPressed: _isSaving ? null : _openConfigEditor,
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          label: const Text('编辑'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                        Expanded(
+                          child: Text(
+                            zh ? '编辑配置' : 'Edit profile',
+                            style: textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-
-                        // Update button (only for URL type)
-                        if (isUrlType)
-                          OutlinedButton.icon(
-                            onPressed: _isSaving ? null : _handleUpdate,
-                            icon: _isSaving
-                                ? SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: colorScheme.primary,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.cloud_upload_outlined,
-                                    size: 18,
-                                  ),
-                            label: const Text('上传'),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
+                        IconButton(
+                          tooltip: MaterialLocalizations.of(context)
+                              .closeButtonTooltip,
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                          style: IconButton.styleFrom(
+                            backgroundColor:
+                                colorScheme.surfaceContainerHighest,
                           ),
+                        ),
                       ],
                     ),
+                    const SizedBox(height: 24),
+
+                    // Name field
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: zh ? '名称' : 'Name',
+                        hintText: zh ? '输入配置名称' : 'Profile name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: colorScheme.surfaceContainerLow,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // URL field (only for URL type)
+                    if (isUrlType) ...[
+                      TextField(
+                        controller: _urlController,
+                        decoration: InputDecoration(
+                          labelText: 'URL',
+                          hintText: 'https://',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerLow,
+                        ),
+                        keyboardType: TextInputType.url,
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Auto update switch
+                      Material(
+                        color: colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                        clipBehavior: Clip.antiAlias,
+                        child: SwitchListTile(
+                          title: Text(zh ? '自动更新' : 'Auto update'),
+                          value: _autoUpdate,
+                          onChanged: (value) {
+                            setState(() => _autoUpdate = value);
+                          },
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Auto update interval (only show when auto update is enabled)
+                      AnimatedSize(
+                        duration: AppMotion.duration(context),
+                        child: _autoUpdate
+                            ? Column(
+                                children: [
+                                  TextField(
+                                    controller: _intervalController,
+                                    decoration: InputDecoration(
+                                      labelText: zh
+                                          ? '自动更新间隔（分钟）'
+                                          : 'Update interval (minutes)',
+                                      hintText: '180',
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      filled: true,
+                                      fillColor:
+                                          colorScheme.surfaceContainerLow,
+                                    ),
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+
+                    // Config info section
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            zh ? '配置' : 'Configuration',
+                            style: textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            children: [
+                              if (_configSize != null) ...[
+                                Text(
+                                  _formatFileSize(_configSize!),
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                Text(
+                                  '  ·  ',
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                              if (widget.profile.lastUpdated != null)
+                                Text(
+                                  _formatTimeAgo(widget.profile.lastUpdated!),
+                                  style: textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Action buttons
+                          Wrap(
+                            children: [
+                              // Edit config button
+                              OutlinedButton.icon(
+                                onPressed: _isSaving ? null : _openConfigEditor,
+                                icon: const Icon(Icons.edit_outlined, size: 18),
+                                label: Text(zh ? '编辑' : 'Edit'),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Update button (only for URL type)
+                              if (isUrlType)
+                                OutlinedButton.icon(
+                                  onPressed: _isSaving ? null : _handleUpdate,
+                                  icon: _isSaving
+                                      ? SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: colorScheme.primary,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.cloud_upload_outlined,
+                                          size: 18,
+                                        ),
+                                  label: Text(zh ? '更新' : 'Update'),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Save button
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _isSaving ? null : _handleSave,
-                  icon: _isSaving
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: colorScheme.onPrimary,
-                          ),
-                        )
-                      : const Icon(Icons.save_outlined),
-                  label: const Text('保存'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isSaving ? null : _handleSave,
+                icon: _isSaving
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: colorScheme.onPrimary,
+                        ),
+                      )
+                    : const Icon(Icons.save_outlined),
+                label: Text(zh ? '保存' : 'Save'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

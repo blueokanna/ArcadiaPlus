@@ -5,6 +5,33 @@ import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
 import 'package:arcadiaplus/src/utils/animation_utils.dart';
 
 void main() {
+  testWidgets('nested sections share one finite page timeline', (tester) async {
+    Animation<double>? parent;
+    Animation<double>? nested;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: FluidPage(
+          child: Builder(
+            builder: (context) {
+              parent = FluidPage.animationOf(context);
+              return FluidPage(
+                child: Builder(
+                  builder: (context) {
+                    nested = FluidPage.animationOf(context);
+                    return const Text('nested');
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+    expect(identical(parent, nested), isTrue);
+    expect(tester.binding.transientCallbackCount, 1);
+    await tester.pumpAndSettle();
+    expect(tester.binding.transientCallbackCount, 0);
+  });
   testWidgets(
     'short empty-state labels stay centered across the full viewport',
     (tester) async {

@@ -1,3 +1,5 @@
+import 'package:arcadiaplus/src/widgets/app_bottom_sheet.dart';
+
 import '../widgets/page_insets.dart';
 import '../widgets/fluid_page.dart';
 import '../widgets/dns_activity_panel.dart';
@@ -672,13 +674,10 @@ class _ConnectionsScreenState extends State<ConnectionsScreen> with RouteAware {
     final textTheme = Theme.of(context).textTheme;
     final appState = context.read<AppStateProvider>();
 
-    showModalBottomSheet(
+    showAppBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.7,
         minChildSize: 0.5,

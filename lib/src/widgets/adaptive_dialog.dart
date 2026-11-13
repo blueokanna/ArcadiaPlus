@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 
+import '../theme/app_shapes.dart';
+
 class AdaptiveDialog extends StatelessWidget {
   final Widget? title;
   final Widget? content;
@@ -61,13 +63,7 @@ class AdaptiveDialog extends StatelessWidget {
             vertical: PlatformUtils.isDesktop ? 24 : 16,
           ),
       clipBehavior: clipBehavior,
-      shape:
-          shape ??
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-              PlatformUtils.isDesktop ? 12 : 16,
-            ),
-          ),
+      shape: shape ?? AppShapes.dialog,
       alignment: alignment,
       child: ConstrainedBox(
         constraints: BoxConstraints(

@@ -59,10 +59,15 @@ class _FluidPageState extends State<FluidPage>
     super.didChangeDependencies();
     if (!_timelineSelected) {
       _timelineSelected = true;
+      // Nested page sections share their parent's timeline rather than fading
+      // the same pixels twice or allocating another entrance controller.
+      _routeAnimation = FluidPage.animationOf(context);
       final route = ModalRoute.of(context)?.animation;
       // The first route is already complete when mounted; give it one finite
       // entrance. Pushed routes keep the navigator's interactive timeline.
-      if (route != null && route.status != AnimationStatus.completed) {
+      if (_routeAnimation == null &&
+          route != null &&
+          route.status != AnimationStatus.completed) {
         // One eased shape timeline follows the navigator, including reversals
         // during back gestures. No second page controller or composited fade.
         _routeAnimation = route.drive(

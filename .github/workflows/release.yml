@@ -269,6 +269,9 @@ jobs:
       - name: Build release APK
         run: flutter build apk --release
 
+      - name: Verify Android 16 KiB native libraries
+        run: python3 scripts/check_android_page_sizes.py build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/app-release.apk
+
       - name: Report why the Android build failed
         if: failure()
         run: |
