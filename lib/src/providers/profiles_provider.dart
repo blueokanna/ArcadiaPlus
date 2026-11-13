@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart';
-import '../services/profile_download.dart';
-import 'package:arcadiaplus/src/services/storage_service.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
+import 'package:arcadiaplus/src/services/profile_download.dart';
 import 'package:arcadiaplus/src/services/rule_provider_service.dart';
+import 'package:arcadiaplus/src/services/storage_service.dart';
+import 'package:flutter/material.dart';
 
 class ProfilesProvider extends ChangeNotifier {
   List<ProfileConfig> _profiles = [];

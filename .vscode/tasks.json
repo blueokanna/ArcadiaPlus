@@ -2,6 +2,22 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
+			"label": "dart-format",
+			"type": "shell",
+			"command": "dart",
+			"args": ["format", "lib", "test"],
+			"options": { "cwd": "${workspaceFolder}" },
+			"problemMatcher": []
+		},
+		{
+			"label": "dart-format-check",
+			"type": "shell",
+			"command": "dart",
+			"args": ["format", "--output=none", "--set-exit-if-changed", "lib", "test"],
+			"options": { "cwd": "${workspaceFolder}" },
+			"problemMatcher": []
+		},
+		{
 			"label": "ohos-cache-diag",
 			"type": "shell",
 			"command": "powershell -NoProfile -ExecutionPolicy Bypass -File d:\\RustProject\\TempFiles\\ohos-cache-diag.ps1"
