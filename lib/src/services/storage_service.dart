@@ -34,10 +34,9 @@ class DnsSettings {
   /// What a profile that names no mode gets, and what a stored value that is
   /// not in [modes] falls back to.
   ///
-  /// mihomo's default: a profile that does not ask for fake addresses should
-  /// not get them, so every connection keeps the name it was made to and
-  /// nothing depends on an address that only exists in this process.
-  static const String defaultMode = 'redir-host';
+  /// Fake IP preserves the destination name even when CDN domains share an IP.
+  /// Explicit profile modes and existing user settings still take precedence.
+  static const String defaultMode = 'fake-ip';
 
   /// The upstreams a fresh install starts with.
   ///

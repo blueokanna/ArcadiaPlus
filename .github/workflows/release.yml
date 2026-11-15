@@ -552,7 +552,7 @@ jobs:
                      "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/512x512/apps"
           cp -a build/linux/x64/release/bundle/. "$pkg/usr/lib/arcadiaplus/"
           ln -s /usr/lib/arcadiaplus/arcadiaplus "$pkg/usr/bin/arcadiaplus"
-          cp assets/arcadiaplus.png "$pkg/usr/share/icons/hicolor/512x512/apps/arcadiaplus.png"
+          cp web/icons/Icon-512.png "$pkg/usr/share/icons/hicolor/512x512/apps/arcadiaplus.png"
           cat > "$pkg/usr/share/applications/arcadiaplus.desktop" <<'DESKTOP'
           [Desktop Entry]
           Name=ArcadiaPlus

@@ -65,7 +65,8 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.3
 
 flutter_launcher_icons:
-  android: true
+  # Android uses maintained day/night vector resources.
+  android: false
   ios: true
   windows:
     generate: true
@@ -75,19 +76,18 @@ flutter_launcher_icons:
   linux: true
   web:
     generate: true
-    image_path: "assets/arcadiaplus.png"
+    image_path: "assets/AcadiaPlusLight.jpg"
     background_color: "#00143D"
     theme_color: "#0057D9"
-  image_path: "assets/arcadiaplus.png"
-  adaptive_icon_background: "#00143D"
-  adaptive_icon_foreground: "assets/arcadiaplus.png"
+  image_path: "assets/AcadiaPlusLight.jpg"
   min_sdk_android: 21
 
 flutter:
   uses-material-design: true
 
   assets:
-    - assets/arcadiaplus.png
+    - assets/AcadiaPlusLight.jpg
+    - assets/AcadiaPlusDark.jpg
     - assets/Country.mmdb
     - assets/fonts/LICENSE-Roboto.txt
     - assets/fonts/LICENSE-GoogleSansFlex.txt

@@ -13,6 +13,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.VpnService
 import android.os.Build
+import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.os.PowerManager
 import android.util.Log
@@ -659,6 +660,7 @@ class ArcadiaPlusVpnService : VpnService() {
                 }
                 _vpnFd = fd
                 _isRunning.set(true)
+                refreshNotification()
                 if (recovering) check(confirmSession()) { "Cannot save restored VPN session" }
                 publishTileState()
 
@@ -803,8 +805,16 @@ class ArcadiaPlusVpnService : VpnService() {
 
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
                 .setContentTitle("ArcadiaPlus")
-                .setContentText("VPN 正在运行 - $modeText")
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setContentText(if (isRunning) "VPN connected - $modeText" else "VPN connecting")
+                .setSmallIcon(R.drawable.ic_stat_arcadia)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .addExtras(Bundle().apply {
+                    if (Build.VERSION.SDK_INT >= 36) {
+                        // Public Android 36.1 extra; keep compiling against SDK 36.
+                        putBoolean("android.requestPromotedOngoing", true)
+                    }
+                })
                 .setContentIntent(pendingIntent)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, "停止", stopPendingIntent)
                 .setOngoing(true)

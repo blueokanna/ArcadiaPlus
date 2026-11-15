@@ -202,7 +202,9 @@ class _StartupScreenState extends State<_StartupScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF00143D),
+      backgroundColor: MediaQuery.platformBrightnessOf(context) == Brightness.dark
+          ? Colors.black
+          : Colors.white,
       body: Center(
         child: RepaintBoundary(
           child: ScaleTransition(
@@ -213,7 +215,9 @@ class _StartupScreenState extends State<_StartupScreen>
                 fit: StackFit.expand,
                 children: [
                   Image.asset(
-                    'assets/arcadiaplus.png',
+                    MediaQuery.platformBrightnessOf(context) == Brightness.dark
+                        ? 'assets/AcadiaPlusDark.jpg'
+                        : 'assets/AcadiaPlusLight.jpg',
                     filterQuality: FilterQuality.medium,
                   ),
                   AnimatedBuilder(
@@ -236,7 +240,9 @@ class _StartupScreenState extends State<_StartupScreen>
                       );
                     },
                     child: Image.asset(
-                      'assets/arcadiaplus.png',
+                      MediaQuery.platformBrightnessOf(context) == Brightness.dark
+                        ? 'assets/AcadiaPlusDark.jpg'
+                        : 'assets/AcadiaPlusLight.jpg',
                       color: Colors.white,
                       filterQuality: FilterQuality.medium,
                     ),

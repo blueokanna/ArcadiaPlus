@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Source = "assets/arcadiaplus.png"
+    [string]$Source = "assets/AcadiaPlusLight.jpg"
 )
 
 $ErrorActionPreference = "Stop"

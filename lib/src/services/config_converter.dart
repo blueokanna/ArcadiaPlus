@@ -727,6 +727,7 @@ class ConfigConverter {
     final value = raw?.toString().trim().toLowerCase() ?? '';
     switch (value) {
       case '':
+        return DnsSettings.defaultMode;
       case 'normal':
       case 'redir-host':
       case 'redir_host':
@@ -1633,13 +1634,18 @@ class ConfigConverter {
     final children = <Map<String, dynamic>>[];
     for (final part in _splitRuleFields(inner)) {
       final piece = part.trim();
-      if (piece.isEmpty) continue;
+      if (piece.isEmpty) return null;
       final body = _stripOuterParens(piece);
       if (body == null) return null;
       final fields = _splitRuleFields(body);
       if (fields.length < 2) return null;
       final childType = _mapRuleType(fields[0].trim());
-      final childPayload = fields.sublist(1).join(',').trim();
+      final noResolve =
+          fields.length > 2 && fields.last.trim().toLowerCase() == 'no-resolve';
+      final childPayload = fields
+          .sublist(1, noResolve ? fields.length - 1 : fields.length)
+          .join(',')
+          .trim();
       if (childType == null) return null;
 
       if (childType == 'and' || childType == 'or' || childType == 'not') {
@@ -1648,7 +1654,12 @@ class ConfigConverter {
           availableRuleSets,
           depth + 1,
         );
-        if (nested == null || nested.isEmpty) return null;
+        if (nested == null ||
+            nested.isEmpty ||
+            noResolve ||
+            (childType == 'not' && nested.length != 1)) {
+          return null;
+        }
         children.add({
           'type': childType,
           'payload': '',
@@ -1667,10 +1678,7 @@ class ConfigConverter {
         'type': childType,
         'payload': childPayload,
         'process_name': null,
-        if (fields
-            .skip(2)
-            .any((flag) => flag.trim().toLowerCase() == 'no-resolve'))
-          'no_resolve': true,
+        if (noResolve) 'no_resolve': true,
       });
     }
     return children;

@@ -904,7 +904,7 @@ rules: []
     expect((convert(yaml)['dns'] as Map)['fake_ip_range'], 'not-a-cidr');
   });
 
-  test("a profile that names no mode gets mihomo's default, not fake-ip", () {
+  test("a profile that names no mode preserves CDN domains with fake-ip", () {
     const yaml = '''
 dns:
   nameserver: [1.1.1.1]
@@ -913,10 +913,7 @@ proxy-groups: []
 rules: []
 ''';
 
-    // mihomo's default behaviour is real answers, which this engine spells
-    // `normal`. The engine knows nothing of `redir-host`, and a value it cannot
-    // read fails the whole config — so the vocabulary is translated here.
-    expect((convert(yaml)['dns'] as Map)['enhanced_mode'], 'normal');
+    expect((convert(yaml)['dns'] as Map)['enhanced_mode'], 'fake-ip');
   });
 
   test('every spelling of the DNS mode lands on the engine word', () {

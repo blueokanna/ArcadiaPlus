@@ -1,74 +1,146 @@
-# ArcadiaPlus
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/AcadiaPlusDark.jpg">
+    <img src="assets/AcadiaPlusLight.jpg" width="112" height="112" alt="ArcadiaPlus">
+  </picture>
+</p>
 
-<p align="center"><img src="assets/arcadiaplus.png" width="112" height="112" alt="ArcadiaPlus"></p>
+<h1 align="center">ArcadiaPlus</h1>
+<p align="center">A Flutter interface for proxy routing and connections powered by Rust.</p>
+<p align="center">
+  <a href="README.md">中文</a> ·
+  <a href="https://github.com/blueokanna/ArcadiaPlus/releases">Downloads</a> ·
+  <a href="#interface-preview">Interface preview</a> ·
+  <a href="#development">Development</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+<p align="center">
+  <a href="https://github.com/blueokanna/ArcadiaPlus/actions/workflows/ci.yml"><img src="https://github.com/blueokanna/ArcadiaPlus/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
 
-A cross-platform proxy client built with Flutter and Rust, with a Material 3 interface, profile management, policy routing and connection diagnostics.
+ArcadiaPlus is a proxy client for desktop and mobile devices. It brings profile management, policy groups, DNS configuration and connection diagnostics into one Material 3 interface. The Corduit engine communicates with the application through Flutter Rust Bridge; native modules handle system proxy and VPN integration.
 
-[中文](README.md) · [Releases](https://github.com/blueokanna/ArcadiaPlus/releases) · [Documentation](https://github.com/blueokanna/ArcadiaPlus/wiki) · [Issues](https://github.com/blueokanna/ArcadiaPlus/issues)
+The project provides a client and its source code, not proxy servers, nodes or subscriptions. Clash-style profiles are translated into the semantics supported by the current engine. ArcadiaPlus is not a complete replacement for Mihomo.
 
 ## Features
 
-- Import Clash-style subscriptions and local configurations; manage updates, nodes and policy groups.
-- Rule, global and direct routing modes, with rule hits, connection details, DNS activity and traffic views.
-- Proxy protocols and TUN processing supplied by Corduit; optional local recursive DNS supplied by RecurseX.
-- Material 3 dynamic colors, light and dark themes, custom backgrounds, responsive navigation and interruptible shape motion.
-- Android VPN foreground service, desktop system proxies and native platform integration, as detailed below.
+| Area | Capabilities |
+| --- | --- |
+| Profiles | Subscription and local configuration import, updates, nodes and policy groups |
+| Routing | Rule, global and direct modes; domain, IP, port, process and logical rules; supported rule-set loading |
+| DNS | Fake-IP and real-address modes, encrypted upstreams, domain policies and optional local recursion through RecurseX |
+| Diagnostics | Connection details, rule hits, DNS activity, logs and separate direct/proxy traffic counters |
+| Interface | English and Chinese, light and dark themes, dynamic colors, custom backgrounds and responsive layouts |
+| Native integration | Android VPN, Windows system proxy and Wintun, Linux and macOS system proxy; limits are listed below |
 
-See the [user guide](https://github.com/blueokanna/ArcadiaPlus/wiki/User-Guide) for protocols, rule types and configuration semantics. ArcadiaPlus does not supply nodes, servers or subscriptions.
+## Interface preview
 
-## Screenshots
+These images were rendered on **2026-11-15** from the actual Flutter pages in the current source tree, in both languages and both themes. They show an idle client with no profile and zero traffic, without fabricated speed tests or active nodes. They are **test-rendered layout previews, not native device screenshots or proof of VPN operation**. See [image provenance and regeneration](docs/images/README.md) for the full gallery.
 
-<details open>
-<summary><b>💻 Windows PC </b></summary>
-<br>
-<div align="center">
-  <img width="48%" src="https://github.com/user-attachments/assets/73f4119d-a59e-4d88-b9df-2777ca0ff53b" />
-  <img width="48%" src="https://github.com/user-attachments/assets/e6650f71-1018-46a5-a6a9-8d9d663bb8b3" />
-  <br><br>
-  <img width="48%" src="https://github.com/user-attachments/assets/63ee8199-4e72-4fb9-8ae9-a02689c234ff" />
-  <img width="48%" src="https://github.com/user-attachments/assets/a28545de-b4e5-47a3-b040-80e2136a844c" />
-</div>
+### Desktop
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/windows-en-dark.png">
+  <img src="docs/images/windows-en-light.png" width="100%" alt="Windows target layout showing service status, routing controls and traffic statistics">
+</picture>
+
+<details>
+<summary>macOS and Linux target layouts</summary>
+
+| macOS | Linux |
+| --- | --- |
+| ![macOS dark layout preview](docs/images/macos-en-dark.png) | ![Linux light layout preview](docs/images/linux-en-light.png) |
+
+These previews use the respective Flutter target-platform setting. Native windows, system proxy changes and tunnels are outside the capture test.
+
 </details>
-<br>
-<details open>
-<summary><b>📱 Android </b></summary>
-<br>
-<div align="center">
-<img width="260" src="https://github.com/user-attachments/assets/21ef5262-a39c-40c6-9565-8ad7b02a5c26" />
-&nbsp;&nbsp;&nbsp;&nbsp;
-<img width="260" src="https://github.com/user-attachments/assets/a92930ff-03fd-43c2-a210-b08173f1c388" />
-</div>
+
+### Mobile and tablet
+
+| Android · Light | iOS · Dark |
+| --- | --- |
+| <img src="docs/images/android-en-light.png" width="300" alt="Android light mobile layout"> | <img src="docs/images/ios-en-dark.png" width="300" alt="iOS dark mobile layout; application interface only"> |
+
+<details>
+<summary>Tablet layout and HarmonyOS NEXT</summary>
+
+<img src="docs/images/tablet-en-light.png" width="640" alt="Responsive tablet layout at 1024 by 1366">
+
+The tablet preview uses an Android target configuration to render the shared Flutter layout. HarmonyOS NEXT requires a separate Flutter SDK and native extension; this layout is not presented as a HarmonyOS device screenshot. See the [HarmonyOS NEXT guide](ohos/README.md) for build and validation requirements.
+
 </details>
 
-## Platform Status
+## Platform support
 
-| Platform | UI shell | System proxy | Full-tunnel VPN/TUN | Current conclusion |
-| --- | --- | --- | --- | --- |
-| Android | Present | N/A | `VpnService` path implemented | Requires device, ABI, and long-running regression tests |
-| Windows | Present | Implemented | Wintun path implemented | Requires Windows 10/11 tests with elevation |
-| Linux | Present | GNOME settings path (every `gsettings` exit code is checked) | IPv4 TUN path provided by corduit | TUN currently permits global mode only and explicitly rejects rule/direct; root/device testing is still required |
-| macOS | Present | `networksetup` path | No Network Extension | Full-tunnel support cannot be claimed |
-| iOS | Present | N/A | No Packet Tunnel Extension | Application shell only |
-| HarmonyOS NEXT | Present | N/A | `VpnExtensionAbility` tunnel with the engine data path implemented | Requires a HarmonyOS NEXT device (authorization prompt, tunnel, engine routing); not claimed before that verification |
+A platform directory, a successful build and verified networking are separate milestones. This table describes the implementation in the repository. Available packages depend on the assets attached to each release.
+
+| Platform | Implementation | Limits |
+| --- | --- | --- |
+| Android | Flutter UI, `VpnService` and foreground notifications | VPN authorization required; ABI, background operation and long connections need device regression tests |
+| Windows | System proxy and Wintun | TUN requires elevation and validation on the target Windows environment |
+| Linux | GNOME `gsettings` system proxy and IPv4 TUN | TUN currently accepts global mode only and requires privileges; automatic setup is not guaranteed on other desktops |
+| macOS | System proxy through `networksetup` | No Network Extension; no system-wide full-tunnel VPN |
+| iOS | Flutter application UI | No Packet Tunnel Extension; not represented as a working VPN client |
+| HarmonyOS NEXT | `VpnExtensionAbility` and Rust data-path integration | Dedicated toolchain; authorization, tunnel and routing still require device validation |
+
+Android notifications request standard Live Updates promotion. ColorOS Fluid Cloud presentation depends on the ROM and system settings and is not yet listed as a verified capability.
 
 ## Getting started
 
-Download a package for your platform from [Releases](https://github.com/blueokanna/ArcadiaPlus/releases). Import a configuration, select a node, grant the required platform permissions and connect. Logs are available in Settings; see [troubleshooting](https://github.com/blueokanna/ArcadiaPlus/wiki/Troubleshooting) for diagnosis.
+1. Download a package for your system and architecture from [Releases](https://github.com/blueokanna/ArcadiaPlus/releases).
+2. Import an existing subscription or local profile and review its nodes and policy-group selections.
+3. Select a routing mode, then enable the system proxy or VPN/TUN appropriate to your platform.
+4. Confirm routing in connection details. Retain sanitized logs and reproduction steps when reporting a problem.
 
-## Build from source
+System proxy settings affect applications that honor them. Rule mode does not send every connection through a remote proxy: DIRECT rules, groups selecting DIRECT and rules that do not cover the actual destination can result in direct connections.
 
-Use Flutter 3.47.x, Dart 3.13 and the pinned Rust toolchain. Android requires JDK 17 and NDK 28.2.13676358.
+For HLS downloads, inspect both playlist and media-segment domains. Fake-IP helps retain domain identity behind shared CDN addresses; it cannot recover names hidden by an application's own DoH or cached real IPs. See the [routing validation notes](docs/routing-and-android-validation.md) for limitations and testing instructions.
+
+## Development
+
+The main toolchain follows CI: Flutter **3.47.2**, Dart **3.13** and Rust **1.97.0**. Android uses JDK **17** and NDK **28.2.13676358**. Lockfiles define dependency versions. HarmonyOS NEXT follows its separate build guide.
 
 ```sh
+git clone https://github.com/blueokanna/ArcadiaPlus.git
+cd ArcadiaPlus
 flutter pub get --enforce-lockfile
 flutter analyze
 flutter test
-flutter build apk --release
-python scripts/check_android_page_sizes.py build/app/outputs/flutter-apk/app-release.apk
+cargo test --manifest-path rust/Cargo.toml --locked
 ```
 
-See [development](https://github.com/blueokanna/ArcadiaPlus/wiki/Development) for signing, other platforms and dependency checks, and [16 KB compatibility](https://github.com/blueokanna/ArcadiaPlus/wiki/Android-16-KB) for Android native-library requirements and verification.
+Install Flutter's native build prerequisites on the appropriate host before building:
 
-## License
+| Target | Command |
+| --- | --- |
+| Android | `flutter build apk --release` |
+| Windows | `flutter build windows --release` |
+| macOS | `flutter build macos --release` |
+| Linux | `flutter build linux --release` |
 
-PolyForm Perimeter License 1.0.1 with repository-specific additional terms. Read [LICENSE](LICENSE) before use, modification or distribution, and retain the copyright notice.
+Before distributing Android builds, also run `python scripts/check_android_page_sizes.py build/app/outputs/flutter-apk/app-release.apk`. The [release workflow](.github/workflows/release.yml) records signing, packaging and dependency setup. A successful local build is not necessarily a signed distribution artifact.
+
+### Repository map
+
+```text
+lib/src/                     Flutter screens, state, configuration and services
+packages/arcadia_expressive/  Shared interaction and motion components
+rust/src/                    Engine bridge, diagnostics and platform entry points
+rust/tests/                  Rust integration tests
+android/ · windows/ · linux/ · macos/ · ios/  Native hosts
+ohos/                        HarmonyOS NEXT host and VPN extension
+test/                        Dart tests and documentation rendering
+scripts/                     Build checks, icon generation and device validation
+```
+
+## Contributing
+
+Contributions are welcome in the form of reproducible reports, focused fixes, device validation and documentation improvements. Useful areas include routing and DNS edge cases, HLS and long-connection verification, native tunnel integration, accessibility and localization.
+
+Read the [contribution guide](CONTRIBUTING.md) before submitting code. Interface changes should include updated previews; networking changes should identify the matched rule, actual outbound and test environment. Do not include subscription URLs, passwords, tokens or private node information in issues, logs or images.
+
+## License and dependencies
+
+Source code is provided under **PolyForm Perimeter License 1.0.1 with repository-specific additional terms**. [LICENSE](LICENSE) defines the permissions and conditions for modification and distribution. Third-party fonts, GeoIP data, Wintun and other bundled resources retain their own licenses.
+
+Core dependencies include Flutter, Rust, Flutter Rust Bridge, Corduit and RecurseX. See [pubspec.yaml](pubspec.yaml) and [rust/Cargo.toml](rust/Cargo.toml) for versions and enabled features.

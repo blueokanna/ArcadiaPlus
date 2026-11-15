@@ -1,0 +1,21 @@
+name: Feature proposal / 功能建议
+description: Propose an improvement with a concrete use case / 描述具体场景与改进方向
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Use case / 使用场景
+      description: What task cannot be completed with the current behavior?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior / 建议行为
+      description: Include affected platforms and configuration compatibility where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and validation / 替代方案与验证方法

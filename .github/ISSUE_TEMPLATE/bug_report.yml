@@ -1,0 +1,37 @@
+name: Bug report / 问题报告
+description: Report a reproducible defect / 提交可复现的问题
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include subscription URLs, tokens, passwords or private node details. 请勿提交订阅地址、令牌、密码或私有节点信息。"
+  - type: input
+    id: environment
+    attributes:
+      label: Version and environment / 版本与环境
+      description: App version or commit, OS version, architecture and device model.
+      placeholder: "Version / commit · OS / ROM · architecture · model"
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction / 复现步骤
+      description: Include a minimal sanitized configuration when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior / 预期与实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: routing
+    attributes:
+      label: Routing evidence / 分流信息
+      description: Routing mode, DNS mode, matched rule and final group member for network issues.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs and screenshots / 日志与截图
+      description: Sanitize credentials and label screenshots with their platform and origin.

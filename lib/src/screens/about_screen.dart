@@ -311,7 +311,9 @@ class _AboutScreenState extends State<AboutScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Image.asset(
-              'assets/arcadiaplus.png',
+              MediaQuery.platformBrightnessOf(context) == Brightness.dark
+                  ? 'assets/AcadiaPlusDark.jpg'
+                  : 'assets/AcadiaPlusLight.jpg',
               width: 44,
               height: 44,
               filterQuality: FilterQuality.medium,
