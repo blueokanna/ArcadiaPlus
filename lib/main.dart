@@ -202,7 +202,8 @@ class _StartupScreenState extends State<_StartupScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MediaQuery.platformBrightnessOf(context) == Brightness.dark
+      backgroundColor:
+          MediaQuery.platformBrightnessOf(context) == Brightness.dark
           ? Colors.black
           : Colors.white,
       body: Center(
@@ -240,9 +241,10 @@ class _StartupScreenState extends State<_StartupScreen>
                       );
                     },
                     child: Image.asset(
-                      MediaQuery.platformBrightnessOf(context) == Brightness.dark
-                        ? 'assets/AcadiaPlusDark.jpg'
-                        : 'assets/AcadiaPlusLight.jpg',
+                      MediaQuery.platformBrightnessOf(context) ==
+                              Brightness.dark
+                          ? 'assets/AcadiaPlusDark.jpg'
+                          : 'assets/AcadiaPlusLight.jpg',
                       color: Colors.white,
                       filterQuality: FilterQuality.medium,
                     ),

@@ -70,7 +70,10 @@ class _NetworkState extends ChangeNotifier implements NetworkSettingsProvider {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   const capture = bool.fromEnvironment('CAPTURE_UI');
-  const language = String.fromEnvironment('SHOWCASE_LOCALE', defaultValue: 'en');
+  const language = String.fromEnvironment(
+    'SHOWCASE_LOCALE',
+    defaultValue: 'en',
+  );
   setUpAll(loadAppFonts);
   for (final (label, size, platform) in [
     ('android', const Size(412, 915), TargetPlatform.android),
@@ -181,5 +184,4 @@ void main() {
       });
     }
   }
-
 }

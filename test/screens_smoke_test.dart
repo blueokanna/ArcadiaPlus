@@ -17,11 +17,14 @@ Future<void> pumpScreen(
   WidgetTester tester,
   Widget child, {
   double textScale = 1,
+  DnsSettingsProvider? dnsProvider,
 }) async {
   await tester.pumpWidget(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => DnsSettingsProvider()),
+        ChangeNotifierProvider(
+          create: (_) => dnsProvider ?? DnsSettingsProvider(),
+        ),
         ChangeNotifierProvider(create: (_) => GeneralSettingsProvider()),
         ChangeNotifierProvider(create: (_) => WallpaperProvider()),
       ],
@@ -47,7 +50,17 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await pumpScreen(tester, const DnsSettingsScreen(), textScale: 2);
+    final savedModes = <String>[];
+    final dns = DnsSettingsProvider(
+      read: () async => DnsSettings(dnsMode: 'fake-ip'),
+      write: (settings) async => savedModes.add(settings.dnsMode),
+    );
+    await pumpScreen(
+      tester,
+      const DnsSettingsScreen(),
+      textScale: 2,
+      dnsProvider: dns,
+    );
     await tester.scrollUntilVisible(
       find.byIcon(Icons.arrow_drop_down).hitTestable(),
       200,
@@ -61,11 +74,41 @@ void main() {
           .first,
     );
     expect(tester.takeException(), isNull);
-    final arrow = find.byIcon(Icons.arrow_drop_down).hitTestable();
+    final modePicker = find.byWidgetPredicate(
+      (widget) =>
+          widget is DropdownMenu<String> &&
+          widget.dropdownMenuEntries.any((entry) => entry.value == 'fake-ip'),
+    );
+    final arrow = find
+        .descendant(
+          of: modePicker,
+          matching: find.byIcon(Icons.arrow_drop_down),
+        )
+        .hitTestable();
     expect(arrow, findsOneWidget);
     await tester.tap(arrow);
     await tester.pumpAndSettle();
-    expect(find.text('Fake-IP').hitTestable(), findsOneWidget);
+    // The selected value also appears in the read-only text field. Match
+    // the actual menu item rather than counting both copies of its label.
+    expect(
+      find.widgetWithText(MenuItemButton, 'Fake-IP').hitTestable(),
+      findsOneWidget,
+    );
+    await tester.tap(
+      find.widgetWithText(MenuItemButton, 'Redir-Host').hitTestable(),
+    );
+    await tester.pumpAndSettle();
+    expect(dns.dnsMode, 'redir-host');
+    await tester.ensureVisible(modePicker);
+    await tester.pumpAndSettle();
+    await tester.tap(arrow);
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(MenuItemButton, 'Fake-IP').hitTestable(),
+    );
+    await tester.pumpAndSettle();
+    expect(dns.dnsMode, 'fake-ip');
+    expect(savedModes, ['redir-host', 'fake-ip']);
     expect(tester.takeException(), isNull);
   });
 

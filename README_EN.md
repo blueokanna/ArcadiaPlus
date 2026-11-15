@@ -137,7 +137,7 @@ scripts/                     Build checks, icon generation and device validation
 
 Contributions are welcome in the form of reproducible reports, focused fixes, device validation and documentation improvements. Useful areas include routing and DNS edge cases, HLS and long-connection verification, native tunnel integration, accessibility and localization.
 
-Read the [contribution guide](CONTRIBUTING.md) before submitting code. Interface changes should include updated previews; networking changes should identify the matched rule, actual outbound and test environment. Do not include subscription URLs, passwords, tokens or private node information in issues, logs or images.
+Interface changes should include updated previews; networking changes should identify the matched rule, actual outbound and test environment. Do not include subscription URLs, passwords, tokens or private node information in issues, logs or images.
 
 ## License and dependencies
 
