@@ -6,6 +6,20 @@
 - Keep a SHA-256 identity instead of a second full configuration document in the Flutter provider; retain source only for the HarmonyOS extension and rollback. Avoid unnecessary native configuration clones outside Android.
 - Stream Android restart snapshots through an 8 KiB buffer with an encoded-size limit and atomic replacement. A failed or oversized write preserves the previous snapshot. Release hidden DNS panel snapshots and reject late results.
 
+## 1.1.0+5
+
+Changes since `v1.1.0+4`.
+
+- Preserve `no-resolve` separately from logical-rule payloads, validate nested NOT arity, and reject empty logical conditions. Validate runtime rule fields and modifiers instead of silently discarding them; map `IP-CIDR` / `IP-CIDR6` with `src` to source-IP rules. Unsupported modifiers, including source-GEOIP matching, stop configuration rather than changing routing semantics.
+- Reject extra fields in classical rule-provider entries because Corduit 0.3.8 does not preserve entry-level modifiers. Use `SRC-IP-CIDR` for source matching and put `no-resolve` on the referencing `RULE-SET` rule. Invalidate previously accepted classical caches so older validation cannot bypass this check.
+- Default unspecified DNS modes to Fake-IP to retain domain identity when CDN names share an address. Keep explicit profile modes and saved user choices. This does not implement TLS/QUIC sniffing or recover names hidden by application-managed DoH or cached real IPs.
+- Request standard Android Live Updates promotion, distinguish VPN startup from the connected state, and use a dedicated notification icon. ColorOS 17 Fluid Cloud presentation remains subject to device verification and system eligibility.
+- Replace application icons, add Android day/night vector resources, and follow system brightness for the Flutter startup and About logos. Refresh static icons on the other platforms and correct the Linux release icon source.
+- Rewrite the Chinese and English READMEs, add issue and pull-request templates, and generate 24 bilingual light/dark layout previews from current widgets. Label these as test-rendered previews rather than native device screenshots, with reproducible generation and source/image fingerprints.
+- Fix Dart formatting failures and scope DNS picker assertions to actual menu items. Cover selecting and saving both Fake-IP and Redir-Host at narrow widths with large text. Check formatting before documentation image generation.
+- Add a public HLS manifest/variant/segment download probe through an explicit HTTP proxy. Successful HTTP delivery alone does not prove the engine used a remote proxy; Android HLS routing and Fluid Cloud are not claimed as validated by this probe.
+- Share release-note validation between CI and release packaging. Require one non-empty section for the exact app revision and catch missing notes before toolchain setup; keep release identity and existing-tag protections.
+
 ## 1.1.0+4
 
 - Align Android Rust libraries for 16 KiB pages and package native libraries uncompressed. Check ELF load segments, RELRO boundaries and APK ZIP offsets in CI and release builds.

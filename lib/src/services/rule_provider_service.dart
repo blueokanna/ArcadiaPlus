@@ -892,7 +892,10 @@ class RuleProviderService extends ChangeNotifier {
         return _isCidr(entry);
       case 'classical':
         final parts = entry.split(',');
-        if (parts.length < 2 || parts[1].trim().isEmpty) return false;
+        // Corduit's classical reader consumes only type and payload. An
+        // entry-level modifier would be discarded, changing the rule's meaning.
+        // Put no-resolve on the referencing RULE-SET, or use SRC-IP-CIDR.
+        if (parts.length != 2 || parts[1].trim().isEmpty) return false;
         final type = parts.first.trim().toUpperCase();
         if (!_classicalTypes.contains(type)) return false;
         return !const {'IP-CIDR', 'IP-CIDR6', 'SRC-IP-CIDR'}.contains(type) ||
@@ -971,6 +974,8 @@ class RuleProviderService extends ChangeNotifier {
 
   bool _matchesSource(Map<String, dynamic>? meta, RuleProviderSpec spec) =>
       meta != null &&
+      (spec.behavior != 'classical' ||
+          meta['classicalValidationVersion'] == 1) &&
       (meta['skipped'] as int? ?? 0) == 0 &&
       (meta['entries'] as int? ?? 0) > 0 &&
       meta['url'] == spec.url &&
@@ -1003,7 +1008,10 @@ class RuleProviderService extends ChangeNotifier {
       '${directory.path}${Platform.pathSeparator}${_safeSegment(name)}.meta.json',
     );
     final tmp = File('${file.path}.tmp');
-    await tmp.writeAsString(jsonEncode(values), flush: true);
+    await tmp.writeAsString(
+      jsonEncode({...values, 'classicalValidationVersion': 1}),
+      flush: true,
+    );
     await tmp.rename(file.path);
   }
 

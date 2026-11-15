@@ -27,6 +27,9 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v5
 
+      - name: Validate current release notes
+        run: python3 scripts/check_release_notes.py
+
       - name: Reclaim disk space this build does not need
         run: |
           set -euo pipefail

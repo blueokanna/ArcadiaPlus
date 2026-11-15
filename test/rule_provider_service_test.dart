@@ -47,6 +47,97 @@ void main() {
   RuleProviderService serviceWith(MockClient client) =>
       RuleProviderService(client: client, storageRoot: () async => support);
 
+  test('old classical caches cannot bypass updated validation', () async {
+    var calls = 0;
+    final service = serviceWith(
+      MockClient((request) async {
+        calls++;
+        if (calls > 1) {
+          expect(request.headers.containsKey('if-none-match'), false);
+          return http.Response('unavailable', 503);
+        }
+        return http.Response(
+          'SRC-IP-CIDR,192.0.2.0/24\n',
+          200,
+          headers: {'etag': 'old'},
+        );
+      }),
+    );
+    addTearDown(service.dispose);
+    final profile = httpProfile(behavior: 'classical');
+    final initial = await service.prepare('legacy-classical', profile);
+    expect(initial.states.single.ready, true);
+    final meta = File(
+      '${File(initial.paths['reject']!).parent.path}/reject.meta.json',
+    );
+    final stored =
+        jsonDecode(await meta.readAsString()) as Map<String, dynamic>;
+    stored.remove('classicalValidationVersion');
+    await meta.writeAsString(jsonEncode(stored));
+    final offline = await service.prepare(
+      'legacy-classical',
+      profile,
+      allowNetwork: false,
+    );
+    expect(offline.paths, isEmpty);
+    final failedRefresh = await service.prepare('legacy-classical', profile);
+    expect(failedRefresh.paths, isEmpty);
+    expect(failedRefresh.states.single.ready, false);
+    expect(calls, 2);
+  });
+
+  test('validated classical cache survives an invalid refresh', () async {
+    var calls = 0;
+    final service = serviceWith(
+      MockClient(
+        (_) async => http.Response(
+          calls++ == 0
+              ? 'SRC-IP-CIDR,192.0.2.0/24\n'
+              : 'IP-CIDR,192.0.2.0/24,src\n',
+          200,
+        ),
+      ),
+    );
+    addTearDown(service.dispose);
+    final profile = httpProfile(behavior: 'classical');
+    final first = await service.prepare('classical-refresh', profile);
+    final refreshed = await service.prepare(
+      'classical-refresh',
+      profile,
+      force: true,
+    );
+    expect(first.paths, isNotEmpty);
+    expect(refreshed.paths, first.paths);
+    expect(refreshed.states.single.error, contains('incomplete rule set'));
+  });
+
+  for (final entry in [
+    'IP-CIDR,192.0.2.0/24,src',
+    'IP-CIDR,192.0.2.0/24,no-resolve',
+    'DOMAIN,video.test,unexpected',
+  ]) {
+    test(
+      'classical provider refuses engine-discarded fields: $entry',
+      () async {
+        final service = serviceWith(
+          MockClient(
+            (_) async => http.Response(
+              'payload:\n  - DOMAIN,safe.test\n  - $entry\n',
+              200,
+            ),
+          ),
+        );
+        addTearDown(service.dispose);
+        final report = await service.prepare(
+          'classical-flags',
+          httpProfile(behavior: 'classical'),
+        );
+        expect(report.states.single.ready, false);
+        expect(report.paths, isEmpty);
+      },
+    );
+  }
+
   test('unwraps a YAML payload into the line format the engine parses', () async {
     final requested = <Uri>[];
     final client = MockClient((request) async {

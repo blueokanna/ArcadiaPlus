@@ -1415,7 +1415,7 @@ class ConfigConverter {
           final outbound = parts.length >= 3
               ? parts[2].trim()
               : parts[1].trim();
-          final mappedType = _mapRuleType(ruleType);
+          var mappedType = _mapRuleType(ruleType);
 
           if (mappedType == null) {
             if (strict) {
@@ -1426,6 +1426,21 @@ class ConfigConverter {
               'for; the rule was skipped.',
             );
             continue;
+          }
+
+          var noResolve = parts
+              .skip(3)
+              .any((flag) => flag.trim().toLowerCase() == 'no-resolve');
+          if (strict) {
+            if ((mappedType == 'match' && parts.length != 2) ||
+                (mappedType != 'match' &&
+                    (parts.length < 3 || payload.isEmpty)) ||
+                outbound.isEmpty) {
+              throw FormatException('Malformed routing rule: $rule');
+            }
+            final modifiers = _routingModifiers(mappedType, parts.skip(3));
+            mappedType = modifiers.type;
+            noResolve = modifiers.noResolve;
           }
 
           if (mappedType == 'geosite' && !availableRuleSets.contains(payload)) {
@@ -1490,10 +1505,7 @@ class ConfigConverter {
             'payload': payload,
             'outbound': resolveTarget(outbound, rule),
             'process_name': null,
-            if (parts
-                .skip(3)
-                .any((flag) => flag.trim().toLowerCase() == 'no-resolve'))
-              'no_resolve': true,
+            if (noResolve) 'no_resolve': true,
           });
         }
       }
@@ -1534,6 +1546,30 @@ class ConfigConverter {
     }
 
     return 'DIRECT';
+  }
+
+  /// Preserve supported modifiers; never silently reinterpret a runtime rule.
+  static ({String type, bool noResolve}) _routingModifiers(
+    String type,
+    Iterable<String> fields,
+  ) {
+    var source = false;
+    var noResolve = false;
+    for (final field in fields) {
+      switch (field.trim().toLowerCase()) {
+        case 'src' when type == 'ip_cidr' && !source:
+          source = true;
+        case 'no-resolve'
+            when const {'ip_cidr', 'geoip', 'rule_set'}.contains(type) &&
+                !noResolve:
+          noResolve = true;
+        default:
+          throw FormatException(
+            'Unsupported or duplicate routing modifier "$field" for $type',
+          );
+      }
+    }
+    return (type: source ? 'src_ip_cidr' : type, noResolve: noResolve);
   }
 
   /// Splits one rule line on the commas that separate its fields.
@@ -1639,14 +1675,27 @@ class ConfigConverter {
       if (body == null) return null;
       final fields = _splitRuleFields(body);
       if (fields.length < 2) return null;
-      final childType = _mapRuleType(fields[0].trim());
-      final noResolve =
-          fields.length > 2 && fields.last.trim().toLowerCase() == 'no-resolve';
-      final childPayload = fields
-          .sublist(1, noResolve ? fields.length - 1 : fields.length)
-          .join(',')
-          .trim();
-      if (childType == null) return null;
+      var childType = _mapRuleType(fields[0].trim());
+      if (childType == null || childType == 'match') return null;
+      final isPort = const {
+        'dst_port',
+        'src_port',
+        'in_port',
+      }.contains(childType);
+      final childPayload = isPort
+          ? fields.sublist(1).join(',').trim()
+          : fields[1].trim();
+      var noResolve = false;
+      try {
+        final modifiers = _routingModifiers(
+          childType,
+          isPort ? const [] : fields.skip(2),
+        );
+        childType = modifiers.type;
+        noResolve = modifiers.noResolve;
+      } on FormatException {
+        return null;
+      }
 
       if (childType == 'and' || childType == 'or' || childType == 'not') {
         final nested = _parseConditionList(

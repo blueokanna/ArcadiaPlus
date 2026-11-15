@@ -75,24 +75,7 @@ jobs:
             exit 1
           fi
 
-          notes_version="$version+$build_number"
-          if [[ "$build_number" == 1 ]] && ! awk -v heading="## $notes_version" '
-            { sub(/\r$/, "") }
-            $0 == heading { found=1 }
-            END { exit !found }
-          ' CHANGELOG.md; then
-            notes_version="$version"
-          fi
-          awk -v heading="## $notes_version" '
-            { sub(/\r$/, "") }
-            found == 0 && $0 == heading { found=1; next }
-            found && /^## / { exit }
-            found { print }
-          ' CHANGELOG.md > changelog-section.md
-          if ! grep -qE '^- ' changelog-section.md; then
-            echo "CHANGELOG.md has no entries under '## $notes_version'; write the release notes before tagging" >&2
-            exit 1
-          fi
+          python3 scripts/check_release_notes.py --output changelog-section.md
           {
             echo '**Official changelog:**'
             echo
