@@ -52,7 +52,15 @@ dependencies:
 
   # File operations
   file_picker: ^13.4.0
-  window_manager: ^0.6.0
+
+  # 0.6 moved the window API onto nativeapi, whose C++ core ships through a
+  # native-asset hook: on Linux it needs GTK 3 / X11 / Xi just to run
+  # `flutter test`, and it packages a desktop windowing library into the Android
+  # APK (measured: 2.26 MB arm64, 1.81 MB armeabi-v7a, 2.17 MB x86_64) for three
+  # calls this app only makes on desktop. 0.7 additionally needs Dart 3.14. This
+  # stays on the plugin line until the toolchain moves and the mobile payload
+  # question has an answer.
+  window_manager: ^0.5.2
 
 dev_dependencies:
   flutter_test:

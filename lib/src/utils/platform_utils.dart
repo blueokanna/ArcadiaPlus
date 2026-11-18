@@ -3,11 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// window_manager 0.6 moved its API onto nativeapi; the 0.5-era surface this
-// file uses lives in the package's documented compatibility library, which is
-// the same code path with the same behaviour. Migrating to the native API is a
-// separate change, and this import is what upstream asks for in the meantime.
-import 'package:window_manager/legacy.dart';
+import 'package:window_manager/window_manager.dart';
 import 'package:arcadiaplus/src/utils/responsive_utils.dart';
 
 class PlatformUtils {
@@ -127,19 +123,15 @@ class PlatformUtils {
 
   /// Sizes, centres and shows the desktop window.
   ///
-  /// window_manager 0.6 moved its API onto nativeapi and keeps the 0.5.x
-  /// surface in `legacy.dart`, the bridge upstream documents for apps written
-  /// against it. The two references marked below are the whole of that bridge
-  /// here — everything afterwards calls the objects they produce — so the
-  /// migration stays a one-line import swap. Moving to the native `Window` API
-  /// is a separate change, because window creation then belongs to the runner.
+  /// The only place this app touches the window manager: a size, a minimum size,
+  /// a title and centring. Anything the platforms differ on is left to the
+  /// runner.
   static Future<void> initDesktopWindow() async {
     if (!isDesktop) return;
 
-    // ignore: deprecated_member_use
-    final manager = windowManager;
-    // ignore: deprecated_member_use
-    const options = WindowOptions(
+    await windowManager.ensureInitialized();
+
+    const windowOptions = WindowOptions(
       size: Size(1200, 800),
       minimumSize: Size(600, 600),
       center: true,
@@ -147,10 +139,9 @@ class PlatformUtils {
       titleBarStyle: TitleBarStyle.normal,
     );
 
-    await manager.ensureInitialized();
-    await manager.waitUntilReadyToShow(options, () async {
-      await manager.show();
-      await manager.focus();
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
     });
   }
 

@@ -87,15 +87,19 @@ force on this bridge.
   but only the second puts a TLS record on the wire, and a locked-down host
   offers no system store at all.
 - Refresh the declared Flutter dependencies to what this toolchain actually
-  resolves — cupertino_icons 2, go_router 18, fl_chart 1.3, file_picker 13,
-  window_manager 0.6 — and regenerate `pubspec.lock`, so the locked resolution
-  succeeds again. Two constraints stay below the published latest and say why:
-  window_manager 0.7 requires Dart 3.14 while this build pins Flutter 3.47 /
-  Dart 3.13, and dynamic_color 2 hands out `material_ui` `ColorScheme`s that
-  Flutter's `ThemeData` cannot take, so it stays on the 1.x line until the theme
-  layer is migrated against a real screen. The 0.6 window API moved onto
-  nativeapi; the two references this app needs sit behind the package's own
-  compatibility bridge, with the native-API migration noted in place.
+  resolves — cupertino_icons 2, go_router 18, fl_chart 1.3, file_picker 13 — and
+  regenerate `pubspec.lock`, so the locked resolution succeeds again. Two stay
+  below the published latest, each for a measured reason. `dynamic_color` 2
+  hands out `material_ui` `ColorScheme`s that Flutter's `ThemeData` cannot take,
+  so it stays on the 1.x line until the theme layer is migrated against a real
+  screen. `window_manager` 0.6 moves the window API onto `nativeapi`, whose C++
+  core arrives through a native-asset hook: it needs GTK 3 / X11 / Xi on every
+  Linux machine that runs `flutter test`, and it packages a desktop windowing
+  library into the Android APK (2.26 MB arm64, 1.81 MB armeabi-v7a, 2.17 MB
+  x86_64) for the three window calls this app makes, all of them desktop-only.
+  The plugin line keeps the APK free of it and `flutter test` free of system
+  packages; 0.7 additionally needs Dart 3.14, so that move waits for the
+  toolchain either way.
 
 ## 1.1.0+5
 
