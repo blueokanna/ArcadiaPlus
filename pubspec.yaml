@@ -71,7 +71,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  ffigen: ^23.0.0
+  # 23 requires `code_assets` ^2.0.0, which requires `hooks` ^2.2.0, which requires
+  # `record_use` ^1.0.0, which requires `meta` ^1.19.0 — and the pinned OHOS fork's
+  # `flutter_test` declares `meta 1.17.0` exactly, so that chain cannot resolve
+  # there. 21 requires `code_assets` ^1.1.0, which accepts `hooks` ^2.0.0, so pub
+  # backtracks to hooks 2.0.2 and its `record_use` ^0.6.0, which takes meta ^1.17.0.
+  ffigen: ^21.0.0
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
 

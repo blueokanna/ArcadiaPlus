@@ -95,7 +95,7 @@ force on this bridge.
   `scripts/check_ohos_dependency_floors.py` now holds every declared constraint
   to that floor in the lint job, so the next bump that cannot resolve there
   fails in seconds instead of inside the HAP job after two toolchain downloads.
-  Three more stay below the published latest, each for a measured reason.
+  Four more stay below the published latest, each for a measured reason.
   `dynamic_color` 2 hands out `material_ui` `ColorScheme`s that Flutter's
   `ThemeData` cannot take, so it stays on the 1.x line until the theme layer is
   migrated against a real screen. `window_manager` 0.6 moves the window API onto
@@ -105,7 +105,18 @@ force on this bridge.
   armeabi-v7a, 2.17 MB x86_64) for the three window calls this app makes, all of
   them desktop-only. The plugin line keeps the APK free of it and `flutter test`
   free of system packages; 0.7 additionally needs Dart 3.14, so that move waits
-  for the toolchain either way.
+  for the toolchain either way. `ffigen` stays on 21: 23 requires `code_assets`
+  ^2.0.0 → `hooks` ^2.2.0 → `record_use` ^1.0.0 → `meta` ^1.19.0, and the fork's
+  `flutter_test` declares `meta 1.17.0` exactly, so the HAP job's `pub get` died
+  in version solving while the lint job was green — version conflict, not a
+  missing floor, so the floors gate could not have seen it. 21 requires
+  `code_assets` ^1.1.0, which takes `hooks` ^2.0.0, so pub backtracks to hooks
+  2.0.2 and `record_use` ^0.6.0, which accepts `meta` ^1.17.0; verified by
+  resolving `ffigen: ^21.0.0` next to a pinned `meta: 1.17.0`, then by running
+  the pinned fork itself (Flutter 3.41.10-ohos-1.0.0 / Dart 3.11.5) against a
+  prepared checkout, which resolved all 131 packages — `meta` 1.17.0, `hooks`
+  backtracked to 2.0.2, `record_use` 0.6.0, `native_toolchain_c` 0.19.2,
+  `analyzer` 10.0.1, `xml` 7.0.1, `platform` 3.1.6 — before this was committed.
 
 ## 1.1.0+5
 

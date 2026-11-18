@@ -17,7 +17,16 @@ in the HAP job in an hour.
 
 Transitive packages are deliberately out of scope. Pub downgrades them inside
 their parents' ranges when it has to, and only the fork's own resolver knows
-whether it can.
+whether it can. That boundary has a price, and it was paid once: `ffigen` 23
+demands `code_assets` 2, whose `hooks` asks for a `meta` the fork's own
+`flutter_test` contradicts. That is a version conflict, not a floor, so this
+check stayed green while the HAP job's `pub get` died. Reproduce that class of
+failure offline rather than in CI, with the pinned fork's own tool:
+
+    python scripts/prepare_ohos_pubspec.py --root <copy of the checkout> \\
+        --dart-version 3.11.5 --flutter-version 3.41.9
+    <fork>/bin/flutter pub get
+    <fork>/bin/flutter analyze --no-pub lib test && <fork>/bin/flutter test --no-pub
 """
 
 import argparse
