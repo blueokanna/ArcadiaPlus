@@ -28,6 +28,40 @@ Corduit 0.3.8 的 classical 规则集读取器不保留条目级附加参数。�
 
 Runtime conversion rejects unsupported modifiers and malformed fields. The `src` modifier on `IP-CIDR` / `IP-CIDR6` becomes a source-IP rule; unsupported source-GEOIP semantics are rejected. Classical providers must contain type/payload pairs only: use explicit `SRC-IP-CIDR` entries and apply `no-resolve` to the referencing `RULE-SET`. Previously cached classical sets must be refreshed under the new validation. A newly validated complete cache remains usable when a later refresh fails.
 
+## Corduit 0.4.0：GEOSITE 与 RULE-SET 的分工
+
+0.4.0 起 `GEOSITE` 只从 `geosite.dat` 读取类别，规则提供者由 `RULE-SET` 引用。旧版把 `GEOSITE,cn` 当作同名规则提供者的别名，所以订阅里写 `GEOSITE,cn`、数据却来自 Loyalsoldier 规则集时，命中会静默落空并顺延到下一条规则——广告拦截和国内直连都会变成一次代理往返，日志里没有任何线索。
+
+ArcadiaPlus 在把文档交给内核前，把**本应用确实提供数据的** `GEOSITE,<名称>` 改写为 `RULE-SET,<名称>`：位置和目标不变，嵌套在 `AND` / `OR` / `NOT` 里的引用一并改写，已经是 `RULE-SET` 的规则保持原样。没有任何数据的类别不改写，由转换器报告并跳过，而不是留在配置里永不命中。`routing_privacy_test.dart` 与 `config_converter_test.dart` 覆盖改写、嵌套改写与保留三种结果；`rust/tests/routing_domains.rs` 用 `RULE-SET` 验证域名集的实际分流。
+
+## Corduit 0.4.0：代理组与规则的新能力
+
+- `url-test` 现在读取 `timeout` 与 `tolerance`（毫秒），`load-balance` 读取 `strategy`（`round-robin` / `consistent-hashing` / `sticky-sessions`），`interval` 仍按秒。转换器把这几个值原样传给内核（单位与订阅一致）；无法读取的值会告警，而不是被内核默认值悄悄替换。少了 `tolerance`，两个相差一毫秒的节点会在每轮探测后互换，而每次切换都要客户端重新握手。
+- 0.4.0 新增 `PROXY-MODE` 规则：按当前路由模式匹配，模式名会被规范成引擎解析的写法（`rule` / `global` / `direct`）。引擎遇到不认识的模式会拒绝整份配置，所以转换器先判断——严格模式抛出，预览模式跳过并告警。
+
+## GEOIP 数据库：0.4.0 读不到，0.4.1 已修
+
+`assets/Country.mmdb` 是合法的 MaxMind 数据库，内核自带的读取器能解析它并正确为中国地址返回 `CN`（`rust/tests/bundled_geoip.rs` 的 `the_bundled_database_is_a_maxmind_database`）。
+
+问题出在分类器，不在文件：Corduit 0.4.0 要求文件以 `\xab\xcd\xefMaxMind.com` 结尾，而真实数据库在该标记之后还有 metadata 映射，于是被判为未知格式，`GEOIP` 规则静默落空。修正随 **Corduit 0.4.1** 发布：`identify` 改为在最后 128 KiB 的 metadata 窗口内查找标记，与 `MmdbReader::open` 共用同一个 `METADATA_SEARCH_WINDOW`，并补了两个 `identify` 测试和一条「读取器能解析的样本必须被判为 mmdb」的断言，防止两者再次漂移。
+
+桥接层不假装安装成功：`setGeoipDatabasePath` 会真正用内核的安装器过一遍再注册，失败时返回带原因的字符串（保留内核自己的原因，因此「截断的下载」与「根本不是数据库」读起来不同），并把同一句话写进应用内日志面板。HarmonyOS 扩展与 Android 重启恢复对同一个文件采取同样的失败策略——一次无法解析的 Geo 数据库不应该让隧道无法启动。
+
+`bundled_geoip` 的路由断言现在是**无条件**的：内核必须把随包数据库装成 `Mmdb`，且国内地址 `DIRECT`、国外走代理。依赖已钉在 0.4.1，一个读不出随包数据库的内核就是坏发布，测试应当直接红，而不是用「顺延到兜底」把自己哄过去。
+
+验证下一个内核版本时，用本地源码跑一遍（不改清单，验证完把锁文件恢复到已发布版本）：
+
+```powershell
+cd rust
+@'
+[patch.crates-io]
+corduit = { path = "D:/RustProject/Corduit" }
+'@ | Set-Content $env:TEMP\corduit-patch.toml
+cargo update -p corduit --offline --config $env:TEMP\corduit-patch.toml
+cargo test --all-targets --config $env:TEMP\corduit-patch.toml
+cargo update -p corduit --offline
+```
+
 ## HLS 验证流程
 
 运行 ArcadiaPlus 后，将其 HTTP 或 mixed 监听地址传给：

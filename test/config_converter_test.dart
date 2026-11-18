@@ -221,6 +221,83 @@ rules:
     });
   });
 
+  test('a url-test group forwards the probe budget the engine reads', () {
+    const yaml = '''
+proxies: []
+proxy-groups:
+  - name: AUTO
+    type: url-test
+    url: https://example.com/204
+    interval: 120
+    timeout: 4000
+    tolerance: 150
+    proxies: [DIRECT, REJECT]
+rules:
+  - MATCH,AUTO
+''';
+
+    final outbounds = convert(yaml)['outbounds'] as List<dynamic>;
+    final group =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'AUTO') as Map;
+
+    expect(group['outbound_type'], 'urltest');
+    expect(optionsOf(group['options']), {
+      'outbounds': ['DIRECT', 'REJECT'],
+      'url': 'https://example.com/204',
+      'interval': 120,
+      'timeout': 4000,
+      'tolerance': 150,
+    });
+  });
+
+  test('a load-balance group forwards its strategy only', () {
+    const yaml = '''
+proxies: []
+proxy-groups:
+  - name: LB
+    type: load-balance
+    strategy: consistent-hashing
+    interval: 60
+    timeout: 3000
+    tolerance: 200
+    proxies: [DIRECT, REJECT]
+rules:
+  - MATCH,LB
+''';
+
+    final outbounds = convert(yaml)['outbounds'] as List<dynamic>;
+    final group = outbounds.firstWhere((o) => (o as Map)['tag'] == 'LB') as Map;
+    final options = optionsOf(group['options']);
+
+    expect(options['strategy'], 'consistent-hashing');
+    expect(options['timeout'], 3000);
+    // Tolerance is a url-test policy; forwarding it here would suggest a
+    // hysteresis this group does not have.
+    expect(options.containsKey('tolerance'), isFalse);
+  });
+
+  test('a probe option the engine cannot read is reported, not dropped', () {
+    const yaml = '''
+proxies: []
+proxy-groups:
+  - name: AUTO
+    type: url-test
+    timeout: "4000"
+    proxies: [DIRECT]
+rules:
+  - MATCH,AUTO
+''';
+
+    final warnings = <String>[];
+    final outbounds =
+        convert(yaml, onWarning: warnings.add)['outbounds'] as List<dynamic>;
+    final group =
+        outbounds.firstWhere((o) => (o as Map)['tag'] == 'AUTO') as Map;
+
+    expect(optionsOf(group['options']).containsKey('timeout'), isFalse);
+    expect(warnings.join('\n'), contains('timeout'));
+  });
+
   test('protocol options travel as a JSON string with Clash keys', () {
     const yaml = '''
 proxies:
@@ -654,7 +731,7 @@ rules:
     },
   );
 
-  test('rule types corduit has no rule for are skipped', () {
+  test('a geosite category nothing supplies is skipped', () {
     const yaml = '''
 proxies: []
 proxy-groups: []
@@ -669,7 +746,7 @@ rules:
 
     expect(rules, hasLength(1));
     expect((rules.single as Map)['rule_type'], 'match');
-    expect(warnings, isNotEmpty);
+    expect(warnings.join('\n'), contains('category-ads-all'));
   });
 
   test('a running recursive resolver leads the nameserver list', () {
@@ -700,10 +777,6 @@ rules: []
         jsonDecode(
               ConfigConverter.convertClashYamlToJson(
                 yaml,
-                // `append system DNS` has no key of its own in the engine's
-                // config, so the setting is expressed by adding the platform's
-                // resolvers to this list. Order is the point: what the user
-                // configured is asked first.
                 systemDnsServers: const ['192.168.1.1', '1.1.1.1'],
               ),
             )['dns']
@@ -1082,10 +1155,8 @@ rules: []
     expect(dns.containsKey('hosts'), isFalse);
   });
 
-  test(
-    'GEOSITE works through a provider of that name, and is skipped without one',
-    () {
-      const yaml = '''
+  test('a GEOSITE category with a provider becomes a rule-set reference', () {
+    const yaml = '''
 proxies: []
 proxy-groups: []
 rule-providers:
@@ -1099,31 +1170,115 @@ rules:
   - MATCH,DIRECT
 ''';
 
-      final warnings = <String>[];
-      final rules =
-          convert(
-                yaml,
-                onWarning: warnings.add,
-                ruleProviderPaths: const {'cn': '/data/rules/cn.txt'},
-              )['rules']
-              as List<dynamic>;
+    final warnings = <String>[];
+    final rules =
+        convert(
+              yaml,
+              onWarning: warnings.add,
+              ruleProviderPaths: const {'cn': '/data/rules/cn.txt'},
+            )['rules']
+            as List<dynamic>;
 
-      // The engine reads a geosite category as a rule-provider name: the entry
-      // is usable when the profile itself defines a provider under that name...
-      expect(rules[0], {
-        'rule_type': 'geosite',
-        'payload': 'cn',
-        'outbound': 'DIRECT',
+    // A list this app downloaded is a rule provider, and corduit 0.4.0 names
+    // those with `RULE-SET`. `GEOSITE` would be read as a category in a
+    // geosite database the build does not carry, so the reference is
+    // rewritten while its position and target stay put.
+    expect(rules[0], {
+      'rule_type': 'rule_set',
+      'payload': 'cn',
+      'outbound': 'DIRECT',
+      'process_name': null,
+    });
+    // The second category has no provider, so it is skipped loudly rather
+    // than left in place as a rule that can never fire.
+    expect(
+      rules.where((rule) => (rule as Map)['rule_type'] == 'rule_set'),
+      hasLength(1),
+    );
+    expect(warnings.join('\n'), contains('geolocation-!cn'));
+  });
+
+  test('a mode guard becomes a proxy-mode rule', () {
+    const yaml = '''
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [DIRECT]
+rules:
+  - DOMAIN-SUFFIX,example.com,DIRECT
+  - PROXY-MODE,global,PROXY
+  - MATCH,DIRECT
+''';
+
+    final rules = convert(yaml)['rules'] as List<dynamic>;
+
+    expect(rules[1], {
+      'rule_type': 'proxy_mode',
+      'payload': 'global',
+      'outbound': 'PROXY',
+      'process_name': null,
+    });
+  });
+
+  test('a mode guard is normalised to the engine spelling', () {
+    // The engine parses the payload against an exact vocabulary when it
+    // compiles the rules, so `Global` has to become `global` here or the whole
+    // profile is refused at start-up.
+    const yaml = '''
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [DIRECT]
+rules:
+  - PROXY-MODE,Global,PROXY
+  - MATCH,DIRECT
+''';
+
+    final rules = convert(yaml)['rules'] as List<dynamic>;
+
+    expect((rules.first as Map)['payload'], 'global');
+  });
+
+  test('a mode guard on a mode the engine lacks stops a strict conversion', () {
+    expect(
+      () => ConfigConverter.convertClashYamlToJson(
+        'rules:\n  - PROXY-MODE,turbo,DIRECT\n  - MATCH,DIRECT',
+        requireCompleteRules: true,
+      ),
+      throwsA(predicate((error) => error.toString().contains('turbo'))),
+    );
+  });
+
+  test('a nested mode guard is read like any other condition', () {
+    const yaml = '''
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [DIRECT]
+rules:
+  - AND,((PROXY-MODE,Global),(DOMAIN-SUFFIX,example.com)),PROXY
+  - MATCH,DIRECT
+''';
+
+    final rules = convert(yaml)['rules'] as List<dynamic>;
+    final guard = rules.first as Map;
+
+    expect(guard['rule_type'], 'and');
+    expect(guard['rules'], [
+      {
+        'type': 'proxy_mode',
+        'payload': 'global',
         'process_name': null,
-      });
-      // ...and must be skipped, loudly, when nothing can answer for it.
-      expect(
-        rules.where((rule) => (rule as Map)['rule_type'] == 'geosite'),
-        hasLength(1),
-      );
-      expect(warnings.join('\n'), contains('geolocation-!cn'));
-    },
-  );
+        'outbound': 'PROXY',
+      },
+      {
+        'type': 'domain_suffix',
+        'payload': 'example.com',
+        'process_name': null,
+        'outbound': 'PROXY',
+      },
+    ]);
+  });
 
   test('inbound rules carry their payload and target through', () {
     const yaml = '''

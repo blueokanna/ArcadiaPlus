@@ -47,7 +47,7 @@ fn bilibili_domain_set_routes_direct_without_overriding_prior_rejections() {
                 ..RuleConfig::default()
             },
             RuleConfig {
-                rule_type: RuleType::Geosite,
+                rule_type: RuleType::RuleSet,
                 payload: "cn".into(),
                 outbound: "DIRECT".into(),
                 ..RuleConfig::default()

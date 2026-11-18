@@ -122,15 +122,11 @@ pub unsafe extern "C" fn arcadia_ohos_start(
         };
 
         match unsafe { read_cstr(geoip_path) } {
-            Some(path) if std::path::Path::new(&path).is_file() => {
-                if let Err(error) = corduit::engine::geoip::set_default_database_path(&path) {
-                    error!("GeoIP database registration failed: {error}");
-                    return -3;
-                }
-                info!("GeoIP database registered: {path}");
-            }
-            Some(path) => warn!("GeoIP database missing at {path}; GEOIP rules stay inert"),
-            None => warn!("no GeoIP path was provided; GEOIP rules stay inert"),
+            Some(path) => match crate::geo_database::install(std::path::Path::new(&path)) {
+                Ok(kind) => info!("Geo database registered as {}: {path}", kind.as_str()),
+                Err(error) => warn!("Geo database unusable, GEO rules stay inert: {error}"),
+            },
+            None => warn!("no Geo database path was provided; GEO rules stay inert"),
         }
 
         if let Err(error) = corduit::api::initialize_corduit(config) {
@@ -141,9 +137,6 @@ pub unsafe extern "C" fn arcadia_ohos_start(
             error!("engine start failed: {error}");
             return -5;
         }
-
-        // Both protections are cheap to record; whichever the ArkTS side
-        // managed to arrange is the one that will carry the exemption.
         corduit::api::set_ohos_process_protected(protect_process != 0);
         corduit::api::set_ohos_vpn_fd(tun_fd);
 

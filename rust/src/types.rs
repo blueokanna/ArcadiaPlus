@@ -336,13 +336,19 @@ impl From<engine::ProxyStatus> for ProxyStatus {
     }
 }
 
+/// Bridge `TrafficStats`, replacing the engine's byte totals with the tracker's
+/// route breakdown.
+///
+/// `upload` and `download` are derived from the very same route sample the
+/// direct/proxy split comes from. Independently sampled counters and the TUN
+/// header cannot then make the total disagree with the numbers shown next to
+/// it, which is what happens when one is a snapshot and the other a sum of
+/// snapshots taken at different instants.
 impl From<engine::TrafficStats> for TrafficStats {
     fn from(value: engine::TrafficStats) -> Self {
         let (direct_upload, direct_download, proxy_upload, proxy_download) =
             engine::engine::global_tracker().route_totals();
         Self {
-            // Derive totals from the very same route sample: independently
-            // sampled counters and TUN headers cannot skew the breakdown.
             upload: direct_upload.saturating_add(proxy_upload),
             download: direct_download.saturating_add(proxy_download),
             upload_speed: value.upload_speed,
@@ -359,10 +365,10 @@ impl From<engine::ActiveConnection> for ConnectionInfo {
     fn from(value: engine::ActiveConnection) -> Self {
         Self {
             id: value.id,
-            host: value.host,
+            host: value.host.clone(),
             destination: match value.destination_ip {
                 Some(ip) => format!("{ip}:{}", value.destination_port),
-                None => String::new(),
+                None => format!("{}:{}", value.host, value.destination_port),
             },
             upload: value.upload_bytes,
             download: value.download_bytes,

@@ -241,11 +241,11 @@ pub(crate) fn restore(path: &Path) -> Result<(), String> {
         return Ok(());
     }
     let state = read_snapshot(path)?;
-    // All saved selectors are restored before listeners or TUN accept traffic.
     let result = (|| {
-        if let Some(path) = &state.geoip {
-            corduit::engine::geoip::set_default_database_path(Path::new(path))
-                .map_err(|e| e.to_string())?;
+        if let Some(geoip) = &state.geoip
+            && let Err(error) = crate::geo_database::install(Path::new(geoip))
+        {
+            tracing::warn!("Geo database not restored, GEO rules stay inert: {error}");
         }
         if let Some((listen, cache)) = &state.recursion {
             crate::recursive_dns::start(listen, cache.as_deref())?;

@@ -1,10 +1,101 @@
 # Changelog
 
-## Unreleased
+## 1.1.1+1
 
-- Validate against local Corduit 0.3.8 and published Courierust 1.1.3. Bound platform TUN egress to 1 MiB of owned packet payload and 512 queued packets, including the packet held by the writer in the byte budget. Drop congestion without blocking ACK processing and retain TCP retransmission semantics.
-- Keep a SHA-256 identity instead of a second full configuration document in the Flutter provider; retain source only for the HarmonyOS extension and rollback. Avoid unnecessary native configuration clones outside Android.
-- Stream Android restart snapshots through an 8 KiB buffer with an encoded-size limit and atomic replacement. A failed or oversized write preserves the previous snapshot. Release hidden DNS panel snapshots and reject late results.
+Corduit 0.4.0, parking_lot 0.13.0, and the semantic changes those two releases
+force on this bridge.
+
+- Move to Corduit 0.4.0 and parking_lot 0.13.0, which together raise the
+  compiler floor to Rust 1.95. The CI compatibility job, the pinned toolchain and
+  the MSRV comment now state that number; the retired 1.88 job would have failed
+  against either crate.
+- Install Geo data through one shared path. `Country.mmdb`, `geoip.dat` and
+  `geosite.dat` are told apart by content, each is registered with the half of
+  the engine that reads it, and the file is loaded once at registration — so a
+  database the router cannot use is an error the app can report, not a log line
+  nobody reads. A minimal `geosite.dat` written by the test confirms the category
+  half installs while a non-database is refused by name. On Android the restart
+  snapshot goes through the same installer and no longer fails a whole resume
+  over a Geo database.
+- Report, instead of hiding, a MaxMind database the engine refuses. Corduit
+  0.4.0 identified one by requiring the `\xab\xcd\xefMaxMind.com` marker at
+  end-of-file, while a real database ends with the metadata map that follows
+  that marker, so every `Country.mmdb` was refused and every `GEOIP` rule fell
+  through in silence. Corduit 0.4.1 fixes the classifier — it searches the same
+  128 KiB metadata window its reader does, through one shared constant, with
+  tests that pin both the real layout and the reader/classifier agreement — and
+  the dependency is pinned to it. The bridge still installs the file through the
+  engine before registering it, so a truncated download and a wrong file report
+  different reasons and both reach the in-app log; `rust/tests/bundled_geoip.rs`
+  now asserts unconditionally that the shipped database installs as `Mmdb` and
+  routes domestic addresses `DIRECT`, because a kernel that cannot read it is a
+  broken release rather than a fall-through to tolerate.
+- Two more kernel fixes land in the same 0.4.1. A DNS listener asked for port
+  `0` no longer gives up when Windows hands out a UDP port whose TCP twin is in
+  a reserved range: the pair is retried on a fresh ephemeral port, which is the
+  retry this app's own recursive front-end already had. And the kernel's
+  end-to-end proxy tests take the same lock as the tests that flip the
+  process-global routing mode, because a `GLOBAL` window from a parallel test
+  turned their `CONNECT` into a SOCKS failure — the reason
+  `cargo test --all-features` failed a few runs in twelve while passing alone.
+- Add a contract test for the document the Dart converter emits
+  (`rust/tests/profile_contract.rs`). `config_converter.dart` asserts the
+  document it builds, but nothing asserted that the *engine* accepts it: a rule
+  type spelled differently, a group option the engine stopped reading, or a
+  provider shape it rejects passes every Dart test and then fails at start-up on
+  a phone. It now runs a realistic profile — selector, `url-test`, `load-balance`
+  with its strategy, a local `RULE-SET` provider, a `PROXY-MODE` guard and the
+  GEOIP rule — through `test_config`, `initialize_corduit` and `start_corduit`,
+  then reads the groups and rules back and compares them semantically rather
+  than by spelling.
+- Follow Corduit 0.4.0's split between `GEOSITE` and `RULE-SET`. `GEOSITE` now
+  reads a geosite database and nothing else, so a `GEOSITE,<name>` reference
+  whose list this app supplies is emitted as `RULE-SET,<name>`: same position,
+  same target, a rule that matches instead of silently falling through. Rule
+  order and targets are untouched, and a category nothing supplies is still
+  skipped with a warning naming it.
+- Forward the proxy-group options Corduit 0.4.0 actually reads: `timeout` and
+  `tolerance` in milliseconds and the `load-balance` `strategy`, with `interval`
+  still in seconds. A `url-test` without its tolerance trades places on every
+  probe round, and every switch costs the client a fresh handshake. A value the
+  engine could not read is reported instead of being replaced by the default in
+  silence.
+- Read the `PROXY-MODE` rule Corduit 0.4.0 added. Its mode is normalised to the
+  spelling the engine parses, and a mode the engine does not have is refused:
+  one such rule makes the engine reject the whole configuration, so the
+  converter has to decide before it gets there.
+- Bound platform TUN egress to 1 MiB of owned packet payload and 512 queued
+  packets, including the packet held by the writer in the byte budget. Drop
+  congestion without blocking ACK processing and retain TCP retransmission
+  semantics.
+- Keep a SHA-256 identity instead of a second full configuration document in the
+  Flutter provider; retain source only for the HarmonyOS extension and rollback.
+  Avoid unnecessary native configuration clones outside Android.
+- Stream Android restart snapshots through an 8 KiB buffer with an encoded-size
+  limit and atomic replacement. A failed or oversized write preserves the
+  previous snapshot. Release hidden DNS panel snapshots and reject late results.
+- Make the tracing install race-free. Two callers do reach it — Flutter start-up
+  and a level change from the UI or a profile — and the second one now sees the
+  first one's outcome instead of being told the subscriber could not be
+  installed.
+- Scan the rule table for the search box without building a lower-case copy of
+  every field of every rule; payloads outside ASCII still fold under Unicode
+  rules. Show a connection's host instead of an empty destination when it never
+  resolved. Drop the unused `once_cell` dependency.
+- The DNS privacy test now tells "this process holds no trust roots" apart from
+  "the peer's certificate was refused". The engine fails closed in both cases,
+  but only the second puts a TLS record on the wire, and a locked-down host
+  offers no system store at all.
+- Refresh the declared Flutter dependencies to what this toolchain actually
+  resolves — cupertino_icons 2, go_router 18, fl_chart 1.3, file_picker 13,
+  window_manager 0.6 — and regenerate `pubspec.lock`, so the locked resolution
+  succeeds again. Two constraints stay below the published latest and say why:
+  window_manager 0.7 requires Dart 3.14 while this build pins Flutter 3.47 /
+  Dart 3.13, and dynamic_color 2 hands out `material_ui` `ColorScheme`s that
+  Flutter's `ThemeData` cannot take, so it stays on the 1.x line until the theme
+  layer is migrated against a real screen. The 0.6 window API moved onto
+  nativeapi; the two references this app needs sit behind the package's own
+  compatibility bridge, with the native-API migration noted in place.
 
 ## 1.1.0+5
 

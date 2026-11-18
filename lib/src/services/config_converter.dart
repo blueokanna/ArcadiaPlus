@@ -260,15 +260,17 @@ class ConfigConverter {
       }
 
       final parsed = _convertToMap(yamlMap);
-      final config = requireCompleteRules
+      final expanded = requireCompleteRules
           ? RuleCatalog.expand(parsed as Map)
-          : parsed;
+          : parsed as Map;
       if (requireCompleteRules) {
         RuleCatalog.requireAvailable(
-          config as Map,
+          expanded,
           ruleProviderPaths?.keys.toSet() ?? {},
         );
       }
+
+      final config = RuleCatalog.preferRuleSets(expanded);
       final arcadiaplusConfig = _convertClashToArcadiaPlus(
         config,
         generalSettings: generalSettings,
@@ -1087,8 +1089,51 @@ class ConfigConverter {
         if (groupMap['url'] != null) {
           optionsMap['url'] = groupMap['url'];
         }
-        if (groupMap['interval'] != null) {
-          optionsMap['interval'] = groupMap['interval'];
+        // corduit reads exactly these probe options, with the units the profile
+        // already uses: `interval` in seconds, `timeout` and `tolerance` in
+        // milliseconds, `strategy` as one of the three names below. Dropping
+        // them is not neutral — a `url-test` without its tolerance flaps between
+        // two nodes a millisecond apart, and every switch costs the client a
+        // fresh handshake.
+        _forwardIntegerOption(
+          name,
+          groupMap,
+          optionsMap,
+          'interval',
+          onWarning,
+        );
+        if (outboundType == 'urltest' ||
+            outboundType == 'fallback' ||
+            outboundType == 'loadbalance') {
+          _forwardIntegerOption(
+            name,
+            groupMap,
+            optionsMap,
+            'timeout',
+            onWarning,
+          );
+        }
+        if (outboundType == 'urltest') {
+          _forwardIntegerOption(
+            name,
+            groupMap,
+            optionsMap,
+            'tolerance',
+            onWarning,
+          );
+        }
+        if (outboundType == 'loadbalance') {
+          final strategy = groupMap['strategy'];
+          if (strategy is String &&
+              _loadBalanceStrategies.contains(strategy.trim().toLowerCase())) {
+            optionsMap['strategy'] = strategy.trim();
+          } else if (strategy != null) {
+            onWarning?.call(
+              'Proxy group "$name" asks for load-balance strategy "$strategy", '
+              'which corduit cannot read; the group rotates round-robin. '
+              'Supported: ${_loadBalanceStrategies.join(', ')}.',
+            );
+          }
         }
 
         outbounds.add({
@@ -1203,6 +1248,43 @@ class ConfigConverter {
     'chacha20-ietf-poly1305',
     'aead_chacha20_poly1305',
   };
+
+  /// The `load-balance` strategies the engine implements, spelled the way both
+  /// Mihomo and corduit spell them. A strategy outside this set rotates
+  /// round-robin there, so forwarding it verbatim would only hide the typo.
+  static const Set<String> _loadBalanceStrategies = {
+    'round-robin',
+    'consistent-hashing',
+    'sticky-sessions',
+  };
+
+  /// The modes a `PROXY-MODE` guard may name, in the engine's spelling.
+  static const Set<String> _proxyModes = {'rule', 'global', 'direct'};
+
+  /// Forwards a probe option the engine reads as an unsigned integer.
+  ///
+  /// The value is passed through only when the profile wrote an integer: a
+  /// string or a float would be discarded by the engine anyway, and the one
+  /// useful thing left to do is say so. A silently ignored `tolerance: "150"`
+  /// is a probe policy the operator believes is in effect.
+  static void _forwardIntegerOption(
+    String name,
+    Map<String, dynamic> group,
+    Map<String, dynamic> options,
+    String key,
+    void Function(String message)? onWarning,
+  ) {
+    final value = group[key];
+    if (value == null) return;
+    if (value is int && value >= 0) {
+      options[key] = value;
+      return;
+    }
+    onWarning?.call(
+      'Proxy group "$name" has a non-integer "$key" ($value); corduit ignores '
+      'it and the built-in default applies.',
+    );
+  }
 
   /// Why the engine cannot build [cipher], or `null` when it can.
   ///
@@ -1411,7 +1493,7 @@ class ConfigConverter {
         final parts = _splitRuleFields(rule);
         if (parts.length >= 2) {
           final ruleType = parts[0].trim();
-          final payload = parts.length >= 3 ? parts[1].trim() : '';
+          var payload = parts.length >= 3 ? parts[1].trim() : '';
           final outbound = parts.length >= 3
               ? parts[2].trim()
               : parts[1].trim();
@@ -1445,8 +1527,9 @@ class ConfigConverter {
 
           if (mappedType == 'geosite' && !availableRuleSets.contains(payload)) {
             onWarning?.call(
-              'Rule "$rule" references the geosite category "$payload", which '
-              'is not available on this engine; the rule was skipped.',
+              'Rule "$rule" references the geosite category "$payload". '
+              'Categories are routed from downloaded rule sets here, and none '
+              'supplies that one; the rule was skipped.',
             );
             continue;
           }
@@ -1458,6 +1541,27 @@ class ConfigConverter {
               'available; the rule was skipped.',
             );
             continue;
+          }
+
+          if (mappedType == 'proxy_mode') {
+            // The engine parses this payload against an exact vocabulary at
+            // compile time, and matches it case-insensitively afterwards, so a
+            // profile that wrote `Global` can be normalised instead of failing
+            // the whole configuration.
+            if (!_proxyModes.contains(payload.toLowerCase())) {
+              if (strict) {
+                throw FormatException(
+                  'Rule "$rule" guards on mode "$payload", which the engine '
+                  'does not have; expected rule, global or direct.',
+                );
+              }
+              onWarning?.call(
+                'Rule "$rule" guards on mode "$payload", which the engine does '
+                'not have; the rule was skipped.',
+              );
+              continue;
+            }
+            payload = payload.toLowerCase();
           }
 
           if (mappedType == 'and' ||
@@ -1682,7 +1786,7 @@ class ConfigConverter {
         'src_port',
         'in_port',
       }.contains(childType);
-      final childPayload = isPort
+      var childPayload = isPort
           ? fields.sublist(1).join(',').trim()
           : fields[1].trim();
       var noResolve = false;
@@ -1722,6 +1826,13 @@ class ConfigConverter {
       if ((childType == 'rule_set' || childType == 'geosite') &&
           !availableRuleSets.contains(childPayload)) {
         return null;
+      }
+      // A nested guard names a mode too, and one the engine does not have can
+      // never fire: treat it like any other condition this build cannot read.
+      // A recognised one is normalised to the spelling the engine parses.
+      if (childType == 'proxy_mode') {
+        if (!_proxyModes.contains(childPayload.toLowerCase())) return null;
+        childPayload = childPayload.toLowerCase();
       }
       children.add({
         'type': childType,
@@ -1768,6 +1879,12 @@ class ConfigConverter {
         return 'rule_set';
       case 'GEOSITE':
         return 'geosite';
+      // corduit 0.4.0 gained the mode guard, which is the only way a dialect
+      // that spells direct/global as rules can load at all. The payload is a
+      // mode name, checked where the rule is built.
+      case 'PROXY-MODE':
+      case 'PROXY_MODE':
+        return 'proxy_mode';
       case 'DST-PORT':
         return 'dst_port';
       case 'SRC-PORT':

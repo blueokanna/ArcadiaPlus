@@ -145,9 +145,30 @@ fn total_matches(rules: &[engine::RuleDto]) -> u64 {
 }
 
 fn matches(rule: &engine::RuleDto, query: &str) -> bool {
-    rule.rule_type.to_lowercase().contains(query)
-        || rule.payload.to_lowercase().contains(query)
-        || rule.outbound.to_lowercase().contains(query)
+    contains_folded(&rule.rule_type, query)
+        || contains_folded(&rule.payload, query)
+        || contains_folded(&rule.outbound, query)
+}
+
+/// Whether `haystack` contains `query`, which is already folded to lower case.
+///
+/// ASCII — every rule type and outbound tag, and virtually every payload — is
+/// compared byte by byte, because the obvious implementation allocates a
+/// `String` per field per rule: a 40 000-rule table would churn 120 000 of them
+/// on every keystroke in the search box. Payloads that are not ASCII still go
+/// through `to_lowercase`, so an internationalised domain keeps the case
+/// folding the search box promises.
+fn contains_folded(haystack: &str, query: &str) -> bool {
+    if query.is_empty() {
+        return true;
+    }
+    if haystack.is_ascii() && query.is_ascii() {
+        return haystack
+            .as_bytes()
+            .windows(query.len())
+            .any(|window| window.eq_ignore_ascii_case(query.as_bytes()));
+    }
+    haystack.to_lowercase().contains(query)
 }
 
 #[cfg(test)]
@@ -228,5 +249,17 @@ mod tests {
         assert!(matches(&candidate, "proxy"));
         assert!(matches(&candidate, "domain-suffix"));
         assert!(!matches(&candidate, "baidu"));
+    }
+
+    #[test]
+    fn folding_is_case_insensitive_in_both_scripts() {
+        // ASCII takes the allocating-free path.
+        assert!(contains_folded("Proxy", "proxy"));
+        assert!(contains_folded("DOMAIN-SUFFIX", "suffix"));
+        assert!(!contains_folded("Proxy", "direct"));
+        assert!(!contains_folded("abc", "abcd"));
+        assert!(contains_folded("Café", &"CAFÉ".to_lowercase()));
+        assert!(contains_folded("例子.中国", "例子"));
+        assert!(!contains_folded("例子.中国", "baidu"));
     }
 }

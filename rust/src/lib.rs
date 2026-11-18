@@ -23,6 +23,7 @@
 // to generated code, without weakening diagnostics in the handwritten bridge.
 #[allow(unknown_lints)]
 mod frb_generated;
+mod geo_database;
 mod logging;
 
 #[cfg(target_os = "android")]

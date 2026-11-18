@@ -40,36 +40,50 @@ where
 ///
 /// The subscriber is installed here rather than through `corduit::api::init_app`
 /// because corduit's installer runs once per process and cannot change the
-/// level afterwards — see [`crate::logging`].
+/// level afterwards — see [`crate::logging`]. Process environment variables are
+/// left alone: backtrace capture uses the environment the app started with, and
+/// mutating it after worker threads exist is a data race dressed as
+/// configuration.
 #[frb(init)]
 pub fn init_app() {
     recurse_x::observation::configure(256);
     let _ = crate::logging::init(crate::logging::LogFilter::UpTo(tracing::Level::INFO));
-    // Do not mutate process environment variables after worker threads start.
-    // Backtrace capture respects the environment supplied when the app starts.
     static PANIC_CAPTURE: std::sync::Once = std::sync::Once::new();
     PANIC_CAPTURE.call_once(flutter_rust_bridge::PanicBacktrace::setup);
 }
 
-/// Point the engine's GeoIP matcher at a database file on disk.
+/// Install the Geo database the engine's `GEOIP` and `GEOSITE` rules match
+/// against.
 ///
-/// corduit resolves `Country.mmdb` from `CORDUIT_GEOIP_DB`, or next to the
-/// running executable. Neither applies to a Flutter app: the asset bundle is
-/// sealed inside the APK / `.app` / install directory. The Dart side unpacks
-/// the bundled database to a real path and registers it here, which must
-/// happen before [`initialize_corduit`] — that call is where the router
-/// builds its matcher, and `GEOIP` rules stay inert without a database.
+/// corduit resolves `Country.mmdb`, `geoip.dat` and `geosite.dat` from
+/// `CORDUIT_GEOIP_DB` / `CORDUIT_GEOSITE_DB`, or from next to the running
+/// executable. Neither applies to a Flutter app: the asset bundle is sealed
+/// inside the APK / `.app` / install directory. The Dart side unpacks the
+/// bundled database to a real path and registers it here, which must happen
+/// before [`initialize_corduit`] — that call is where the router builds its
+/// matcher, and both rule families stay inert without a database.
 ///
-/// A missing file is reported instead of silently leaving `GEOIP` rules
-/// unmatched, so a broken deployment cannot pass for a working one.
+/// Any of the three shapes is accepted; the content decides which of the
+/// engine's two halves it feeds. The file is validated by installing it, so one
+/// the engine cannot read is an error now instead of a log line during start-up.
 #[frb]
 pub async fn set_geoip_database_path(path: String) -> std::result::Result<(), String> {
     run(move || {
         let database = std::path::Path::new(&path);
-        if !database.is_file() {
-            return Err(format!("GeoIP database not found at {path}"));
-        }
-        engine::engine::geoip::set_default_database_path(database).map_err(|e| e.to_string())?;
+        // The engine's own installer is the only authority on whether the
+        // router will use this file, so the check *is* the install.
+        let kind = match crate::geo_database::install(database) {
+            Ok(kind) => kind,
+            Err(error) => {
+                // The caller records the error; the log line is what makes it
+                // visible in the in-app log panel, where a rule that never
+                // matches is otherwise indistinguishable from one that never
+                // existed.
+                tracing::warn!("GEOIP and GEOSITE rules stay inert: {error}");
+                return Err(error);
+            }
+        };
+        tracing::info!("Geo database registered as {}: {path}", kind.as_str());
         #[cfg(any(target_os = "android", test))]
         crate::vpn_resume::geoip(path);
         Ok::<(), String>(())
@@ -322,11 +336,13 @@ pub async fn get_traffic_stats_dto() -> std::result::Result<TrafficStatsDto, Str
     run(|| engine::api::get_traffic_stats_dto().map(TrafficStatsDto::from)).await
 }
 
+/// Active connections as the UI's connection list.
+///
+/// corduit's own `get_connections` discards the tracker result and always
+/// returns an empty list, so this reads the tracker-backed active connections
+/// instead. Same rows, one source of truth.
 #[frb]
 pub async fn get_connections() -> std::result::Result<Vec<ConnectionInfo>, String> {
-    // corduit's `get_connections` discards the tracker result and always
-    // returns an empty list, so the connection list is fed from the
-    // tracker-backed active connections instead.
     run(|| engine::api::get_active_connections().map(convert_vec)).await
 }
 

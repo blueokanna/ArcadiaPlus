@@ -214,36 +214,62 @@ rules: [MATCH,DIRECT]
     },
   );
 
-  test(
-    'GEOSITE cn uses the downloaded domain provider in its original position',
-    () {
-      final config = jsonDecode(
-        ConfigConverter.convertClashYamlToJson(
-          '''
+  test('GEOSITE cn is routed from the downloaded provider in its original position', () {
+    final config = jsonDecode(
+      ConfigConverter.convertClashYamlToJson(
+        '''
 rules:
   - DOMAIN,blocked.example,REJECT
   - GEOSITE,cn,DIRECT
   - MATCH,REJECT
 ''',
-          requireCompleteRules: true,
-          ruleProviderPaths: {'cn': '/cache/cn.rules'},
-        ),
-      ) as Map;
-      final rules = config['rules'] as List;
-      expect(rules[0]['outbound'], 'REJECT');
-      expect(rules[1]['rule_type'], 'geosite');
-      expect(rules[1]['outbound'], 'DIRECT');
-      expect(rules[2]['outbound'], 'REJECT');
-      expect(config['rule_providers'][0]['path'], '/cache/cn.rules');
-      final expanded = RuleCatalog.expand({
-        'rules': ['GEOSITE,cn,DIRECT'],
-        'rule-providers': {
-          'cn': {'type': 'file', 'path': '/custom'},
-        },
-      });
-      expect(expanded['rule-providers']['cn']['path'], '/custom');
-    },
-  );
+        requireCompleteRules: true,
+        ruleProviderPaths: {'cn': '/cache/cn.rules'},
+      ),
+    ) as Map;
+    final rules = config['rules'] as List;
+    expect(rules[0]['outbound'], 'REJECT');
+    expect(rules[1]['rule_type'], 'rule_set');
+    expect(rules[1]['payload'], 'cn');
+    expect(rules[1]['outbound'], 'DIRECT');
+    expect(rules[2]['outbound'], 'REJECT');
+    expect(config['rule_providers'][0]['path'], '/cache/cn.rules');
+    final expanded = RuleCatalog.expand({
+      'rules': ['GEOSITE,cn,DIRECT'],
+      'rule-providers': {
+        'cn': {'type': 'file', 'path': '/custom'},
+      },
+    });
+    expect(expanded['rule-providers']['cn']['path'], '/custom');
+    expect(RuleCatalog.preferRuleSets(expanded)['rules'], [
+      'RULE-SET,cn,DIRECT',
+    ]);
+  });
+
+  test('only supplied GEOSITE references become rule-set references', () {
+    // Nothing supplies this category, so no `RULE-SET` may be invented for it:
+    // the converter reports the reference instead of hiding it.
+    final untouched = RuleCatalog.preferRuleSets({
+      'rules': ['GEOSITE,netflix,Proxy', 'MATCH,DIRECT'],
+    });
+    expect(untouched['rules'], ['GEOSITE,netflix,Proxy', 'MATCH,DIRECT']);
+
+    // A nested reference keeps its separator, its position and its target, and
+    // a rule that already names a provider is left byte for byte identical.
+    final nested = RuleCatalog.preferRuleSets({
+      'rule-providers': {
+        'cn': {'type': 'file', 'path': '/cache/cn'},
+      },
+      'rules': [
+        'AND,((GEOSITE,cn),(NETWORK,TCP)),DIRECT',
+        'RULE-SET,cn,DIRECT',
+      ],
+    });
+    expect(nested['rules'], [
+      'AND,((RULE-SET,cn),(NETWORK,TCP)),DIRECT',
+      'RULE-SET,cn,DIRECT',
+    ]);
+  });
 
   test('profiles cannot inherit another profile\'s selected proxy', () async {
     final engine = FakeEngine()..isReady = true;

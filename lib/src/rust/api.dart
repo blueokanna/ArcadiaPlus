@@ -11,17 +11,20 @@ import 'types.dart';
 
 // These functions are ignored because they are not marked as `pub`: `run`
 
-/// Point the engine's GeoIP matcher at a database file on disk.
+/// Install the Geo database the engine's `GEOIP` and `GEOSITE` rules match
+/// against.
 ///
-/// corduit resolves `Country.mmdb` from `CORDUIT_GEOIP_DB`, or next to the
-/// running executable. Neither applies to a Flutter app: the asset bundle is
-/// sealed inside the APK / `.app` / install directory. The Dart side unpacks
-/// the bundled database to a real path and registers it here, which must
-/// happen before [`initialize_corduit`] — that call is where the router
-/// builds its matcher, and `GEOIP` rules stay inert without a database.
+/// corduit resolves `Country.mmdb`, `geoip.dat` and `geosite.dat` from
+/// `CORDUIT_GEOIP_DB` / `CORDUIT_GEOSITE_DB`, or from next to the running
+/// executable. Neither applies to a Flutter app: the asset bundle is sealed
+/// inside the APK / `.app` / install directory. The Dart side unpacks the
+/// bundled database to a real path and registers it here, which must happen
+/// before [`initialize_corduit`] — that call is where the router builds its
+/// matcher, and both rule families stay inert without a database.
 ///
-/// A missing file is reported instead of silently leaving `GEOIP` rules
-/// unmatched, so a broken deployment cannot pass for a working one.
+/// Any of the three shapes is accepted; the content decides which of the
+/// engine's two halves it feeds. The file is validated by installing it, so one
+/// the engine cannot read is an error now instead of a log line during start-up.
 Future<void> setGeoipDatabasePath({required String path}) =>
     RustLib.instance.api.crateApiSetGeoipDatabasePath(path: path);
 
@@ -177,6 +180,11 @@ Future<TrafficStats> getTrafficStats() =>
 Future<TrafficStatsDto> getTrafficStatsDto() =>
     RustLib.instance.api.crateApiGetTrafficStatsDto();
 
+/// Active connections as the UI's connection list.
+///
+/// corduit's own `get_connections` discards the tracker result and always
+/// returns an empty list, so this reads the tracker-backed active connections
+/// instead. Same rows, one source of truth.
 Future<List<ConnectionInfo>> getConnections() =>
     RustLib.instance.api.crateApiGetConnections();
 

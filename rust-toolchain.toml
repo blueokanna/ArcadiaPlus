@@ -1,6 +1,7 @@
 # Keep local builds, cargokit, rustfmt and CI Clippy on one toolchain.
-# Rust 1.88 is the minimum supported compiler and is checked separately in CI;
-# it does not need to be the compiler used to produce release artifacts.
+# Rust 1.95 is the minimum supported compiler — corduit 0.4.0 and parking_lot
+# 0.13.0 both declare it — and CI checks that floor separately; it does not
+# need to be the compiler used to produce release artifacts.
 
 [toolchain]
 channel = "1.97.0"
