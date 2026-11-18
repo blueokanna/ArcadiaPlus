@@ -145,6 +145,7 @@ jobs:
           python scripts/check_engine_dependencies.py
           python -m unittest discover -s scripts/tests -p 'test_*.py'
           flutter pub get --enforce-lockfile
+          python scripts/check_ohos_dependency_floors.py
           dart format --output=none --set-exit-if-changed lib test
           flutter analyze
           flutter test

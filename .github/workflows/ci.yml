@@ -83,6 +83,9 @@ jobs:
       - name: Resolve locked Flutter dependencies
         run: flutter pub get --enforce-lockfile
 
+      - name: Verify the dependencies also resolve on the Flutter OHOS line
+        run: python3 scripts/check_ohos_dependency_floors.py
+
       - name: Check Dart formatting
         run: dart format --output=none --set-exit-if-changed lib test
 

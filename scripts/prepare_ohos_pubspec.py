@@ -5,6 +5,14 @@ import argparse
 from pathlib import Path
 import re
 
+# The version line the pinned Flutter OHOS fork reports. Both the profile
+# selection below and `check_ohos_dependency_floors.py` key on these, so they are
+# defined once: a dependency set that resolves here still has to accept them.
+OHOS_DART_FLOOR = (3, 11, 5)
+OHOS_DART_CEILING = (3, 12, 0)
+OHOS_FLUTTER_FLOOR = (3, 41, 9)
+OHOS_FLUTTER_CEILING = (3, 42, 0)
+
 
 def version(value: str) -> tuple[int, int, int]:
     match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)(?:[-+ ][\w.+ -]+)?", value)
@@ -16,9 +24,9 @@ def version(value: str) -> tuple[int, int, int]:
 def prepare(text: str, dart: str, flutter: str) -> str:
     """Change only environment bounds and the first-party component path."""
     dart_version, flutter_version = version(dart), version(flutter)
-    if not (3, 11, 5) <= dart_version < (3, 12, 0):
+    if not (OHOS_DART_FLOOR <= dart_version < OHOS_DART_CEILING):
         raise ValueError(f"OHOS profile requires Dart 3.11.5+ on 3.11.x, got {dart}")
-    if not (3, 41, 9) <= flutter_version < (3, 42, 0):
+    if not (OHOS_FLUTTER_FLOOR <= flutter_version < OHOS_FLUTTER_CEILING):
         raise ValueError(f"OHOS profile requires Flutter 3.41.9+ on 3.41.x, got {flutter}")
 
     def replace_once(pattern: str, replacement: str, label: str) -> None:

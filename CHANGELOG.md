@@ -86,20 +86,26 @@ force on this bridge.
   "the peer's certificate was refused". The engine fails closed in both cases,
   but only the second puts a TLS record on the wire, and a locked-down host
   offers no system store at all.
-- Refresh the declared Flutter dependencies to what this toolchain actually
-  resolves — cupertino_icons 2, go_router 18, fl_chart 1.3, file_picker 13 — and
-  regenerate `pubspec.lock`, so the locked resolution succeeds again. Two stay
-  below the published latest, each for a measured reason. `dynamic_color` 2
-  hands out `material_ui` `ColorScheme`s that Flutter's `ThemeData` cannot take,
-  so it stays on the 1.x line until the theme layer is migrated against a real
-  screen. `window_manager` 0.6 moves the window API onto `nativeapi`, whose C++
-  core arrives through a native-asset hook: it needs GTK 3 / X11 / Xi on every
-  Linux machine that runs `flutter test`, and it packages a desktop windowing
-  library into the Android APK (2.26 MB arm64, 1.81 MB armeabi-v7a, 2.17 MB
-  x86_64) for the three window calls this app makes, all of them desktop-only.
-  The plugin line keeps the APK free of it and `flutter test` free of system
-  packages; 0.7 additionally needs Dart 3.14, so that move waits for the
-  toolchain either way.
+- Refresh the declared Flutter dependencies to what this project's *two*
+  toolchains resolve, and regenerate `pubspec.lock`, so the locked resolution
+  succeeds again. The second toolchain is the Flutter OHOS fork behind the HAP
+  build — Dart 3.11.5, Flutter 3.41.9, which `prepare_ohos_pubspec.py` rewrites
+  only the root bounds of — so `cupertino_icons` stays on 1.x and `go_router` on
+  17.x: 2 and 18 need Dart 3.12, and go_router 18 also needs Flutter 3.44.
+  `scripts/check_ohos_dependency_floors.py` now holds every declared constraint
+  to that floor in the lint job, so the next bump that cannot resolve there
+  fails in seconds instead of inside the HAP job after two toolchain downloads.
+  Three more stay below the published latest, each for a measured reason.
+  `dynamic_color` 2 hands out `material_ui` `ColorScheme`s that Flutter's
+  `ThemeData` cannot take, so it stays on the 1.x line until the theme layer is
+  migrated against a real screen. `window_manager` 0.6 moves the window API onto
+  `nativeapi`, whose C++ core arrives through a native-asset hook: it needs GTK 3
+  / X11 / Xi on every Linux machine that runs `flutter test`, and it packages a
+  desktop windowing library into the Android APK (2.26 MB arm64, 1.81 MB
+  armeabi-v7a, 2.17 MB x86_64) for the three window calls this app makes, all of
+  them desktop-only. The plugin line keeps the APK free of it and `flutter test`
+  free of system packages; 0.7 additionally needs Dart 3.14, so that move waits
+  for the toolchain either way.
 
 ## 1.1.0+5
 
