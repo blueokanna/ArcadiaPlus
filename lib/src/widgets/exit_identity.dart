@@ -11,11 +11,13 @@ class ExitIdentity extends StatelessWidget {
   const ExitIdentity({
     super.key,
     required this.report,
+    this.ipv6,
     required this.loading,
     required this.failed,
     required this.onRefresh,
   });
   final ExitIpReport? report;
+  final String? ipv6;
   final bool loading;
   final bool failed;
   final VoidCallback onRefresh;
@@ -28,6 +30,14 @@ class ExitIdentity extends StatelessWidget {
     final c = Theme.of(context).colorScheme;
     final t = Theme.of(context).textTheme;
     final value = report;
+    String addressLabel(String ip) {
+      if (!ip.contains(':')) return 'IPv4  $ip';
+      final compact = ip.length <= 16
+          ? ip
+          : '${ip.substring(0, 12)}…${ip.substring(ip.length - 4)}';
+      return 'IPv6  $compact';
+    }
+
     final network = switch (value?.network ?? IpNetworkKind.unknown) {
       IpNetworkKind.residentialCandidate => l10n.exitResidential,
       IpNetworkKind.mobile => l10n.exitMobile,
@@ -57,7 +67,9 @@ class ExitIdentity extends StatelessWidget {
             switchInCurve: AppMotion.standardCurve,
             switchOutCurve: AppMotion.standardCurve,
             child: Text(
-              value?.ip ?? (loading ? l10n.exitChecking : '—'),
+              value == null
+                  ? (loading ? l10n.exitChecking : '—')
+                  : addressLabel(value.ip),
               key: ValueKey(value?.ip ?? (loading ? 'loading' : 'empty')),
               style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
               maxLines: 2,
@@ -65,6 +77,11 @@ class ExitIdentity extends StatelessWidget {
             ),
           ),
         ),
+        if (ipv6 != null && ipv6 != value?.ip)
+          GestureDetector(
+            onLongPress: () => Clipboard.setData(ClipboardData(text: ipv6!)),
+            child: Text(addressLabel(ipv6!), style: t.bodyMedium),
+          ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 6,

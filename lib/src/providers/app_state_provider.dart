@@ -9,6 +9,7 @@ import 'package:arcadiaplus/src/rust/api.dart';
 import 'package:arcadiaplus/src/rust/types.dart';
 import 'package:arcadiaplus/src/services/storage_service.dart';
 import 'package:arcadiaplus/src/services/config_converter.dart';
+import 'package:arcadiaplus/src/services/ip_probe_client.dart';
 import 'package:arcadiaplus/src/services/platform_proxy_service.dart';
 import 'package:arcadiaplus/src/services/native_core_service.dart';
 import 'package:arcadiaplus/src/services/rule_provider_service.dart';
@@ -87,6 +88,7 @@ class AppStateProvider extends ChangeNotifier {
   bool get isServiceRunning => _isServiceRunning;
   bool get isInitialized => _isInitialized;
   ProxyStatus? get proxyStatus => _proxyStatus;
+  ProbeListener? get probeListener => _appliedConfig?.probeListener;
   TrafficStats? get trafficStats => _trafficStats;
   BigInt get currentUploadSpeed => _currentUploadSpeed;
   BigInt get currentDownloadSpeed => _currentDownloadSpeed;
@@ -519,6 +521,7 @@ class AppStateProvider extends ChangeNotifier {
         config,
         retainSource: PlatformUtils.isOHOS,
       );
+      ProxySelectionEvents.applied('profile-reloaded');
       return;
     }
     final platform = PlatformProxyService.instance;
@@ -535,6 +538,7 @@ class AppStateProvider extends ChangeNotifier {
       if (!await platform.enableTunMode(mode: _proxyMode)) {
         throw StateError('Extension rejected updated configuration');
       }
+      ProxySelectionEvents.applied('profile-reloaded');
     } catch (_) {
       _appliedConfig = previous;
       await _prepareOhosEngine();

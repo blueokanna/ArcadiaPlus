@@ -13,6 +13,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:yaml/yaml.dart';
 import 'package:arcadiaplus/src/services/rule_catalog.dart';
 
+import '../rust/api.dart' show validateMrs;
+
 /// A `rule-providers` entry exactly as the profile declares it.
 @immutable
 class RuleProviderSpec {
@@ -23,6 +25,9 @@ class RuleProviderSpec {
     required this.intervalSeconds,
     this.url,
     this.path,
+    this.format = '',
+    this.payload,
+    this.geosite = false,
   });
 
   final String name;
@@ -36,6 +41,9 @@ class RuleProviderSpec {
   final int intervalSeconds;
   final String? url;
   final String? path;
+  final String format;
+  final List? payload;
+  final bool geosite;
 
   static const supportedBehaviors = {'domain', 'ipcidr', 'classical'};
 
@@ -75,7 +83,12 @@ class RuleProviderSpec {
       final path = value['path']?.toString();
       final format = (value['format']?.toString() ?? '').trim().toLowerCase();
 
-      if (type != 'http' && type != 'file') {
+      final payload = value['payload'];
+      if (type == 'inline' && (payload is! List || payload.isEmpty)) {
+        onWarning?.call('Inline rule provider "$name" needs a payload list.');
+        continue;
+      }
+      if (type != 'http' && type != 'file' && type != 'inline') {
         onWarning?.call(
           'Rule provider "$name" has unsupported type "$type"; it was dropped.',
         );
@@ -87,22 +100,19 @@ class RuleProviderSpec {
         );
         continue;
       }
-      // MRS is mihomo's binary rule-set format. Decoding it is not something
-      // this engine implements, and guessing would be worse than saying so:
-      // the set is dropped with a reason instead of silently contributing
-      // nothing. A profile can point the same provider at a YAML or text
-      // source and get the rules it intended.
-      final source = (url ?? path ?? '').toLowerCase();
+      final source = (Uri.tryParse(url ?? '')?.path ?? '').toLowerCase();
       final isMrs =
-          format == 'mrs' || (format.isEmpty && source.endsWith('.mrs'));
-      if (isMrs) {
+          format == 'mrs' ||
+          (format.isEmpty &&
+              (source.endsWith('.mrs') ||
+                  (path ?? '').toLowerCase().endsWith('.mrs')));
+      if (isMrs && (behavior == 'classical' || type == 'inline')) {
         onWarning?.call(
-          'Rule provider "$name" is a MRS (binary) rule set, which this build '
-          'cannot decode; it was dropped. Point it at a YAML or text rule set.',
+          'MRS provider "$name" requires a domain or ipcidr file.',
         );
         continue;
       }
-      if (format.isNotEmpty && format != 'yaml' && format != 'text') {
+      if (!const {'', 'yaml', 'text', 'mrs'}.contains(format)) {
         onWarning?.call(
           'Rule provider "$name" declares format "$format", which is not '
           'supported; it was dropped.',
@@ -126,6 +136,9 @@ class RuleProviderSpec {
           intervalSeconds: _parseInterval(value['interval'], name, onWarning),
           url: url,
           path: path,
+          format: isMrs ? 'mrs' : format,
+          payload: type == 'inline' ? payload as List : null,
+          geosite: value['_geosite'] == true,
         ),
       );
     }
@@ -297,7 +310,7 @@ class RuleProviderService extends ChangeNotifier {
     final deadline = DateTime.now().add(budget);
     final states = <RuleProviderState>[];
     Future<RuleProviderState> prepareOne(RuleProviderSpec spec) async {
-      if (DateTime.now().isAfter(deadline)) {
+      if (spec.type == 'http' && DateTime.now().isAfter(deadline)) {
         onWarning?.call(
           'Rule provider "${spec.name}" was skipped: refresh budget exhausted.',
         );
@@ -359,8 +372,15 @@ class RuleProviderService extends ChangeNotifier {
     required Duration timeout,
     void Function(String message)? onWarning,
   }) async {
-    final stored = await _readMeta(directory, spec.name);
-    final meta = _matchesSource(stored, spec) ? stored : null;
+    if (spec.type == 'inline') {
+      return _storeNormalised(
+        spec,
+        directory,
+        utf8.encode(jsonEncode({'payload': spec.payload})),
+        updatedAt: DateTime.now(),
+      );
+    }
+    final meta = await _sourceMeta(directory, spec);
     final cachedPath = meta?['path'] as String?;
     final updatedAt = DateTime.tryParse(meta?['updatedAt'] as String? ?? '');
     final interval = spec.intervalSeconds > 0
@@ -404,12 +424,13 @@ class RuleProviderService extends ChangeNotifier {
       );
     }
 
+    final hasCache = cachedPath != null && await File(cachedPath).exists();
     return _fromNetwork(
       spec,
       directory,
       timeout: timeout < _requestTimeout ? timeout : _requestTimeout,
-      etag: meta?['etag'] as String?,
-      lastModified: meta?['lastModified'] as String?,
+      etag: hasCache ? (meta?['etag'] as String?) : null,
+      lastModified: hasCache ? (meta?['lastModified'] as String?) : null,
       cachedPath: cachedPath,
       cachedUpdatedAt: updatedAt,
       cachedEntries: meta?['entries'] as int? ?? 0,
@@ -455,7 +476,7 @@ class RuleProviderService extends ChangeNotifier {
       if (!state.ready) {
         throw FormatException(state.error ?? 'invalid rule set');
       }
-      await _writeMeta(directory, spec.name, {
+      await _writeMeta(directory, spec, {
         'path': state.path,
         'url': spec.url,
         'sourcePath': spec.path,
@@ -531,7 +552,7 @@ class RuleProviderService extends ChangeNotifier {
             error: 'source reported 304 but no local copy exists',
           );
         }
-        await _writeMeta(directory, spec.name, {
+        await _writeMeta(directory, spec, {
           'path': cachedPath,
           'url': spec.url,
           'behavior': spec.behavior,
@@ -595,7 +616,7 @@ class RuleProviderService extends ChangeNotifier {
         );
       }
 
-      await _writeMeta(directory, spec.name, {
+      await _writeMeta(directory, spec, {
         'path': state.path,
         'url': spec.url,
         'behavior': spec.behavior,
@@ -683,7 +704,7 @@ class RuleProviderService extends ChangeNotifier {
     );
   }
 
-  Future<String> _readBounded(Stream<List<int>> stream) async {
+  Future<Uint8List> _readBounded(Stream<List<int>> stream) async {
     final builder = BytesBuilder(copy: false);
     await for (final chunk in stream) {
       builder.add(chunk);
@@ -691,7 +712,7 @@ class RuleProviderService extends ChangeNotifier {
         throw const FormatException('rule set exceeds the 32 MiB limit');
       }
     }
-    return utf8.decode(builder.takeBytes(), allowMalformed: true);
+    return builder.takeBytes();
   }
 
   /// Writes the provider's rules under a content-addressed name, so a changed
@@ -700,37 +721,45 @@ class RuleProviderService extends ChangeNotifier {
   Future<RuleProviderState> _storeNormalised(
     RuleProviderSpec spec,
     Directory directory,
-    String raw, {
+    Uint8List raw, {
     required DateTime updatedAt,
   }) async {
-    if (_looksBinary(raw)) {
-      return RuleProviderState(
-        name: spec.name,
-        behavior: spec.behavior,
-        entries: 0,
-        skipped: 0,
-        updatedAt: null,
-        error:
-            'the rule set is a binary payload this build cannot decode '
-            '(MRS?); use a YAML or text source',
-      );
+    late Uint8List bytes;
+    late int entries;
+    final mrs =
+        raw.length >= 4 &&
+        raw[0] == 0x28 &&
+        raw[1] == 0xb5 &&
+        raw[2] == 0x2f &&
+        raw[3] == 0xfd;
+    if (spec.format == 'mrs' || (spec.format.isEmpty && mrs)) {
+      entries = await validateMrs(bytes: raw, behavior: spec.behavior);
+      bytes = raw;
+    } else {
+      if (raw.contains(0)) {
+        throw const FormatException('Unexpected binary rule payload');
+      }
+      final normalised = await compute(_normalisePayload, (
+        raw,
+        spec.behavior,
+        spec.geosite,
+      ));
+      if (normalised.entries == 0 || normalised.skipped != 0) {
+        return RuleProviderState(
+          name: spec.name,
+          behavior: spec.behavior,
+          entries: 0,
+          skipped: normalised.skipped,
+          updatedAt: null,
+          error: normalised.entries == 0 && normalised.skipped == 0
+              ? 'no usable rules'
+              : 'incomplete rule set: ${normalised.skipped} unsupported entries; '
+                    'refusing to publish partial routing data',
+        );
+      }
+      bytes = utf8.encode(normalised.content);
+      entries = normalised.entries;
     }
-    final behavior = spec.behavior;
-    final normalised = await compute(_normalisePayload, (raw, behavior));
-    if (normalised.entries == 0 || normalised.skipped != 0) {
-      return RuleProviderState(
-        name: spec.name,
-        behavior: spec.behavior,
-        entries: 0,
-        skipped: normalised.skipped,
-        updatedAt: null,
-        error: normalised.entries == 0 && normalised.skipped == 0
-            ? 'no usable rules'
-            : 'incomplete rule set: ${normalised.skipped} unsupported entries; '
-                  'refusing to publish partial routing data',
-      );
-    }
-    final bytes = utf8.encode(normalised.content);
     final digest = sha256.convert(bytes).toString().substring(0, 16);
     final file = File(
       '${directory.path}${Platform.pathSeparator}${_safeSegment(spec.name)}.$digest.rules',
@@ -747,7 +776,10 @@ class RuleProviderService extends ChangeNotifier {
     await for (final entity in directory.list()) {
       if (entity is! File) continue;
       final name = entity.uri.pathSegments.last;
-      if (name.startsWith('${_safeSegment(spec.name)}.') &&
+      if (name.length ==
+              _safeSegment(spec.name).length +
+                  '.0123456789abcdef.rules'.length &&
+          name.startsWith('${_safeSegment(spec.name)}.') &&
           name.endsWith('.rules') &&
           name != keep &&
           entity.path != previous) {
@@ -762,41 +794,48 @@ class RuleProviderService extends ChangeNotifier {
     return RuleProviderState(
       name: spec.name,
       behavior: spec.behavior,
-      entries: normalised.entries,
-      skipped: normalised.skipped,
+      entries: entries,
+      skipped: 0,
       updatedAt: updatedAt,
       path: file.path,
     );
   }
 
-  /// Whether decoded text is actually a binary payload.
-  ///
-  /// `utf8.decode(allowMalformed: true)` turns a binary set into replacement
-  /// characters rather than failing, so the check has to look at the bytes
-  /// that arrived: a NUL or a dense run of replacement characters is a
-  /// packed format, not a rule list.
-  static bool _looksBinary(String raw) {
-    if (raw.contains('\u0000')) return true;
-    if (raw.isEmpty) return false;
-    final head = raw.length > 2048 ? raw.substring(0, 2048) : raw;
-    var replacement = 0;
-    for (final unit in head.codeUnits) {
-      if (unit == 0xFFFD) replacement++;
-    }
-    return replacement * 10 > head.length;
-  }
-
   static ({String content, int entries, int skipped}) _normalisePayload(
-    (String, String) input,
-  ) => _normalise(input.$1, input.$2);
+    (Uint8List, String, bool) input,
+  ) => _normalise(utf8.decode(input.$1), input.$2, input.$3);
 
   static ({String content, int entries, int skipped}) _normalise(
     String raw,
     String behavior,
+    bool geosite,
   ) {
     final document = _yamlPayload(raw);
     final entries = <String>[];
     var skipped = 0;
+
+    void addEntry(String entry) {
+      if (geosite) {
+        // A regex quantifier can contain commas. Split only at the type.
+        final comma = entry.indexOf(',');
+        if (comma < 0) throw const FormatException('Invalid GEOSITE entry');
+        final value = entry.substring(comma + 1);
+        entry = switch (entry.substring(0, comma)) {
+          'DOMAIN' => 'full:$value',
+          'DOMAIN-SUFFIX' => '+.$value',
+          'DOMAIN-KEYWORD' => 'keyword:$value',
+          'DOMAIN-REGEX' => 'regexp:$value',
+          final type => throw FormatException(
+            'Unsupported GEOSITE entry: $type',
+          ),
+        };
+      }
+      if (_isSupported(entry, behavior)) {
+        entries.add(behavior == 'domain' ? _domainPattern(entry) : entry);
+      } else {
+        skipped++;
+      }
+    }
 
     if (document != null) {
       for (final item in document) {
@@ -806,11 +845,7 @@ class RuleProviderService extends ChangeNotifier {
           );
         }
         final entry = item.trim();
-        if (_isSupported(entry, behavior)) {
-          entries.add(entry);
-        } else {
-          skipped++;
-        }
+        addEntry(entry);
       }
     } else {
       for (final line in raw.split('\n')) {
@@ -818,11 +853,7 @@ class RuleProviderService extends ChangeNotifier {
         if (entry.isEmpty || entry.startsWith('#') || entry.startsWith('//')) {
           continue;
         }
-        if (_isSupported(entry, behavior)) {
-          entries.add(entry);
-        } else {
-          skipped++;
-        }
+        addEntry(entry);
       }
     }
 
@@ -886,6 +917,31 @@ class RuleProviderService extends ChangeNotifier {
         .map((line) => line.substring(5, line.length - 1));
   }
 
+  /// Encode Clash's exact, one-label wildcard and subdomain-only patterns
+  /// explicitly. Corduit otherwise treats every unprefixed name as a suffix.
+  static String _domainPattern(String entry) {
+    if (entry.contains(':')) return entry;
+    final domain = entry.endsWith('.')
+        ? entry.substring(0, entry.length - 1)
+        : entry;
+    if (domain.startsWith('+.') && !domain.contains('*')) return domain;
+    if (!domain.startsWith('.') && !domain.contains('*')) return 'full:$domain';
+    final labels = domain.split('.');
+    final prefix = switch (labels.first) {
+      '' => r'(?:[^.]+\.)+',
+      '+' => r'(?:[^.]+\.)*',
+      _ => '',
+    };
+    final pattern = labels
+        .skip(prefix.isEmpty ? 0 : 1)
+        .map(
+          (label) =>
+              label == '*' ? r'[^.]+' : RegExp.escape(label.toLowerCase()),
+        )
+        .join(r'\.');
+    return 'regexp:^$prefix$pattern\$';
+  }
+
   static bool _isSupported(String entry, String behavior) {
     switch (behavior) {
       case 'ipcidr':
@@ -922,7 +978,9 @@ class RuleProviderService extends ChangeNotifier {
             domain
                 .split('.')
                 .every(
-                  (label) => label.length <= 63 && _domainLabel.hasMatch(label),
+                  (label) =>
+                      (label == '*' && !entry.startsWith('full:')) ||
+                      (label.length <= 63 && _domainLabel.hasMatch(label)),
                 );
     }
   }
@@ -958,8 +1016,7 @@ class RuleProviderService extends ChangeNotifier {
     RuleProviderSpec spec,
     Directory directory,
   ) async {
-    final stored = await _readMeta(directory, spec.name);
-    final meta = _matchesSource(stored, spec) ? stored : null;
+    final meta = await _sourceMeta(directory, spec);
     final path = meta?['path'] as String?;
     if (path == null || !File(path).existsSync()) return null;
     return RuleProviderState(
@@ -972,15 +1029,50 @@ class RuleProviderService extends ChangeNotifier {
     );
   }
 
-  bool _matchesSource(Map<String, dynamic>? meta, RuleProviderSpec spec) =>
-      meta != null &&
-      (spec.behavior != 'classical' ||
-          meta['classicalValidationVersion'] == 1) &&
-      (meta['skipped'] as int? ?? 0) == 0 &&
-      (meta['entries'] as int? ?? 0) > 0 &&
-      meta['url'] == spec.url &&
-      meta['behavior'] == spec.behavior &&
-      meta['sourcePath'] == spec.path;
+  Future<Map<String, dynamic>?> _sourceMeta(
+    Directory directory,
+    RuleProviderSpec spec,
+  ) async {
+    final meta = await _readMeta(directory, spec.name);
+    if (meta == null ||
+        meta['url'] != spec.url ||
+        meta['behavior'] != spec.behavior ||
+        meta['sourcePath'] != spec.path ||
+        (meta['skipped'] ?? 0) != 0 ||
+        (meta['entries'] as int? ?? 0) <= 0 ||
+        (meta['format'] != null
+            ? meta['format'] != spec.format
+            : spec.format == 'mrs') ||
+        (spec.behavior == 'classical' &&
+            meta['classicalValidationVersion'] != 1)) {
+      return null;
+    }
+    if (spec.behavior != 'domain' || meta['domainPatternVersion'] == 1) {
+      return meta;
+    }
+    // Earlier versions cached the original domain lines. Re-index them even
+    // when the device cannot reach the provider after upgrading.
+    final path = meta['path'] as String?;
+    if (path == null || spec.geosite) return null;
+    try {
+      final migrated = await _storeNormalised(
+        spec,
+        directory,
+        await _readBounded(File(path).openRead()),
+        updatedAt: DateTime.parse(meta['updatedAt'] as String),
+      );
+      if (!migrated.ready) return null;
+      final updated = {
+        ...meta,
+        'path': migrated.path,
+        'entries': migrated.entries,
+      };
+      await _writeMeta(directory, spec, updated);
+      return updated;
+    } on Exception {
+      return null;
+    }
+  }
 
   Future<Map<String, dynamic>?> _readMeta(
     Directory directory,
@@ -1001,15 +1093,20 @@ class RuleProviderService extends ChangeNotifier {
 
   Future<void> _writeMeta(
     Directory directory,
-    String name,
+    RuleProviderSpec spec,
     Map<String, dynamic> values,
   ) async {
     final file = File(
-      '${directory.path}${Platform.pathSeparator}${_safeSegment(name)}.meta.json',
+      '${directory.path}${Platform.pathSeparator}${_safeSegment(spec.name)}.meta.json',
     );
     final tmp = File('${file.path}.tmp');
     await tmp.writeAsString(
-      jsonEncode({...values, 'classicalValidationVersion': 1}),
+      jsonEncode({
+        ...values,
+        'format': spec.format,
+        'domainPatternVersion': 1,
+        'classicalValidationVersion': 1,
+      }),
       flush: true,
     );
     await tmp.rename(file.path);

@@ -91,6 +91,27 @@ pub async fn set_geoip_database_path(path: String) -> std::result::Result<(), St
     .await
 }
 
+/// Check a downloaded Clash MRS before replacing the last usable provider.
+#[frb]
+pub async fn validate_mrs(bytes: Vec<u8>, behavior: String) -> Result<u32, String> {
+    run(move || {
+        let rules = engine::engine::ruleset::mrs::decode(&bytes).map_err(|e| e.to_string())?;
+        let [rule] = rules.as_slice() else {
+            return Err("Expected one MRS domain or address set".to_string());
+        };
+        let entries = match behavior.as_str() {
+            "domain" => rule.domains.as_ref().map(|domains| domains.len()),
+            "ipcidr" => rule.ip_cidr.as_ref().map(|ranges| ranges.range_count()),
+            _ => None,
+        };
+        entries
+            .filter(|count| *count > 0)
+            .and_then(|count| u32::try_from(count).ok())
+            .ok_or_else(|| format!("MRS payload has no entries for declared behavior {behavior}"))
+    })
+    .await
+}
+
 /// Validate a config without starting anything.
 #[frb]
 pub async fn test_config(config_json: String) -> std::result::Result<bool, String> {

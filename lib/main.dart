@@ -314,22 +314,7 @@ class _ArcadiaPlusAppState extends State<ArcadiaPlusApp> {
         ),
         ChangeNotifierProvider(create: (_) => DnsSettingsProvider()),
         ChangeNotifierProvider(create: (_) => GeneralSettingsProvider()),
-        ChangeNotifierProxyProvider2<
-          AppStateProvider,
-          GeneralSettingsProvider,
-          ExitIpController
-        >(
-          create: (_) => ExitIpController(),
-          update: (_, app, settings, controller) {
-            final exit = controller!;
-            exit.configure(
-              useProxy: app.isServiceRunning,
-              port: settings.mixedPort,
-              active: exit.requested && app.isServiceRunning,
-            );
-            return exit;
-          },
-        ),
+        ChangeNotifierProvider(create: (_) => ExitIpController()),
         ChangeNotifierProvider(create: (_) => UpdateProvider()),
         ChangeNotifierProvider(create: (_) => WallpaperProvider()),
       ],

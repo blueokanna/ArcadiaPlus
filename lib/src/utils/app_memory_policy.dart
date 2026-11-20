@@ -5,10 +5,30 @@ import 'package:flutter/widgets.dart';
 /// Flutter's binding already evicts this cache on OS memory-pressure events.
 abstract final class AppMemoryPolicy {
   static final _observer = _MemoryObserver();
+  static final retainedBytes = ValueNotifier<int>(0);
+  static bool _started = false;
+
   static void start() {
+    if (_started) return;
+    _started = true;
     final binding = WidgetsBinding.instance;
-    binding.removeObserver(_observer);
     binding.addObserver(_observer);
+    // Sample after painting, including the first frame that decodes a wallpaper.
+    // Registering a frame callback does not schedule frames while idle.
+    binding.addPersistentFrameCallback((_) {
+      binding.addPostFrameCallback(
+        (_) => maintain(PaintingBinding.instance.imageCache),
+      );
+    });
+  }
+
+  static void maintain(ImageCache cache) {
+    if ((cache.maximumSizeBytes > 0 &&
+            cache.currentSizeBytes * 100 >= cache.maximumSizeBytes * 95) ||
+        (cache.maximumSize > 0 && cache.currentSize >= cache.maximumSize)) {
+      releaseImageCache(cache);
+    }
+    retainedBytes.value = cache.currentSizeBytes;
   }
 
   /// Evicts retained decoded images. Live image listeners and native engine
@@ -16,6 +36,7 @@ abstract final class AppMemoryPolicy {
   static int releaseImageCache(ImageCache cache) {
     final before = cache.currentSizeBytes;
     cache.clear();
+    retainedBytes.value = cache.currentSizeBytes;
     return (before - cache.currentSizeBytes).clamp(0, before);
   }
 

@@ -29,7 +29,12 @@ use corduit::engine::routing::{Router, proxy_mode, set_runtime_proxy_mode};
 use parking_lot::RwLock;
 
 /// Addresses the bundled database attributes to China, and one it does not.
-const DOMESTIC: [&str; 3] = ["117.185.18.212", "119.147.96.223", "223.5.5.5"];
+const DOMESTIC: [&str; 4] = [
+    "117.185.18.212",
+    "119.147.96.223",
+    "223.5.5.5",
+    "2400:3200::1",
+];
 const FOREIGN: &str = "1.1.1.1";
 
 fn bundled_database() -> PathBuf {
@@ -132,6 +137,7 @@ fn the_bundled_database_routes_addresses_by_country() {
         "PROXY",
         "{FOREIGN} is outside them, so the catch-all decides"
     );
+    assert_eq!(route(&router, "2606:4700:4700::1111"), "PROXY");
 
     set_runtime_proxy_mode(proxy_mode::CONFIG);
 }

@@ -48,14 +48,8 @@ void main() {
       expect(tester.takeException(), isNull);
       await captureTestUi(tester, boundary, 'memory-details-$scale');
       expect(find.text('219.0 MiB'), findsWidgets);
-      final clear = tester.widget<IconButton>(
-        find.widgetWithIcon(IconButton, Icons.cleaning_services_rounded),
-      );
-      expect(
-        clear.onPressed,
-        isNull,
-        reason: 'An empty cache is not presented as reclaimable memory',
-      );
+      expect(find.textContaining('Clears automatically'), findsOneWidget);
+      expect(find.byIcon(Icons.cleaning_services_rounded), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     });
   }

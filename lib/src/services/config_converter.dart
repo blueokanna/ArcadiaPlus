@@ -260,17 +260,7 @@ class ConfigConverter {
       }
 
       final parsed = _convertToMap(yamlMap);
-      final expanded = requireCompleteRules
-          ? RuleCatalog.expand(parsed as Map)
-          : parsed as Map;
-      if (requireCompleteRules) {
-        RuleCatalog.requireAvailable(
-          expanded,
-          ruleProviderPaths?.keys.toSet() ?? {},
-        );
-      }
-
-      final config = RuleCatalog.preferRuleSets(expanded);
+      final config = RuleCatalog.expand(parsed as Map);
       final arcadiaplusConfig = _convertClashToArcadiaPlus(
         config,
         generalSettings: generalSettings,
@@ -394,7 +384,7 @@ class ConfigConverter {
       final behavior = (config['behavior'] ?? 'classical')
           .toString()
           .toLowerCase();
-      if (type != 'http' && type != 'file') {
+      if (type != 'http' && type != 'file' && type != 'inline') {
         throw FormatException('Unsupported rule provider type: $type');
       }
       if (!const {'domain', 'ipcidr', 'classical'}.contains(behavior)) {
@@ -1485,7 +1475,29 @@ class ConfigConverter {
       return 'DIRECT';
     }
 
-    for (final rule in clashRules) {
+    // Node-only subscriptions supply no routing policy. Use the bundled CN
+    // GeoIP data for both families before falling back to the selected proxy.
+    final defaultSplit =
+        clashRules.isEmpty && _defaultRuleOutbound(clash) != 'DIRECT';
+    for (final rule
+        in defaultSplit
+            ? [
+                'DOMAIN-SUFFIX,localhost,DIRECT',
+                'DOMAIN-SUFFIX,local,DIRECT',
+                'DOMAIN-SUFFIX,cn,DIRECT',
+                if (availableRuleSets.contains(clash['_defaultCnProvider']))
+                  'RULE-SET,${clash['_defaultCnProvider']},DIRECT',
+                'IP-CIDR,127.0.0.0/8,DIRECT,no-resolve',
+                'IP-CIDR,10.0.0.0/8,DIRECT,no-resolve',
+                'IP-CIDR,172.16.0.0/12,DIRECT,no-resolve',
+                'IP-CIDR,192.168.0.0/16,DIRECT,no-resolve',
+                'IP-CIDR,169.254.0.0/16,DIRECT,no-resolve',
+                'IP-CIDR6,::1/128,DIRECT,no-resolve',
+                'IP-CIDR6,fc00::/7,DIRECT,no-resolve',
+                'IP-CIDR6,fe80::/10,DIRECT,no-resolve',
+                'GEOIP,CN,DIRECT',
+              ]
+            : clashRules) {
       if (strict && (rule is! String || _splitRuleFields(rule).length < 2)) {
         throw FormatException('Malformed routing rule: $rule');
       }

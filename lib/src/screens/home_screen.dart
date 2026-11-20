@@ -6,6 +6,7 @@ import 'package:arcadiaplus/src/widgets/theme_picker.dart';
 import 'package:arcadiaplus/src/widgets/exit_identity.dart';
 import 'package:arcadiaplus/src/widgets/memory_info_card.dart';
 import 'package:arcadiaplus/src/services/exit_ip_service.dart';
+import 'package:arcadiaplus/src/services/ip_probe_client.dart';
 
 import 'dart:async';
 import 'dart:io';
@@ -282,25 +283,48 @@ class _StatusSection extends StatefulWidget {
 }
 
 class _StatusSectionState extends State<_StatusSection> {
+  late ExitIpController exit;
+
+  @override
+  void dispose() {
+    exit.hide();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     // The application owns the lookup and its one-hour cache across routes.
-    final exit = context.read<ExitIpController>();
-    final port = context.watch<GeneralSettingsProvider>().mixedPort;
+    exit = context.read<ExitIpController>();
+    final visible = ModalRoute.isCurrentOf(context) ?? true;
+    final settings = context.watch<GeneralSettingsProvider>();
     return Selector<
       AppStateProvider,
-      ({bool isRunning, bool isLoading, String? error})
+      ({bool isRunning, bool isLoading, String? error, ProbeListener? listener})
     >(
       selector: (_, appState) => (
         isRunning: appState.isServiceRunning,
         isLoading: appState.isLoading,
         error: appState.serviceError,
+        listener: appState.isServiceRunning ? appState.probeListener : null,
       ),
       builder: (context, snapshot, _) {
         exit.configure(
           useProxy: snapshot.isRunning,
-          port: port,
-          active: snapshot.isRunning,
+          port: snapshot.isRunning
+              ? snapshot.listener?.port ?? settings.mixedPort
+              : 0,
+          listener: snapshot.isRunning
+              ? snapshot.listener ??
+                    (
+                      host: settings.bindAddress == '*' && settings.ipv6
+                          ? '::1'
+                          : settings.bindAddress,
+                      port: settings.mixedPort,
+                      user: null,
+                      password: null,
+                    )
+              : null,
+          active: visible && !snapshot.isLoading,
         );
         return StatusCard(
           error: snapshot.error,
@@ -313,17 +337,16 @@ class _StatusSectionState extends State<_StatusSection> {
                   ),
                 )
               : null,
-          identity: !snapshot.isRunning
-              ? null
-              : ListenableBuilder(
-                  listenable: exit,
-                  builder: (context, _) => ExitIdentity(
-                    report: exit.report,
-                    loading: exit.loading,
-                    failed: exit.failed,
-                    onRefresh: exit.refresh,
-                  ),
-                ),
+          identity: ListenableBuilder(
+            listenable: exit,
+            builder: (context, _) => ExitIdentity(
+              report: exit.report,
+              ipv6: exit.ipv6?.ip,
+              loading: exit.loading,
+              failed: exit.failed,
+              onRefresh: exit.refresh,
+            ),
+          ),
           isRunning: snapshot.isRunning,
           isLoading: snapshot.isLoading,
           onStartStop: () {

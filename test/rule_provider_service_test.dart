@@ -294,6 +294,39 @@ void main() {
     expect(File(state.path!).readAsStringSync(), '198.18.0.0/15\n');
   });
 
+  test('upgrade reindexes the previous domain payload while offline', () async {
+    const raw =
+        'exact.example\n+.suffix.example\n*.wild.example\n.sub.example\n';
+    final service = serviceWith(
+      MockClient((_) async => http.Response(raw, 200)),
+    );
+    addTearDown(service.dispose);
+    final profile = httpProfile();
+    final first = await service.prepare('legacy', profile);
+    final directory = File(first.paths['reject']!).parent;
+    final previous = File('${directory.path}/legacy.rules')
+      ..writeAsStringSync(raw);
+    final meta = File('${directory.path}/reject.meta.json');
+    final old = jsonDecode(await meta.readAsString()) as Map;
+    old.remove('domainPatternVersion');
+    old.remove('format');
+    old['path'] = previous.path;
+    await meta.writeAsString(jsonEncode(old));
+    final updated = await service.prepare(
+      'legacy',
+      profile,
+      allowNetwork: false,
+    );
+    final entries = await File(updated.paths['reject']!).readAsLines();
+    expect(entries.take(2), ['full:exact.example', '+.suffix.example']);
+    final wild = RegExp(entries[2].substring('regexp:'.length));
+    expect(wild.hasMatch('a.wild.example'), true);
+    expect(wild.hasMatch('a.b.wild.example'), false);
+    final sub = RegExp(entries[3].substring('regexp:'.length));
+    expect(sub.hasMatch('a.b.sub.example'), true);
+    expect(sub.hasMatch('sub.example'), false);
+  });
+
   test('does not re-download a provider before its interval elapses', () async {
     var calls = 0;
     final client = MockClient((request) async {
@@ -423,7 +456,7 @@ void main() {
     expect(warnings, hasLength(4));
   });
 
-  test('MRS rule sets are dropped with a reason instead of half-loading', () {
+  test('MRS providers are recognised by format and extension', () {
     final warnings = <String>[];
     final specs = RuleProviderSpec.parse({
       // Declared explicitly...
@@ -454,12 +487,8 @@ void main() {
     }, onWarning: warnings.add);
 
     expect(specs.map((spec) => spec.name), contains('text-is-fine'));
-    expect(specs, hasLength(1));
-    expect(
-      warnings.where((warning) => warning.contains('MRS')),
-      hasLength(2),
-      reason: 'both the explicit format and the .mrs extension are reported',
-    );
+    expect(specs.where((spec) => spec.format == 'mrs'), hasLength(2));
+    expect(specs, hasLength(3));
     expect(warnings.join('\n'), contains('sing-box'));
   });
 
@@ -587,7 +616,10 @@ void main() {
       );
       expect(after.paths, before.paths);
       expect(after.states.single.error, contains('payload'));
-      expect(File(after.paths['reject']!).readAsStringSync(), 'safe.example\n');
+      expect(
+        File(after.paths['reject']!).readAsStringSync(),
+        'full:safe.example\n',
+      );
     });
   }
 

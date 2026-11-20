@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.1+2
+
+- Resolve GEOSITE categories individually and validate downloaded MRS rule sets
+  before replacing the cached provider.
+- Show IPv4 and IPv6 exit addresses on the dashboard and refresh the probe when
+  the active proxy listener changes.
+- Release cached images as Flutter's image cache reaches its limit.
+- Update heapless to 0.9.4 to address the RustSec advisories for 0.9.3.
+
 ## 1.1.1+1
 
 Corduit 0.4.0, parking_lot 0.13.0, and the semantic changes those two releases

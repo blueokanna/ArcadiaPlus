@@ -527,10 +527,15 @@ jobs:
 
       - name: Build the Debian package
         shell: bash
+        env:
+          BUILD_NUMBER: ${{ needs.validate.outputs.build_number }}
         run: |
           set -euo pipefail
           tag='${{ needs.validate.outputs.tag }}'
           version='${{ needs.validate.outputs.version }}'
+          if [[ "$BUILD_NUMBER" != 0 ]]; then
+            version="$version-$BUILD_NUMBER"
+          fi
           pkg="$(mktemp -d)/arcadiaplus"
           install -d "$pkg/DEBIAN" "$pkg/usr/lib/arcadiaplus" "$pkg/usr/bin" \
                      "$pkg/usr/share/applications" "$pkg/usr/share/icons/hicolor/512x512/apps"
@@ -771,9 +776,10 @@ jobs:
           TAG: ${{ needs.validate.outputs.tag }}
         run: |
           set -euo pipefail
-          hap="$(find ohos/entry/build -name '*.hap' -print -quit)"
+          suffix="${HAP_NAME_SUFFIX:-unsigned}"
+          hap="$(find ohos/entry/build -type f -name "entry-default-${suffix}.hap" -print -quit)"
           if [[ -z "$hap" ]]; then
-            echo "::error title=No HAP produced::flutter build hap left no HAP behind"
+            echo "::error title=Missing HAP::Expected entry-default-${suffix}.hap"
             find ohos/entry/build -name '*.hap' -print
             exit 1
           fi
@@ -803,7 +809,6 @@ jobs:
           # ever configures secrets would rather see a failed verification
           # warned about loudly than have a whole release stopped over a
           # HarmonyOS label.
-          suffix="${HAP_NAME_SUFFIX:-unsigned}"
           sign_tool="$(find "${DEVECO_SDK_HOME:-/nonexistent}/default/openharmony/toolchains/lib" \
                         -maxdepth 1 -name 'hap-sign-tool.jar' -print -quit 2>/dev/null || true)"
           verified="no"
@@ -856,11 +861,6 @@ jobs:
           path: dist
           merge-multiple: true
 
-      - name: Download the release notes
-        uses: actions/download-artifact@v4
-        with:
-          name: release-notes
-
       - name: Verify the staged assets
         id: release
         shell: bash
@@ -870,6 +870,7 @@ jobs:
         run: |
           set -euo pipefail
           expected=(
+            "release-notes.md"
             "ArcadiaPlus-${TAG}-android-debug.apk"
             "ArcadiaPlus-${TAG}-android-release.apk"
             "ArcadiaPlus-${TAG}-windows-x64-portable.zip"
@@ -880,16 +881,18 @@ jobs:
             "ArcadiaPlus-${TAG}-linux-x64.tar.gz"
           )
           for asset in "${expected[@]}"; do
-            if [[ ! -f "dist/$asset" ]]; then
-              echo "Missing release asset: $asset" >&2
+            if [[ ! -s "dist/$asset" ]]; then
+              echo "Missing or empty release asset: $asset" >&2
               exit 1
             fi
           done
           # The HAP is signed or unsigned depending on whether the signing
           # secrets are configured, so it is verified by pattern rather than by
           # exact name.
-          if [[ -z "$(find dist -maxdepth 1 -name "ArcadiaPlus-${TAG}-ohos-arm64-*.hap" -print -quit)" ]]; then
-            echo "Missing release asset: ArcadiaPlus-${TAG}-ohos-arm64-{signed,unsigned}.hap" >&2
+          shopt -s nullglob
+          haps=(dist/"ArcadiaPlus-${TAG}-ohos-arm64-"*.hap)
+          if [[ ${#haps[@]} != 1 || ! -s "${haps[0]:-}" ]]; then
+            echo "Expected one non-empty HarmonyOS package for $TAG" >&2
             exit 1
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -933,7 +936,7 @@ jobs:
           tag_name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ github.sha }}
           name: ArcadiaPlus ${{ steps.release.outputs.tag }}
-          body_path: release-notes.md
+          body_path: dist/release-notes.md
           draft: false
           prerelease: false
           make_latest: true

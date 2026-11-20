@@ -104,6 +104,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<LatencyTestResult> dco_decode_list_latency_test_result(dynamic raw);
 
   @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -311,6 +314,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<LatencyTestResult> sse_decode_list_latency_test_result(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -669,6 +675,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   JSAny cst_encode_list_latency_test_result(List<LatencyTestResult> raw) {
     // Codec=Cst (C-struct based), see doc to use other codecs
     return raw.map(cst_encode_latency_test_result).toList().jsify()!;
+  }
+
+  @protected
+  JSAny cst_encode_list_prim_u_8_loose(List<int> raw) {
+    // Codec=Cst (C-struct based), see doc to use other codecs
+    return raw.jsify()!;
   }
 
   @protected
@@ -1100,6 +1112,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     List<LatencyTestResult> self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -1678,6 +1693,12 @@ class RustLibWire implements BaseWire {
     port,
     timeout_ms,
   );
+
+  void wire__crate__api__validate_mrs(
+    NativePortType port_,
+    JSAny bytes,
+    String behavior,
+  ) => wasmModule.wire__crate__api__validate_mrs(port_, bytes, behavior);
 }
 
 @JS('wasm_bindgen')
@@ -1997,5 +2018,11 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
     String server,
     int port,
     int timeout_ms,
+  );
+
+  external void wire__crate__api__validate_mrs(
+    NativePortType port_,
+    JSAny bytes,
+    String behavior,
   );
 }

@@ -28,6 +28,10 @@ import 'types.dart';
 Future<void> setGeoipDatabasePath({required String path}) =>
     RustLib.instance.api.crateApiSetGeoipDatabasePath(path: path);
 
+/// Check a downloaded Clash MRS before replacing the last usable provider.
+Future<int> validateMrs({required List<int> bytes, required String behavior}) =>
+    RustLib.instance.api.crateApiValidateMrs(bytes: bytes, behavior: behavior);
+
 /// Validate a config without starting anything.
 Future<bool> testConfig({required String configJson}) =>
     RustLib.instance.api.crateApiTestConfig(configJson: configJson);

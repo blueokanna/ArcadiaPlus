@@ -15,7 +15,6 @@ class MemoryInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final zh = Localizations.localeOf(context).languageCode == 'zh';
     final c = Theme.of(context).colorScheme;
-    final cache = PaintingBinding.instance.imageCache;
     return Card.filled(
       child: InkWell(
         borderRadius: BorderRadius.circular(28),
@@ -64,8 +63,10 @@ class MemoryInfoCard extends StatelessWidget {
                   ),
                   Chip(label: Text(device)),
                   Chip(
-                    label: Text(
-                      '${zh ? '图像缓存' : 'Image cache'} ${_mib(cache.currentSizeBytes)}',
+                    label: ValueListenableBuilder<int>(
+                      valueListenable: AppMemoryPolicy.retainedBytes,
+                      builder: (_, bytes, _) =>
+                          Text('${zh ? '图像缓存' : 'Image cache'} ${_mib(bytes)}'),
                     ),
                   ),
                 ],
@@ -78,16 +79,10 @@ class MemoryInfoCard extends StatelessWidget {
   }
 }
 
-class _MemoryDetails extends StatefulWidget {
+class _MemoryDetails extends StatelessWidget {
   const _MemoryDetails({required this.info, required this.device});
   final SystemInfo info;
   final String device;
-  @override
-  State<_MemoryDetails> createState() => _MemoryDetailsState();
-}
-
-class _MemoryDetailsState extends State<_MemoryDetails> {
-  int? _released;
   @override
   Widget build(BuildContext context) {
     final zh = Localizations.localeOf(context).languageCode == 'zh';
@@ -109,15 +104,6 @@ class _MemoryDetailsState extends State<_MemoryDetails> {
                     style: t.headlineSmall,
                   ),
                 ),
-                IconButton.filledTonal(
-                  tooltip: zh ? '清理图像缓存' : 'Clear image cache',
-                  onPressed: cache.currentSizeBytes == 0
-                      ? null
-                      : () => setState(() {
-                          _released = AppMemoryPolicy.releaseImageCache(cache);
-                        }),
-                  icon: const Icon(Icons.cleaning_services_rounded),
-                ),
                 IconButton(
                   tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                   onPressed: () => Navigator.pop(context),
@@ -126,10 +112,7 @@ class _MemoryDetailsState extends State<_MemoryDetails> {
               ],
             ),
             const SizedBox(height: 24),
-            Text(
-              _mib(widget.info.memoryUsed.toDouble()),
-              style: t.displaySmall,
-            ),
+            Text(_mib(info.memoryUsed.toDouble()), style: t.displaySmall),
             Text(
               zh
                   ? '进程 RSS 快照，包含同进程内核。'
@@ -140,56 +123,41 @@ class _MemoryDetailsState extends State<_MemoryDetails> {
               color: Theme.of(context).colorScheme.surfaceContainer,
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      zh ? '可清理的图像缓存' : 'Reclaimable image cache',
-                      style: t.titleMedium,
-                    ),
-                    const SizedBox(height: 12),
-                    LinearProgressIndicator(
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .outlineVariant
-                          .withValues(alpha: .45),
-                      value: cache.maximumSizeBytes == 0
-                          ? 0
-                          : (cache.currentSizeBytes / cache.maximumSizeBytes)
-                                .clamp(0, 1),
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${_mib(cache.currentSizeBytes)} / ${_mib(cache.maximumSizeBytes)}',
-                    ),
-                    Text(
-                      zh ? '正在显示的图像、活动连接和 DNS 缓存不会被强制清除。' : 'Displayed images, active connections and DNS caches remain in use.',
-                      style: t.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            if (_released != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Semantics(
-                  liveRegion: true,
-                  child: Text(
-                    zh
-                        ? '已从图像缓存移除 ${_mib(_released!)}；系统 RSS 不一定立即下降。'
-                        : 'Evicted ${_mib(_released!)} from image cache; RSS may not fall immediately.',
+                child: ValueListenableBuilder<int>(
+                  valueListenable: AppMemoryPolicy.retainedBytes,
+                  builder: (_, bytes, _) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        zh ? '可清理的图像缓存' : 'Reclaimable image cache',
+                        style: t.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      LinearProgressIndicator(
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .outlineVariant
+                            .withValues(alpha: .45),
+                        value: cache.maximumSizeBytes == 0
+                            ? 0
+                            : (bytes / cache.maximumSizeBytes).clamp(0, 1),
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      const SizedBox(height: 8),
+                      Text('${_mib(bytes)} / ${_mib(cache.maximumSizeBytes)}'),
+                      Text(
+                        zh ? '缓存达到容量的 95% 或达到图像数量上限时自动清理。' : 'Clears automatically at 95% capacity or when the image count limit is reached.',
+                        style: t.bodySmall,
+                      ),
+                    ],
                   ),
                 ),
               ),
-            const SizedBox(height: 16),
-            Text(
-              '${widget.info.platform} · ${widget.device}',
-              style: t.titleMedium,
             ),
-            if (widget.info.cpuName.isNotEmpty) Text(widget.info.cpuName),
+            const SizedBox(height: 16),
+            Text('${info.platform} · $device', style: t.titleMedium),
+            if (info.cpuName.isNotEmpty) Text(info.cpuName),
             const SizedBox(height: 8),
             Text(
               zh ? '当前接口未提供 Dart 堆与 Rust 分配器的独立占用，不拆分或估算百分比。' : 'Separate Dart heap and Rust allocator measurements are not available.',

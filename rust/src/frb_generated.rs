@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueNom,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1581887764;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -22153862;
 
 // Section: executor
 
@@ -2062,6 +2062,32 @@ fn wire__crate__api__test_tcp_connectivity_impl(
                         let output_ok =
                             crate::api::test_tcp_connectivity(api_server, api_port, api_timeout_ms)
                                 .await?;
+                        std::result::Result::Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__validate_mrs_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    bytes: impl CstDecode<Vec<u8>>,
+    behavior: impl CstDecode<String>,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::DcoCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "validate_mrs",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let api_bytes = bytes.cst_decode();
+            let api_behavior = behavior.cst_decode();
+            move |context| async move {
+                transform_result_dco::<_, _, String>(
+                    (move || async move {
+                        let output_ok = crate::api::validate_mrs(api_bytes, api_behavior).await?;
                         std::result::Result::Ok(output_ok)
                     })()
                     .await,
@@ -4392,6 +4418,15 @@ mod io {
             vec.into_iter().map(CstDecode::cst_decode).collect()
         }
     }
+    impl CstDecode<Vec<u8>> for *mut wire_cst_list_prim_u_8_loose {
+        // Codec=Cst (C-struct based), see doc to use other codecs
+        fn cst_decode(self) -> Vec<u8> {
+            unsafe {
+                let wrap = flutter_rust_bridge::for_generated::box_from_leak_ptr(self);
+                flutter_rust_bridge::for_generated::vec_from_leak_ptr(wrap.ptr, wrap.len)
+            }
+        }
+    }
     impl CstDecode<Vec<u8>> for *mut wire_cst_list_prim_u_8_strict {
         // Codec=Cst (C-struct based), see doc to use other codecs
         fn cst_decode(self) -> Vec<u8> {
@@ -5704,6 +5739,15 @@ mod io {
     }
 
     #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_wire__crate__api__validate_mrs(
+        port_: i64,
+        bytes: *mut wire_cst_list_prim_u_8_loose,
+        behavior: *mut wire_cst_list_prim_u_8_strict,
+    ) {
+        wire__crate__api__validate_mrs_impl(port_, bytes, behavior)
+    }
+
+    #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_arcadiaplus_cst_new_box_autoadd_bool(value: bool) -> *mut bool {
         flutter_rust_bridge::for_generated::new_leak_box_ptr(value)
     }
@@ -5805,6 +5849,17 @@ mod io {
             len,
         };
         flutter_rust_bridge::for_generated::new_leak_box_ptr(wrap)
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_arcadiaplus_cst_new_list_prim_u_8_loose(
+        len: i32,
+    ) -> *mut wire_cst_list_prim_u_8_loose {
+        let ans = wire_cst_list_prim_u_8_loose {
+            ptr: flutter_rust_bridge::for_generated::new_leak_vec_ptr(Default::default(), len),
+            len,
+        };
+        flutter_rust_bridge::for_generated::new_leak_box_ptr(ans)
     }
 
     #[unsafe(no_mangle)]
@@ -6070,6 +6125,12 @@ mod io {
     #[derive(Clone, Copy)]
     pub struct wire_cst_list_latency_test_result {
         ptr: *mut wire_cst_latency_test_result,
+        len: i32,
+    }
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct wire_cst_list_prim_u_8_loose {
+        ptr: *mut u8,
         len: i32,
     }
     #[repr(C)]
@@ -7842,6 +7903,15 @@ mod web {
         timeout_ms: u32,
     ) {
         wire__crate__api__test_tcp_connectivity_impl(port_, server, port, timeout_ms)
+    }
+
+    #[wasm_bindgen]
+    pub fn wire__crate__api__validate_mrs(
+        port_: flutter_rust_bridge::for_generated::MessagePort,
+        bytes: Box<[u8]>,
+        behavior: String,
+    ) {
+        wire__crate__api__validate_mrs_impl(port_, bytes, behavior)
     }
 }
 #[cfg(target_family = "wasm")]

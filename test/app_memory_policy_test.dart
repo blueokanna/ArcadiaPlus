@@ -29,7 +29,10 @@ void main() {
       await tester.pump();
       final bytes = cache.currentSizeBytes;
       expect(bytes, greaterThan(0));
-      expect(AppMemoryPolicy.releaseImageCache(cache), bytes);
+      AppMemoryPolicy.maintain(cache);
+      expect(cache.currentSizeBytes, bytes);
+      cache.maximumSizeBytes = bytes;
+      AppMemoryPolicy.maintain(cache);
       expect(cache.currentSizeBytes, 0);
       expect(cache.liveImageCount, 1);
       completer.removeListener(listener);

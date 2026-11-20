@@ -241,22 +241,22 @@ rules:
       },
     });
     expect(expanded['rule-providers']['cn']['path'], '/custom');
-    expect(RuleCatalog.preferRuleSets(expanded)['rules'], [
-      'RULE-SET,cn,DIRECT',
-    ]);
+    expect(expanded['rules'], ['RULE-SET,_geosite_cn,DIRECT']);
   });
 
-  test('only supplied GEOSITE references become rule-set references', () {
-    // Nothing supplies this category, so no `RULE-SET` may be invented for it:
-    // the converter reports the reference instead of hiding it.
-    final untouched = RuleCatalog.preferRuleSets({
+  test('service categories and nested references keep their own providers', () {
+    final expanded = RuleCatalog.expand({
       'rules': ['GEOSITE,netflix,Proxy', 'MATCH,DIRECT'],
     });
-    expect(untouched['rules'], ['GEOSITE,netflix,Proxy', 'MATCH,DIRECT']);
+    expect(expanded['rules'], ['RULE-SET,netflix,Proxy', 'MATCH,DIRECT']);
+    expect(
+      expanded['rule-providers']['netflix']['url'],
+      endsWith('/classical/netflix.list'),
+    );
 
     // A nested reference keeps its separator, its position and its target, and
     // a rule that already names a provider is left byte for byte identical.
-    final nested = RuleCatalog.preferRuleSets({
+    final nested = RuleCatalog.expand({
       'rule-providers': {
         'cn': {'type': 'file', 'path': '/cache/cn'},
       },
@@ -266,7 +266,7 @@ rules:
       ],
     });
     expect(nested['rules'], [
-      'AND,((RULE-SET,cn),(NETWORK,TCP)),DIRECT',
+      'AND,((RULE-SET,_geosite_cn),(NETWORK,TCP)),DIRECT',
       'RULE-SET,cn,DIRECT',
     ]);
   });

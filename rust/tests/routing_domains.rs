@@ -2,7 +2,9 @@ use corduit::engine::config::{Config, OutboundConfig, OutboundType, RuleConfig, 
 use corduit::engine::routing::{
     Router, proxy_mode, set_runtime_proxy_mode, set_runtime_rule_providers,
 };
-use corduit::engine::rule_provider::{RuleProviderBehavior, RuleProviderConfig, RuleProviderType};
+use corduit::engine::rule_provider::{
+    RuleMatchInput, RuleProvider, RuleProviderBehavior, RuleProviderConfig, RuleProviderType,
+};
 use parking_lot::RwLock;
 use std::sync::Arc;
 
@@ -97,5 +99,54 @@ fn outbound(tag: &str, outbound_type: OutboundType) -> OutboundConfig {
         server: None,
         port: None,
         options: Default::default(),
+    }
+}
+
+#[test]
+#[ignore = "requires METACUBEX_FIXTURE_DIR with the geosite-cn and geoip-cn MRS snapshots"]
+fn published_mrs_sets_match_domestic_domains_and_both_address_families() {
+    let root = std::path::PathBuf::from(std::env::var_os("METACUBEX_FIXTURE_DIR").unwrap());
+    let load = |name: &str, behavior| {
+        let provider = RuleProvider::new(RuleProviderConfig {
+            name: name.into(),
+            provider_type: RuleProviderType::File,
+            behavior,
+            url: None,
+            path: Some(root.join(name).to_string_lossy().into_owned()),
+            interval: 86400,
+        });
+        provider.load().unwrap();
+        provider
+    };
+    let domains = load("geosite-cn.mrs", RuleProviderBehavior::Domain);
+    for (domain, expected) in [
+        ("api.bilibili.com", true),
+        ("weixin.qq.com", true),
+        ("bilibili.com.example.net", false),
+    ] {
+        assert_eq!(
+            domains.matches(&RuleMatchInput {
+                domain: Some(domain),
+                ..Default::default()
+            }),
+            expected,
+            "{domain}"
+        );
+    }
+    let ips = load("geoip-cn.mrs", RuleProviderBehavior::IpCidr);
+    for (ip, expected) in [
+        ("223.5.5.5", true),
+        ("2400:3200::1", true),
+        ("1.1.1.1", false),
+        ("2606:4700:4700::1111", false),
+    ] {
+        assert_eq!(
+            ips.matches(&RuleMatchInput {
+                dst_ip: Some(ip.parse().unwrap()),
+                ..Default::default()
+            }),
+            expected,
+            "{ip}"
+        );
     }
 }

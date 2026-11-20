@@ -71,7 +71,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.13.0';
 
   @override
-  int get rustContentHash => 1581887764;
+  int get rustContentHash => -22153862;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -307,6 +307,11 @@ abstract class RustLibApi extends BaseApi {
     required String server,
     required int port,
     required int timeoutMs,
+  });
+
+  Future<int> crateApiValidateMrs({
+    required List<int> bytes,
+    required String behavior,
   });
 }
 
@@ -2379,6 +2384,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["server", "port", "timeoutMs"],
       );
 
+  @override
+  Future<int> crateApiValidateMrs({
+    required List<int> bytes,
+    required String behavior,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          var arg0 = cst_encode_list_prim_u_8_loose(bytes);
+          var arg1 = cst_encode_String(behavior);
+          return wire.wire__crate__api__validate_mrs(port_, arg0, arg1);
+        },
+        codec: DcoCodec(
+          decodeSuccessData: dco_decode_u_32,
+          decodeErrorData: dco_decode_String,
+        ),
+        constMeta: kCrateApiValidateMrsConstMeta,
+        argValues: [bytes, behavior],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiValidateMrsConstMeta => const TaskConstMeta(
+    debugName: "validate_mrs",
+    argNames: ["bytes", "behavior"],
+  );
+
   @protected
   Map<String, List<String>> dco_decode_Map_String_list_String_None(
     dynamic raw,
@@ -2658,6 +2691,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<LatencyTestResult> dco_decode_list_latency_test_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_latency_test_result).toList();
+  }
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<int>;
   }
 
   @protected
@@ -3417,6 +3456,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       ans_.add(sse_decode_latency_test_result(deserializer));
     }
     return ans_;
+  }
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
   }
 
   @protected
@@ -4225,6 +4271,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     for (final item in self) {
       sse_encode_latency_test_result(item, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(
+    List<int> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(
+      self is Uint8List ? self : Uint8List.fromList(self),
+    );
   }
 
   @protected

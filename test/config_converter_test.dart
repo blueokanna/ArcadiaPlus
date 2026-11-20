@@ -174,7 +174,21 @@ rules: []
 
     final rules = convert(yaml)['rules'] as List<dynamic>;
 
-    expect(rules.single['outbound'], 'node-1');
+    expect(rules.last['outbound'], 'node-1');
+    expect(rules[rules.length - 2], containsPair('rule_type', 'geoip'));
+    expect(rules[rules.length - 2], containsPair('outbound', 'DIRECT'));
+    final withDomains =
+        convert(
+              yaml,
+              ruleProviderPaths: const {'cn': '/data/cn.rules'},
+            )['rules']
+            as List;
+    final category = withDomains.singleWhere(
+      (rule) => rule['rule_type'] == 'rule_set',
+    );
+    expect(category['payload'], 'cn');
+    expect(category['outbound'], 'DIRECT');
+    expect(withDomains.last['outbound'], 'node-1');
   });
 
   test('inbounds and outbounds follow the corduit FFI contract', () {
@@ -1155,8 +1169,10 @@ rules: []
     expect(dns.containsKey('hosts'), isFalse);
   });
 
-  test('a GEOSITE category with a provider becomes a rule-set reference', () {
-    const yaml = '''
+  test(
+    'a GEOSITE category uses its own data alongside a namesake provider',
+    () {
+      const yaml = '''
 proxies: []
 proxy-groups: []
 rule-providers:
@@ -1170,33 +1186,37 @@ rules:
   - MATCH,DIRECT
 ''';
 
-    final warnings = <String>[];
-    final rules =
-        convert(
-              yaml,
-              onWarning: warnings.add,
-              ruleProviderPaths: const {'cn': '/data/rules/cn.txt'},
-            )['rules']
-            as List<dynamic>;
+      final warnings = <String>[];
+      final rules =
+          convert(
+                yaml,
+                onWarning: warnings.add,
+                ruleProviderPaths: const {
+                  'cn': '/data/custom.txt',
+                  '_geosite_cn': '/data/rules/cn.txt',
+                },
+              )['rules']
+              as List<dynamic>;
 
-    // A list this app downloaded is a rule provider, and corduit 0.4.0 names
-    // those with `RULE-SET`. `GEOSITE` would be read as a category in a
-    // geosite database the build does not carry, so the reference is
-    // rewritten while its position and target stay put.
-    expect(rules[0], {
-      'rule_type': 'rule_set',
-      'payload': 'cn',
-      'outbound': 'DIRECT',
-      'process_name': null,
-    });
-    // The second category has no provider, so it is skipped loudly rather
-    // than left in place as a rule that can never fire.
-    expect(
-      rules.where((rule) => (rule as Map)['rule_type'] == 'rule_set'),
-      hasLength(1),
-    );
-    expect(warnings.join('\n'), contains('geolocation-!cn'));
-  });
+      // A list this app downloaded is a rule provider, and corduit 0.4.0 names
+      // those with `RULE-SET`. `GEOSITE` would be read as a category in a
+      // geosite database the build does not carry, so the reference is
+      // rewritten while its position and target stay put.
+      expect(rules[0], {
+        'rule_type': 'rule_set',
+        'payload': '_geosite_cn',
+        'outbound': 'DIRECT',
+        'process_name': null,
+      });
+      // The second category has no provider, so it is skipped loudly rather
+      // than left in place as a rule that can never fire.
+      expect(
+        rules.where((rule) => (rule as Map)['rule_type'] == 'rule_set'),
+        hasLength(1),
+      );
+      expect(warnings.join('\n'), contains('geolocation-!cn'));
+    },
+  );
 
   test('a mode guard becomes a proxy-mode rule', () {
     const yaml = '''
