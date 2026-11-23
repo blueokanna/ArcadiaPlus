@@ -67,6 +67,8 @@ class _RulesScreenState extends State<RulesScreen> {
   BigInt _totalMatches = BigInt.zero;
   bool _loading = true;
   bool _loadingMore = false;
+  bool _refreshingHead = false;
+  int _generation = 0;
   String? _error;
 
   String _query = '';
@@ -75,6 +77,7 @@ class _RulesScreenState extends State<RulesScreen> {
   bool _searchTruncated = false;
   bool _searching = false;
   bool _searchFailed = false;
+  int _searchGeneration = 0;
 
   @override
   void initState() {
@@ -94,6 +97,7 @@ class _RulesScreenState extends State<RulesScreen> {
   }
 
   Future<void> _loadFirstPage({required bool refresh}) async {
+    final generation = ++_generation;
     setState(() {
       _loading = true;
       _error = null;
@@ -106,7 +110,7 @@ class _RulesScreenState extends State<RulesScreen> {
         limit: _pageSize,
         refresh: refresh,
       );
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _rules = window.rules;
         _total = window.total;
@@ -114,7 +118,7 @@ class _RulesScreenState extends State<RulesScreen> {
         _loading = false;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
       setState(() {
         _error = error.toString();
         _loading = false;
@@ -130,25 +134,36 @@ class _RulesScreenState extends State<RulesScreen> {
   /// visible action (scrolling, refreshing, searching) reports them properly.
   Future<void> _refreshTopPage() async {
     if (!mounted || !AppLifecycle.instance.isActive) return;
-    if (_query.isNotEmpty || _loading || _loadingMore || _error != null) return;
+    if (_query.isNotEmpty ||
+        _loading ||
+        _loadingMore ||
+        _refreshingHead ||
+        _error != null) {
+      return;
+    }
+    final generation = _generation;
+    _refreshingHead = true;
     try {
       final window = await getRulesWindow(
         offset: 0,
         limit: _pageSize,
         refresh: false,
       );
-      if (!mounted || _query.isNotEmpty) return;
+      if (!mounted || generation != _generation || _query.isNotEmpty) return;
       setState(() {
+        final tableChanged = _total != window.total;
         _total = window.total;
         _totalMatches = window.totalMatches;
         // Rows past the first page are somebody else's load and are kept; the
         // head of the list is replaced with the fresh copy.
-        _rules = _rules.length <= window.rules.length
+        _rules = tableChanged || _rules.length <= window.rules.length
             ? window.rules
             : [...window.rules, ..._rules.sublist(window.rules.length)];
       });
     } catch (error) {
       debugPrint('Failed to refresh the rule table: $error');
+    } finally {
+      _refreshingHead = false;
     }
   }
 
@@ -161,13 +176,18 @@ class _RulesScreenState extends State<RulesScreen> {
     if (_rules.length >= _total || _rules.length >= _maxLoadedRows) return;
 
     _loadingMore = true;
+    final generation = _generation;
     try {
       final window = await getRulesWindow(
         offset: _rules.length,
         limit: _pageSize,
         refresh: false,
       );
-      if (!mounted) return;
+      if (!mounted || generation != _generation) return;
+      if (_total != window.total) {
+        await _loadFirstPage(refresh: false);
+        return;
+      }
       setState(() {
         // The table can shrink between windows (a reload), in which case the
         // offset comes back clamped; rows before it are kept and the tail is
@@ -194,11 +214,13 @@ class _RulesScreenState extends State<RulesScreen> {
   }
 
   void _onSearchChanged(String value) {
+    _searchGeneration++;
     _searchDebounce?.cancel();
     _searchDebounce = Timer(_searchDebounceDelay, () => _runSearch(value));
   }
 
   Future<void> _runSearch(String value) async {
+    final generation = ++_searchGeneration;
     final needle = value.trim();
     if (needle.isEmpty) {
       if (!mounted) return;
@@ -220,7 +242,7 @@ class _RulesScreenState extends State<RulesScreen> {
     });
     try {
       final result = await searchRules(needle: needle, limit: 500);
-      if (!mounted || _query != needle) return;
+      if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _searchResults = result.rules;
         _searchMatched = result.matched;
@@ -229,7 +251,7 @@ class _RulesScreenState extends State<RulesScreen> {
         _searchFailed = false;
       });
     } catch (error) {
-      if (!mounted || _query != needle) return;
+      if (!mounted || generation != _searchGeneration) return;
       debugPrint('Rule search failed: $error');
       // An empty result list and a failed scan look identical in the table, so
       // the failure is stated rather than shown as "no match".
@@ -271,13 +293,15 @@ class _RulesScreenState extends State<RulesScreen> {
       appBar: AppBar(
         title: Text(l10n?.rulesTitle ?? 'Rules'),
         leading: IconButton(
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => popOrGoSettings(context),
         ),
         actions: [
-          IconButton(
-            tooltip: l10n?.rulesOpen ?? 'Rule diagnostics',
-            icon: const Icon(Icons.refresh),
+          IconButton.filledTonal(
+            tooltip: MaterialLocalizations.of(context)
+                .refreshIndicatorSemanticLabel,
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: _loading ? null : _refreshTable,
           ),
         ],
@@ -341,28 +365,25 @@ class _RulesScreenState extends State<RulesScreen> {
   }
 
   Widget _searchField(BuildContext context, AppLocalizations? l10n) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return TextField(
+    return SearchBar(
       controller: _searchController,
       onChanged: _onSearchChanged,
       textInputAction: TextInputAction.search,
-      decoration: InputDecoration(
-        hintText: l10n?.rulesSearchHint ?? 'Search type, payload or outbound',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: _query.isEmpty
-            ? null
-            : IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _clearSearch,
-              ),
-        isDense: true,
-        filled: true,
-        fillColor: colorScheme.surfaceContainerHigh,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+      hintText: l10n?.rulesSearchHint ?? 'Search type, payload or outbound',
+      leading: const Icon(Icons.search_rounded),
+      trailing: [
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _searchController,
+          builder: (context, value, _) => value.text.isEmpty
+              ? const SizedBox.shrink()
+              : IconButton(
+                  tooltip: MaterialLocalizations.of(context)
+                      .deleteButtonTooltip,
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: _clearSearch,
+                ),
         ),
-      ),
+      ],
     );
   }
 

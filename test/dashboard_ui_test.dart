@@ -44,6 +44,8 @@ class _DashboardState extends ChangeNotifier implements AppStateProvider {
   @override
   SystemInfo? get systemInfo => null;
   @override
+  int? get peakResidentBytes => null;
+  @override
   TrafficStats? get trafficStats => null;
   @override
   BigInt get currentDownloadSpeed => BigInt.zero;

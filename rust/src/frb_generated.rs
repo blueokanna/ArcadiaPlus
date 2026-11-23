@@ -2856,6 +2856,7 @@ impl SseDecode for crate::types::SystemInfo {
         let mut var_version = <String>::sse_decode(deserializer);
         let mut var_memoryTotal = <u64>::sse_decode(deserializer);
         let mut var_memoryUsed = <u64>::sse_decode(deserializer);
+        let mut var_coreHeapBytes = <u64>::sse_decode(deserializer);
         let mut var_cpuCores = <u32>::sse_decode(deserializer);
         let mut var_cpuThreads = <u32>::sse_decode(deserializer);
         let mut var_cpuName = <String>::sse_decode(deserializer);
@@ -2865,6 +2866,7 @@ impl SseDecode for crate::types::SystemInfo {
             version: var_version,
             memory_total: var_memoryTotal,
             memory_used: var_memoryUsed,
+            core_heap_bytes: var_coreHeapBytes,
             cpu_cores: var_cpuCores,
             cpu_threads: var_cpuThreads,
             cpu_name: var_cpuName,
@@ -3451,6 +3453,7 @@ impl flutter_rust_bridge::IntoDart for crate::types::SystemInfo {
             self.version.into_into_dart().into_dart(),
             self.memory_total.into_into_dart().into_dart(),
             self.memory_used.into_into_dart().into_dart(),
+            self.core_heap_bytes.into_into_dart().into_dart(),
             self.cpu_cores.into_into_dart().into_dart(),
             self.cpu_threads.into_into_dart().into_dart(),
             self.cpu_name.into_into_dart().into_dart(),
@@ -4063,6 +4066,7 @@ impl SseEncode for crate::types::SystemInfo {
         <String>::sse_encode(self.version, serializer);
         <u64>::sse_encode(self.memory_total, serializer);
         <u64>::sse_encode(self.memory_used, serializer);
+        <u64>::sse_encode(self.core_heap_bytes, serializer);
         <u32>::sse_encode(self.cpu_cores, serializer);
         <u32>::sse_encode(self.cpu_threads, serializer);
         <String>::sse_encode(self.cpu_name, serializer);
@@ -4652,6 +4656,7 @@ mod io {
                 version: self.version.cst_decode(),
                 memory_total: self.memory_total.cst_decode(),
                 memory_used: self.memory_used.cst_decode(),
+                core_heap_bytes: self.core_heap_bytes.cst_decode(),
                 cpu_cores: self.cpu_cores.cst_decode(),
                 cpu_threads: self.cpu_threads.cst_decode(),
                 cpu_name: self.cpu_name.cst_decode(),
@@ -5101,6 +5106,7 @@ mod io {
                 version: core::ptr::null_mut(),
                 memory_total: Default::default(),
                 memory_used: Default::default(),
+                core_heap_bytes: Default::default(),
                 cpu_cores: Default::default(),
                 cpu_threads: Default::default(),
                 cpu_name: core::ptr::null_mut(),
@@ -6293,6 +6299,7 @@ mod io {
         version: *mut wire_cst_list_prim_u_8_strict,
         memory_total: u64,
         memory_used: u64,
+        core_heap_bytes: u64,
         cpu_cores: u32,
         cpu_threads: u32,
         cpu_name: *mut wire_cst_list_prim_u_8_strict,
@@ -7079,8 +7086,8 @@ mod web {
                 .unwrap();
             assert_eq!(
                 self_.length(),
-                8,
-                "Expected 8 elements, got {}",
+                9,
+                "Expected 9 elements, got {}",
                 self_.length()
             );
             crate::types::SystemInfo {
@@ -7088,10 +7095,11 @@ mod web {
                 version: self_.get(1).cst_decode(),
                 memory_total: self_.get(2).cst_decode(),
                 memory_used: self_.get(3).cst_decode(),
-                cpu_cores: self_.get(4).cst_decode(),
-                cpu_threads: self_.get(5).cst_decode(),
-                cpu_name: self_.get(6).cst_decode(),
-                cpu_usage: self_.get(7).cst_decode(),
+                core_heap_bytes: self_.get(4).cst_decode(),
+                cpu_cores: self_.get(5).cst_decode(),
+                cpu_threads: self_.get(6).cst_decode(),
+                cpu_name: self_.get(7).cst_decode(),
+                cpu_usage: self_.get(8).cst_decode(),
             }
         }
     }

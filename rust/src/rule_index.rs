@@ -15,7 +15,6 @@
 //! also how a rule that starts firing while the screen is open becomes
 //! visible.
 
-use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use corduit as engine;
@@ -30,32 +29,33 @@ pub const MAX_SEARCH: u32 = 500;
 
 struct Snapshot {
     taken_at: Instant,
-    rules: Arc<Vec<engine::RuleDto>>,
+    rules: Vec<engine::RuleDto>,
+    total_matches: u64,
 }
 
-/// The current snapshot, in a mutex rather than a channel: reads outnumber
-/// writes, the critical section is a pointer swap, and the lock is never held
-/// across the engine call.
+/// Only diagnostics take this lock. Serialising refresh and projection keeps
+/// concurrent searches from retaining several full tables during a reload.
 static SNAPSHOT: Mutex<Option<Snapshot>> = Mutex::new(None);
 
-fn snapshot(force: bool) -> Result<Arc<Vec<engine::RuleDto>>, String> {
-    {
-        let slot = SNAPSHOT.lock();
-        if !force
-            && let Some(current) = slot.as_ref()
-            && current.taken_at.elapsed() < SNAPSHOT_TTL
-        {
-            return Ok(Arc::clone(&current.rules));
-        }
-    }
+pub(crate) fn invalidate() {
+    *SNAPSHOT.lock() = None;
+}
 
-    let fresh = Arc::new(engine::api::get_rules()?);
+fn with_snapshot<T>(force: bool, project: impl FnOnce(&Snapshot) -> T) -> Result<T, String> {
     let mut slot = SNAPSHOT.lock();
-    *slot = Some(Snapshot {
+    if !force
+        && let Some(current) = slot.as_ref()
+        && current.taken_at.elapsed() < SNAPSHOT_TTL
+    {
+        return Ok(project(current));
+    }
+    *slot = None;
+    let rules = engine::api::get_rules()?;
+    Ok(project(slot.insert(Snapshot {
         taken_at: Instant::now(),
-        rules: Arc::clone(&fresh),
-    });
-    Ok(fresh)
+        total_matches: total_matches(&rules),
+        rules,
+    })))
 }
 
 /// Rules `offset..offset + limit` of the engine's table, with the total so a
@@ -65,13 +65,14 @@ fn snapshot(force: bool) -> Result<Arc<Vec<engine::RuleDto>>, String> {
 /// and its pull-to-refresh pass: a diagnostic table that cannot be made to
 /// re-read the engine is a screenshot, not a diagnostic.
 pub fn window(offset: u32, limit: u32, refresh: bool) -> Result<RuleWindowDto, String> {
-    let rules = snapshot(refresh)?;
-    let (total, offset, slice) = slice(&rules, offset, limit);
-    Ok(RuleWindowDto {
-        total,
-        offset,
-        total_matches: total_matches(&rules),
-        rules: slice,
+    with_snapshot(refresh, |snapshot| {
+        let (total, offset, slice) = slice(&snapshot.rules, offset, limit);
+        RuleWindowDto {
+            total,
+            offset,
+            total_matches: snapshot.total_matches,
+            rules: slice,
+        }
     })
 }
 
@@ -81,12 +82,13 @@ pub fn window(offset: u32, limit: u32, refresh: bool) -> Result<RuleWindowDto, S
 /// boundary: a query that matches every rule costs one bounded message, not
 /// the whole table again.
 pub fn search(needle: &str, limit: u32) -> Result<RuleSearchResultDto, String> {
-    let rules = snapshot(false)?;
-    let (matched, truncated, hits) = find(&rules, needle, limit);
-    Ok(RuleSearchResultDto {
-        matched,
-        truncated,
-        rules: hits,
+    with_snapshot(false, |snapshot| {
+        let (matched, truncated, hits) = find(&snapshot.rules, needle, limit);
+        RuleSearchResultDto {
+            matched,
+            truncated,
+            rules: hits,
+        }
     })
 }
 

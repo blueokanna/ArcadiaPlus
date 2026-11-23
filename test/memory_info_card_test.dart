@@ -22,6 +22,7 @@ void main() {
         version: 'test',
         memoryTotal: BigInt.from(8 * 1024 * 1024 * 1024),
         memoryUsed: BigInt.from(219 * 1024 * 1024),
+        coreHeapBytes: BigInt.from(32 * 1024 * 1024),
         cpuCores: 8,
         cpuThreads: 8,
         cpuName: 'Test CPU',
@@ -38,7 +39,11 @@ void main() {
           ),
           home: Scaffold(
             body: SingleChildScrollView(
-              child: MemoryInfoCard(info: info, device: 'MatePad test fixture'),
+              child: MemoryInfoCard(
+                info: info,
+                device: 'MatePad test fixture',
+                peakResidentBytes: 384000001,
+              ),
             ),
           ),
         ),
@@ -48,6 +53,8 @@ void main() {
       expect(tester.takeException(), isNull);
       await captureTestUi(tester, boundary, 'memory-details-$scale');
       expect(find.text('219.0 MiB'), findsWidgets);
+      expect(find.text('Rust core heap · 32.0 MiB'), findsOneWidget);
+      expect(find.text('Memory budget exceeded this session'), findsOneWidget);
       expect(find.textContaining('Clears automatically'), findsOneWidget);
       expect(find.byIcon(Icons.cleaning_services_rounded), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());

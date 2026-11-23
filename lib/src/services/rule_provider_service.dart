@@ -1,19 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-
-import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
-
 import 'dart:typed_data' show BytesBuilder;
 
+import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:yaml/yaml.dart';
-import 'package:arcadiaplus/src/services/rule_catalog.dart';
 
 import '../rust/api.dart' show validateMrs;
+import 'domain_ruleset_encoder.dart';
+import 'rule_catalog.dart';
 
 /// A `rule-providers` entry exactly as the profile declares it.
 @immutable
@@ -248,6 +247,7 @@ class RuleProviderService extends ChangeNotifier {
   final Future<Directory> Function() _storageRoot;
   Directory? _root;
   final _updates = SerialTaskQueue();
+  final _decodes = SerialTaskQueue();
 
   /// Profile the last [prepare] call belonged to, so a listener can tell
   /// whether the refresh concerns the config it owns.
@@ -373,12 +373,23 @@ class RuleProviderService extends ChangeNotifier {
     void Function(String message)? onWarning,
   }) async {
     if (spec.type == 'inline') {
-      return _storeNormalised(
-        spec,
-        directory,
-        utf8.encode(jsonEncode({'payload': spec.payload})),
-        updatedAt: DateTime.now(),
-      );
+      try {
+        return await _storeNormalised(
+          spec,
+          directory,
+          null,
+          updatedAt: DateTime.now(),
+        );
+      } on FormatException catch (error) {
+        return RuleProviderState(
+          name: spec.name,
+          behavior: spec.behavior,
+          entries: 0,
+          skipped: 0,
+          updatedAt: null,
+          error: error.message,
+        );
+      }
     }
     final meta = await _sourceMeta(directory, spec);
     final cachedPath = meta?['path'] as String?;
@@ -458,19 +469,15 @@ class RuleProviderService extends ChangeNotifier {
     }
 
     try {
-      // Bytes, not `readAsString`: a packed (binary) rule set would make the
-      // strict UTF-8 decoder throw before the binary guard could explain it.
-      // The size bound matches the network path for the same reason — a rule
-      // set is read into memory, so it needs a ceiling either way.
+      // Reject oversized local files before copying them into staging.
       final size = await source.length();
       if (size > _maxPayloadBytes) {
         throw const FormatException('rule set exceeds the 32 MiB limit');
       }
-      final raw = await _readBounded(source.openRead());
       final state = await _storeNormalised(
         spec,
         directory,
-        raw,
+        source.openRead(),
         updatedAt: await source.lastModified(),
       );
       if (!state.ready) {
@@ -598,11 +605,10 @@ class RuleProviderService extends ChangeNotifier {
         );
       }
 
-      final raw = await _readBounded(streamed.stream);
       final state = await _storeNormalised(
         spec,
         directory,
-        raw,
+        streamed.stream,
         updatedAt: DateTime.now(),
       );
       if (!state.ready) {
@@ -704,71 +710,89 @@ class RuleProviderService extends ChangeNotifier {
     );
   }
 
-  Future<Uint8List> _readBounded(Stream<List<int>> stream) async {
-    final builder = BytesBuilder(copy: false);
-    await for (final chunk in stream) {
-      builder.add(chunk);
-      if (builder.length > _maxPayloadBytes) {
-        throw const FormatException('rule set exceeds the 32 MiB limit');
-      }
-    }
-    return builder.takeBytes();
-  }
-
   /// Writes the provider's rules under a content-addressed name, so a changed
   /// rule set produces a changed `path` and the engine reloads it immediately
   /// instead of waiting for its own interval.
   Future<RuleProviderState> _storeNormalised(
     RuleProviderSpec spec,
     Directory directory,
-    Uint8List raw, {
+    Stream<List<int>>? source, {
     required DateTime updatedAt,
+    int? cachedEntries,
   }) async {
-    late Uint8List bytes;
-    late int entries;
-    final mrs =
-        raw.length >= 4 &&
-        raw[0] == 0x28 &&
-        raw[1] == 0xb5 &&
-        raw[2] == 0x2f &&
-        raw[3] == 0xfd;
-    if (spec.format == 'mrs' || (spec.format.isEmpty && mrs)) {
-      entries = await validateMrs(bytes: raw, behavior: spec.behavior);
-      bytes = raw;
-    } else {
-      if (raw.contains(0)) {
-        throw const FormatException('Unexpected binary rule payload');
+    final staging = await directory.createTemp('incoming-');
+    try {
+      final raw = File('${staging.path}/source');
+      final signature = <int>[];
+      if (source != null) {
+        var size = 0;
+        final sink = raw.openWrite();
+        try {
+          await sink.addStream(
+            source.map((chunk) {
+              size += chunk.length;
+              if (size > _maxPayloadBytes) {
+                throw const FormatException(
+                  'rule set exceeds the 32 MiB limit',
+                );
+              }
+              if (signature.length < 4) {
+                signature.addAll(chunk.take(4 - signature.length));
+              }
+              return chunk;
+            }),
+          );
+        } finally {
+          await sink.close();
+        }
       }
-      final normalised = await compute(_normalisePayload, (
-        raw,
-        spec.behavior,
-        spec.geosite,
-      ));
-      if (normalised.entries == 0 || normalised.skipped != 0) {
-        return RuleProviderState(
-          name: spec.name,
-          behavior: spec.behavior,
-          entries: 0,
-          skipped: normalised.skipped,
-          updatedAt: null,
-          error: normalised.entries == 0 && normalised.skipped == 0
-              ? 'no usable rules'
-              : 'incomplete rule set: ${normalised.skipped} unsupported entries; '
-                    'refusing to publish partial routing data',
-        );
+      final mrs =
+          spec.format == 'mrs' ||
+          (spec.format.isEmpty &&
+              listEquals(signature, const [0x28, 0xb5, 0x2f, 0xfd]));
+      final output = mrs ? raw : File('${staging.path}/rules');
+      // Downloads overlap on disk. Only one provider holds a YAML tree or
+      // decompressed MRS index at a time, even when three downloads finish together.
+      final entries = await _decodes.run(() async {
+        if (mrs) {
+          return validateMrs(
+            bytes: await raw.readAsBytes(),
+            behavior: spec.behavior,
+          );
+        }
+        return compute(_normaliseFile, (
+          raw.path,
+          output.path,
+          spec.behavior,
+          spec.geosite && cachedEntries == null,
+          spec.payload?.toList(growable: false),
+        ));
+      });
+      if (cachedEntries != null && entries != cachedEntries) {
+        throw const FormatException('cached rule count differs from metadata');
       }
-      bytes = utf8.encode(normalised.content);
-      entries = normalised.entries;
+      return await _publish(spec, directory, output, entries, updatedAt);
+    } finally {
+      await staging.delete(recursive: true);
     }
-    final digest = sha256.convert(bytes).toString().substring(0, 16);
+  }
+
+  Future<RuleProviderState> _publish(
+    RuleProviderSpec spec,
+    Directory directory,
+    File output,
+    int entries,
+    DateTime updatedAt,
+  ) async {
+    final digest = (await sha256.bind(output.openRead()).first)
+        .toString()
+        .substring(0, 16);
     final file = File(
       '${directory.path}${Platform.pathSeparator}${_safeSegment(spec.name)}.$digest.rules',
     );
 
     if (!file.existsSync()) {
-      final tmp = File('${file.path}.tmp');
-      await tmp.writeAsBytes(bytes, flush: true);
-      await tmp.rename(file.path);
+      await output.rename(file.path);
     }
 
     final previous = (await _readMeta(directory, spec.name))?['path'];
@@ -801,91 +825,163 @@ class RuleProviderService extends ChangeNotifier {
     );
   }
 
-  static ({String content, int entries, int skipped}) _normalisePayload(
-    (Uint8List, String, bool) input,
-  ) => _normalise(utf8.decode(input.$1), input.$2, input.$3);
-
-  static ({String content, int entries, int skipped}) _normalise(
-    String raw,
-    String behavior,
-    bool geosite,
-  ) {
-    final document = _yamlPayload(raw);
-    final entries = <String>[];
+  static Future<int> _normaliseFile(
+    (String, String, String, bool, List?) input,
+  ) async {
+    final (sourcePath, outputPath, behavior, geosite, inline) = input;
+    final entries = inline == null
+        ? _fileEntries(File(sourcePath))
+        : Stream<Object?>.fromIterable(inline);
+    final output = File(outputPath).openSync(mode: FileMode.write);
+    final buffer = BytesBuilder(copy: false);
+    var count = 0;
     var skipped = 0;
-
-    void addEntry(String entry) {
-      if (geosite) {
-        // A regex quantifier can contain commas. Split only at the type.
-        final comma = entry.indexOf(',');
-        if (comma < 0) throw const FormatException('Invalid GEOSITE entry');
-        final value = entry.substring(comma + 1);
-        entry = switch (entry.substring(0, comma)) {
-          'DOMAIN' => 'full:$value',
-          'DOMAIN-SUFFIX' => '+.$value',
-          'DOMAIN-KEYWORD' => 'keyword:$value',
-          'DOMAIN-REGEX' => 'regexp:$value',
-          final type => throw FormatException(
-            'Unsupported GEOSITE entry: $type',
-          ),
-        };
-      }
-      if (_isSupported(entry, behavior)) {
-        entries.add(behavior == 'domain' ? _domainPattern(entry) : entry);
-      } else {
-        skipped++;
-      }
-    }
-
-    if (document != null) {
-      for (final item in document) {
+    var size = 0;
+    var packDomains = behavior == 'domain';
+    try {
+      await for (final item in entries) {
         if (item is! String || item.trim().isEmpty) {
           throw const FormatException(
             'every rule payload entry must be a non-empty string',
           );
         }
-        final entry = item.trim();
-        addEntry(entry);
-      }
-    } else {
-      for (final line in raw.split('\n')) {
-        final entry = line.trim();
-        if (entry.isEmpty || entry.startsWith('#') || entry.startsWith('//')) {
+        var entry = item.trim();
+        if (item.contains('\n') ||
+            item.contains('\r') ||
+            item.contains('\x00')) {
+          throw const FormatException(
+            'incomplete rule set: invalid control character in entry',
+          );
+        }
+        if (geosite) {
+          // A regex quantifier can contain commas. Split only at the type.
+          final comma = entry.indexOf(',');
+          if (comma < 0) throw const FormatException('Invalid GEOSITE entry');
+          final value = entry.substring(comma + 1);
+          entry = switch (entry.substring(0, comma)) {
+            'DOMAIN' => 'full:$value',
+            'DOMAIN-SUFFIX' => '+.$value',
+            'DOMAIN-KEYWORD' => 'keyword:$value',
+            'DOMAIN-REGEX' => 'regexp:$value',
+            final type => throw FormatException(
+              'Unsupported GEOSITE entry: $type',
+            ),
+          };
+        }
+        if (!_isSupported(entry, behavior)) {
+          skipped++;
           continue;
         }
-        addEntry(entry);
+        final line = behavior == 'domain' ? _domainPattern(entry) : entry;
+        if (packDomains &&
+            !line.startsWith('full:') &&
+            !line.startsWith('+.')) {
+          packDomains = false;
+        }
+        final bytes = utf8.encode('$line\n');
+        size += bytes.length;
+        if (size > _maxPayloadBytes) {
+          throw const FormatException(
+            'normalised rule set exceeds the 32 MiB limit',
+          );
+        }
+        buffer.add(bytes);
+        if (buffer.length >= 65536) output.writeFromSync(buffer.takeBytes());
+        count++;
+        if (count > 1 << 21) {
+          throw const FormatException(
+            'rule set exceeds the Corduit entry limit',
+          );
+        }
       }
+      if (skipped > 0) {
+        throw FormatException(
+          'incomplete rule set: $skipped unsupported entries',
+        );
+      }
+      if (count == 0) throw const FormatException('no usable rules');
+      output.writeFromSync(buffer.takeBytes());
+      output.flushSync();
+    } finally {
+      output.closeSync();
     }
-
-    return (
-      content: entries.isEmpty ? '' : '${entries.join('\n')}\n',
-      entries: entries.length,
-      skipped: skipped,
-    );
+    // Text compilation in Corduit keeps both the parsed strings and a queue
+    // covering every trie node. Hand it the compiled trie for large tables.
+    if (packDomains && count >= 32768) {
+      final packed = File('$outputPath.srs');
+      final text = File(outputPath);
+      await encodeDomainRules(text, packed, count);
+      if (await packed.length() > _maxPayloadBytes) {
+        throw const FormatException(
+          'encoded rule set exceeds the 32 MiB limit',
+        );
+      }
+      await packed.rename(text.path);
+    }
+    return count;
   }
 
-  /// Returns the `payload:` list when [raw] is a YAML/JSON rule-set document.
-  static Iterable<Object?>? _yamlPayload(String raw) {
-    final quoted = _quotedPayload(raw);
-    if (quoted != null) return quoted;
-    final lines = LineSplitter.split(raw);
-    final first = lines
-        .map((line) => line.trim())
-        .firstWhere(
-          (line) => line.isNotEmpty && !line.startsWith('#'),
-          orElse: () => '',
-        );
-    final looksStructured =
-        first.startsWith('{') ||
-        first.startsWith('[') ||
-        first == '---' ||
-        lines.any((line) => line.trimLeft().startsWith('payload:'));
-    if (!looksStructured) return null;
-
+  /// Recognise plain lists and simple YAML block sequences used by community
+  /// providers with bounded memory. A second pass reads the staged file, so a
+  /// complex scalar late in the document can still select the full YAML parser.
+  static Stream<Object?> _fileEntries(File source) async* {
+    Stream<String> lines() => source
+        .openRead()
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+    var first = true;
+    var simpleYaml = false;
+    var structured = false;
     try {
-      final document = loadYaml(raw);
+      await for (final line in lines()) {
+        if (line.contains('\x00')) {
+          throw const FormatException('binary payload');
+        }
+        final text = line.trim();
+        if (text.isEmpty || text.startsWith('#')) continue;
+        if (first) {
+          first = false;
+          simpleYaml = line == 'payload:';
+          structured =
+              simpleYaml ||
+              text.startsWith('{') ||
+              text.startsWith('[') ||
+              text == '---';
+          if (simpleYaml) continue;
+        }
+        if (simpleYaml && _simpleYamlItem(line) != null) {
+          continue;
+        }
+        if (structured || text.startsWith('payload:')) {
+          structured = true;
+          simpleYaml = false;
+          break;
+        }
+      }
+    } on FormatException {
+      throw const FormatException(
+        'Unexpected binary or invalid UTF-8 rule payload',
+      );
+    }
+    if (simpleYaml || !structured) {
+      await for (final line in lines()) {
+        final text = line.trim();
+        if (text.isEmpty || text.startsWith('#')) continue;
+        if (simpleYaml) {
+          if (line != 'payload:') yield _simpleYamlItem(line)!;
+        } else if (!text.startsWith('//')) {
+          yield text;
+        }
+      }
+      return;
+    }
+    try {
+      final document = loadYaml(await source.readAsString());
       if (document is Map && document['payload'] is List) {
-        return (document['payload'] as List).cast<Object?>();
+        for (final entry in document['payload'] as List) {
+          yield entry;
+        }
+        return;
       }
     } on YamlException catch (error) {
       throw FormatException('invalid rule payload: ${error.message}');
@@ -893,33 +989,32 @@ class RuleProviderService extends ChangeNotifier {
     throw const FormatException('rule document must contain a payload array');
   }
 
-  /// Published domain/CIDR sets commonly contain hundreds of thousands of
-  /// single-quoted scalars. Recognise only that exact, unambiguous subset so
-  /// parsing does not retain a YAML node tree alongside the normalised rules.
-  /// Anything more complex still goes through the full YAML parser.
-  static Iterable<String>? _quotedPayload(String raw) {
-    final lines = LineSplitter.split(raw);
-    final iterator = lines.iterator;
-    if (!iterator.moveNext() || iterator.current != 'payload:') return null;
-    while (iterator.moveNext()) {
-      final line = iterator.current;
-      if (line.isEmpty) continue;
-      if (!line.startsWith("  - '") ||
-          !line.endsWith("'") ||
-          line.length < 7 ||
-          line.indexOf("'", 5) != line.length - 1) {
+  // Keep escapes, aliases and implicitly typed scalars with the YAML parser.
+  // An ordinary dotted hostname ending in letters is unambiguously a string.
+  static final _plainHostname = RegExp(
+    r'^(?:\+\.)?[A-Za-z0-9_][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)*\.[A-Za-z]{2,63}$',
+  );
+  static String? _simpleYamlItem(String line) {
+    if (!line.startsWith('  - ') || line.length == 4) return null;
+    final quote = line[4];
+    if (quote == '"' || quote == "'") {
+      if (line.length < 6 ||
+          line.indexOf(quote, 5) != line.length - 1 ||
+          (quote == '"' && line.contains(r'\'))) {
         return null;
       }
+      return line.substring(5, line.length - 1);
     }
-    return lines
-        .skip(1)
-        .where((line) => line.isNotEmpty)
-        .map((line) => line.substring(5, line.length - 1));
+    final value = line.substring(4);
+    return _plainHostname.hasMatch(value) ? value : null;
   }
 
   /// Encode Clash's exact, one-label wildcard and subdomain-only patterns
   /// explicitly. Corduit otherwise treats every unprefixed name as a suffix.
   static String _domainPattern(String entry) {
+    if (entry.startsWith('full:') && entry.endsWith('.')) {
+      return entry.substring(0, entry.length - 1);
+    }
     if (entry.contains(':')) return entry;
     final domain = entry.endsWith('.')
         ? entry.substring(0, entry.length - 1)
@@ -1034,12 +1129,28 @@ class RuleProviderService extends ChangeNotifier {
     RuleProviderSpec spec,
   ) async {
     final meta = await _readMeta(directory, spec.name);
-    if (meta == null ||
-        meta['url'] != spec.url ||
+    if (meta == null) return null;
+    final path = meta['path'];
+    final entries = meta['entries'];
+    final timestamp = meta['updatedAt'];
+    final updatedAt = timestamp is String ? DateTime.tryParse(timestamp) : null;
+    if (path is! String ||
+        path.isEmpty ||
+        File(path).absolute.parent.uri != directory.absolute.uri ||
+        !path.endsWith('.rules') ||
+        entries is! int ||
+        entries <= 0 ||
+        updatedAt == null ||
+        meta['skipped'] is! int? ||
+        meta['etag'] is! String? ||
+        meta['lastModified'] is! String?) {
+      return null;
+    }
+    if (meta['url'] != spec.url ||
         meta['behavior'] != spec.behavior ||
         meta['sourcePath'] != spec.path ||
+        (meta['geosite'] ?? false) != spec.geosite ||
         (meta['skipped'] ?? 0) != 0 ||
-        (meta['entries'] as int? ?? 0) <= 0 ||
         (meta['format'] != null
             ? meta['format'] != spec.format
             : spec.format == 'mrs') ||
@@ -1047,19 +1158,25 @@ class RuleProviderService extends ChangeNotifier {
             meta['classicalValidationVersion'] != 1)) {
       return null;
     }
-    if (spec.behavior != 'domain' || meta['domainPatternVersion'] == 1) {
+    if (meta['entryValidationVersion'] == 1 &&
+        (spec.behavior != 'domain' || meta['domainPatternVersion'] == 2)) {
+      final name = File(path).uri.pathSegments.last;
+      final prefix = '${_safeSegment(spec.name)}.';
+      if (!name.startsWith(prefix) ||
+          !_cacheFileSuffix.hasMatch(name.substring(prefix.length))) {
+        return null;
+      }
       return meta;
     }
-    // Earlier versions cached the original domain lines. Re-index them even
-    // when the device cannot reach the provider after upgrading.
-    final path = meta['path'] as String?;
-    if (path == null || spec.geosite) return null;
+    // Revalidate old normalized files offline. Their recorded source entry
+    // count detects a scalar which an older writer split across two rules.
     try {
       final migrated = await _storeNormalised(
         spec,
         directory,
-        await _readBounded(File(path).openRead()),
-        updatedAt: DateTime.parse(meta['updatedAt'] as String),
+        File(path).openRead(),
+        updatedAt: updatedAt,
+        cachedEntries: entries,
       );
       if (!migrated.ready) return null;
       final updated = {
@@ -1073,6 +1190,8 @@ class RuleProviderService extends ChangeNotifier {
       return null;
     }
   }
+
+  static final _cacheFileSuffix = RegExp(r'^[0-9a-f]{16}\.rules$');
 
   Future<Map<String, dynamic>?> _readMeta(
     Directory directory,
@@ -1103,8 +1222,10 @@ class RuleProviderService extends ChangeNotifier {
     await tmp.writeAsString(
       jsonEncode({
         ...values,
+        'geosite': spec.geosite,
         'format': spec.format,
-        'domainPatternVersion': 1,
+        'entryValidationVersion': 1,
+        'domainPatternVersion': 2,
         'classicalValidationVersion': 1,
       }),
       flush: true,
@@ -1119,7 +1240,7 @@ class RuleProviderService extends ChangeNotifier {
   }
 
   /// Removes every cached copy belonging to a deleted profile.
-  Future<void> forgetProfile(String profileId) async {
+  Future<void> forgetProfile(String profileId) => _updates.run(() async {
     try {
       final root = await _rootDirectory();
       final directory = _profileDirectory(root, profileId);
@@ -1129,7 +1250,7 @@ class RuleProviderService extends ChangeNotifier {
     } catch (error) {
       debugPrint('Failed to drop cached rule providers of $profileId: $error');
     }
-  }
+  });
 }
 
 String _safeSegment(String value) {

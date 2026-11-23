@@ -245,6 +245,29 @@ rules:
   });
 
   test('service categories and nested references keep their own providers', () {
+    const pattern = r'^node[(),][0-9]{1,3}\(\.example$';
+    final converted = jsonDecode(
+      ConfigConverter.convertClashYamlToJson(
+        jsonEncode({
+          'rules': [
+            'DOMAIN-REGEX,$pattern,DIRECT',
+            'NOT,((DOMAIN-REGEX,$pattern)),REJECT',
+          ],
+        }),
+        requireCompleteRules: true,
+      ),
+    ) as Map;
+    expect(converted['rules'][0]['payload'], pattern);
+    expect(converted['rules'][0]['outbound'], 'DIRECT');
+    expect(converted['rules'][1]['rules'][0]['payload'], pattern);
+    expect(converted['rules'][1]['outbound'], 'REJECT');
+    const regex = 'DOMAIN-REGEX,^(GEOSITE,cn)..(RULE-SET,internal),REJECT';
+    const conditional = 'AND,(($regex),(GEOSITE,cn)),DIRECT';
+    final literals = RuleCatalog.expand({
+      'rules': [regex, conditional],
+    });
+    expect(literals['rules'], [regex, 'AND,(($regex),(RULE-SET,cn)),DIRECT']);
+    expect(RuleCatalog.references(literals).map((r) => r.name), ['cn']);
     final expanded = RuleCatalog.expand({
       'rules': ['GEOSITE,netflix,Proxy', 'MATCH,DIRECT'],
     });

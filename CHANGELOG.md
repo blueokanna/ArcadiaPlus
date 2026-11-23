@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1+3
+
+- Upgrade to Corduit 0.4.2, including its HTTP authentication and Wintun archive verification fixes.
+- Stream downloaded rule sets to disk and normalize large domain lists incrementally. Keep the last usable provider when a refresh contains invalid entries.
+- Preserve GEOSITE and RULE-SET text inside regular expressions when resolving nested routing rules.
+- Show the live Rust heap and lifetime process RSS peak in memory details, and refresh rule diagnostics when the engine configuration changes.
+- Load large exact and suffix domain lists as a compact binary index. Map Android fonts and GeoIP assets directly from the APK and cap the Windows working set at startup.
+
 ## 1.1.1+2
 
 - Resolve GEOSITE categories individually and validate downloaded MRS rule sets

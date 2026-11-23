@@ -60,6 +60,8 @@ pub struct SystemInfo {
     pub version: String,
     pub memory_total: u64,
     pub memory_used: u64,
+    /// Live requested Rust heap bytes, including Corduit and the bridge.
+    pub core_heap_bytes: u64,
     pub cpu_cores: u32,
     pub cpu_threads: u32,
     pub cpu_name: String,
@@ -330,7 +332,7 @@ impl From<engine::ProxyStatus> for ProxyStatus {
             inbound_count: value.inbound_count,
             outbound_count: value.outbound_count,
             connection_count: value.connection_count,
-            memory_usage: value.memory_usage,
+            memory_usage: crate::memory::allocated_bytes(),
             uptime: value.uptime,
         }
     }
@@ -401,6 +403,7 @@ impl From<engine::SystemInfo> for SystemInfo {
             version: value.version,
             memory_total: value.memory_total,
             memory_used: value.memory_used,
+            core_heap_bytes: crate::memory::allocated_bytes(),
             cpu_cores: value.cpu_cores,
             cpu_threads: value.cpu_threads,
             cpu_name: value.cpu_name,

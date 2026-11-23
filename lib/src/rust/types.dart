@@ -830,6 +830,9 @@ class SystemInfo {
   final String version;
   final BigInt memoryTotal;
   final BigInt memoryUsed;
+
+  /// Live requested Rust heap bytes, including Corduit and the bridge.
+  final BigInt coreHeapBytes;
   final int cpuCores;
   final int cpuThreads;
   final String cpuName;
@@ -840,6 +843,7 @@ class SystemInfo {
     required this.version,
     required this.memoryTotal,
     required this.memoryUsed,
+    required this.coreHeapBytes,
     required this.cpuCores,
     required this.cpuThreads,
     required this.cpuName,
@@ -852,6 +856,7 @@ class SystemInfo {
       version.hashCode ^
       memoryTotal.hashCode ^
       memoryUsed.hashCode ^
+      coreHeapBytes.hashCode ^
       cpuCores.hashCode ^
       cpuThreads.hashCode ^
       cpuName.hashCode ^
@@ -866,6 +871,7 @@ class SystemInfo {
           version == other.version &&
           memoryTotal == other.memoryTotal &&
           memoryUsed == other.memoryUsed &&
+          coreHeapBytes == other.coreHeapBytes &&
           cpuCores == other.cpuCores &&
           cpuThreads == other.cpuThreads &&
           cpuName == other.cpuName &&

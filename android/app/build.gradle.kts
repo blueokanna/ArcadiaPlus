@@ -63,6 +63,10 @@ android {
 
     defaultConfig {
         applicationId = "com.blueokanna.arcadiaplus"
+        if (providers.gradleProperty("target").orNull?.replace('\\', '/')
+                ?.endsWith("scripts/verify_memory_budget.dart") == true) {
+            applicationIdSuffix = ".memorybench"
+        }
         minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = androidVersionCode(flutter.versionName, flutter.versionCode)
@@ -101,6 +105,12 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
         }
+    }
+
+    // AssetManager can map fonts and GeoIP directly from the APK. Inflating
+    // the bundled CJK font alone otherwise allocates another 17 MiB at startup.
+    androidResources {
+        noCompress += listOf("ttf", "otf", "mmdb")
     }
     
     packaging {

@@ -21,6 +21,15 @@ add_executable(${BINARY_NAME} WIN32
 # that need different build settings.
 apply_standard_settings(${BINARY_NAME})
 
+# path_provider and shared_preferences derive their directories from the EXE's
+# product name. Keep the workload's profile and caches separate from the app.
+include("${FLUTTER_MANAGED_DIR}/ephemeral/generated_config.cmake")
+foreach(setting IN LISTS FLUTTER_TOOL_ENVIRONMENT)
+  if(setting MATCHES "^FLUTTER_TARGET=(.*/)?scripts/verify_memory_budget\\.dart$")
+    target_compile_definitions(${BINARY_NAME} PRIVATE ARCADIA_MEMORY_BENCHMARK)
+  endif()
+endforeach()
+
 # Add preprocessor definitions for the build version.
 target_compile_definitions(${BINARY_NAME} PRIVATE "FLUTTER_VERSION=\"${FLUTTER_VERSION}\"")
 target_compile_definitions(${BINARY_NAME} PRIVATE "FLUTTER_VERSION_MAJOR=${FLUTTER_VERSION_MAJOR}")

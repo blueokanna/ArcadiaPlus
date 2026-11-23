@@ -95,7 +95,11 @@ BEGIN
             VALUE "InternalName", "arcadiaplus" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 blueokanna and HyphenTeam." "\0"
             VALUE "OriginalFilename", "arcadiaplus.exe" "\0"
+#ifdef ARCADIA_MEMORY_BENCHMARK
+            VALUE "ProductName", "ArcadiaPlusMemoryBenchmark" "\0"
+#else
             VALUE "ProductName", "ArcadiaPlus" "\0"
+#endif
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

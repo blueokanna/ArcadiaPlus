@@ -2969,17 +2969,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SystemInfo dco_decode_system_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return SystemInfo(
       platform: dco_decode_String(arr[0]),
       version: dco_decode_String(arr[1]),
       memoryTotal: dco_decode_u_64(arr[2]),
       memoryUsed: dco_decode_u_64(arr[3]),
-      cpuCores: dco_decode_u_32(arr[4]),
-      cpuThreads: dco_decode_u_32(arr[5]),
-      cpuName: dco_decode_String(arr[6]),
-      cpuUsage: dco_decode_f_64(arr[7]),
+      coreHeapBytes: dco_decode_u_64(arr[4]),
+      cpuCores: dco_decode_u_32(arr[5]),
+      cpuThreads: dco_decode_u_32(arr[6]),
+      cpuName: dco_decode_String(arr[7]),
+      cpuUsage: dco_decode_f_64(arr[8]),
     );
   }
 
@@ -3827,6 +3828,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_version = sse_decode_String(deserializer);
     var var_memoryTotal = sse_decode_u_64(deserializer);
     var var_memoryUsed = sse_decode_u_64(deserializer);
+    var var_coreHeapBytes = sse_decode_u_64(deserializer);
     var var_cpuCores = sse_decode_u_32(deserializer);
     var var_cpuThreads = sse_decode_u_32(deserializer);
     var var_cpuName = sse_decode_String(deserializer);
@@ -3836,6 +3838,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       version: var_version,
       memoryTotal: var_memoryTotal,
       memoryUsed: var_memoryUsed,
+      coreHeapBytes: var_coreHeapBytes,
       cpuCores: var_cpuCores,
       cpuThreads: var_cpuThreads,
       cpuName: var_cpuName,
@@ -4581,6 +4584,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.version, serializer);
     sse_encode_u_64(self.memoryTotal, serializer);
     sse_encode_u_64(self.memoryUsed, serializer);
+    sse_encode_u_64(self.coreHeapBytes, serializer);
     sse_encode_u_32(self.cpuCores, serializer);
     sse_encode_u_32(self.cpuThreads, serializer);
     sse_encode_String(self.cpuName, serializer);

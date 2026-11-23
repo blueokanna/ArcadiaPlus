@@ -1006,6 +1006,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     wireObj.version = cst_encode_String(apiObj.version);
     wireObj.memory_total = cst_encode_u_64(apiObj.memoryTotal);
     wireObj.memory_used = cst_encode_u_64(apiObj.memoryUsed);
+    wireObj.core_heap_bytes = cst_encode_u_64(apiObj.coreHeapBytes);
     wireObj.cpu_cores = cst_encode_u_32(apiObj.cpuCores);
     wireObj.cpu_threads = cst_encode_u_32(apiObj.cpuThreads);
     wireObj.cpu_name = cst_encode_String(apiObj.cpuName);
@@ -4215,6 +4216,9 @@ final class wire_cst_system_info extends ffi.Struct {
   @ffi.Uint64()
   external int memory_used;
 
+  @ffi.Uint64()
+  external int core_heap_bytes;
+
   @ffi.Uint32()
   external int cpu_cores;
 
@@ -4232,6 +4236,7 @@ final class wire_cst_system_info extends ffi.Struct {
     required ffi.Pointer<wire_cst_list_prim_u_8_strict> version,
     required int memory_total,
     required int memory_used,
+    required int core_heap_bytes,
     required int cpu_cores,
     required int cpu_threads,
     required ffi.Pointer<wire_cst_list_prim_u_8_strict> cpu_name,
@@ -4241,6 +4246,7 @@ final class wire_cst_system_info extends ffi.Struct {
     ..ref.version = version
     ..ref.memory_total = memory_total
     ..ref.memory_used = memory_used
+    ..ref.core_heap_bytes = core_heap_bytes
     ..ref.cpu_cores = cpu_cores
     ..ref.cpu_threads = cpu_threads
     ..ref.cpu_name = cpu_name

@@ -30,10 +30,12 @@ void main() {
         final source = await File('$meta/geosite-$name.list').readAsLines();
         expect(report.states.single.error, isNull, reason: name);
         expect(report.entryCount, source.length, reason: name);
-        final entries = await File(report.paths[name]!).readAsLines();
-        for (final regex in source.where(
+        final regexes = source.where(
           (line) => line.startsWith('DOMAIN-REGEX,'),
-        )) {
+        );
+        if (regexes.isEmpty) continue;
+        final entries = await File(report.paths[name]!).readAsLines();
+        for (final regex in regexes) {
           expect(
             entries.contains('regexp:${regex.substring(13)}'),
             isTrue,

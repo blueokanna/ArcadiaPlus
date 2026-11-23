@@ -429,9 +429,11 @@ class _SystemInfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
-    return Selector<AppStateProvider, SystemInfo?>(
-      selector: (_, appState) => appState.systemInfo,
-      builder: (context, systemInfo, _) {
+    return Selector<AppStateProvider, (SystemInfo?, int?)>(
+      selector: (_, appState) =>
+          (appState.systemInfo, appState.peakResidentBytes),
+      builder: (context, snapshot, _) {
+        final (systemInfo, peak) = snapshot;
         if (systemInfo == null) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -442,7 +444,11 @@ class _SystemInfoSection extends StatelessWidget {
               Icons.info_outline,
             ),
             ResponsiveSpacing(multiplier: 1.5),
-            MemoryInfoCard(info: systemInfo, device: _deviceModel()),
+            MemoryInfoCard(
+              info: systemInfo,
+              device: _deviceModel(),
+              peakResidentBytes: peak,
+            ),
             ResponsiveSpacing(multiplier: 2),
           ],
         );

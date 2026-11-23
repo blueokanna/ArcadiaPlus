@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -46,6 +47,28 @@ void main() {
 
   RuleProviderService serviceWith(MockClient client) =>
       RuleProviderService(client: client, storageRoot: () async => support);
+
+  test('a multiline scalar cannot add a second compiled domain rule', () async {
+    var calls = 0;
+    final service = serviceWith(
+      MockClient(
+        (_) async => http.Response(
+          calls++ == 0
+              ? 'safe.test'
+              : jsonEncode({
+                  'payload': ['keyword:safe\n+.other.test'],
+                }),
+          200,
+        ),
+      ),
+    );
+    addTearDown(service.dispose);
+    final first = await service.prepare('scalar', httpProfile());
+    final next = await service.prepare('scalar', httpProfile(), force: true);
+    expect(next.paths, first.paths);
+    expect(next.states.single.error, contains('invalid control character'));
+    expect(await File(next.paths['reject']!).readAsLines(), ['full:safe.test']);
+  });
 
   test('old classical caches cannot bypass updated validation', () async {
     var calls = 0;
@@ -327,6 +350,30 @@ void main() {
     expect(sub.hasMatch('sub.example'), false);
   });
 
+  test('an old cache cannot introduce an extra compiled rule', () async {
+    final service = serviceWith(
+      MockClient((_) async => http.Response('full:example.com.\n', 200)),
+    );
+    addTearDown(service.dispose);
+    final profile = httpProfile();
+    final first = await service.prepare('entry-count', profile);
+    final cached = File(first.paths['reject']!);
+    expect(await cached.readAsLines(), ['full:example.com']);
+    final previous = File('${cached.parent.path}/old.rules');
+    await previous.writeAsString('keyword:example\n+.unexpected.test\n');
+    final meta = File('${cached.parent.path}/reject.meta.json');
+    final values = jsonDecode(await meta.readAsString()) as Map;
+    values['path'] = previous.path;
+    values['domainPatternVersion'] = 1;
+    await meta.writeAsString(jsonEncode(values));
+    final offline = await service.prepare(
+      'entry-count',
+      profile,
+      allowNetwork: false,
+    );
+    expect(offline.paths, isEmpty);
+  });
+
   test('does not re-download a provider before its interval elapses', () async {
     var calls = 0;
     final client = MockClient((request) async {
@@ -343,6 +390,71 @@ void main() {
 
     await service.prepare('profile-1', httpProfile(), force: true);
     expect(calls, 2);
+  });
+
+  test('invalid cache metadata is isolated and can be refreshed', () async {
+    var requests = 0;
+    final service = serviceWith(
+      MockClient((request) async {
+        requests++;
+        expect(request.headers['if-none-match'], isNull);
+        return http.Response('host.test', 200, headers: {'etag': 'cached'});
+      }),
+    );
+    addTearDown(service.dispose);
+    const profile = '''
+rule-providers:
+  remote: {type: http, behavior: domain, url: https://example.test/rules}
+  local: {type: inline, behavior: domain, payload: [local.test]}
+''';
+    final first = await service.prepare('metadata', profile);
+    final directory = File(first.paths['remote']!).parent;
+    final file = File('${directory.path}/remote.meta.json');
+    final original = jsonDecode(await file.readAsString()) as Map;
+    final outside = File('${sandbox.path}/remote.0123456789abcdef.rules');
+    await outside.writeAsString('full:outside.test\n');
+    final corruptFields = [
+      {'entries': '1'},
+      {'skipped': 0.0},
+      {'path': []},
+      {'path': outside.path},
+      {'path': first.paths['local']!},
+      {'updatedAt': false},
+      {'etag': 7},
+      {'lastModified': {}},
+    ];
+    for (final invalid in corruptFields) {
+      await file.writeAsString(jsonEncode({...original, ...invalid}));
+      final offline = await service.prepare(
+        'metadata',
+        profile,
+        allowNetwork: false,
+      );
+      expect(offline.paths.keys, ['local'], reason: '$invalid');
+      final repaired = await service.prepare('metadata', profile);
+      expect(repaired.paths, first.paths);
+    }
+    expect(requests, 1 + corruptFields.length);
+  });
+
+  test('deleting a profile waits for its active refresh', () async {
+    final started = Completer<void>();
+    final response = Completer<http.Response>();
+    final service = serviceWith(
+      MockClient((_) {
+        started.complete();
+        return response.future;
+      }),
+    );
+    addTearDown(service.dispose);
+    final refresh = service.prepare('removed', httpProfile());
+    await started.future;
+    final removal = service.forgetProfile('removed');
+    response.complete(http.Response('host.test', 200));
+    final report = await refresh;
+    await removal;
+    expect(report.states.single.ready, true);
+    expect(await File(report.paths['reject']!).parent.exists(), false);
   });
 
   test('reuses the cached copy when the refresh fails', () async {

@@ -7,20 +7,32 @@
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
-  // Attach to console when present (e.g., 'flutter run') or create a
-  // new console when running with a debugger.
+  SYSTEM_INFO system_info{};
+  ::GetSystemInfo(&system_info);
+  constexpr SIZE_T working_set_bytes = 360000000;
+  const SIZE_T page_size = system_info.dwPageSize;
+  const SIZE_T max_working_set = working_set_bytes / page_size * page_size;
+  SIZE_T min_working_set, previous_max;
+  DWORD flags;
+  HANDLE process = ::GetCurrentProcess();
+  if (!::GetProcessWorkingSetSizeEx(process, &min_working_set, &previous_max,
+                                    &flags) ||
+      !::SetProcessWorkingSetSizeEx(process, min_working_set, max_working_set,
+                                    QUOTA_LIMITS_HARDWS_MAX_ENABLE)) {
+    ::MessageBoxW(nullptr, L"Windows could not apply the 384 MB memory limit.",
+                  L"ArcadiaPlus", MB_OK | MB_ICONERROR);
+    return EXIT_FAILURE;
+  }
+
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
     CreateAndAttachConsole();
   }
 
-  // Initialize COM, so that it is available for use in the library and/or
-  // plugins.
   ::CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 
   flutter::DartProject project(L"data");
 
-  std::vector<std::string> command_line_arguments =
-      GetCommandLineArguments();
+  std::vector<std::string> command_line_arguments = GetCommandLineArguments();
 
   project.set_dart_entrypoint_arguments(std::move(command_line_arguments));
 

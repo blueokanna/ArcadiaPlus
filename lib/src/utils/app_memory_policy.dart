@@ -1,9 +1,22 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import 'dart:io' show ProcessInfo;
+
 /// Bounds retained decoded images, not process RSS or live render surfaces.
 /// Flutter's binding already evicts this cache on OS memory-pressure events.
 abstract final class AppMemoryPolicy {
+  static const processBudgetBytes = 384000000;
+
+  static int? get peakResidentBytes {
+    try {
+      final bytes = ProcessInfo.maxRss;
+      return bytes > 0 ? bytes : null;
+    } on UnsupportedError {
+      return null;
+    }
+  }
+
   static final _observer = _MemoryObserver();
   static final retainedBytes = ValueNotifier<int>(0);
   static bool _started = false;

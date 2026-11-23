@@ -125,6 +125,7 @@ pub async fn initialize_corduit(config_json: String) -> std::result::Result<(), 
         #[cfg(any(target_os = "android", test))]
         let resume_config = config_json.clone();
         engine::api::initialize_corduit(config_json)?;
+        crate::rule_index::invalidate();
         #[cfg(any(target_os = "android", test))]
         crate::vpn_resume::configuration(resume_config);
         Ok::<(), engine::CorduitError>(())
@@ -141,7 +142,7 @@ pub async fn start_corduit() -> std::result::Result<(), String> {
 /// Stop the engine and release every listener it owns.
 #[frb]
 pub async fn stop_corduit() -> std::result::Result<(), String> {
-    run(|| engine::api::stop_corduit()).await
+    run(|| engine::api::stop_corduit().inspect(|_| crate::rule_index::invalidate())).await
 }
 
 /// Replace the running config.
@@ -151,6 +152,7 @@ pub async fn reload_corduit(config_json: String) -> std::result::Result<(), Stri
         #[cfg(any(target_os = "android", test))]
         let resume_config = config_json.clone();
         engine::api::reload_corduit(config_json)?;
+        crate::rule_index::invalidate();
         #[cfg(any(target_os = "android", test))]
         crate::vpn_resume::configuration(resume_config);
         Ok::<(), engine::CorduitError>(())
@@ -173,18 +175,24 @@ pub async fn get_corduit_status() -> std::result::Result<ProxyStatus, String> {
 /// JSON `options` string), not YAML.
 #[frb]
 pub async fn start_proxy_from_yaml(yaml_config: String) -> std::result::Result<(), String> {
-    run(move || engine::api::start_proxy_from_yaml(yaml_config)).await
+    run(move || {
+        engine::api::start_proxy_from_yaml(yaml_config).inspect(|_| crate::rule_index::invalidate())
+    })
+    .await
 }
 
 /// Start the engine from a config file holding the same JSON document.
 #[frb]
 pub async fn start_proxy_from_file(config_path: String) -> std::result::Result<(), String> {
-    run(move || engine::api::start_proxy_from_file(config_path)).await
+    run(move || {
+        engine::api::start_proxy_from_file(config_path).inspect(|_| crate::rule_index::invalidate())
+    })
+    .await
 }
 
 #[frb]
 pub async fn stop_proxy() -> std::result::Result<(), String> {
-    run(|| engine::api::stop_proxy()).await
+    run(|| engine::api::stop_proxy().inspect(|_| crate::rule_index::invalidate())).await
 }
 
 #[frb]
@@ -196,13 +204,21 @@ pub async fn is_proxy_running() -> std::result::Result<bool, String> {
 /// [`start_proxy_from_yaml`]).
 #[frb]
 pub async fn reload_config_from_yaml(yaml_config: String) -> std::result::Result<(), String> {
-    run(move || engine::api::reload_config_from_yaml(yaml_config)).await
+    run(move || {
+        engine::api::reload_config_from_yaml(yaml_config)
+            .inspect(|_| crate::rule_index::invalidate())
+    })
+    .await
 }
 
 /// Replace the running config from a JSON config file on disk.
 #[frb]
 pub async fn reload_config_from_file(config_path: String) -> std::result::Result<(), String> {
-    run(move || engine::api::reload_config_from_file(config_path)).await
+    run(move || {
+        engine::api::reload_config_from_file(config_path)
+            .inspect(|_| crate::rule_index::invalidate())
+    })
+    .await
 }
 
 #[frb]

@@ -25,6 +25,7 @@
 mod frb_generated;
 mod geo_database;
 mod logging;
+mod memory;
 
 #[cfg(target_os = "android")]
 pub mod android_jni;

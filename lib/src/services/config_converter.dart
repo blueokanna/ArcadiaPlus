@@ -1498,11 +1498,14 @@ class ConfigConverter {
                 'GEOIP,CN,DIRECT',
               ]
             : clashRules) {
-      if (strict && (rule is! String || _splitRuleFields(rule).length < 2)) {
+      if (strict && rule is! String) {
         throw FormatException('Malformed routing rule: $rule');
       }
       if (rule is String) {
-        final parts = _splitRuleFields(rule);
+        final parts = RuleCatalog.splitFields(rule);
+        if (strict && parts.length < 2) {
+          throw FormatException('Malformed routing rule: $rule');
+        }
         if (parts.length >= 2) {
           final ruleType = parts[0].trim();
           var payload = parts.length >= 3 ? parts[1].trim() : '';
@@ -1688,60 +1691,12 @@ class ConfigConverter {
     return (type: source ? 'src_ip_cidr' : type, noResolve: noResolve);
   }
 
-  /// Splits one rule line on the commas that separate its fields.
-  ///
-  /// A logical rule carries a bracketed condition that has commas of its own
-  /// (`AND,((DOMAIN-SUFFIX,a.com),(NETWORK,tcp)),PROXY`), so the split has to
-  /// respect the brackets or the condition would be torn apart.
-  static List<String> _splitRuleFields(String rule) {
-    final fields = <String>[];
-    final current = StringBuffer();
-    var depth = 0;
-    for (var i = 0; i < rule.length; i++) {
-      final char = rule[i];
-      if (char == '(') depth++;
-      if (char == ')') depth = depth > 0 ? depth - 1 : 0;
-      if (char == ',' && depth == 0) {
-        fields.add(current.toString());
-        current.clear();
-        continue;
-      }
-      current.write(char);
-    }
-    fields.add(current.toString());
-    return fields;
-  }
-
-  /// Returns the text inside one outer pair of parentheses, or `null` when the
-  /// text is not a single balanced bracket.
-  static String? _stripOuterParens(String text) {
-    if (!text.startsWith('(') || !text.endsWith(')')) return null;
-    var depth = 0;
-    for (var i = 0; i < text.length; i++) {
-      final char = text[i];
-      if (char == '(') depth++;
-      if (char == ')') {
-        depth--;
-        if (depth == 0) {
-          return i == text.length - 1 ? text.substring(1, i) : null;
-        }
-      }
-    }
-    return null;
-  }
-
-  /// Nesting limit for logical rules, mirroring the engine's own
-  /// (`MAX_RULE_DEPTH` in the router). The engine refuses a table nested
-  /// deeper than this, and a converter that kept walking would hit the stack
-  /// first on a profile written to nest without end.
-  static const int _maxRuleDepth = 8;
-
   /// Converts a Clash logical condition into the engine's nested child rules.
   ///
   /// Returns `null` for a condition this build cannot express: a malformed
   /// bracket list, a sub-rule type the engine has no equivalent for, a
   /// sub-rule naming a rule set that is not available, or nesting past
-  /// [_maxRuleDepth]. The caller skips the whole rule then — a logical rule
+  /// [RuleCatalog.maxDepth]. The caller skips the whole rule then — a logical rule
   /// that matches on part of its condition silently routes traffic the
   /// profile meant to protect.
   static List<Map<String, dynamic>>? _parseLogicalRule(
@@ -1779,17 +1734,17 @@ class ConfigConverter {
     Set<String> availableRuleSets,
     int depth,
   ) {
-    if (depth > _maxRuleDepth) return null;
-    final inner = _stripOuterParens(condition.trim());
+    if (depth > RuleCatalog.maxDepth) return null;
+    final inner = RuleCatalog.stripOuterParens(condition.trim());
     if (inner == null) return null;
 
     final children = <Map<String, dynamic>>[];
-    for (final part in _splitRuleFields(inner)) {
+    for (final part in RuleCatalog.splitFields(inner)) {
       final piece = part.trim();
       if (piece.isEmpty) return null;
-      final body = _stripOuterParens(piece);
+      final body = RuleCatalog.stripOuterParens(piece);
       if (body == null) return null;
-      final fields = _splitRuleFields(body);
+      final fields = RuleCatalog.splitFields(body);
       if (fields.length < 2) return null;
       var childType = _mapRuleType(fields[0].trim());
       if (childType == null || childType == 'match') return null;

@@ -19,6 +19,7 @@ import 'package:arcadiaplus/src/services/proxy_selection_events.dart';
 import 'package:arcadiaplus/src/services/service_diagnostics.dart';
 import 'package:arcadiaplus/src/services/proxy_engine_service.dart';
 import 'package:arcadiaplus/src/utils/app_lifecycle.dart';
+import 'package:arcadiaplus/src/utils/app_memory_policy.dart';
 import 'package:arcadiaplus/src/utils/applied_configuration.dart';
 import 'package:arcadiaplus/src/utils/platform_utils.dart';
 import 'package:arcadiaplus/src/utils/serial_task_queue.dart';
@@ -35,6 +36,7 @@ class AppStateProvider extends ChangeNotifier {
   TrafficStats? _trafficStats;
   List<ActiveConnection> _activeConnections = [];
   SystemInfo? _systemInfo;
+  int? _peakResidentBytes;
   bool _isLoading = false;
   String? _serviceError;
   String? _initializationError;
@@ -98,6 +100,7 @@ class AppStateProvider extends ChangeNotifier {
   BigInt get totalUploadBytes => _totalUploadBytes;
   BigInt get totalDownloadBytes => _totalDownloadBytes;
   SystemInfo? get systemInfo => _systemInfo;
+  int? get peakResidentBytes => _peakResidentBytes;
   bool get isLoading => _isLoading;
   String? get serviceError => _serviceError;
   String? get recursiveDnsWarning => _recursiveDnsWarning;
@@ -703,7 +706,9 @@ class AppStateProvider extends ChangeNotifier {
     }
     try {
       final info = await getSystemInfo();
-      if (info == _systemInfo) return;
+      final peak = AppMemoryPolicy.peakResidentBytes;
+      if (info == _systemInfo && peak == _peakResidentBytes) return;
+      _peakResidentBytes = peak;
       _systemInfo = info;
       notifyListeners();
     } catch (e) {

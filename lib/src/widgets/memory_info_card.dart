@@ -2,14 +2,21 @@ import 'package:arcadiaplus/src/widgets/app_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 
 import '../rust/types.dart';
+import '../theme/app_shapes.dart';
 import '../utils/app_memory_policy.dart';
 
 String _mib(num bytes) => '${(bytes / 1048576).toStringAsFixed(1)} MiB';
 
 class MemoryInfoCard extends StatelessWidget {
-  const MemoryInfoCard({super.key, required this.info, required this.device});
+  const MemoryInfoCard({
+    super.key,
+    required this.info,
+    required this.device,
+    required this.peakResidentBytes,
+  });
   final SystemInfo info;
   final String device;
+  final int? peakResidentBytes;
 
   @override
   Widget build(BuildContext context) {
@@ -17,13 +24,17 @@ class MemoryInfoCard extends StatelessWidget {
     final c = Theme.of(context).colorScheme;
     return Card.filled(
       child: InkWell(
-        borderRadius: BorderRadius.circular(28),
+        customBorder: AppShapes.card,
         onTap: () => showAppBottomSheet<void>(
           context: context,
           isScrollControlled: true,
           useSafeArea: true,
           showDragHandle: true,
-          builder: (_) => _MemoryDetails(info: info, device: device),
+          builder: (_) => _MemoryDetails(
+            info: info,
+            device: device,
+            peakResidentBytes: peakResidentBytes,
+          ),
         ),
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -45,7 +56,9 @@ class MemoryInfoCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                _mib(info.memoryUsed.toDouble()),
+                info.memoryUsed > BigInt.zero
+                    ? _mib(info.memoryUsed.toDouble())
+                    : (zh ? '暂无数据' : 'Unavailable'),
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               Text(
@@ -58,10 +71,10 @@ class MemoryInfoCard extends StatelessWidget {
                 runSpacing: 8,
                 children: [
                   Chip(
-                    label: Text(info.platform),
-                    avatar: const Icon(Icons.devices_rounded, size: 18),
+                    label: Text(
+                      '${zh ? 'Rust 内核堆' : 'Rust core heap'} ${_mib(info.coreHeapBytes.toDouble())}',
+                    ),
                   ),
-                  Chip(label: Text(device)),
                   Chip(
                     label: ValueListenableBuilder<int>(
                       valueListenable: AppMemoryPolicy.retainedBytes,
@@ -80,14 +93,21 @@ class MemoryInfoCard extends StatelessWidget {
 }
 
 class _MemoryDetails extends StatelessWidget {
-  const _MemoryDetails({required this.info, required this.device});
+  const _MemoryDetails({
+    required this.info,
+    required this.device,
+    required this.peakResidentBytes,
+  });
   final SystemInfo info;
   final String device;
+  final int? peakResidentBytes;
   @override
   Widget build(BuildContext context) {
     final zh = Localizations.localeOf(context).languageCode == 'zh';
     final t = Theme.of(context).textTheme;
     final cache = PaintingBinding.instance.imageCache;
+    final peak = peakResidentBytes;
+    const budget = AppMemoryPolicy.processBudgetBytes;
     return SafeArea(
       top: false,
       child: SingleChildScrollView(
@@ -112,13 +132,47 @@ class _MemoryDetails extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            Text(_mib(info.memoryUsed.toDouble()), style: t.displaySmall),
+            Text(
+              info.memoryUsed > BigInt.zero
+                  ? _mib(info.memoryUsed.toDouble())
+                  : (zh ? '暂无数据' : 'Unavailable'),
+              style: t.displaySmall,
+            ),
             Text(
               zh
                   ? '进程 RSS 快照，包含同进程内核。'
                   : 'Process RSS snapshot, including the in-process core.',
             ),
             const SizedBox(height: 24),
+            Text(zh ? '进程峰值 RSS' : 'Peak process RSS', style: t.titleMedium),
+            const SizedBox(height: 8),
+            if (peak != null) ...[
+              LinearProgressIndicator(
+                value: (peak / budget).clamp(0, 1),
+                color: peak > budget
+                    ? Theme.of(context).colorScheme.error
+                    : null,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${(peak / 1000000).toStringAsFixed(1)} MB / ${budget ~/ 1000000} MB',
+              ),
+              if (peak > budget)
+                Text(
+                  zh ? '本次运行已超出内存预算' : 'Memory budget exceeded this session',
+                ),
+            ] else
+              Text(zh ? '系统未提供峰值' : 'Peak unavailable'),
+            const SizedBox(height: 16),
+            Text(
+              '${zh ? 'Rust 内核堆' : 'Rust core heap'} · ${_mib(info.coreHeapBytes.toDouble())}',
+              style: t.titleMedium,
+            ),
+            Text(
+              zh ? '统计 Corduit、DNS 和桥接层仍在使用的 Rust 堆分配。' : 'Live Rust allocations in Corduit, DNS and the Flutter bridge.',
+              style: t.bodySmall,
+            ),
+            const SizedBox(height: 16),
             Card.filled(
               color: Theme.of(context).colorScheme.surfaceContainer,
               child: Padding(
@@ -158,11 +212,6 @@ class _MemoryDetails extends StatelessWidget {
             const SizedBox(height: 16),
             Text('${info.platform} · $device', style: t.titleMedium),
             if (info.cpuName.isNotEmpty) Text(info.cpuName),
-            const SizedBox(height: 8),
-            Text(
-              zh ? '当前接口未提供 Dart 堆与 Rust 分配器的独立占用，不拆分或估算百分比。' : 'Separate Dart heap and Rust allocator measurements are not available.',
-              style: t.bodySmall,
-            ),
           ],
         ),
       ),

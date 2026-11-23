@@ -913,6 +913,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       cst_encode_String(raw.version),
       cst_encode_u_64(raw.memoryTotal),
       cst_encode_u_64(raw.memoryUsed),
+      cst_encode_u_64(raw.coreHeapBytes),
       cst_encode_u_32(raw.cpuCores),
       cst_encode_u_32(raw.cpuThreads),
       cst_encode_String(raw.cpuName),
